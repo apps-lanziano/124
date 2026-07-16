@@ -1619,8 +1619,8 @@ async function loadRuntimeLists(){
   if(t && Array.isArray(t) && t.length){ MORNING_TASKS = t; }
   else { MORNING_TASKS = MORNING_TASKS_SEED.slice(); await sSet("cfg_tasks", MORNING_TASKS); }
 
-  if(currentShed && currentShed.id === "shed2"){ await seedShed2Certs(); await ensureExtraCertsSeed(); }
-  if(currentShed && currentShed.id !== "shed2"){ await ensureAllShedsSeed(); await reloadPersonnelIfSeeded(); }
+  if(currentShed && currentShed.id === "shed2"){ await seedShed2Certs(); await ensureExtraCertsSeed(currentShed.id); }
+  if(currentShed && currentShed.id !== "shed2"){ await ensureAllShedsSeed(currentShed.id); await reloadPersonnelIfSeeded(); }
   await processReleases();   // הסרת חיילים ששוחררו (תאריך שחרור עבר/היום)
 }
 
@@ -3459,7 +3459,7 @@ async function reloadPersonnelIfSeeded(){
    זריעת כל הסככות (1,3,4,5) — צוות + הסמכות מהמאגר הטייסתי
    רץ פעם אחת (דגל לכל סככה). מפקד/מנהל/חייל — כולם רואים.
    ============================================================ */
-async function ensureAllShedsSeed(){
+async function ensureAllShedsSeed(scopeShedId){
   await migrateNameFixes();
   await syncCertPeopleIntoRoster("shed1", SHED1_ALL_NAMES);
   const SAF = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🟢"));
@@ -3544,7 +3544,10 @@ async function ensureAllShedsSeed(){
     }
   };
 
-  for(const shedId of Object.keys(PLAN)){
+  // ברירת מחדל: לסרוק את כל הסככות (למסך מנהל-על). כניסת חייל/מפקד רגילה
+  // מעבירה את הסככה שלה בלבד — אין טעם לסרוק סככות אחרות בכל כניסה.
+  const shedIds = scopeShedId ? [scopeShedId] : Object.keys(PLAN);
+  await Promise.all(shedIds.map(async shedId=>{
     try{
       const plan = PLAN[shedId];
 
@@ -3561,7 +3564,7 @@ async function ensureAllShedsSeed(){
       // 2. הסמכות — עדיין מוגנות בדגל חד-פעמי נפרד (לא לשכפל בכל טעינה)
       const flagKey = shedId + "_certs_seeded_v1";
       const seeded = await sGetRaw(flagKey);
-      if(seeded) continue;
+      if(seeded) return;
 
       const existing = (await sGetIn(shedId,"certs_list")) || [];
       const certs = existing.slice();
@@ -3579,8 +3582,8 @@ async function ensureAllShedsSeed(){
       await sSetRaw(flagKey, true);
       console.log("✅ נזרעו נתוני " + shedId);
     }catch(e){ console.error("seed "+shedId, e); }
-  }
-  await ensureExtraCertsSeed();
+  }));
+  await ensureExtraCertsSeed(scopeShedId);
 }
 
 /* מבטיח שהסמכות + צוות סככה 2 קיימים ב-Firebase (בלי תלות במי שנכנס) */
@@ -3591,9 +3594,10 @@ async function ensureAllShedsSeed(){
    רץ פעם אחת (דגל גלובלי). נקרא גם מכניסת חייל/מפקד וגם מכניסת מנהל-על.
    ============================================================ */
 /* מתקן נתוני "שלב" ישנים שנזרעו בטעות עם תפוגה/בלי קידומת צבע — רץ בכל טעינה, ללא דגל */
-async function fixStageCertsMigration(){
+async function fixStageCertsMigration(scopeShedId){
   const BARE = ["שלב 7","שלב 10 סף","שלב 10 רף"];
-  for(const shedId of ["shed1","shed2","shed3","shed4","shed5"]){
+  const sheds = scopeShedId ? [scopeShedId] : ["shed1","shed2","shed3","shed4","shed5"];
+  await Promise.all(sheds.map(async shedId=>{
     try{
       const certs = (await sGetIn(shedId,"certs_list")) || [];
       let changed = false;
@@ -3603,12 +3607,13 @@ async function fixStageCertsMigration(){
       });
       if(changed) await sSetIn(shedId,"certs_list", certs);
     }catch(e){ console.error("fixStageCertsMigration "+shedId, e); }
-  }
+  }));
 }
 
 /* מסנכרן: כל שם שמופיע בהסמכות של סככה חייב להיות גם ברשימת הצוות שלה (self-healing, כל טעינה) */
-async function syncAllShedsRosterFromCerts(){
-  for(const shedId of ["shed1","shed2","shed3","shed4","shed5"]){
+async function syncAllShedsRosterFromCerts(scopeShedId){
+  const sheds = scopeShedId ? [scopeShedId] : ["shed1","shed2","shed3","shed4","shed5"];
+  await Promise.all(sheds.map(async shedId=>{
     try{
       const pers = (await sGetIn(shedId,"cfg_personnel")) || [];
       const certs = (await sGetIn(shedId,"certs_list")) || [];
@@ -3619,13 +3624,14 @@ async function syncAllShedsRosterFromCerts(){
       }
       if(changed) await sSetIn(shedId,"cfg_personnel", pers);
     }catch(e){ console.error("syncAllShedsRosterFromCerts "+shedId, e); }
-  }
+  }));
 }
 
 /* כל מפקד בכל סככה מקבל "שלב 12"; חמשת מפקדי-הבכיר של הסככות מקבלים גם "שלב 13" (self-healing, כל טעינה) */
 const COMMANDER_STAGE13_LEADS = ["נאור ישראל","אלעד לנציאנו","אריאל אלמליח","סמי אורסו","שיראל איפרגן"];
-async function ensureCommanderStageCerts(){
-  for(const shedId of ["shed1","shed2","shed3","shed4","shed5"]){
+async function ensureCommanderStageCerts(scopeShedId){
+  const sheds = scopeShedId ? [scopeShedId] : ["shed1","shed2","shed3","shed4","shed5"];
+  await Promise.all(sheds.map(async shedId=>{
     try{
       const pers = (await sGetIn(shedId,"cfg_personnel")) || [];
       const certs = (await sGetIn(shedId,"certs_list")) || [];
@@ -3640,7 +3646,7 @@ async function ensureCommanderStageCerts(){
       }
       if(changed) await sSetIn(shedId,"certs_list", certs);
     }catch(e){ console.error("ensureCommanderStageCerts "+shedId, e); }
-  }
+  }));
 }
 
 /* PF: כל חייל חייב הסמכת PF תוך 45 יום מהצטרפותו. נכון לרגע זה כל החיילים הקיימים כבר מוסמכים —
@@ -3666,10 +3672,10 @@ async function ensurePfBackfill(){
   console.log("✅ כל החיילים הקיימים סומנו כמוסמכי PF");
 }
 
-async function ensureExtraCertsSeed(){
-  await fixStageCertsMigration();
-  await syncAllShedsRosterFromCerts();
-  await ensureCommanderStageCerts();
+async function ensureExtraCertsSeed(scopeShedId){
+  await fixStageCertsMigration(scopeShedId);
+  await syncAllShedsRosterFromCerts(scopeShedId);
+  await ensureCommanderStageCerts(scopeShedId);
   await ensurePfBackfill();
 
   const flagKey = "extra_certs_seed_v2";
