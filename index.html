@@ -710,6 +710,7 @@ nav{
 .cert-chip-row.pf{background:#fefce8;border-color:#fde68a}
 .cert-chip-row.pf .cert-chip-name{color:#a16207}
 .cert-chip-del{width:24px;height:24px;border-radius:7px;border:1px solid var(--red-line);background:var(--red-soft);color:var(--red);cursor:pointer;font-size:11px;flex-shrink:0;font-weight:700}
+.cert-chip-edit{width:24px;height:24px;border-radius:7px;border:1px solid var(--line);background:var(--bg);cursor:pointer;font-size:11px;flex-shrink:0}
 .cert-person-head{display:flex;align-items:center;gap:10px;padding:13px 15px;background:#fdfafa;border-bottom:1px solid var(--line)}
 .cert-person-head b{font-size:14.5px;font-weight:800;flex:1}
 .cert-count{font-size:11px;color:var(--ink-3);font-weight:600;background:var(--red-soft);color:var(--red);padding:3px 9px;border-radius:99px}
@@ -1006,6 +1007,11 @@ nav{
         </div>
         <button class="add-btn hidden" id="cert-add-btn" onclick="openCertAdd()">+ הסמכה</button>
       </div>
+      <div class="search-box" id="certs-search-box" style="display:none">
+        <span class="search-ic">🔍</span>
+        <input type="text" id="certs-search" placeholder="חיפוש לפי שם…" oninput="renderCertsPageList()">
+      </div>
+      <div class="faults-filter" id="certs-filter"></div>
       <div id="certs-page-list"></div>
     </section>
 
@@ -4639,10 +4645,18 @@ function specialOtherClass(cleanName){
   return "";
 }
 
+let certsFilter = "all"; // "all" | "attention"
+let certsPageCache = { certs: [], isCmdr: false };
+
 async function renderCertsPage(){
-  const certs = await getCerts();
+  certsPageCache = { certs: await getCerts(), isCmdr: userRole === "מפקד" };
+  renderCertsPageList();
+}
+function setCertsFilter(f){ certsFilter = f; renderCertsPageList(); }
+
+function renderCertsPageList(){
+  const { certs, isCmdr } = certsPageCache;
   const box = document.getElementById("certs-page-list");
-  const isCmdr = userRole === "מפקד";
   if(!box) return;
 
   const trainingCard = `<div class="db-board-card" style="display:flex;align-items:center;gap:14px;margin-bottom:16px" onclick="closeMoreAnd('scr-training')">
@@ -4654,7 +4668,10 @@ async function renderCertsPage(){
     <div class="db-feed-chev">‹</div>
   </div>`;
 
+  document.getElementById("certs-search-box").style.display = certs.length>=4 ? "flex" : "none";
+
   if(certs.length===0){
+    document.getElementById("certs-filter").innerHTML = "";
     box.innerHTML = trainingCard + `<div class="empty-state"><div class="ic">🎓</div><h3>אין עדיין הסמכות</h3><p>${isCmdr?'הוסף הסמכה באמצעות "+ הסמכה"':'המפקד טרם הזין הסמכות'}</p></div>`;
     return;
   }
@@ -4663,9 +4680,24 @@ async function renderCertsPage(){
   const byPerson = {};
   certs.forEach((c,idx)=>{ (byPerson[c.person] = byPerson[c.person] || []).push({...c, _idx:idx}); });
 
-  // order: known personnel first (soldiers before others), then any extras
-  const names = PERSONNEL.map(p=>p.name).filter(n=>byPerson[n]);
+  // order: known personnel first (soldiers before others; includes those with zero certs), then any extras
+  const names = PERSONNEL.map(p=>p.name);
   Object.keys(byPerson).forEach(n=>{ if(!names.includes(n)) names.push(n); });
+
+  const needsAttention = n => {
+    const list = byPerson[n] || [];
+    if(list.length===0) return true;
+    return list.some(c=>certStatus(c).cls!=="g");
+  };
+  const attentionCount = names.filter(needsAttention).length;
+  document.getElementById("certs-filter").innerHTML = `
+    <button class="fault-fbtn ${certsFilter==='all'?'active':''}" onclick="setCertsFilter('all')">הכל (${names.length})</button>
+    <button class="fault-fbtn ${certsFilter==='attention'?'active':''}" onclick="setCertsFilter('attention')">⚠️ דורש טיפול (${attentionCount})</button>`;
+
+  const q = (document.getElementById("certs-search")?.value || "").trim().toLowerCase();
+  let shownNames = names;
+  if(certsFilter==="attention") shownNames = shownNames.filter(needsAttention);
+  if(q) shownNames = shownNames.filter(n=>n.toLowerCase().includes(q));
 
   // legend
   const legend = `<div class="cert-legend">
@@ -4676,8 +4708,13 @@ async function renderCertsPage(){
     <span class="lvl-tag stage">🟣 שלבים</span>
   </div>`;
 
-  const cards = names.map(name=>{
-    const list = byPerson[name];
+  if(shownNames.length===0){
+    box.innerHTML = trainingCard + legend + `<div class="empty-state"><div class="ic">🔍</div><h3>לא נמצאו תוצאות</h3><p>נסה חיפוש אחר או נקה את הסינון</p></div>`;
+    return;
+  }
+
+  const cards = shownNames.map(name=>{
+    const list = byPerson[name] || [];
     // count per level
     const counts = {saf:0, raf:0, himush:0, elyon:0, stage:0, other:0};
     list.forEach(c=>{ counts[certLevel(c.name)]++; });
@@ -4797,11 +4834,28 @@ function pickToolFromBank(){
   const v = document.getElementById("tool-bank-pick").value;
   if(v) document.getElementById("tool-name").value = v;
 }
+let toolEditId = null;
 function openToolAdd(){
+  toolEditId = null;
   document.getElementById("tool-bank-pick").innerHTML = toolBankOptions();
   document.getElementById("tool-name").value = "";
   document.getElementById("tool-serial").value = "";
   document.getElementById("tool-expiry").value = "";
+  document.querySelector("#tool-modal h3").textContent = "🧰 הוספת כלי לחדר הכלים";
+  document.querySelector("#tool-modal .m-btn.primary").textContent = "➕ הוסף כלי";
+  document.getElementById("tool-modal").classList.add("open");
+}
+async function openToolEdit(id){
+  const tools = await getTools();
+  const t = tools.find(x=>x.id===id);
+  if(!t) return;
+  toolEditId = id;
+  document.getElementById("tool-bank-pick").innerHTML = toolBankOptions();
+  document.getElementById("tool-name").value = t.name;
+  document.getElementById("tool-serial").value = t.serial || "";
+  document.getElementById("tool-expiry").value = t.expiry || "";
+  document.querySelector("#tool-modal h3").textContent = "✏️ עריכת כלי";
+  document.querySelector("#tool-modal .m-btn.primary").textContent = "💾 שמור שינויים";
   document.getElementById("tool-modal").classList.add("open");
 }
 async function addTool(){
@@ -4810,6 +4864,16 @@ async function addTool(){
   const expiry = document.getElementById("tool-expiry").value;
   if(name.length<2){ toast("נא למלא שם כלי"); return; }
   const tools = await getTools();
+  if(toolEditId){
+    const t = tools.find(x=>x.id===toolEditId);
+    if(t){ t.name=name; t.serial=serial; t.expiry=expiry; }
+    toolEditId = null;
+    await sSet("tools_list", tools);
+    document.getElementById("tool-modal").classList.remove("open");
+    renderToolsPage(); updateAlertBell();
+    toast("הכלי עודכן ✓");
+    return;
+  }
   tools.push({id:"tool"+Date.now(), name, serial, expiry});
   await sSet("tools_list", tools);
   document.getElementById("tool-name").value=""; document.getElementById("tool-serial").value=""; document.getElementById("tool-expiry").value="";
@@ -4860,7 +4924,7 @@ async function renderToolsPage(){
         <div class="avatar" style="width:40px;height:40px;font-size:18px">🧰</div>
         <div class="cert-sum-name"><b>${escapeHTML(t.name)}</b><span>${t.serial?("מספר סידורי: "+escapeHTML(t.serial)):"ללא מספר סידורי"}</span></div>
         <span class="pill ${t.st.cls}" style="font-size:10px;white-space:nowrap">${t.st.tag}</span>
-        ${isCmdr?`<button class="cert-chip-del" onclick="removeToolById('${t.id}')">✕</button>`:''}
+        ${isCmdr?`<button class="cert-chip-edit" onclick="openToolEdit('${t.id}')">✏️</button><button class="cert-chip-del" onclick="removeToolById('${t.id}')">✕</button>`:''}
       </div>
     </div>`).join("");
   box.innerHTML = banner + cards;
@@ -4882,11 +4946,28 @@ function pickVehicleFromBank(){
   const v = document.getElementById("vehicle-bank-pick").value;
   if(v) document.getElementById("vehicle-name").value = v;
 }
+let vehicleEditId = null;
 function openVehicleAdd(){
+  vehicleEditId = null;
   document.getElementById("vehicle-bank-pick").innerHTML = vehicleBankOptions();
   document.getElementById("vehicle-name").value = "";
   document.getElementById("vehicle-number").value = "";
   document.getElementById("vehicle-next-service").value = "";
+  document.querySelector("#vehicle-modal h3").textContent = "🚙 הוספת רכב למעקב";
+  document.querySelector("#vehicle-modal .m-btn.primary").textContent = "➕ הוסף רכב";
+  document.getElementById("vehicle-modal").classList.add("open");
+}
+async function openVehicleEdit(id){
+  const vehicles = await getVehicles();
+  const v = vehicles.find(x=>x.id===id);
+  if(!v) return;
+  vehicleEditId = id;
+  document.getElementById("vehicle-bank-pick").innerHTML = vehicleBankOptions();
+  document.getElementById("vehicle-name").value = v.name;
+  document.getElementById("vehicle-number").value = v.number || "";
+  document.getElementById("vehicle-next-service").value = v.nextService || "";
+  document.querySelector("#vehicle-modal h3").textContent = "✏️ עריכת רכב";
+  document.querySelector("#vehicle-modal .m-btn.primary").textContent = "💾 שמור שינויים";
   document.getElementById("vehicle-modal").classList.add("open");
 }
 async function addVehicle(){
@@ -4895,6 +4976,16 @@ async function addVehicle(){
   const nextService = document.getElementById("vehicle-next-service").value;
   if(name.length<2){ toast("נא למלא שם/סוג רכב"); return; }
   const vehicles = await getVehicles();
+  if(vehicleEditId){
+    const v = vehicles.find(x=>x.id===vehicleEditId);
+    if(v){ v.name=name; v.number=number; v.nextService=nextService; }
+    vehicleEditId = null;
+    await sSet("vehicles_list", vehicles);
+    document.getElementById("vehicle-modal").classList.remove("open");
+    renderVehiclesPage(); updateAlertBell();
+    toast("הרכב עודכן ✓");
+    return;
+  }
   vehicles.push({id:"veh"+Date.now(), name, number, nextService});
   await sSet("vehicles_list", vehicles);
   document.getElementById("vehicle-name").value=""; document.getElementById("vehicle-number").value=""; document.getElementById("vehicle-next-service").value="";
@@ -4944,7 +5035,7 @@ async function renderVehiclesPage(){
         <div class="avatar" style="width:40px;height:40px;font-size:18px">🚙</div>
         <div class="cert-sum-name"><b>${escapeHTML(v.name)}</b><span>${v.number?("מספר רכב: "+escapeHTML(v.number)):"ללא מספר רכב"}</span></div>
         <span class="pill ${v.st.cls}" style="font-size:10px;white-space:nowrap">${v.st.tag}</span>
-        ${isCmdr?`<button class="cert-chip-del" onclick="removeVehicleById('${v.id}')">✕</button>`:''}
+        ${isCmdr?`<button class="cert-chip-edit" onclick="openVehicleEdit('${v.id}')">✏️</button><button class="cert-chip-del" onclick="removeVehicleById('${v.id}')">✕</button>`:''}
       </div>
     </div>`).join("");
   box.innerHTML = banner + cards;
