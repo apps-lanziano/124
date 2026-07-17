@@ -3834,10 +3834,8 @@ async function renderAdminDashboard(){
   let html = "";
   for(const shed of SHEDS){
     const personnel = (await sGetIn(shed.id, "cfg_personnel")) || [];
-    const tasks = (await sGetIn(shed.id, "cfg_tasks")) || MORNING_TASKS_SEED;
     const events = (await sGetIn(shed.id, "safety_events")) || [];
     const faults = (await sGetIn(shed.id, "faults_list")) || [];
-    const morning = (await sGetIn(shed.id, "team_morning_" + todayKey())) || {};
 
     // signatures
     let totalSigs = 0;
@@ -3848,11 +3846,6 @@ async function renderAdminDashboard(){
     const maxSigs = personnel.length * events.length;
     const sigPct = maxSigs ? Math.round(totalSigs/maxSigs*100) : 0;
     const openFaults = faults.filter(f=>f.status!=="closed").length;
-    const mDone = tasks.filter(t=>morning[t.id]).length;
-    const mCls = mDone===tasks.length ? "ok" : mDone===0 ? "none" : "partial";
-    const mTxt = mDone===tasks.length ? "✅ כל מטלות הבוקר בוצעו" 
-               : mDone===0 ? "⚠️ מטלות בוקר טרם בוצעו"
-               : "🔶 מטלות בוקר: " + mDone + "/" + tasks.length;
     const num = shed.id.replace("shed","");
 
     html += `<div class="shed-card clickable" onclick="drillShed('${shed.id}')">
@@ -3867,7 +3860,6 @@ async function renderAdminDashboard(){
         <div class="shed-stat ${sigPct>=80?'ok':sigPct>=40?'warn':'bad'}"><b>${maxSigs?sigPct+'%':'—'}</b><span>חתימות</span></div>
         <div class="shed-stat ${openFaults===0?'ok':'bad'}"><b>${openFaults}</b><span>תקלות פתוחות</span></div>
       </div>
-      <div class="shed-morning-line ${mCls}">${personnel.length===0?'—':mTxt}</div>
     </div>`;
   }
   grid.innerHTML = html;
