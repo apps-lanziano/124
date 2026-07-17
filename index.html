@@ -890,14 +890,14 @@ nav{
     <section class="screen active" id="scr-safety">
       <div class="sec-head">
         <div>
-          <h2>אירועי בטיחות</h2>
-          <p>חובה לקרוא כל אירוע, לחתום ולאשר שהמסר הועבר.</p>
+          <h2>קרא וחתום</h2>
+          <p>חובה לקרוא כל פריט, לחתום ולאשר שהמסר הועבר.</p>
         </div>
-        <button class="add-btn hidden" id="add-event-btn" onclick="openAddEvent()">+ אירוע</button>
+        <button class="add-btn hidden" id="add-event-btn" onclick="openAddEvent()">+ פריט</button>
       </div>
       <div class="search-box" id="safety-search-box" style="display:none">
         <span class="search-ic">🔍</span>
-        <input type="text" id="safety-search" placeholder="חיפוש אירוע לפי כותרת או תאריך…" oninput="renderDocs()">
+        <input type="text" id="safety-search" placeholder="חיפוש לפי כותרת או תאריך…" oninput="renderDocs()">
       </div>
       <div id="docs-list"><div class="skel-card"><div class="skel-line w60"></div><div class="skel-line w90"></div></div><div class="skel-card"><div class="skel-line w40"></div><div class="skel-line w90"></div></div></div>
     </section>
@@ -1064,7 +1064,7 @@ nav{
       <div class="sec-head">
         <div>
           <h2>תמונת מצב — מפקד</h2>
-          <p>מעקב נפרד: חתימות בטיחות ומטלות בוקר.</p>
+          <p>מעקב נפרד: חתימות ומטלות בוקר.</p>
         </div>
       </div>
       <div class="cmd-tabs">
@@ -1082,14 +1082,14 @@ nav{
       <!-- PANE: SAFETY -->
       <div class="cmd-pane" id="pane-safety">
         <div class="cmd-kpis">
-          <div class="kpi info"><b id="kpi-events">—</b><span>אירועי בטיחות פעילים</span></div>
+          <div class="kpi info"><b id="kpi-events">—</b><span>קרא וחתום פעילים</span></div>
           <div class="kpi good"><b id="kpi-read">—</b><span>חתימות שהתקבלו</span></div>
           <div class="kpi bad"><b id="kpi-pending">—</b><span>חתימות חסרות</span></div>
-          <div class="kpi warn"><b id="kpi-fullsign">—</b><span>חתמו על כל האירועים</span></div>
+          <div class="kpi warn"><b id="kpi-fullsign">—</b><span>חתמו על כל הפריטים</span></div>
         </div>
         <div class="cmd-section-title">👥 סטטוס חתימה לפי איש צוות</div>
         <div class="cmd-table" id="cmd-reads"></div>
-        <div class="cmd-section-title" id="events-title" style="display:none">📋 סטטוס לפי אירוע</div>
+        <div class="cmd-section-title" id="events-title" style="display:none">📋 סטטוס לפי פריט</div>
         <div class="cmd-table" id="cmd-events" style="display:none"></div>
       </div>
 
@@ -1139,7 +1139,7 @@ nav{
       <!-- PANE: OVERVIEW -->
       <div class="admin-pane active" id="apane-overview">
         <div class="admin-actions-row">
-          <button class="admin-card" onclick="openAdminEvent()"><span class="a-ic">📄</span><b>פרסום אירוע בטיחות</b><span>לכל הסככות</span></button>
+          <button class="admin-card" onclick="openAdminEvent()"><span class="a-ic">📄</span><b>פרסום קרא וחתום</b><span>לכל הסככות</span></button>
           <button class="admin-card" onclick="openAdminBoard()"><span class="a-ic">📅</span><b>העלאת לוח צוות</b><span>לכל הסככות</span></button>
           <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>פרסום הודעה</b><span>לכל הסככות</span></button>
           <button class="admin-card" onclick="openAdminAlerts()"><span class="a-ic">🔔</span><b>מרכז התראות</b><span>כל הסככות</span></button>
@@ -1188,7 +1188,7 @@ nav{
   <!-- NAV -->
   <nav>
     <button class="nav-btn hidden" id="nav-cmd" data-scr="scr-cmd" onclick="go('scr-cmd',this)"><span class="ic">🎖️</span><span>מפקד</span></button>
-    <button class="nav-btn active" data-scr="scr-safety" onclick="go('scr-safety',this)"><span class="ic">📄</span><span>בטיחות</span><span class="nav-badge hidden" id="badge-safety">0</span></button>
+    <button class="nav-btn active" data-scr="scr-safety" onclick="go('scr-safety',this)"><span class="ic">📄</span><span>קרא וחתום</span><span class="nav-badge hidden" id="badge-safety">0</span></button>
     <button class="nav-btn" data-scr="scr-morning" onclick="go('scr-morning',this)"><span class="ic">✅</span><span>מטלות</span><span class="nav-badge hidden" id="badge-morning">0</span></button>
     <button class="nav-btn" data-scr="scr-board" onclick="go('scr-board',this)"><span class="ic">📅</span><span>לוח שבועי</span></button>
     <button class="nav-btn" data-scr="scr-certs" onclick="go('scr-certs',this)"><span class="ic">🎓</span><span>הסמכות</span></button>
@@ -1224,8 +1224,8 @@ nav{
   <!-- SIGNATURE MODAL -->
   <div class="modal-bg" id="sig-modal">
     <div class="modal">
-      <h3>✍️ חתימה על אירוע בטיחות</h3>
-      <div class="m-sub">בחתימתך את/ה מאשר/ת: <b>קראתי את האירוע והמסר הועבר אליי</b></div>
+      <h3>✍️ חתימה על פריט</h3>
+      <div class="m-sub">בחתימתך את/ה מאשר/ת: <b>קראתי את הפריט והמסר הועבר אליי</b></div>
       <canvas id="sig-canvas"></canvas>
       <div class="sig-hint">חתום/חתמי באצבע או בעכבר בתוך המסגרת</div>
       <div class="modal-actions">
@@ -1239,15 +1239,15 @@ nav{
   <!-- ADD EVENT MODAL (commander) -->
   <div class="modal-bg" id="add-modal">
     <div class="modal">
-      <h3>➕ העלאת אירוע בטיחות</h3>
-      <div class="m-sub">האירוע יופץ לכל אנשי הצוות ויידרש אישור חתימה מכל אחד.</div>
-      <input class="m-input" id="ev-title" type="text" placeholder="כותרת האירוע (לדוגמה: אירוע FOD ברחבה)">
-      <div class="m-file" id="ev-file-label" onclick="document.getElementById('ev-file').click()">📤 לחץ לבחירת קובץ האירוע</div>
+      <h3>➕ העלאת פריט</h3>
+      <div class="m-sub">הפריט יופץ לכל אנשי הצוות ויידרש אישור חתימה מכל אחד.</div>
+      <input class="m-input" id="ev-title" type="text" placeholder="כותרת הפריט (לדוגמה: אירוע FOD ברחבה)">
+      <div class="m-file" id="ev-file-label" onclick="document.getElementById('ev-file').click()">📤 לחץ לבחירת קובץ הפריט</div>
       <input type="file" id="ev-file" accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" class="hidden" onchange="onEvFile(event)">
       <div class="ftype-pills"><span class="ftype-pill">🖼️ תמונה</span><span class="ftype-pill">📕 PDF</span><span class="ftype-pill">📘 Word</span><span class="ftype-pill">📙 PowerPoint</span></div>
       <div class="modal-actions">
         <button class="m-btn ghost" onclick="closeAddEvent()">ביטול</button>
-        <button class="m-btn primary" id="ev-save" onclick="saveEvent()" disabled>פרסום האירוע</button>
+        <button class="m-btn primary" id="ev-save" onclick="saveEvent()" disabled>פרסום הפריט</button>
       </div>
     </div>
   </div>
@@ -1255,7 +1255,7 @@ nav{
   <!-- SIGNATURE DETAIL MODAL (per event) -->
   <div class="modal-bg" id="sigdetail-modal">
     <div class="modal">
-      <h3 id="sigdetail-title">חתימות על האירוע</h3>
+      <h3 id="sigdetail-title">חתימות על הפריט</h3>
       <div class="m-sub" id="sigdetail-sub"></div>
       <div class="sig-detail-list" id="sigdetail-list"></div>
       <div class="modal-actions">
@@ -1304,7 +1304,7 @@ nav{
   <div class="modal-bg" id="msg-modal">
     <div class="modal">
       <h3>📢 לוח הודעות</h3>
-      <div class="m-sub">הודעה תופיע לכל הצוות בראש מסך הבטיחות.</div>
+      <div class="m-sub">הודעה תופיע לכל הצוות בראש מסך קרא וחתום.</div>
       <input class="m-input" id="msg-text" type="text" placeholder="תוכן ההודעה…" oninput="checkMsgReady()">
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <button class="msg-type-btn active" data-type="info" onclick="selMsgType('info',this)">🔵 מידע</button>
@@ -2027,15 +2027,15 @@ async function renderDocs(){
   if(events.length === 0){
     list.innerHTML = `<div class="empty-state">
       <div class="ic">🗂️</div>
-      <h3>אין אירועי בטיחות עדיין</h3>
-      <p>${isCmdr?'העלה אירוע חדש באמצעות כפתור "+ אירוע"':'טרם פורסמו אירועי בטיחות'}</p>
+      <h3>אין עדיין פריטים</h3>
+      <p>${isCmdr?'העלה פריט חדש באמצעות כפתור "+ פריט"':'טרם פורסמו פריטים'}</p>
     </div>`;
     updateBadges();
     return;
   }
   const filtered = q ? events.filter(e=>(e.title||"").toLowerCase().includes(q) || (e.date||"").includes(q)) : events;
   if(filtered.length===0){
-    list.innerHTML = `<div class="empty-state"><div class="ic">🔍</div><h3>לא נמצאו אירועים</h3><p>נסה מונח חיפוש אחר</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="ic">🔍</div><h3>לא נמצאו פריטים</h3><p>נסה מונח חיפוש אחר</p></div>`;
     return;
   }
   filtered.forEach(ev=>{
@@ -2064,12 +2064,12 @@ async function renderDocs(){
 
 /* delete safety event (feature 7) */
 async function deleteEvent(id){
-  if(!confirm("למחוק את האירוע לצמיתות? החתימות עליו יימחקו גם.")) return;
+  if(!confirm("למחוק את הפריט לצמיתות? החתימות עליו יימחקו גם.")) return;
   let events = await getEvents();
   events = events.filter(e=>e.id!==id);
   await sSet("safety_events", events);
   await sDel("safety_ev_"+id);
-  toast("האירוע נמחק 🗑️");
+  toast("הפריט נמחק 🗑️");
   renderDocs();
 }
 
@@ -2084,7 +2084,7 @@ async function openReader(id){
   const ftype = currentDoc.ftype || "image";
   let viewer = "";
   if(ftype === "image"){
-    viewer = `<img class="event-img" src="${fileData}" alt="אירוע בטיחות">`;
+    viewer = `<img class="event-img" src="${fileData}" alt="קרא וחתום">`;
   } else if(ftype === "pdf"){
     viewer = `<div class="file-viewer"><iframe src="${fileData}" title="מסמך PDF"></iframe></div>
       <div style="text-align:center;margin-top:10px"><a class="file-dl-btn" href="${fileData}" download="${escapeHTML(currentDoc.fname||'document.pdf')}">⬇️ הורדת המסמך</a></div>`;
@@ -2098,7 +2098,7 @@ async function openReader(id){
       </div>`;
   }
   document.getElementById("reader-body").innerHTML = `
-    <span class="doc-tag">אירוע בטיחות · חובת חתימה</span>
+    <span class="doc-tag">קרא וחתום · חובת חתימה</span>
     <div class="sub">הועלה ע"י ${escapeHTML(currentDoc.by)} · ${currentDoc.date} · טייסת 124</div>
     ${viewer}
     ${sig ? `<div class="sig-preview">
@@ -2174,7 +2174,7 @@ async function saveSignature(){
   reads[currentDoc.id] = {date:new Date().toLocaleDateString("he-IL"), sig:sigData};
   await sSet(key, reads);
   closeSignature();
-  await logAction("חתימה על אירוע בטיחות", currentDoc.title);
+  await logAction("חתימה על פריט", currentDoc.title);
   toast("החתימה נקלטה — המסר אושר ✍️");
   await openReader(currentDoc.id);
   renderDocs();
@@ -2182,7 +2182,7 @@ async function saveSignature(){
 
 /* ============ ADD EVENT (commander) ============ */
 function openAddEvent(){
-  if(userRole !== "מפקד" && !isAdmin){ toast("העלאת אירוע — מפקדים בלבד ⛔"); return; }
+  if(userRole !== "מפקד" && !isAdmin){ toast("העלאת פריט — מפקדים בלבד ⛔"); return; }
   window._adminPublish = false;
   openAddEventRaw();
 }
@@ -2190,7 +2190,7 @@ function openAddEventRaw(){
   evImgData = null; evFileMeta = null;
   document.getElementById("ev-title").value="";
   const lbl = document.getElementById("ev-file-label");
-  lbl.classList.remove("has"); lbl.textContent="📤 לחץ לבחירת קובץ האירוע";
+  lbl.classList.remove("has"); lbl.textContent="📤 לחץ לבחירת קובץ הפריט";
   const prev = document.getElementById("ev-preview"); if(prev) prev.remove();
   document.getElementById("ev-save").disabled = true;
   document.getElementById("add-modal").classList.add("open");
@@ -2288,7 +2288,7 @@ async function saveEvent(){
       // מנהל — פרסום לכל 5 הסככות
       await publishEventToAllSheds(id, title, evFileMeta, evImgData, thumb);
       closeAddEvent();
-      toast("האירוע פורסם לכל 5 המסגרות 📢");
+      toast("הפריט פורסם לכל 5 המסגרות 📢");
       renderAdminDashboard();
       openWaPrompt("event", title);
     } else {
@@ -2299,9 +2299,9 @@ async function saveEvent(){
                       ftype:evFileMeta.type, fname:evFileMeta.name, mime:evFileMeta.mime, thumb});
       const okList = await sSetSafe("safety_events", events);
       if(!okList){ throw new Error("list-store-failed"); }
-      await logAction("פרסום אירוע בטיחות", title);
+      await logAction("פרסום קרא וחתום", title);
       closeAddEvent();
-      toast("האירוע פורסם לצוות 📢");
+      toast("הפריט פורסם לצוות 📢");
       renderDocs();
       openWaPrompt("event", title);
     }
@@ -2309,7 +2309,7 @@ async function saveEvent(){
     toast("⚠️ השמירה נכשלה — נסה קובץ קטן יותר");
     console.error("saveEvent error:", err);
   }finally{
-    saveBtn.textContent = "פרסום האירוע"; saveBtn.disabled = false;
+    saveBtn.textContent = "פרסום הפריט"; saveBtn.disabled = false;
   }
 }
 function loadImg(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
@@ -2769,7 +2769,7 @@ async function renderCommander(){
     const rc = events.filter(e=>sigs[e.id]).length;
     totalSigs += rc;
     if(totalDocs>0 && rc===totalDocs) fullSign++;
-    const pill = totalDocs===0 ? '<span class="pill y">אין אירועים</span>'
+    const pill = totalDocs===0 ? '<span class="pill y">אין פריטים</span>'
                : rc===totalDocs ? '<span class="pill g">חתם על הכל ✓</span>'
                : rc===0 ? '<span class="pill r">לא חתם</span>'
                : `<span class="pill y">${rc}/${totalDocs} נחתמו</span>`;
@@ -2880,7 +2880,7 @@ function openWaPrompt(kind, payload){
   const go = document.getElementById("wa-go");
   const title = document.getElementById("wa-title");
   const sub = document.getElementById("wa-sub");
-  if(kind==="event"){ title.textContent="האירוע פורסם ✅"; sub.textContent="שלח התראה לצוות לקרוא ולחתום"; }
+  if(kind==="event"){ title.textContent="הפריט פורסם ✅"; sub.textContent="שלח התראה לצוות לקרוא ולחתום"; }
   else if(kind==="board"){ title.textContent="הלוח עודכן ✅"; sub.textContent="עדכן את הצוות שיש לוח תורנויות חדש"; }
   else if(kind==="msg"){ title.textContent="ההודעה פורסמה ✅"; sub.textContent="שלח את ההודעה גם לקבוצת הוואטסאפ"; }
   // rebind the button fresh each time
@@ -2896,9 +2896,9 @@ function shareEventWA(title){
   const msg =
     "🔴 *עדכון באפליקציית טייסת 124 — " + waShedName() + "*\n" +
     "━━━━━━━━━━━━━━\n" +
-    "📄 *אירוע בטיחות חדש פורסם:*\n" +
+    "📄 *קרא וחתום חדש פורסם:*\n" +
     "\"" + title + "\"\n\n" +
-    "⚠️ *נדרשת פעולה:* יש להיכנס לאפליקציה, לקרוא את האירוע ולחתום שהמסר הועבר.\n\n" +
+    "⚠️ *נדרשת פעולה:* יש להיכנס לאפליקציה, לקרוא את הפריט ולחתום שהמסר הועבר.\n\n" +
     "🔗 " + SITE_URL;
   waShare(msg);
 }
@@ -3388,7 +3388,7 @@ async function renderReport(){
     <div class="report-box" id="report-box">
       <div class="report-head"><h3>📊 דוח סטטוס · טייסת 124</h3><p>${now.toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p></div>
       <div class="report-stat"><span class="rs-label">👥 אנשי צוות</span><span class="rs-val">${PERSONNEL.length}</span></div>
-      <div class="report-stat"><span class="rs-label">📄 אירועי בטיחות פעילים</span><span class="rs-val">${totalDocs}</span></div>
+      <div class="report-stat"><span class="rs-label">📄 קרא וחתום פעילים</span><span class="rs-val">${totalDocs}</span></div>
       <div class="report-stat"><span class="rs-label">✍️ אחוז חתימה כולל</span><span class="rs-val ${pct>=80?'g':''}">${pct}%</span></div>
       <div class="report-stat"><span class="rs-label">🧰 מטלות בוקר שבוצעו היום</span><span class="rs-val ${mDone===MORNING_TASKS.length?'g':''}">${mDone}/${MORNING_TASKS.length}</span></div>
       <div class="report-stat"><span class="rs-label">🛠️ תקלות פתוחות</span><span class="rs-val">${openF}</span></div>
@@ -3405,7 +3405,7 @@ async function exportReport(){
     const canvas = await window.html2canvas(box, {scale:2, backgroundColor:"#ffffff"});
     canvas.toBlob(blob=>{
       const url=URL.createObjectURL(blob);
-      const a=document.createElement("a"); a.href=url; a.download="דוח_בטיחות_124.png"; a.click();
+      const a=document.createElement("a"); a.href=url; a.download="דוח_קרא_וחתום_124.png"; a.click();
       URL.revokeObjectURL(url);
       toast("הדוח יוצא כתמונה 📸");
     });
@@ -3835,7 +3835,6 @@ async function renderAdminDashboard(){
   for(const shed of SHEDS){
     const personnel = (await sGetIn(shed.id, "cfg_personnel")) || [];
     const events = (await sGetIn(shed.id, "safety_events")) || [];
-    const faults = (await sGetIn(shed.id, "faults_list")) || [];
 
     // signatures
     let totalSigs = 0;
@@ -3845,7 +3844,6 @@ async function renderAdminDashboard(){
     }
     const maxSigs = personnel.length * events.length;
     const sigPct = maxSigs ? Math.round(totalSigs/maxSigs*100) : 0;
-    const openFaults = faults.filter(f=>f.status!=="closed").length;
     const num = shed.id.replace("shed","");
 
     html += `<div class="shed-card clickable" onclick="drillShed('${shed.id}')">
@@ -3856,9 +3854,8 @@ async function renderAdminDashboard(){
       </div>
       <div class="shed-stats">
         <div class="shed-stat info"><b>${personnel.length}</b><span>אנשי צוות</span></div>
-        <div class="shed-stat info"><b>${events.length}</b><span>אירועי בטיחות</span></div>
+        <div class="shed-stat info"><b>${events.length}</b><span>קרא וחתום</span></div>
         <div class="shed-stat ${sigPct>=80?'ok':sigPct>=40?'warn':'bad'}"><b>${maxSigs?sigPct+'%':'—'}</b><span>חתימות</span></div>
-        <div class="shed-stat ${openFaults===0?'ok':'bad'}"><b>${openFaults}</b><span>תקלות פתוחות</span></div>
       </div>
     </div>`;
   }
@@ -4275,9 +4272,7 @@ async function drillShed(shedId){
   const shed = SHEDS.find(s=>s.id===shedId); if(!shed) return;
   const personnel = (await sGetIn(shedId,"cfg_personnel")) || [];
   const events = (await sGetIn(shedId,"safety_events")) || [];
-  const faults = (await sGetIn(shedId,"faults_list")) || [];
   const certs = (await sGetIn(shedId,"certs_list")) || [];
-  const openF = faults.filter(f=>f.status!=="closed").length;
   const cmds = personnel.filter(p=>p.role==="מפקד");
   const sols = personnel.filter(p=>p.role==="חייל");
 
@@ -4286,16 +4281,13 @@ async function drillShed(shedId){
     <div class="m-sub">תמונת מצב מפורטת · לצפייה בלבד</div>
     <div class="drill-grid">
       <div class="drill-stat"><b>${personnel.length}</b><span>אנשי צוות</span></div>
-      <div class="drill-stat"><b>${events.length}</b><span>אירועי בטיחות</span></div>
-      <div class="drill-stat"><b>${openF}</b><span>תקלות פתוחות</span></div>
+      <div class="drill-stat"><b>${events.length}</b><span>קרא וחתום</span></div>
       <div class="drill-stat"><b>${certs.length}</b><span>הסמכות</span></div>
     </div>
     <div class="drill-sec">🎖️ מפקדים (${cmds.length})</div>
     <div class="drill-people">${cmds.length?cmds.map(p=>escapeHTML(p.name)).join(" · "):"—"}</div>
     <div class="drill-sec">👤 חיילים (${sols.length})</div>
     <div class="drill-people">${sols.length?sols.map(p=>escapeHTML(p.name)).join(" · "):"—"}</div>
-    <div class="drill-sec">🛠️ תקלות פתוחות</div>
-    <div class="drill-people">${openF?faults.filter(f=>f.status!=="closed").map(f=>escapeHTML(f.title)).join(" · "):"אין תקלות פתוחות ✅"}</div>
     <button class="m-btn ghost" onclick="document.getElementById('drill-modal').classList.remove('open')" style="width:100%;margin-top:14px">סגור</button>`;
   document.getElementById("drill-modal").classList.add("open");
 }
@@ -4431,7 +4423,7 @@ async function renderTrends(){
     <div class="db-today-grid">
       <div class="db-ring-card">
         <div class="db-ring" style="background:conic-gradient(var(--green) ${sigPct}%, var(--green-soft) 0)"><b>${maxSigs?sigPct+'%':'—'}</b></div>
-        <div class="db-ring-body"><b>חתימות בטיחות</b><span>${totalSigs} מתוך ${maxSigs} חתמו</span></div>
+        <div class="db-ring-body"><b>חתימות</b><span>${totalSigs} מתוך ${maxSigs} חתמו</span></div>
       </div>
       <div class="db-ring-card">
         <div class="db-ring" style="background:conic-gradient(var(--gold) ${MORNING_TASKS.length?Math.round(mDone/MORNING_TASKS.length*100):0}%, var(--gold-soft) 0)"><b>${mDone}/${MORNING_TASKS.length}</b></div>
@@ -5147,7 +5139,7 @@ async function renderProfileBanner(){
     <div class="pb-avatar">${initials(me.name)}</div>
     <div class="pb-info"><b>${escapeHTML(me.name)}</b><span>${currentShed?currentShed.name:""}</span></div>
     <div class="pb-stats">
-      <div class="pb-stat"><b>${signed}/${events.length}</b><span>אירועים נחתמו</span></div>
+      <div class="pb-stat"><b>${signed}/${events.length}</b><span>פריטים נחתמו</span></div>
       ${releaseHtml}
     </div>
   </div>`;
