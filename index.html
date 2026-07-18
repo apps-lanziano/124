@@ -1116,6 +1116,7 @@ nav{
       <div class="admin-grid">
         <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic">📋</span><b>דגשי בוקר / תדריך</b><span>תדריך יומי לצוות</span></button>
         <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
+        <button class="admin-card" onclick="cmdTab('report')"><span class="a-ic">📸</span><b>ייצוא דוח</b><span>תמונה לשיתוף</span></button>
       </div>
     </section>
 
@@ -4407,12 +4408,6 @@ async function renderTrends(){
           <div class="db-gauge-label">מדד מוכנות</div>
         </div>
       </div>
-      <div class="db-strip">
-        <div class="db-chip">🎓 <b>${certExpired+certSoon}</b> הסמכות דורשות טיפול</div>
-        <div class="db-chip">🧰 <b>${toolExpired+toolSoon}</b> כלים דורשים טיפול</div>
-        <div class="db-chip">🚙 <b>${vehExpired+vehSoon}</b> רכבים לטיפול</div>
-        <div class="db-chip">✅ <b>${mDone}/${MORNING_TASKS.length}</b> מטלות בוקר</div>
-      </div>
     </div>
 
     <div class="cmd-section-title">${priorityFeed.length? '🔴 דורש טיפול עכשיו' : '✅ סטטוס כללי'}${priorityFeed.length?` <span style="background:var(--red-soft);color:var(--red);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${priorityFeed.length}</span>`:''}</div>
@@ -4468,13 +4463,6 @@ async function renderTrends(){
         <div class="db-board-num">${naatim.length}</div>
         <div class="db-board-label">נע"תים · ${naatimOpen? naatimOpen+' טרם נבדקו השבוע' : 'כולם נבדקו השבוע'}</div>
       </div>
-    </div>
-
-    <div class="cmd-section-title">⚙️ ניהול מהיר</div>
-    <div class="db-actions-row">
-      <div class="db-action-btn" onclick="openBriefMgmt()"><span class="a-ic">📋</span><span>דגשי בוקר</span></div>
-      <div class="db-action-btn" onclick="openMsgMgmt()"><span class="a-ic">📢</span><span>לוח הודעות</span></div>
-      <div class="db-action-btn" onclick="cmdTab('report')"><span class="a-ic">📸</span><span>ייצוא דוח</span></div>
     </div>
   `;
 }
