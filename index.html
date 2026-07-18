@@ -1922,50 +1922,54 @@ async function doLogin(){
   if(person.role !== enteredRole){ toast("אין התאמה בין הקוד לשם ⛔"); return; }
   if(person.release && person.release <= todayKey()){ toast("חייל זה שוחרר מהמסגרת ⛔"); return; }
   setBtnLoading(btn, true);
-  user = person.name; userRole = person.role;
-  document.getElementById("login-overlay").style.display="none";
-  document.getElementById("hdr-username").textContent = user;
-  document.getElementById("hdr-rank").textContent = userRole === "מפקד" ? "🎖️ מפקד" : "👤 חייל";
-  document.getElementById("hdr-shed").textContent = "דרג א' · " + currentShed.name;
+  try{
+    user = person.name; userRole = person.role;
+    document.getElementById("login-overlay").style.display="none";
+    document.getElementById("hdr-username").textContent = user;
+    document.getElementById("hdr-rank").textContent = userRole === "מפקד" ? "🎖️ מפקד" : "👤 חייל";
+    document.getElementById("hdr-shed").textContent = "דרג א' · " + currentShed.name;
 
-  const navCmd = document.getElementById("nav-cmd");
-  const addBtn = document.getElementById("add-event-btn");
-  if(userRole === "מפקד"){
-    isCmd = true;
-    navCmd.classList.remove("hidden");
-    addBtn.classList.remove("hidden");
-  } else {
-    isCmd = false;
-    navCmd.classList.add("hidden");
-    addBtn.classList.add("hidden");
-  }
-  document.getElementById("safety-search").value = "";
-  if(userRole === "מפקד"){
-    document.getElementById("close-mgmt-btn").classList.remove("hidden");
-    document.getElementById("naatim-mgmt-btn").classList.remove("hidden");
-    document.getElementById("cert-add-btn").classList.remove("hidden");
-    document.getElementById("tools-add-btn").classList.remove("hidden");
-    document.getElementById("vehicles-add-btn").classList.remove("hidden");
-    document.getElementById("more-team-item").classList.remove("hidden");
-    document.getElementById("more-tasks-item").classList.remove("hidden");
-  } else {
-    document.getElementById("close-mgmt-btn").classList.add("hidden");
-    document.getElementById("naatim-mgmt-btn").classList.add("hidden");
-    document.getElementById("cert-add-btn").classList.add("hidden");
-    document.getElementById("tools-add-btn").classList.add("hidden");
-    document.getElementById("vehicles-add-btn").classList.add("hidden");
-    document.getElementById("more-team-item").classList.add("hidden");
-    document.getElementById("more-tasks-item").classList.add("hidden");
-  }
-  await refreshAll();
+    const navCmd = document.getElementById("nav-cmd");
+    const addBtn = document.getElementById("add-event-btn");
+    if(userRole === "מפקד"){
+      isCmd = true;
+      navCmd.classList.remove("hidden");
+      addBtn.classList.remove("hidden");
+    } else {
+      isCmd = false;
+      navCmd.classList.add("hidden");
+      addBtn.classList.add("hidden");
+    }
+    document.getElementById("safety-search").value = "";
+    if(userRole === "מפקד"){
+      document.getElementById("close-mgmt-btn").classList.remove("hidden");
+      document.getElementById("naatim-mgmt-btn").classList.remove("hidden");
+      document.getElementById("cert-add-btn").classList.remove("hidden");
+      document.getElementById("tools-add-btn").classList.remove("hidden");
+      document.getElementById("vehicles-add-btn").classList.remove("hidden");
+      document.getElementById("more-team-item").classList.remove("hidden");
+      document.getElementById("more-tasks-item").classList.remove("hidden");
+    } else {
+      document.getElementById("close-mgmt-btn").classList.add("hidden");
+      document.getElementById("naatim-mgmt-btn").classList.add("hidden");
+      document.getElementById("cert-add-btn").classList.add("hidden");
+      document.getElementById("tools-add-btn").classList.add("hidden");
+      document.getElementById("vehicles-add-btn").classList.add("hidden");
+      document.getElementById("more-team-item").classList.add("hidden");
+      document.getElementById("more-tasks-item").classList.add("hidden");
+    }
+    await refreshAll();
 
-  // commander lands on commander screen; soldier on safety
-  if(userRole === "מפקד"){
-    go("scr-cmd", document.querySelector('[data-scr="scr-cmd"]'));
-  } else {
-    go("scr-safety", document.querySelector('[data-scr="scr-safety"]'));
+    // commander lands on commander screen; soldier on safety
+    if(userRole === "מפקד"){
+      go("scr-cmd", document.querySelector('[data-scr="scr-cmd"]'));
+    } else {
+      go("scr-safety", document.querySelector('[data-scr="scr-safety"]'));
+    }
+    toast("ברוך הבא, " + user.split(" ")[0] + " 👋");
+  } finally {
+    setBtnLoading(btn, false);
   }
-  toast("ברוך הבא, " + user.split(" ")[0] + " 👋");
 }
 function logout(){
   user=null; userRole=null; isCmd=false; isAdmin=false;
