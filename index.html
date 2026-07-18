@@ -1978,14 +1978,14 @@ async function doLogin(){
       document.getElementById("more-team-item").classList.add("hidden");
       document.getElementById("more-tasks-item").classList.add("hidden");
     }
-    await refreshAll();
-
-    // commander lands on commander screen; soldier on safety
+    // commander lands on commander screen; soldier on safety —
+    // switched before refreshAll() so the wrong screen never flashes underneath the overlay
     if(userRole === "מפקד"){
       go("scr-cmd", document.querySelector('[data-scr="scr-cmd"]'));
     } else {
       go("scr-safety", document.querySelector('[data-scr="scr-safety"]'));
     }
+    await refreshAll();
     toast("ברוך הבא, " + user.split(" ")[0] + " 👋");
   } finally {
     setBtnLoading(btn, false);
