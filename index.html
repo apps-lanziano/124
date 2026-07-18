@@ -4319,10 +4319,6 @@ async function renderTrends(){
   // faults open/closed
   const openF = faults.filter(f=>f.status!=="closed").length;
 
-  // team composition
-  const cmdCount = PERSONNEL.filter(p=>p.role==="מפקד").length;
-  const solCount = PERSONNEL.filter(p=>p.role==="חייל").length;
-
   // certs (עליון/סף/רף/... + PF)
   const today = new Date(); today.setHours(0,0,0,0);
   const certs = await getCerts();
@@ -4366,11 +4362,6 @@ async function renderTrends(){
   const naatim = await getNaatim();
   const naatimChecks = (await sGet("naatim_checks_"+weekKey())) || {};
   const naatimOpen = naatim.filter(n=>!naatimChecks[n.id]).length;
-
-  // birthdays in the next 7 days
-  const bdayList = PERSONNEL.map(p=>({p, ...bdayInfo(p)})).sort((a,b)=>a.days-b.days);
-  const bdaySoon = bdayList.filter(b=>b.days<=7).length;
-  const nextBday = bdayList[0];
 
   // ===== מדד מוכנות מאוחד (0-100) =====
   let score = 100;
@@ -4424,20 +4415,6 @@ async function renderTrends(){
         <div class="db-ring" style="background:conic-gradient(var(--gold) ${MORNING_TASKS.length?Math.round(mDone/MORNING_TASKS.length*100):0}%, var(--gold-soft) 0)"><b>${mDone}/${MORNING_TASKS.length}</b></div>
         <div class="db-ring-body"><b>מטלות בוקר</b><span>${MORNING_TASKS.length-mDone} מטלות עדיין פתוחות</span></div>
       </div>
-    </div>
-
-    <div class="cmd-section-title">👥 צוות</div>
-    <div class="db-team-card">
-      <div class="db-team-top">
-        <b>${PERSONNEL.length} אנשי צוות</b>
-        <button class="db-team-manage" onclick="openTeamMgmt()">ניהול צוות ‹</button>
-      </div>
-      <div class="db-avatars">
-        ${PERSONNEL.slice(0,5).map(p=>`<div class="avatar" style="width:32px;height:32px;font-size:11px">${initials(p.name)}</div>`).join("")}
-        ${PERSONNEL.length>5?`<div class="avatar" style="width:32px;height:32px;font-size:11px;background:var(--ink-3)">+${PERSONNEL.length-5}</div>`:''}
-      </div>
-      <div class="db-team-stats"><span><b>${cmdCount}</b> מפקדים</span><span><b>${solCount}</b> חיילים</span></div>
-      ${nextBday?`<div class="db-bday-row"><span>🎂</span><span>${nextBday.days===0?`<b>${escapeHTML(nextBday.p.name)}</b> חוגג/ת היום!`:`<b>${escapeHTML(nextBday.p.name)}</b> — יום הולדת בעוד ${nextBday.days} ימים`}</span></div>`:''}
     </div>
 
     <div class="cmd-section-title">📊 מוכנות לפי תחום</div>
