@@ -1727,12 +1727,28 @@ const FIREBASE_CONFIG = {
 let fbDB = null, fbReady = false;
 const COLLECTION = "sq124";   // מסמכי הנתונים כולם תחת אוסף אחד
 
+/* App Check — מאמת שהבקשות ל-Firestore מגיעות מהאתר האמיתי ולא מסקריפט חיצוני.
+   ה-site key פומבי (בטוח שיהיה גלוי בקוד לקוח, בניגוד ל-secret key שנשאר רק ב-Firebase).
+   ה-debug token פעיל רק על localhost/127.0.0.1 — לבדיקות מקומיות בלבד; בפרודקשן עובד reCAPTCHA האמיתי. */
+const APPCHECK_SITE_KEY = "6LdR_1ktAAAAAAlzH7q7W7yA5FAVqmWHedoGXKb6";
+const APPCHECK_DEBUG_TOKEN = "DEA2B845-FC06-41A3-8B03-F03DBE9E21E5";
+
 async function initFirebase(){
   if(!FIREBASE_CONFIG.projectId){ console.log("Firebase not configured → local mode"); return; }
   try{
     const appMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
     const fsMod  = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
     const app = appMod.initializeApp(FIREBASE_CONFIG);
+
+    try{
+      if(location.hostname === "localhost" || location.hostname === "127.0.0.1"){
+        self.FIREBASE_APPCHECK_DEBUG_TOKEN = APPCHECK_DEBUG_TOKEN;
+      }
+      const acMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js");
+      acMod.initializeAppCheck(app, { provider: new acMod.ReCaptchaV3Provider(APPCHECK_SITE_KEY), isTokenAutoRefreshEnabled: true });
+      console.log("✅ App Check מופעל");
+    }catch(e){ console.error("App Check init failed (ממשיכים בלעדיו)", e); }
+
     fbDB = fsMod.getFirestore(app);
     fbDB._fs = fsMod; // stash module fns
     fbReady = true;
