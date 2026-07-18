@@ -819,7 +819,7 @@ nav{
 
     <!-- STEP 1: code entry -->
     <div id="login-step-code" style="width:100%;max-width:320px">
-      <input id="login-code" type="password" inputmode="numeric" placeholder="הזן קוד כניסה…" autocomplete="off"
+      <input id="login-code" type="tel" inputmode="numeric" placeholder="הזן קוד כניסה…" autocomplete="off"
         style="width:100%;padding:15px 18px;border-radius:14px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;font-family:'Heebo';font-size:16px;text-align:center;letter-spacing:4px;outline:none;transition:all .25s;backdrop-filter:blur(8px)">
       <button class="login-go" id="login-code-btn" onclick="checkCode()" style="margin-top:14px">המשך ←</button>
       <div class="login-note">הזן את קוד הכניסה של הצוות. קוד נפרד לחיילים ולמפקדים.</div>
@@ -1193,8 +1193,8 @@ nav{
     <button class="nav-btn" data-scr="scr-morning" onclick="go('scr-morning',this)"><span class="ic">✅</span><span>מטלות</span><span class="nav-badge hidden" id="badge-morning">0</span></button>
     <button class="nav-btn" data-scr="scr-board" onclick="go('scr-board',this)"><span class="ic">📅</span><span>לוח שבועי</span></button>
     <button class="nav-btn" data-scr="scr-certs" onclick="go('scr-certs',this)"><span class="ic">🎓</span><span>הסמכות</span></button>
-    <button class="nav-btn" data-scr="scr-tools" onclick="go('scr-tools',this)"><span class="ic">🧰</span><span>חדר כלים</span></button>
-    <button class="nav-btn" data-scr="scr-vehicles" onclick="go('scr-vehicles',this)"><span class="ic">🚙</span><span>רכבים</span></button>
+    <button class="nav-btn hidden" id="nav-tools" data-scr="scr-tools" onclick="go('scr-tools',this)"><span class="ic">🧰</span><span>חדר כלים</span></button>
+    <button class="nav-btn hidden" id="nav-vehicles" data-scr="scr-vehicles" onclick="go('scr-vehicles',this)"><span class="ic">🚙</span><span>רכבים</span></button>
     <button class="nav-btn" onclick="openMoreSheet()"><span class="ic">⋯</span><span>עוד</span></button>
     <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic">🏛️</span><span>מנהל</span></button>
   </nav>
@@ -1684,6 +1684,8 @@ let user = null, userRole = null;
 let mem = {};
 let currentDoc = null;
 let isCmd = false;
+let isToolsResp = false;   // נע"ת חדר כלים — הרשאות הוספה/עריכה
+let isVehiclesResp = false; // נע"ת רכבים — הרשאות הוספה/עריכה
 let evImgData = null;      // data URL of selected file
 let evFileMeta = null;     // {type:'image'|'pdf'|'word'|'ppt', name, mime}
 
@@ -1929,6 +1931,8 @@ async function doLogin(){
     document.getElementById("hdr-rank").textContent = userRole === "מפקד" ? "🎖️ מפקד" : "👤 חייל";
     document.getElementById("hdr-shed").textContent = "דרג א' · " + currentShed.name;
 
+    await refreshAreaPermissions();
+
     const navCmd = document.getElementById("nav-cmd");
     const addBtn = document.getElementById("add-event-btn");
     if(userRole === "מפקד"){
@@ -1941,20 +1945,20 @@ async function doLogin(){
       addBtn.classList.add("hidden");
     }
     document.getElementById("safety-search").value = "";
+    document.getElementById("nav-tools").classList.toggle("hidden", !isToolsResp);
+    document.getElementById("nav-vehicles").classList.toggle("hidden", !isVehiclesResp);
+    document.getElementById("tools-add-btn").classList.toggle("hidden", !isToolsResp);
+    document.getElementById("vehicles-add-btn").classList.toggle("hidden", !isVehiclesResp);
     if(userRole === "מפקד"){
       document.getElementById("close-mgmt-btn").classList.remove("hidden");
       document.getElementById("naatim-mgmt-btn").classList.remove("hidden");
       document.getElementById("cert-add-btn").classList.remove("hidden");
-      document.getElementById("tools-add-btn").classList.remove("hidden");
-      document.getElementById("vehicles-add-btn").classList.remove("hidden");
       document.getElementById("more-team-item").classList.remove("hidden");
       document.getElementById("more-tasks-item").classList.remove("hidden");
     } else {
       document.getElementById("close-mgmt-btn").classList.add("hidden");
       document.getElementById("naatim-mgmt-btn").classList.add("hidden");
       document.getElementById("cert-add-btn").classList.add("hidden");
-      document.getElementById("tools-add-btn").classList.add("hidden");
-      document.getElementById("vehicles-add-btn").classList.add("hidden");
       document.getElementById("more-team-item").classList.add("hidden");
       document.getElementById("more-tasks-item").classList.add("hidden");
     }
@@ -1972,11 +1976,13 @@ async function doLogin(){
   }
 }
 function logout(){
-  user=null; userRole=null; isCmd=false; isAdmin=false;
+  user=null; userRole=null; isCmd=false; isAdmin=false; isToolsResp=false; isVehiclesResp=false;
   // restore regular nav buttons
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.remove("hidden"));
   document.getElementById("nav-cmd").classList.add("hidden");
   document.getElementById("nav-admin").classList.add("hidden");
+  document.getElementById("nav-tools").classList.add("hidden");
+  document.getElementById("nav-vehicles").classList.add("hidden");
   document.getElementById("add-event-btn").classList.add("hidden");
   document.getElementById("more-team-item").classList.add("hidden");
   document.getElementById("more-tasks-item").classList.add("hidden");
@@ -2477,6 +2483,15 @@ async function toggleCloseTask(id){
 
 /* ============ נע"תים (NAATIM — areas of responsibility) ============ */
 async function getNaatim(){ return (await sGet("naatim_list")) || []; }
+
+/* נע"ת חדר כלים / רכבים — מעניק הרשאות הוספה ועריכה למי ששובץ לתחום, בנוסף למפקד.
+   ההתאמה היא לפי שם תחום מדויק ("חדר כלים" / "רכבים") ושם החייל המשובץ. */
+async function refreshAreaPermissions(){
+  const list = await getNaatim();
+  const has = area => list.some(n => n.area && n.area.trim()===area && n.person===user);
+  isToolsResp = userRole==="מפקד" || has("חדר כלים");
+  isVehiclesResp = userRole==="מפקד" || has("רכבים");
+}
 
 async function renderNaatim(){
   const items = await getNaatim();
@@ -4882,9 +4897,9 @@ async function renderToolsPage(){
   const box = document.getElementById("tools-page-list");
   if(!box) return;
   const tools = await getTools();
-  const isCmdr = userRole === "מפקד";
+  const isCmdr = isToolsResp;
   if(tools.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🧰</div><h3>אין עדיין כלים בחדר הכלים</h3><p>${isCmdr?'הוסף כלי באמצעות "+ כלי"':'המפקד טרם הזין כלים'}</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">🧰</div><h3>אין עדיין כלים בחדר הכלים</h3><p>${isCmdr?'הוסף כלי באמצעות "+ כלי"':'המפקד או אחראי חדר הכלים טרם הזין כלים'}</p></div>`;
     return;
   }
   const withStatus = tools.map(t=>({...t, st: toolStatus(t)}));
@@ -4994,9 +5009,9 @@ async function renderVehiclesPage(){
   const box = document.getElementById("vehicles-page-list");
   if(!box) return;
   const vehicles = await getVehicles();
-  const isCmdr = userRole === "מפקד";
+  const isCmdr = isVehiclesResp;
   if(vehicles.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🚙</div><h3>אין עדיין רכבים במעקב</h3><p>${isCmdr?'הוסף רכב באמצעות "+ רכב"':'המפקד טרם הזין רכבים'}</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">🚙</div><h3>אין עדיין רכבים במעקב</h3><p>${isCmdr?'הוסף רכב באמצעות "+ רכב"':'המפקד או אחראי הרכבים טרם הזין רכבים'}</p></div>`;
     return;
   }
   const withStatus = vehicles.map(v=>({...v, st: vehicleStatus(v)}));
