@@ -629,6 +629,18 @@ nav{
   text-align:center;box-shadow:var(--shadow);cursor:pointer}
 .db-action-btn .a-ic{font-size:17px;display:block;margin-bottom:4px}
 .db-action-btn span:last-child{font-size:10.5px;color:var(--ink-2);font-weight:600}
+.bo-qa-row{display:flex;gap:8px}
+.bo-qa-btn{flex:1;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.14);border-radius:10px;padding:9px 6px;text-align:center;color:#fff;cursor:pointer}
+.bo-qa-btn .a-ic{font-size:16px;display:block;margin-bottom:3px}
+.bo-qa-btn span:last-child{font-size:10px;font-weight:700}
+.bo-bar-card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--card)}
+.bo-bar-top{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;font-weight:700;margin-bottom:6px}
+.bo-bar-top span{font-size:10px;color:var(--ink-3);font-weight:400}
+.bo-bar-track{height:7px;background:var(--bg,#f3efe9);border-radius:99px;overflow:hidden}
+.bo-bar-fill{height:100%;border-radius:99px}
+.bo-bar-fill.g{background:var(--green)}
+.bo-bar-fill.y{background:var(--gold)}
+.bo-bar-fill.r{background:var(--red)}
 .trend-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
 .trend-card-title{font-size:13.5px;font-weight:800;margin-bottom:14px}
 .bar-chart{display:flex;align-items:flex-end;justify-content:space-between;gap:6px;height:120px}
@@ -1221,6 +1233,43 @@ nav{
       </div>
     </section>
 
+    <!-- ===== BUDGET OFFICER (אחראי תקציבים טייסתי) ===== -->
+    <section class="screen" id="scr-budget-officer">
+      <div class="sec-head">
+        <div>
+          <h2>אחראי תקציבים טייסתי 💰</h2>
+          <p>הקצאות, הוצאות ואישורים · תקציב טייסתי כולל</p>
+        </div>
+      </div>
+
+      <div class="cmd-tabs" style="margin-bottom:16px">
+        <button class="cmd-tab active" id="botab-overview" onclick="boTab('overview')">📊 סקירה</button>
+        <button class="cmd-tab" id="botab-allocations" onclick="boTab('allocations')">💵 הקצאות</button>
+        <button class="cmd-tab" id="botab-expenses" onclick="boTab('expenses')">🧾 הוצאות ואישורים</button>
+      </div>
+
+      <!-- PANE: OVERVIEW -->
+      <div class="admin-pane active" id="bopane-overview">
+        <div id="bo-overview-content"></div>
+      </div>
+
+      <!-- PANE: ALLOCATIONS -->
+      <div class="admin-pane" id="bopane-allocations">
+        <div class="admin-actions-row">
+          <button class="admin-card" style="grid-column:1/-1" onclick="openBoAllocationAdd()"><span class="a-ic">➕</span><b>הוספת הקצאה</b><span>מקור תקציב + סכום</span></button>
+        </div>
+        <div id="bo-allocations-list"></div>
+      </div>
+
+      <!-- PANE: EXPENSES -->
+      <div class="admin-pane" id="bopane-expenses">
+        <div class="admin-actions-row">
+          <button class="admin-card" style="grid-column:1/-1" onclick="openBoExpenseAdd()"><span class="a-ic">➕</span><b>הוספת הוצאה</b><span>סכום, קטגוריה ומקור</span></button>
+        </div>
+        <div id="bo-expenses-list"></div>
+      </div>
+    </section>
+
   </main>
 
   <!-- NAV -->
@@ -1235,6 +1284,7 @@ nav{
     <button class="nav-btn" onclick="openMoreSheet()"><span class="ic">⋯</span><span>עוד</span></button>
     <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic">🏛️</span><span>מנהל</span></button>
     <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic">🚙</span><span>קצין רכב</span></button>
+    <button class="nav-btn hidden" id="nav-budget-officer" data-scr="scr-budget-officer" onclick="go('scr-budget-officer',this)"><span class="ic">💰</span><span>תקציבים</span></button>
   </nav>
 
   <!-- DOC READER -->
@@ -1550,6 +1600,57 @@ nav{
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('vo-license-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUDGET OFFICER — ALLOCATION MODAL -->
+  <div class="modal-bg" id="bo-allocation-modal">
+    <div class="modal">
+      <h3 id="bo-allocation-title">💵 הוספת הקצאה</h3>
+      <div class="m-sub">מקור תקציב + סכום. שם המקור חופשי — הקלד לפי מה שמתאים.</div>
+      <div class="team-add-form">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏦 מקור תקציב</label>
+        <input class="m-input" id="bo-alloc-source" type="text" placeholder="לדוגמה: בסיס, אג&quot;ם, תרומה" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">💰 סכום (₪)</label>
+        <input class="m-input" id="bo-alloc-amount" type="number" min="0" placeholder="סכום ההקצאה" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך</label>
+        <input class="m-input" id="bo-alloc-date" type="date" style="margin-bottom:8px">
+        <input class="m-input" id="bo-alloc-note" type="text" placeholder="הערה (לא חובה)" style="margin-bottom:10px">
+        <button class="m-btn primary" onclick="saveBoAllocation()" style="width:100%">➕ הוסף הקצאה</button>
+      </div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn ghost" onclick="document.getElementById('bo-allocation-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUDGET OFFICER — EXPENSE MODAL -->
+  <div class="modal-bg" id="bo-expense-modal">
+    <div class="modal">
+      <h3 id="bo-expense-title">🧾 הוספת הוצאה</h3>
+      <div class="m-sub">סכום, קטגוריה ומקור תקציב.</div>
+      <div class="team-add-form">
+        <input class="m-input" id="bo-exp-desc" type="text" placeholder="תיאור ההוצאה" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗃️ קטגוריה — בחר מהמאגר או הקלד ידני למטה</label>
+        <select class="m-input" id="bo-exp-cat-pick" style="margin-bottom:8px" onchange="pickBoExpenseCatFromBank()"></select>
+        <input class="m-input" id="bo-exp-category" type="text" placeholder="קטגוריה" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏦 מקור תקציב</label>
+        <select class="m-input" id="bo-exp-source" style="margin-bottom:8px"></select>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">💰 סכום (₪)</label>
+        <input class="m-input" id="bo-exp-amount" type="number" min="0" placeholder="סכום ההוצאה" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך</label>
+        <input class="m-input" id="bo-exp-date" type="date" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📌 סטטוס</label>
+        <select class="m-input" id="bo-exp-status" style="margin-bottom:10px">
+          <option value="pending">ממתין לאישור</option>
+          <option value="approved">אושר</option>
+          <option value="rejected">נדחה</option>
+        </select>
+        <button class="m-btn primary" onclick="saveBoExpense()" style="width:100%">➕ הוסף הוצאה</button>
+      </div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn ghost" onclick="document.getElementById('bo-expense-modal').classList.remove('open')" style="flex:1">סגור</button>
       </div>
     </div>
   </div>
@@ -1931,11 +2032,13 @@ const SHEDS = [
 ];
 const ADMIN_CODE = "9124";   // קוד מנהל-על
 const VEHICLE_OFFICER_CODE = "8124";   // קוד קצין רכב טייסתי
+const BUDGET_OFFICER_CODE = "7124";   // קוד אחראי תקציבים טייסתי
 
 let currentShed = null;      // {id,name,...} של המסגרת הפעילה
 let isAdmin = false;         // מנהל-על
 let isVehicleOfficer = false; // קצין רכב טייסתי
-let enteredRole = null;      // "חייל" | "מפקד" | "מנהל" | "קצין רכב" after code check
+let isBudgetOfficer = false; // אחראי תקציבים טייסתי
+let enteredRole = null;      // "חייל" | "מפקד" | "מנהל" | "קצין רכב" | "אחראי תקציבים" after code check
 
 /* מפתח storage ממוספר לפי סככה — הפרדת נתונים מלאה */
 function shedKey(key){
@@ -1970,6 +2073,12 @@ async function checkCode(){
     if(code === VEHICLE_OFFICER_CODE){
       enteredRole = "קצין רכב"; isVehicleOfficer = true; currentShed = null;
       await vehicleOfficerLogin();
+      return;
+    }
+    // budget officer code?
+    if(code === BUDGET_OFFICER_CODE){
+      enteredRole = "אחראי תקציבים"; isBudgetOfficer = true; currentShed = null;
+      await budgetOfficerLogin();
       return;
     }
     // match against shed codes
@@ -2104,12 +2213,13 @@ async function doLogin(){
   }
 }
 function logout(){
-  user=null; userRole=null; isCmd=false; isAdmin=false; isVehicleOfficer=false; isToolsResp=false; isVehiclesResp=false;
+  user=null; userRole=null; isCmd=false; isAdmin=false; isVehicleOfficer=false; isBudgetOfficer=false; isToolsResp=false; isVehiclesResp=false;
   // restore regular nav buttons
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.remove("hidden"));
   document.getElementById("nav-cmd").classList.add("hidden");
   document.getElementById("nav-admin").classList.add("hidden");
   document.getElementById("nav-vehicle-officer").classList.add("hidden");
+  document.getElementById("nav-budget-officer").classList.add("hidden");
   document.getElementById("nav-tools").classList.add("hidden");
   document.getElementById("nav-vehicles").classList.add("hidden");
   document.getElementById("add-event-btn").classList.add("hidden");
@@ -2138,7 +2248,8 @@ function go(id, btn){
   if(id==="scr-vehicles") renderVehiclesPage();
   if(id==="scr-training") renderTrainingView();
   if(id==="scr-vehicle-officer") renderVoOverview();
-  if(id!=="scr-vehicle-officer"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסך קצין הרכב (אין לו סככה)
+  if(id==="scr-budget-officer") renderBoOverview();
+  if(id!=="scr-vehicle-officer" && id!=="scr-budget-officer"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי קצין הרכב/אחראי תקציבים (אין להם סככה)
 }
 
 /* ===== MORE SHEET ===== */
@@ -3592,6 +3703,19 @@ async function vehicleOfficerLogin(){
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
   go("scr-vehicle-officer", document.getElementById("nav-vehicle-officer"));
   toast("ברוך הבא, קצין רכב 🚙");
+}
+
+async function budgetOfficerLogin(){
+  user = "אחראי תקציבים טייסתי"; userRole = "אחראי תקציבים"; isBudgetOfficer = true;
+  document.getElementById("login-overlay").style.display = "none";
+  document.getElementById("hdr-username").textContent = user;
+  document.getElementById("hdr-rank").textContent = "💰 אחראי תקציבים";
+  document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
+  // hide regular nav functions; show only budget-officer screen
+  document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
+  document.getElementById("nav-budget-officer").classList.remove("hidden");
+  go("scr-budget-officer", document.getElementById("nav-budget-officer"));
+  toast("ברוך הבא, אחראי תקציבים 💰");
 }
 
 /* ============================================================
@@ -5575,6 +5699,328 @@ async function renderVoLicenses(){
         <button class="cert-chip-del" onclick="removeVoLicense('${l.id}')">✕</button>
       </div>
     </div>`).join("");
+}
+
+/* ============================================================
+   אחראי תקציבים טייסתי — הקצאות, הוצאות ואישורים
+   ============================================================ */
+const EXPENSE_CATEGORY_BANK = ["ציוד ואימונים", "רווחה ואירועים", "תחזוקה", "משרדי", "אחר"];
+const fmtILS = n => "₪" + Number(n||0).toLocaleString();
+
+async function getBoAllocations(){ return (await sGetRaw("bo_allocations_list")) || []; }
+async function getBoExpenses(){ return (await sGetRaw("bo_expenses_list")) || []; }
+
+function boTab(which){
+  ["overview","allocations","expenses"].forEach(w=>{
+    document.getElementById("botab-"+w).classList.toggle("active", which===w);
+    document.getElementById("bopane-"+w).classList.toggle("active", which===w);
+  });
+  if(which==="overview") renderBoOverview();
+  if(which==="allocations") renderBoAllocations();
+  if(which==="expenses") renderBoExpenses();
+}
+
+/* ===== ALLOCATIONS ===== */
+let boAllocEditId = null;
+function openBoAllocationAdd(){
+  boAllocEditId = null;
+  document.getElementById("bo-alloc-source").value = "";
+  document.getElementById("bo-alloc-amount").value = "";
+  document.getElementById("bo-alloc-date").value = todayKey();
+  document.getElementById("bo-alloc-note").value = "";
+  document.getElementById("bo-allocation-title").textContent = "💵 הוספת הקצאה";
+  document.querySelector("#bo-allocation-modal .m-btn.primary").textContent = "➕ הוסף הקצאה";
+  document.getElementById("bo-allocation-modal").classList.add("open");
+}
+async function openBoAllocationEdit(id){
+  const list = await getBoAllocations();
+  const a = list.find(x=>x.id===id);
+  if(!a) return;
+  boAllocEditId = id;
+  document.getElementById("bo-alloc-source").value = a.source;
+  document.getElementById("bo-alloc-amount").value = a.amount;
+  document.getElementById("bo-alloc-date").value = a.date || "";
+  document.getElementById("bo-alloc-note").value = a.note || "";
+  document.getElementById("bo-allocation-title").textContent = "✏️ עריכת הקצאה";
+  document.querySelector("#bo-allocation-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.getElementById("bo-allocation-modal").classList.add("open");
+}
+async function saveBoAllocation(){
+  const source = document.getElementById("bo-alloc-source").value.trim();
+  const amount = Number(document.getElementById("bo-alloc-amount").value);
+  const date = document.getElementById("bo-alloc-date").value;
+  const note = document.getElementById("bo-alloc-note").value.trim();
+  if(source.length<2){ toast("נא למלא מקור תקציב"); return; }
+  if(!amount || amount<=0){ toast("נא למלא סכום תקין"); return; }
+  const list = await getBoAllocations();
+  if(boAllocEditId){
+    const a = list.find(x=>x.id===boAllocEditId);
+    if(a){ a.source=source; a.amount=amount; a.date=date; a.note=note; }
+    boAllocEditId = null;
+    toast("ההקצאה עודכנה ✓");
+  } else {
+    list.push({id:"alloc"+Date.now(), source, amount, date, note});
+    toast("ההקצאה נוספה ✓");
+  }
+  await sSetRaw("bo_allocations_list", list);
+  document.getElementById("bo-allocation-modal").classList.remove("open");
+  renderBoAllocations();
+}
+async function removeBoAllocation(id){
+  if(!confirm("להסיר את ההקצאה?")) return;
+  let list = await getBoAllocations();
+  list = list.filter(a=>a.id!==id);
+  await sSetRaw("bo_allocations_list", list);
+  toast("ההקצאה הוסרה");
+  renderBoAllocations();
+}
+async function renderBoAllocations(){
+  const box = document.getElementById("bo-allocations-list");
+  if(!box) return;
+  const list = await getBoAllocations();
+  if(list.length===0){
+    box.innerHTML = `<div class="empty-state"><div class="ic">💵</div><h3>אין עדיין הקצאות</h3><p>הוסף הקצאה באמצעות "הוספת הקצאה"</p></div>`;
+    return;
+  }
+  const sorted = [...list].sort((a,b)=> (b.date||"").localeCompare(a.date||""));
+  box.innerHTML = sorted.map(a=>`
+    <div class="cert-sum-card" style="cursor:default">
+      <div class="cert-sum-head">
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">💵</div>
+        <div class="cert-sum-name"><b>${escapeHTML(a.source)}</b><span>${fmtILS(a.amount)}${a.date?(" · "+a.date):""}${a.note?(" · "+escapeHTML(a.note)):""}</span></div>
+        <button class="cert-chip-edit" onclick="openBoAllocationEdit('${a.id}')">✏️</button>
+        <button class="cert-chip-del" onclick="removeBoAllocation('${a.id}')">✕</button>
+      </div>
+    </div>`).join("");
+}
+
+/* ===== EXPENSES & APPROVALS ===== */
+function pickBoExpenseCatFromBank(){
+  const v = document.getElementById("bo-exp-cat-pick").value;
+  if(v) document.getElementById("bo-exp-category").value = v;
+}
+function expenseCatBankOptions(){
+  return '<option value="">— בחר מהמאגר —</option>' + EXPENSE_CATEGORY_BANK.map(c=>`<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`).join("");
+}
+async function populateBoExpenseSource(selected){
+  const allocations = await getBoAllocations();
+  const sources = [...new Set(allocations.map(a=>a.source))];
+  const sel = document.getElementById("bo-exp-source");
+  sel.innerHTML = '<option value="">— ללא מקור ספציפי —</option>' +
+    sources.map(s=>`<option value="${escapeHTML(s)}" ${s===selected?"selected":""}>${escapeHTML(s)}</option>`).join("");
+}
+let boExpenseEditId = null;
+async function openBoExpenseAdd(){
+  boExpenseEditId = null;
+  document.getElementById("bo-exp-desc").value = "";
+  document.getElementById("bo-exp-cat-pick").innerHTML = expenseCatBankOptions();
+  document.getElementById("bo-exp-category").value = "";
+  await populateBoExpenseSource();
+  document.getElementById("bo-exp-amount").value = "";
+  document.getElementById("bo-exp-date").value = todayKey();
+  document.getElementById("bo-exp-status").value = "pending";
+  document.getElementById("bo-expense-title").textContent = "🧾 הוספת הוצאה";
+  document.querySelector("#bo-expense-modal .m-btn.primary").textContent = "➕ הוסף הוצאה";
+  document.getElementById("bo-expense-modal").classList.add("open");
+}
+async function openBoExpenseEdit(id){
+  const list = await getBoExpenses();
+  const e = list.find(x=>x.id===id);
+  if(!e) return;
+  boExpenseEditId = id;
+  document.getElementById("bo-exp-desc").value = e.description;
+  document.getElementById("bo-exp-cat-pick").innerHTML = expenseCatBankOptions();
+  document.getElementById("bo-exp-category").value = e.category || "";
+  await populateBoExpenseSource(e.source);
+  document.getElementById("bo-exp-amount").value = e.amount;
+  document.getElementById("bo-exp-date").value = e.date || "";
+  document.getElementById("bo-exp-status").value = e.status || "pending";
+  document.getElementById("bo-expense-title").textContent = "✏️ עריכת הוצאה";
+  document.querySelector("#bo-expense-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.getElementById("bo-expense-modal").classList.add("open");
+}
+async function saveBoExpense(){
+  const description = document.getElementById("bo-exp-desc").value.trim();
+  const category = document.getElementById("bo-exp-category").value.trim();
+  const source = document.getElementById("bo-exp-source").value;
+  const amount = Number(document.getElementById("bo-exp-amount").value);
+  const date = document.getElementById("bo-exp-date").value;
+  const status = document.getElementById("bo-exp-status").value;
+  if(description.length<2){ toast("נא למלא תיאור הוצאה"); return; }
+  if(!amount || amount<=0){ toast("נא למלא סכום תקין"); return; }
+  const list = await getBoExpenses();
+  if(boExpenseEditId){
+    const e = list.find(x=>x.id===boExpenseEditId);
+    if(e){ e.description=description; e.category=category; e.source=source; e.amount=amount; e.date=date; e.status=status; }
+    boExpenseEditId = null;
+    toast("ההוצאה עודכנה ✓");
+  } else {
+    list.push({id:"exp"+Date.now(), description, category, source, amount, date, status});
+    toast("ההוצאה נוספה ✓");
+  }
+  await sSetRaw("bo_expenses_list", list);
+  document.getElementById("bo-expense-modal").classList.remove("open");
+  renderBoExpenses();
+}
+async function removeBoExpense(id){
+  if(!confirm("להסיר את ההוצאה?")) return;
+  let list = await getBoExpenses();
+  list = list.filter(e=>e.id!==id);
+  await sSetRaw("bo_expenses_list", list);
+  toast("ההוצאה הוסרה");
+  renderBoExpenses();
+}
+async function setBoExpenseStatus(id, status){
+  const list = await getBoExpenses();
+  const e = list.find(x=>x.id===id);
+  if(!e) return;
+  e.status = status;
+  await sSetRaw("bo_expenses_list", list);
+  toast(status==="approved" ? "ההוצאה אושרה ✓" : "ההוצאה נדחתה");
+  renderBoExpenses();
+  renderBoOverview();
+}
+function expenseStatusPill(status){
+  if(status==="approved") return {tag:"אושר", cls:"g"};
+  if(status==="rejected") return {tag:"נדחה", cls:"r"};
+  return {tag:"ממתין", cls:"y"};
+}
+async function renderBoExpenses(){
+  const box = document.getElementById("bo-expenses-list");
+  if(!box) return;
+  const list = await getBoExpenses();
+  if(list.length===0){
+    box.innerHTML = `<div class="empty-state"><div class="ic">🧾</div><h3>אין עדיין הוצאות</h3><p>הוסף הוצאה באמצעות "הוספת הוצאה"</p></div>`;
+    return;
+  }
+  const sorted = [...list].sort((a,b)=> (b.date||"").localeCompare(a.date||""));
+  box.innerHTML = sorted.map(e=>{
+    const st = expenseStatusPill(e.status);
+    const approveActions = e.status==="pending"
+      ? `<button class="cert-chip-edit" title="אישור" onclick="setBoExpenseStatus('${e.id}','approved')">✓</button><button class="cert-chip-edit" title="דחייה" onclick="setBoExpenseStatus('${e.id}','rejected')">✕</button>`
+      : "";
+    return `
+    <div class="cert-sum-card" style="cursor:default">
+      <div class="cert-sum-head">
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">🧾</div>
+        <div class="cert-sum-name"><b>${escapeHTML(e.description)}</b><span>${fmtILS(e.amount)}${e.category?(" · "+escapeHTML(e.category)):""}${e.source?(" · "+escapeHTML(e.source)):""}${e.date?(" · "+e.date):""}</span></div>
+        <span class="pill ${st.cls}" style="font-size:10px;white-space:nowrap">${st.tag}</span>
+        ${approveActions}
+        <button class="cert-chip-edit" onclick="openBoExpenseEdit('${e.id}')">✏️</button>
+        <button class="cert-chip-del" onclick="removeBoExpense('${e.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+/* ===== OVERVIEW DASHBOARD ===== */
+async function renderBoOverview(){
+  const box = document.getElementById("bo-overview-content");
+  if(!box) return;
+  box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען נתוני תקציב…</div>';
+
+  const allocations = await getBoAllocations();
+  const expenses = await getBoExpenses();
+
+  const totalAllocated = allocations.reduce((s,a)=> s+Number(a.amount||0), 0);
+  const approved = expenses.filter(e=>e.status==="approved");
+  const pending = expenses.filter(e=>e.status==="pending");
+  const totalSpent = approved.reduce((s,e)=> s+Number(e.amount||0), 0);
+  const remaining = totalAllocated - totalSpent;
+  const utilization = totalAllocated>0 ? Math.round(totalSpent/totalAllocated*100) : 0;
+  const scoreClamped = Math.max(0, Math.min(100, utilization));
+
+  const dateStr = new Date().toLocaleDateString("he-IL",{weekday:"long", day:"numeric", month:"long"});
+
+  // pending approvals feed
+  const pendingSorted = [...pending].sort((a,b)=> (b.date||"").localeCompare(a.date||""));
+  const feedHtml = pendingSorted.length===0
+    ? `<div class="db-all-clear"><b>✅ אין הוצאות ממתינות</b><span>כל ההוצאות טופלו</span></div>`
+    : `<div class="db-feed">${pendingSorted.map(e=>`
+        <div class="db-feed-item y">
+          <div class="db-feed-ic">🧾</div>
+          <div class="db-feed-body"><b>${escapeHTML(e.description)}</b><span>${fmtILS(e.amount)}${e.date?(" · "+e.date):""}</span></div>
+          <button class="cert-chip-edit" title="אישור" onclick="setBoExpenseStatus('${e.id}','approved')">✓</button>
+          <button class="cert-chip-edit" title="דחייה" onclick="setBoExpenseStatus('${e.id}','rejected')">✕</button>
+        </div>`).join("")}</div>`;
+
+  // recent history (all statuses)
+  const recentSorted = [...expenses].sort((a,b)=> (b.date||"").localeCompare(a.date||"")).slice(0,5);
+  const histHtml = recentSorted.length===0 ? `<div class="cmd-section-sub">אין עדיין הוצאות</div>` :
+    recentSorted.map(e=>{
+      const st = expenseStatusPill(e.status);
+      return `<div class="cert-sum-card clickable" style="cursor:pointer" onclick="boTab('expenses')">
+        <div class="cert-sum-head">
+          <div class="avatar" style="width:36px;height:36px;font-size:15px">🧾</div>
+          <div class="cert-sum-name"><b>${escapeHTML(e.description)}</b><span>${e.source?escapeHTML(e.source)+" · ":""}${e.date||""}</span></div>
+          <span class="pill ${st.cls}" style="font-size:10px;white-space:nowrap">${fmtILS(e.amount)} · ${st.tag}</span>
+        </div>
+      </div>`;
+    }).join("");
+
+  // by source
+  const sources = [...new Set(allocations.map(a=>a.source))];
+  const bySourceHtml = sources.length===0 ? "" : sources.map(src=>{
+    const srcAllocated = allocations.filter(a=>a.source===src).reduce((s,a)=>s+Number(a.amount||0),0);
+    const srcSpent = approved.filter(e=>e.source===src).reduce((s,e)=>s+Number(e.amount||0),0);
+    const pct = srcAllocated>0 ? Math.min(100, Math.round(srcSpent/srcAllocated*100)) : 0;
+    const cls = pct>=90?"r":pct>=70?"y":"g";
+    return `<div class="bo-bar-card">
+      <div class="bo-bar-top">${escapeHTML(src)} <span>${fmtILS(srcSpent)} / ${fmtILS(srcAllocated)}</span></div>
+      <div class="bo-bar-track"><div class="bo-bar-fill ${cls}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join("");
+
+  // by category (share of total approved spend)
+  const categories = [...new Set(approved.map(e=>e.category).filter(Boolean))];
+  const byCatHtml = categories.length===0 ? "" : categories.map(cat=>{
+    const catSpent = approved.filter(e=>e.category===cat).reduce((s,e)=>s+Number(e.amount||0),0);
+    const pct = totalSpent>0 ? Math.round(catSpent/totalSpent*100) : 0;
+    return `<div class="bo-bar-card">
+      <div class="bo-bar-top">${escapeHTML(cat)} <span>${fmtILS(catSpent)} · ${pct}% מהניצול</span></div>
+      <div class="bo-bar-track"><div class="bo-bar-fill g" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join("");
+
+  box.innerHTML = `
+    <div class="db-hero">
+      <div class="db-hero-top">
+        <div>
+          <div class="db-eyebrow">תקציב טייסתי כולל · דרג א׳</div>
+          <div class="db-title">אחראי תקציבים 💰</div>
+          <div class="db-date">${dateStr}</div>
+        </div>
+        <div class="db-score">
+          <div class="db-gauge" style="background:conic-gradient(#fff 0% ${scoreClamped}%, rgba(255,255,255,.28) ${scoreClamped}% 100%)"><b>${utilization}%</b></div>
+          <div class="db-gauge-label">ניצול תקציב</div>
+        </div>
+      </div>
+      <div class="db-today-grid" style="grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">
+        <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:8px 6px;text-align:center">
+          <b style="display:block;font-size:13px;font-weight:800">${fmtILS(totalAllocated)}</b><span style="font-size:9px;opacity:.85">סה"כ הוקצה</span>
+        </div>
+        <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:8px 6px;text-align:center">
+          <b style="display:block;font-size:13px;font-weight:800">${fmtILS(totalSpent)}</b><span style="font-size:9px;opacity:.85">אושר ונוצל</span>
+        </div>
+        <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:8px 6px;text-align:center">
+          <b style="display:block;font-size:13px;font-weight:800">${fmtILS(remaining)}</b><span style="font-size:9px;opacity:.85">יתרה</span>
+        </div>
+      </div>
+      <div class="bo-qa-row" style="margin-top:12px">
+        <div class="bo-qa-btn" onclick="openBoExpenseAdd()"><span class="a-ic">➕</span><span>הוצאה חדשה</span></div>
+        <div class="bo-qa-btn" onclick="openBoAllocationAdd()"><span class="a-ic">💵</span><span>הקצאה חדשה</span></div>
+      </div>
+    </div>
+
+    <div class="cmd-section-title">${pending.length? '🟡 ממתינות לאישור' : '✅ אין הוצאות ממתינות'}${pending.length?` <span style="background:var(--gold-soft);color:var(--gold);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${pending.length}</span>`:''}</div>
+    ${feedHtml}
+
+    <div class="cmd-section-title">🕓 היסטוריית הוצאות <span style="font-weight:400;color:var(--red);font-size:10.5px;cursor:pointer" onclick="boTab('expenses')">כל ההוצאות ›</span></div>
+    ${histHtml}
+
+    ${bySourceHtml? `<div class="cmd-section-title">💰 לפי מקור תקציב</div>${bySourceHtml}` : ""}
+    ${byCatHtml? `<div class="cmd-section-title">🏷️ לפי קטגוריה</div>${byCatHtml}` : ""}
+  `;
 }
 
 /* ===== FEATURE 24: DAILY BRIEF ===== */
