@@ -1194,12 +1194,18 @@ nav{
       </div>
 
       <div class="cmd-tabs" style="margin-bottom:16px">
-        <button class="cmd-tab active" id="votab-vehicles" onclick="voTab('vehicles')">🚙 רכבים</button>
+        <button class="cmd-tab active" id="votab-overview" onclick="voTab('overview')">📊 סקירה</button>
+        <button class="cmd-tab" id="votab-vehicles" onclick="voTab('vehicles')">🚙 רכבים</button>
         <button class="cmd-tab" id="votab-licenses" onclick="voTab('licenses')">🪪 רישיונות והסמכות</button>
       </div>
 
+      <!-- PANE: OVERVIEW -->
+      <div class="admin-pane active" id="vopane-overview">
+        <div id="vo-overview-content"></div>
+      </div>
+
       <!-- PANE: VEHICLES -->
-      <div class="admin-pane active" id="vopane-vehicles">
+      <div class="admin-pane" id="vopane-vehicles">
         <div class="admin-actions-row">
           <button class="admin-card" style="grid-column:1/-1" onclick="openVoVehicleAdd()"><span class="a-ic">➕</span><b>הוספת רכב</b><span>שיוך לסככה + כל פרטי המעקב</span></button>
         </div>
@@ -2131,7 +2137,7 @@ function go(id, btn){
   if(id==="scr-tools") renderToolsPage();
   if(id==="scr-vehicles") renderVehiclesPage();
   if(id==="scr-training") renderTrainingView();
-  if(id==="scr-vehicle-officer") renderVoVehicles();
+  if(id==="scr-vehicle-officer") renderVoOverview();
   if(id!=="scr-vehicle-officer"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסך קצין הרכב (אין לו סככה)
 }
 
@@ -5196,11 +5202,125 @@ async function renderVehiclesPage(){
 /* ============================================================
    קצין רכב טייסתי — מעקב רכבים ורישיונות בכל 5 הסככות
    ============================================================ */
+/* סקירה כללית — מד מוכנות צי, פיד דחיפויות מאוחד (רכבים+רישיונות) ופילוח לפי סככה */
+async function renderVoOverview(){
+  const box = document.getElementById("vo-overview-content");
+  if(!box) return;
+  box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען נתונים מכל המסגרות…</div>';
+
+  const feed = [];
+  let totalVehicles = 0, vehExpired = 0, vehSoon = 0, testExpired = 0, testSoon = 0;
+  const shedRows = [];
+
+  for(const shed of SHEDS){
+    const vehicles = (await sGetIn(shed.id, "vehicles_list")) || [];
+    totalVehicles += vehicles.length;
+    let shedWorst = "g";
+    const order = {r:0, y:1, g:2};
+    for(const v of vehicles){
+      const st = vehicleStatus(v);
+      if(order[st.cls] < order[shedWorst]) shedWorst = st.cls;
+      if(st.cls==="r" || st.cls==="y"){
+        feed.push({cls:st.cls, ic: v.testDate && st.tag.includes("טסט") ? "🛂" : "🚙", title:`${v.name} — ${shed.name}`, sub:st.tag, tag: st.cls==="r"?"דחוף":st.tag, go:"vehicles"});
+      }
+      if(st.tag.includes("טסט")){ if(st.cls==="r") testExpired++; else if(st.cls==="y") testSoon++; }
+      else if(st.cls==="r") vehExpired++; else if(st.cls==="y") vehSoon++;
+    }
+    shedRows.push({shed, count: vehicles.length, worst: shedWorst});
+  }
+
+  const licenses = await getVoLicenses();
+  let licExpired = 0, licSoon = 0, licValid = 0;
+  const shedName = id => (SHEDS.find(s=>s.id===id)||{}).name || id;
+  for(const l of licenses){
+    const st = licenseStatus(l);
+    if(st.cls==="r"){ licExpired++; feed.push({cls:"r", ic:"🪪", title:`${l.person} — ${l.type}`, sub:st.tag, tag:"דחוף", go:"licenses"}); }
+    else if(st.cls==="y"){ licSoon++; feed.push({cls:"y", ic:"🪪", title:`${l.person} — ${l.type}`, sub:st.tag, tag:st.tag, go:"licenses"}); }
+    else licValid++;
+  }
+
+  feed.sort((a,b)=> (a.cls===b.cls?0:(a.cls==="r"?-1:1)));
+
+  let score = 100;
+  score -= (vehExpired+testExpired+licExpired)*3 + (vehSoon+testSoon+licSoon)*1;
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  const dateStr = new Date().toLocaleDateString("he-IL",{weekday:"long", day:"numeric", month:"long"});
+  const feedHtml = feed.length===0
+    ? `<div class="db-all-clear"><b>✅ הכל תקין</b><span>אין רכבים, טסטים או רישיונות שדורשים תשומת לב כרגע</span></div>`
+    : `<div class="db-feed">${feed.map(f=>`
+        <div class="db-feed-item ${f.cls}" onclick="voTab('${f.go}')">
+          <div class="db-feed-ic">${f.ic}</div>
+          <div class="db-feed-body"><b>${escapeHTML(f.title)}</b><span>${escapeHTML(f.sub)}</span></div>
+          <div class="db-feed-tag">${escapeHTML(f.tag)}</div>
+          <div class="db-feed-chev">‹</div>
+        </div>`).join("")}</div>`;
+
+  const dotCls = w => w==="r"?"bad":w==="y"?"warn":"ok";
+  const shedHtml = shedRows.map(({shed,count,worst})=>`
+    <div class="shed-card clickable" onclick="voTab('vehicles')">
+      <div class="shed-card-head">
+        <h3><span class="shed-num">${shed.id.replace("shed","")}</span>${shed.name}</h3>
+        <span class="drill-hint">${count} רכבים ›</span>
+      </div>
+      <div class="shed-stats">
+        <div class="shed-stat ${dotCls(worst)}"><b>${worst==="g"?"✓":worst==="y"?"!":"⚠"}</b><span>${worst==="g"?"הכל בתוקף":worst==="y"?"טיפול קרוב":"דורש טיפול"}</span></div>
+      </div>
+    </div>`).join("");
+
+  box.innerHTML = `
+    <div class="db-hero">
+      <div class="db-hero-top">
+        <div>
+          <div class="db-eyebrow">כלל 5 הסככות · דרג א׳</div>
+          <div class="db-title">קצין רכב טייסתי 🚙</div>
+          <div class="db-date">${dateStr}</div>
+        </div>
+        <div class="db-score">
+          <div class="db-gauge" style="background:conic-gradient(#fff 0% ${score}%, rgba(255,255,255,.28) ${score}% 100%)"><b>${score}%</b></div>
+          <div class="db-gauge-label">מוכנות צי</div>
+        </div>
+      </div>
+      <div class="db-strip">
+        <div class="db-chip">🚙 <b>${totalVehicles}</b> רכבים במעקב</div>
+        <div class="db-chip">🪪 <b>${licValid+licSoon}</b> רישיונות בתוקף</div>
+      </div>
+    </div>
+
+    <div class="cmd-section-title">${feed.length? '🔴 דורש טיפול עכשיו' : '✅ סטטוס כללי'}${feed.length?` <span style="background:var(--red-soft);color:var(--red);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${feed.length}</span>`:''}</div>
+    ${feedHtml}
+
+    <div class="cmd-section-title">📊 תמונת מצב</div>
+    <div class="db-board">
+      <div class="db-board-card" onclick="voTab('vehicles')">
+        <div class="db-board-top"><div class="db-board-ic">🚙</div><div class="db-board-dot ${vehExpired?'r':vehSoon?'y':'g'}"></div></div>
+        <div class="db-board-num">${totalVehicles}</div>
+        <div class="db-board-label">רכבים · ${vehExpired+vehSoon? (vehExpired+vehSoon)+' דורשים טיפול' : 'הכל בתוקף'}</div>
+      </div>
+      <div class="db-board-card" onclick="voTab('vehicles')">
+        <div class="db-board-top"><div class="db-board-ic">🛂</div><div class="db-board-dot ${testExpired?'r':testSoon?'y':'g'}"></div></div>
+        <div class="db-board-num">${totalVehicles}</div>
+        <div class="db-board-label">טסטים · ${testExpired+testSoon? (testExpired+testSoon)+' דורשים טיפול' : 'הכל בתוקף'}</div>
+      </div>
+      <div class="db-board-card" onclick="voTab('licenses')">
+        <div class="db-board-top"><div class="db-board-ic">🪪</div><div class="db-board-dot ${licExpired?'r':licSoon?'y':'g'}"></div></div>
+        <div class="db-board-num">${licenses.length}</div>
+        <div class="db-board-label">רישיונות · ${licExpired+licSoon? (licExpired+licSoon)+' דורשים טיפול' : 'הכל בתוקף'}</div>
+      </div>
+    </div>
+
+    <div class="cmd-section-title">🏷️ לפי סככה</div>
+    <div class="cmd-section-sub">לחיצה פותחת את רשימת הרכבים</div>
+    ${shedHtml}
+  `;
+}
+
 function voTab(which){
-  ["vehicles","licenses"].forEach(w=>{
+  ["overview","vehicles","licenses"].forEach(w=>{
     document.getElementById("votab-"+w).classList.toggle("active", which===w);
     document.getElementById("vopane-"+w).classList.toggle("active", which===w);
   });
+  if(which==="overview") renderVoOverview();
   if(which==="vehicles") renderVoVehicles();
   if(which==="licenses") renderVoLicenses();
 }
