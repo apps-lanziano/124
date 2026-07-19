@@ -1184,6 +1184,37 @@ nav{
       </div>
     </section>
 
+    <!-- ===== VEHICLE OFFICER (קצין רכב טייסתי) ===== -->
+    <section class="screen" id="scr-vehicle-officer">
+      <div class="sec-head">
+        <div>
+          <h2>קצין רכב טייסתי 🚙</h2>
+          <p>מעקב רכבים ורישיונות · כלל 5 הסככות</p>
+        </div>
+      </div>
+
+      <div class="cmd-tabs" style="margin-bottom:16px">
+        <button class="cmd-tab active" id="votab-vehicles" onclick="voTab('vehicles')">🚙 רכבים</button>
+        <button class="cmd-tab" id="votab-licenses" onclick="voTab('licenses')">🪪 רישיונות והסמכות</button>
+      </div>
+
+      <!-- PANE: VEHICLES -->
+      <div class="admin-pane active" id="vopane-vehicles">
+        <div class="admin-actions-row">
+          <button class="admin-card" style="grid-column:1/-1" onclick="openVoVehicleAdd()"><span class="a-ic">➕</span><b>הוספת רכב</b><span>שיוך לסככה + כל פרטי המעקב</span></button>
+        </div>
+        <div id="vo-vehicles-list"></div>
+      </div>
+
+      <!-- PANE: LICENSES -->
+      <div class="admin-pane" id="vopane-licenses">
+        <div class="admin-actions-row">
+          <button class="admin-card" style="grid-column:1/-1" onclick="openVoLicenseAdd()"><span class="a-ic">➕</span><b>הוספת רישיון/הסמכה</b><span>לכל חייל בכל סככה</span></button>
+        </div>
+        <div id="vo-licenses-list"></div>
+      </div>
+    </section>
+
   </main>
 
   <!-- NAV -->
@@ -1197,6 +1228,7 @@ nav{
     <button class="nav-btn hidden" id="nav-vehicles" data-scr="scr-vehicles" onclick="go('scr-vehicles',this)"><span class="ic">🚙</span><span>רכבים</span></button>
     <button class="nav-btn" onclick="openMoreSheet()"><span class="ic">⋯</span><span>עוד</span></button>
     <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic">🏛️</span><span>מנהל</span></button>
+    <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic">🚙</span><span>קצין רכב</span></button>
   </nav>
 
   <!-- DOC READER -->
@@ -1446,6 +1478,72 @@ nav{
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('vehicle-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VEHICLE OFFICER — VEHICLE MODAL (כלל הסככות) -->
+  <div class="modal-bg" id="vo-vehicle-modal">
+    <div class="modal">
+      <h3 id="vo-vehicle-title">🚙 הוספת רכב למעקב</h3>
+      <div class="m-sub">שיוך לסככה + כל פרטי המעקב.</div>
+      <div class="team-add-form">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏷️ סככה משוייכת</label>
+        <select class="m-input" id="vo-vehicle-shed" style="margin-bottom:8px"></select>
+        <select class="m-input" id="vo-vehicle-bank-pick" style="margin-bottom:8px" onchange="pickVoVehicleFromBank()"></select>
+        <input class="m-input" id="vo-vehicle-name" type="text" placeholder="שם/סוג הרכב" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מספר רכב</label>
+        <input class="m-input" id="vo-vehicle-number" type="text" placeholder="מס' רכב" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך טיפול הבא</label>
+        <input class="m-input" id="vo-vehicle-next-service" type="date" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🛂 תאריך טסט</label>
+        <input class="m-input" id="vo-vehicle-test" type="date" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📏 ק"מ נוכחי</label>
+        <input class="m-input" id="vo-vehicle-km" type="number" min="0" placeholder="ק&quot;מ נוכחי" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📏 ק"מ לטיפול הבא</label>
+        <input class="m-input" id="vo-vehicle-km-service" type="number" min="0" placeholder="לדוגמה: 120000" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">⏱️ שעות מנוע</label>
+        <input class="m-input" id="vo-vehicle-hours" type="number" min="0" placeholder="שעות מנוע נוכחיות" style="margin-bottom:10px">
+        <button class="m-btn primary" onclick="saveVoVehicle()" style="width:100%">➕ הוסף רכב</button>
+      </div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn ghost" onclick="document.getElementById('vo-vehicle-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VEHICLE OFFICER — UPDATE KM MODAL -->
+  <div class="modal-bg" id="vo-km-modal">
+    <div class="modal">
+      <h3>📏 עדכון ק"מ</h3>
+      <div class="m-sub" id="vo-km-sub"></div>
+      <div class="team-add-form">
+        <input class="m-input" id="vo-km-value" type="number" min="0" placeholder="ק&quot;מ נוכחי" style="margin-bottom:10px">
+        <button class="m-btn primary" onclick="saveVoKmUpdate()" style="width:100%">💾 עדכן ק"מ</button>
+      </div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn ghost" onclick="document.getElementById('vo-km-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VEHICLE OFFICER — LICENSE MODAL (כלל הסככות) -->
+  <div class="modal-bg" id="vo-license-modal">
+    <div class="modal">
+      <h3 id="vo-license-title">🪪 הוספת רישיון/הסמכה</h3>
+      <div class="m-sub">רישיונות נהיגה והסמכות רכב, לכל חייל בכל סככה.</div>
+      <div class="team-add-form">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">👤 חייל</label>
+        <select class="m-input" id="vo-license-person" style="margin-bottom:8px"></select>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗃️ בחר מהמאגר — או הקלד ידני למטה</label>
+        <select class="m-input" id="vo-license-bank-pick" style="margin-bottom:8px" onchange="pickVoLicenseFromBank()"></select>
+        <input class="m-input" id="vo-license-type" type="text" placeholder="סוג רישיון/הסמכה" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תוקף עד</label>
+        <input class="m-input" id="vo-license-expiry" type="date" style="margin-bottom:10px">
+        <button class="m-btn primary" onclick="saveVoLicense()" style="width:100%">➕ הוסף</button>
+      </div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn ghost" onclick="document.getElementById('vo-license-modal').classList.remove('open')" style="flex:1">סגור</button>
       </div>
     </div>
   </div>
@@ -1826,10 +1924,12 @@ const SHEDS = [
   {id:"shed5", name:"סככה 5", soldierCode:"1501", commanderCode:"1509"}
 ];
 const ADMIN_CODE = "9124";   // קוד מנהל-על
+const VEHICLE_OFFICER_CODE = "8124";   // קוד קצין רכב טייסתי
 
 let currentShed = null;      // {id,name,...} של המסגרת הפעילה
 let isAdmin = false;         // מנהל-על
-let enteredRole = null;      // "חייל" | "מפקד" | "מנהל" after code check
+let isVehicleOfficer = false; // קצין רכב טייסתי
+let enteredRole = null;      // "חייל" | "מפקד" | "מנהל" | "קצין רכב" after code check
 
 /* מפתח storage ממוספר לפי סככה — הפרדת נתונים מלאה */
 function shedKey(key){
@@ -1858,6 +1958,12 @@ async function checkCode(){
     if(code === ADMIN_CODE){
       enteredRole = "מנהל"; isAdmin = true; currentShed = null;
       await adminLogin();
+      return;
+    }
+    // vehicle officer code?
+    if(code === VEHICLE_OFFICER_CODE){
+      enteredRole = "קצין רכב"; isVehicleOfficer = true; currentShed = null;
+      await vehicleOfficerLogin();
       return;
     }
     // match against shed codes
@@ -1992,11 +2098,12 @@ async function doLogin(){
   }
 }
 function logout(){
-  user=null; userRole=null; isCmd=false; isAdmin=false; isToolsResp=false; isVehiclesResp=false;
+  user=null; userRole=null; isCmd=false; isAdmin=false; isVehicleOfficer=false; isToolsResp=false; isVehiclesResp=false;
   // restore regular nav buttons
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.remove("hidden"));
   document.getElementById("nav-cmd").classList.add("hidden");
   document.getElementById("nav-admin").classList.add("hidden");
+  document.getElementById("nav-vehicle-officer").classList.add("hidden");
   document.getElementById("nav-tools").classList.add("hidden");
   document.getElementById("nav-vehicles").classList.add("hidden");
   document.getElementById("add-event-btn").classList.add("hidden");
@@ -2024,8 +2131,8 @@ function go(id, btn){
   if(id==="scr-tools") renderToolsPage();
   if(id==="scr-vehicles") renderVehiclesPage();
   if(id==="scr-training") renderTrainingView();
-  renderMessages();   // הודעות מופיעות בכל המסכים
-  renderBrief();
+  if(id==="scr-vehicle-officer") renderVoVehicles();
+  if(id!=="scr-vehicle-officer"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסך קצין הרכב (אין לו סככה)
 }
 
 /* ===== MORE SHEET ===== */
@@ -3466,6 +3573,19 @@ async function adminLogin(){
   go("scr-admin", document.getElementById("nav-admin"));
   renderMessages();
   toast("ברוך הבא, מנהל 🏛️");
+}
+
+async function vehicleOfficerLogin(){
+  user = "קצין רכב טייסתי"; userRole = "קצין רכב"; isVehicleOfficer = true;
+  document.getElementById("login-overlay").style.display = "none";
+  document.getElementById("hdr-username").textContent = user;
+  document.getElementById("hdr-rank").textContent = "🚙 קצין רכב";
+  document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
+  // hide regular nav functions; show only vehicle-officer screen
+  document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
+  document.getElementById("nav-vehicle-officer").classList.remove("hidden");
+  go("scr-vehicle-officer", document.getElementById("nav-vehicle-officer"));
+  toast("ברוך הבא, קצין רכב 🚙");
 }
 
 /* ============================================================
@@ -5012,14 +5132,34 @@ async function removeVehicleById(id){
   toast("הרכב הוסר מהמעקב");
 }
 /* סטטוס טיפול רכב — שבועיים לפני = צהוב, אחרי המועד = אדום */
+const VEHICLES_TEST_ALERT_DAYS = 30;   /* חודש לפני פקיעת טסט */
+const VEHICLES_KM_ALERT_BUFFER = 500;  /* 500 ק"מ לפני יעד הטיפול */
+
+/* בודק את כל ממדי המעקב (תאריך טיפול, טסט, ק"מ) ומחזיר את החמור מביניהם */
 function vehicleStatus(v){
-  if(!v.nextService) return {tag:"אין טיפול מתוזמן", cls:"g"};
   const today = new Date(); today.setHours(0,0,0,0);
-  const next = new Date(v.nextService+"T00:00:00");
-  const d = Math.round((next-today)/86400000);
-  if(d<0) return {tag:"עבר מועד הטיפול! ("+Math.abs(d)+" ימים)", cls:"r"};
-  if(d<=VEHICLES_ALERT_DAYS) return {tag:d+" ימים לטיפול", cls:"y"};
-  return {tag:"בתוקף", cls:"g"};
+  const checks = [];
+
+  if(v.nextService){
+    const d = Math.round((new Date(v.nextService+"T00:00:00")-today)/86400000);
+    if(d<0) checks.push({tag:"עבר מועד הטיפול! ("+Math.abs(d)+" ימים)", cls:"r", pri:d});
+    else if(d<=VEHICLES_ALERT_DAYS) checks.push({tag:d+" ימים לטיפול", cls:"y", pri:d});
+  }
+  if(v.testDate){
+    const d = Math.round((new Date(v.testDate+"T00:00:00")-today)/86400000);
+    if(d<0) checks.push({tag:"טסט פג תוקף! ("+Math.abs(d)+" ימים)", cls:"r", pri:d});
+    else if(d<=VEHICLES_TEST_ALERT_DAYS) checks.push({tag:"טסט בעוד "+d+" ימים", cls:"y", pri:d});
+  }
+  if(v.kmService && v.km!=null && v.km!==""){
+    const left = Number(v.kmService) - Number(v.km);
+    if(left<0) checks.push({tag:"עבר יעד ק\"מ לטיפול! (חריגה של "+Math.abs(left)+' ק"מ)', cls:"r", pri:left});
+    else if(left<=VEHICLES_KM_ALERT_BUFFER) checks.push({tag:left+' ק"מ לטיפול', cls:"y", pri:left});
+  }
+
+  if(checks.length===0) return {tag:"בתוקף", cls:"g"};
+  const order = {r:0, y:1};
+  checks.sort((a,b)=> order[a.cls]-order[b.cls] || a.pri-b.pri);
+  return checks[0];
 }
 async function renderVehiclesPage(){
   const box = document.getElementById("vehicles-page-list");
@@ -5051,6 +5191,270 @@ async function renderVehiclesPage(){
       </div>
     </div>`).join("");
   box.innerHTML = banner + cards;
+}
+
+/* ============================================================
+   קצין רכב טייסתי — מעקב רכבים ורישיונות בכל 5 הסככות
+   ============================================================ */
+function voTab(which){
+  ["vehicles","licenses"].forEach(w=>{
+    document.getElementById("votab-"+w).classList.toggle("active", which===w);
+    document.getElementById("vopane-"+w).classList.toggle("active", which===w);
+  });
+  if(which==="vehicles") renderVoVehicles();
+  if(which==="licenses") renderVoLicenses();
+}
+
+let voVehicleCtx = null; // {shedId, id} כשעורכים רכב קיים, null כשמוסיפים חדש
+
+async function renderVoVehicles(){
+  const box = document.getElementById("vo-vehicles-list");
+  if(!box) return;
+  box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען רכבים מכל המסגרות…</div>';
+  let html = "";
+  let anyVehicle = false;
+  for(const shed of SHEDS){
+    const vehicles = (await sGetIn(shed.id, "vehicles_list")) || [];
+    if(vehicles.length===0) continue;
+    anyVehicle = true;
+    const withStatus = vehicles.map(v=>({...v, st: vehicleStatus(v)}));
+    const order = {r:0, y:1, g:2};
+    withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
+    html += `<div class="cmd-section-title">${shed.name}</div>` + withStatus.map(v=>`
+      <div class="cert-sum-card" style="cursor:default">
+        <div class="cert-sum-head">
+          <div class="avatar" style="width:40px;height:40px;font-size:18px">🚙</div>
+          <div class="cert-sum-name"><b>${escapeHTML(v.name)}</b><span>${v.number?("מס' "+escapeHTML(v.number)):"ללא מספר"}${v.km!=null && v.km!==""?(" · "+Number(v.km).toLocaleString()+' ק"מ'):""}</span></div>
+          <span class="pill ${v.st.cls}" style="font-size:10px;white-space:nowrap">${v.st.tag}</span>
+          <button class="cert-chip-edit" title="עדכון ק&quot;מ" onclick="openVoKmUpdate('${shed.id}','${v.id}')">📏</button>
+          <button class="cert-chip-edit" onclick="openVoVehicleEdit('${shed.id}','${v.id}')">✏️</button>
+          <button class="cert-chip-del" onclick="removeVoVehicle('${shed.id}','${v.id}')">✕</button>
+        </div>
+      </div>`).join("");
+  }
+  if(!anyVehicle){
+    box.innerHTML = `<div class="empty-state"><div class="ic">🚙</div><h3>אין עדיין רכבים במעקב</h3><p>הוסף רכב באמצעות "הוספת רכב"</p></div>`;
+    return;
+  }
+  box.innerHTML = html;
+}
+
+function voShedOptions(selected){
+  return SHEDS.map(s=>`<option value="${s.id}" ${s.id===selected?"selected":""}>${escapeHTML(s.name)}</option>`).join("");
+}
+function pickVoVehicleFromBank(){
+  const v = document.getElementById("vo-vehicle-bank-pick").value;
+  if(v) document.getElementById("vo-vehicle-name").value = v;
+}
+function openVoVehicleAdd(){
+  voVehicleCtx = null;
+  document.getElementById("vo-vehicle-shed").innerHTML = voShedOptions();
+  document.getElementById("vo-vehicle-bank-pick").innerHTML = vehicleBankOptions();
+  document.getElementById("vo-vehicle-name").value = "";
+  document.getElementById("vo-vehicle-number").value = "";
+  document.getElementById("vo-vehicle-next-service").value = "";
+  document.getElementById("vo-vehicle-test").value = "";
+  document.getElementById("vo-vehicle-km").value = "";
+  document.getElementById("vo-vehicle-km-service").value = "";
+  document.getElementById("vo-vehicle-hours").value = "";
+  document.getElementById("vo-vehicle-title").textContent = "🚙 הוספת רכב למעקב";
+  document.querySelector("#vo-vehicle-modal .m-btn.primary").textContent = "➕ הוסף רכב";
+  document.getElementById("vo-vehicle-modal").classList.add("open");
+}
+async function openVoVehicleEdit(shedId, id){
+  const vehicles = (await sGetIn(shedId, "vehicles_list")) || [];
+  const v = vehicles.find(x=>x.id===id);
+  if(!v) return;
+  voVehicleCtx = {shedId, id};
+  document.getElementById("vo-vehicle-shed").innerHTML = voShedOptions(shedId);
+  document.getElementById("vo-vehicle-bank-pick").innerHTML = vehicleBankOptions();
+  document.getElementById("vo-vehicle-name").value = v.name;
+  document.getElementById("vo-vehicle-number").value = v.number || "";
+  document.getElementById("vo-vehicle-next-service").value = v.nextService || "";
+  document.getElementById("vo-vehicle-test").value = v.testDate || "";
+  document.getElementById("vo-vehicle-km").value = v.km ?? "";
+  document.getElementById("vo-vehicle-km-service").value = v.kmService ?? "";
+  document.getElementById("vo-vehicle-hours").value = v.hours ?? "";
+  document.getElementById("vo-vehicle-title").textContent = "✏️ עריכת רכב";
+  document.querySelector("#vo-vehicle-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.getElementById("vo-vehicle-modal").classList.add("open");
+}
+async function saveVoVehicle(){
+  const shedId = document.getElementById("vo-vehicle-shed").value;
+  const name = document.getElementById("vo-vehicle-name").value.trim();
+  const number = document.getElementById("vo-vehicle-number").value.trim();
+  const nextService = document.getElementById("vo-vehicle-next-service").value;
+  const testDate = document.getElementById("vo-vehicle-test").value;
+  const kmVal = document.getElementById("vo-vehicle-km").value;
+  const kmServiceVal = document.getElementById("vo-vehicle-km-service").value;
+  const hoursVal = document.getElementById("vo-vehicle-hours").value;
+  if(name.length<2){ toast("נא למלא שם/סוג רכב"); return; }
+  const km = kmVal===""?null:Number(kmVal);
+  const kmService = kmServiceVal===""?null:Number(kmServiceVal);
+  const hours = hoursVal===""?null:Number(hoursVal);
+
+  if(voVehicleCtx && voVehicleCtx.shedId===shedId){
+    const vehicles = (await sGetIn(shedId, "vehicles_list")) || [];
+    const v = vehicles.find(x=>x.id===voVehicleCtx.id);
+    if(v){ v.name=name; v.number=number; v.nextService=nextService; v.testDate=testDate; v.km=km; v.kmService=kmService; v.hours=hours; }
+    await sSetIn(shedId, "vehicles_list", vehicles);
+    toast("הרכב עודכן ✓");
+  } else {
+    // עריכה עם שינוי סככה = מעבר רכב: מוחקים מהסככה הישנה, מוסיפים לחדשה
+    if(voVehicleCtx){
+      const oldList = (await sGetIn(voVehicleCtx.shedId, "vehicles_list")) || [];
+      await sSetIn(voVehicleCtx.shedId, "vehicles_list", oldList.filter(x=>x.id!==voVehicleCtx.id));
+    }
+    const vehicles = (await sGetIn(shedId, "vehicles_list")) || [];
+    vehicles.push({id:"veh"+Date.now(), name, number, nextService, testDate, km, kmService, hours});
+    await sSetIn(shedId, "vehicles_list", vehicles);
+    toast("הרכב נוסף למעקב ✓");
+  }
+  voVehicleCtx = null;
+  document.getElementById("vo-vehicle-modal").classList.remove("open");
+  renderVoVehicles();
+}
+async function removeVoVehicle(shedId, id){
+  if(!confirm("להסיר את הרכב מהמעקב?")) return;
+  let vehicles = (await sGetIn(shedId, "vehicles_list")) || [];
+  vehicles = vehicles.filter(v=>v.id!==id);
+  await sSetIn(shedId, "vehicles_list", vehicles);
+  toast("הרכב הוסר");
+  renderVoVehicles();
+}
+
+let voKmCtx = null;
+async function openVoKmUpdate(shedId, id){
+  const vehicles = (await sGetIn(shedId, "vehicles_list")) || [];
+  const v = vehicles.find(x=>x.id===id);
+  if(!v) return;
+  voKmCtx = {shedId, id};
+  document.getElementById("vo-km-sub").textContent = escapeHTML(v.name) + (v.km!=null && v.km!==""?(" — ק\"מ נוכחי: "+Number(v.km).toLocaleString()):"");
+  document.getElementById("vo-km-value").value = v.km ?? "";
+  document.getElementById("vo-km-modal").classList.add("open");
+}
+async function saveVoKmUpdate(){
+  if(!voKmCtx) return;
+  const val = document.getElementById("vo-km-value").value;
+  if(val==="" || Number(val)<0){ toast("נא להזין ק\"מ תקין"); return; }
+  const vehicles = (await sGetIn(voKmCtx.shedId, "vehicles_list")) || [];
+  const v = vehicles.find(x=>x.id===voKmCtx.id);
+  if(v) v.km = Number(val);
+  await sSetIn(voKmCtx.shedId, "vehicles_list", vehicles);
+  voKmCtx = null;
+  document.getElementById("vo-km-modal").classList.remove("open");
+  toast('הק"מ עודכן ✓');
+  renderVoVehicles();
+}
+
+/* רישיונות והסמכות — נתון טייסתי-רוחבי, לא לפי סככה */
+const LICENSE_BANK_DEFAULT = ["רישיון B", "רישיון C", "רישיון נגרר", "מלגזה", "טרקטור"];
+const LICENSE_ALERT_DAYS = 30;
+async function getVoLicenses(){ return (await sGetRaw("vo_licenses_list")) || []; }
+
+function licenseStatus(l){
+  if(!l.expiry) return {tag:"ללא תוקף", cls:"g"};
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = Math.round((new Date(l.expiry+"T00:00:00")-today)/86400000);
+  if(d<0) return {tag:"פג תוקף! ("+Math.abs(d)+" ימים)", cls:"r"};
+  if(d<=LICENSE_ALERT_DAYS) return {tag:d+" ימים לפקיעה", cls:"y"};
+  return {tag:"בתוקף", cls:"g"};
+}
+async function populateVoLicensePerson(){
+  const sel = document.getElementById("vo-license-person");
+  let html = '<option value="">— בחר חייל —</option>';
+  for(const shed of SHEDS){
+    const personnel = (await sGetIn(shed.id, "cfg_personnel")) || [];
+    if(personnel.length===0) continue;
+    html += `<optgroup label="${escapeHTML(shed.name)}">` +
+      personnel.map(p=>`<option value="${shed.id}::${escapeHTML(p.name)}">${escapeHTML(p.name)}</option>`).join("") +
+      `</optgroup>`;
+  }
+  sel.innerHTML = html;
+}
+function licenseBankOptions(){
+  return '<option value="">— בחר מהמאגר —</option>' + LICENSE_BANK_DEFAULT.map(c=>`<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`).join("");
+}
+function pickVoLicenseFromBank(){
+  const v = document.getElementById("vo-license-bank-pick").value;
+  if(v) document.getElementById("vo-license-type").value = v;
+}
+let voLicenseEditId = null;
+async function openVoLicenseAdd(){
+  voLicenseEditId = null;
+  await populateVoLicensePerson();
+  document.getElementById("vo-license-bank-pick").innerHTML = licenseBankOptions();
+  document.getElementById("vo-license-type").value = "";
+  document.getElementById("vo-license-expiry").value = "";
+  document.getElementById("vo-license-title").textContent = "🪪 הוספת רישיון/הסמכה";
+  document.querySelector("#vo-license-modal .m-btn.primary").textContent = "➕ הוסף";
+  document.getElementById("vo-license-modal").classList.add("open");
+}
+async function saveVoLicense(){
+  const personVal = document.getElementById("vo-license-person").value;
+  const type = document.getElementById("vo-license-type").value.trim();
+  const expiry = document.getElementById("vo-license-expiry").value;
+  if(!personVal){ toast("נא לבחור חייל"); return; }
+  if(type.length<2){ toast("נא למלא סוג רישיון/הסמכה"); return; }
+  const [shedId, person] = personVal.split("::");
+  const licenses = await getVoLicenses();
+  if(voLicenseEditId){
+    const l = licenses.find(x=>x.id===voLicenseEditId);
+    if(l){ l.shedId=shedId; l.person=person; l.type=type; l.expiry=expiry; }
+    voLicenseEditId = null;
+    toast("הרישיון עודכן ✓");
+  } else {
+    licenses.push({id:"lic"+Date.now(), shedId, person, type, expiry});
+    toast("הרישיון נוסף ✓");
+  }
+  await sSetRaw("vo_licenses_list", licenses);
+  document.getElementById("vo-license-modal").classList.remove("open");
+  renderVoLicenses();
+}
+async function openVoLicenseEdit(id){
+  const licenses = await getVoLicenses();
+  const l = licenses.find(x=>x.id===id);
+  if(!l) return;
+  voLicenseEditId = id;
+  await populateVoLicensePerson();
+  document.getElementById("vo-license-person").value = l.shedId+"::"+l.person;
+  document.getElementById("vo-license-bank-pick").innerHTML = licenseBankOptions();
+  document.getElementById("vo-license-type").value = l.type;
+  document.getElementById("vo-license-expiry").value = l.expiry || "";
+  document.getElementById("vo-license-title").textContent = "✏️ עריכת רישיון";
+  document.querySelector("#vo-license-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.getElementById("vo-license-modal").classList.add("open");
+}
+async function removeVoLicense(id){
+  if(!confirm("להסיר את הרישיון?")) return;
+  let licenses = await getVoLicenses();
+  licenses = licenses.filter(l=>l.id!==id);
+  await sSetRaw("vo_licenses_list", licenses);
+  toast("הרישיון הוסר");
+  renderVoLicenses();
+}
+async function renderVoLicenses(){
+  const box = document.getElementById("vo-licenses-list");
+  if(!box) return;
+  const licenses = await getVoLicenses();
+  if(licenses.length===0){
+    box.innerHTML = `<div class="empty-state"><div class="ic">🪪</div><h3>אין עדיין רישיונות במעקב</h3><p>הוסף רישיון באמצעות "הוספת רישיון/הסמכה"</p></div>`;
+    return;
+  }
+  const shedName = id => (SHEDS.find(s=>s.id===id)||{}).name || id;
+  const withStatus = licenses.map(l=>({...l, st: licenseStatus(l)}));
+  const order = {r:0, y:1, g:2};
+  withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
+  box.innerHTML = withStatus.map(l=>`
+    <div class="cert-sum-card" style="cursor:default">
+      <div class="cert-sum-head">
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">🪪</div>
+        <div class="cert-sum-name"><b>${escapeHTML(l.person)}</b><span>${escapeHTML(l.type)} · ${escapeHTML(shedName(l.shedId))}</span></div>
+        <span class="pill ${l.st.cls}" style="font-size:10px;white-space:nowrap">${l.st.tag}</span>
+        <button class="cert-chip-edit" onclick="openVoLicenseEdit('${l.id}')">✏️</button>
+        <button class="cert-chip-del" onclick="removeVoLicense('${l.id}')">✕</button>
+      </div>
+    </div>`).join("");
 }
 
 /* ===== FEATURE 24: DAILY BRIEF ===== */
