@@ -1281,6 +1281,8 @@ nav{
     <button class="nav-btn" id="nav-certs" data-scr="scr-certs" onclick="go('scr-certs',this)"><span class="ic">🎓</span><span>הסמכות</span></button>
     <button class="nav-btn hidden" id="nav-tools" data-scr="scr-tools" onclick="go('scr-tools',this)"><span class="ic">🧰</span><span>חדר כלים</span></button>
     <button class="nav-btn hidden" id="nav-vehicles" data-scr="scr-vehicles" onclick="go('scr-vehicles',this)"><span class="ic">🚙</span><span>רכבים</span></button>
+    <button class="nav-btn" data-scr="scr-faults" onclick="go('scr-faults',this)"><span class="ic">🛠️</span><span>תקלות</span></button>
+    <button class="nav-btn" data-scr="scr-bdays" onclick="go('scr-bdays',this)"><span class="ic">🎂</span><span>ימי הולדת</span></button>
     <button class="nav-btn" onclick="openMoreSheet()"><span class="ic">⋯</span><span>עוד</span></button>
     <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic">🏛️</span><span>מנהל</span></button>
     <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic">🚙</span><span>קצין רכב</span></button>
@@ -1359,11 +1361,9 @@ nav{
     <div class="sheet">
       <div class="sheet-handle"></div>
       <div class="sheet-item" id="sheet-naatim" onclick="closeMoreAnd('scr-naatim')"><div class="s-ic">🗂️</div><div class="s-tx"><b>נע"תים</b><span>תחומי אחריות ובדיקה שבועית</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item" onclick="closeMoreAnd('scr-faults')"><div class="s-ic">🛠️</div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" onclick="closeMoreAnd('scr-duties')"><div class="s-ic">🔄</div><div class="s-tx"><b>תורנויות</b><span>שיבוץ שמי שבועי</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-closeday" onclick="closeMoreAnd('scr-closeday')"><div class="s-ic">🌙</div><div class="s-tx"><b>סגירת יום</b><span>צ'קליסט סוף משמרת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" onclick="closeMoreAnd('scr-training')"><div class="s-ic">📚</div><div class="s-tx"><b>חומרי הדרכה</b><span>מהמנהל הטייסתי</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item" onclick="closeMoreAnd('scr-bdays')"><div class="s-ic">🎂</div><div class="s-tx"><b>ימי הולדת</b><span>צוות המסגרת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-team-item" onclick="closeMoreAndFn(openTeamMgmt)"><div class="s-ic">👥</div><div class="s-tx"><b>ניהול צוות</b><span>הוספה, עריכה, ימי הולדת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-tasks-item" onclick="closeMoreAndFn(openTaskMgmt)"><div class="s-ic">🧰</div><div class="s-tx"><b>עריכת מטלות בוקר</b><span>הוספה ושינוי מטלות</span></div><span class="s-chev">‹</span></div>
     </div>
