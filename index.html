@@ -4662,6 +4662,7 @@ async function drillShed(shedId){
 /* ===== FEATURE 1: TRENDS DASHBOARD — v25: מכלול הנתונים ===== */
 async function renderTrends(){
   const box = document.getElementById("trends-content");
+  const isDeptUnit = !!(currentShed && currentShed.isDept);
   const events = await getEvents();
   const faults = await getFaults();
 
@@ -4698,8 +4699,8 @@ async function renderTrends(){
   });
   const pfMissing = pfList.length;
 
-  // tools (חדר כלים)
-  const tools = await getTools();
+  // tools (חדר כלים) — לא רלוונטי ליוזר מחלקות
+  const tools = isDeptUnit ? [] : await getTools();
   let toolExpired=0, toolSoon=0;
   tools.forEach(t=>{
     if(!t.expiry) return;
@@ -4709,8 +4710,8 @@ async function renderTrends(){
     else if(d<=TOOLS_ALERT_DAYS){ toolSoon++; priorityFeed.push({cls:"y", ic:"🧰", title:label, sub:`פ.ת בעוד ${d} ימים`, tag:d+" ימים", days:d, go:"go('scr-tools',document.querySelector('[data-scr=\\'scr-tools\\']'))"}); }
   });
 
-  // vehicles (מעקב רכבים)
-  const vehicles = await getVehicles();
+  // vehicles (מעקב רכבים) — לא רלוונטי ליוזר מחלקות
+  const vehicles = isDeptUnit ? [] : await getVehicles();
   let vehExpired=0, vehSoon=0;
   vehicles.forEach(v=>{
     if(!v.nextService) return;
@@ -4787,6 +4788,7 @@ async function renderTrends(){
         <div class="db-board-num">${certs.length}</div>
         <div class="db-board-label">הסמכות · ${certExpired+certSoon?  (certExpired+certSoon)+' דורשות טיפול' : 'הכל בתוקף'}</div>
       </div>
+      ${isDeptUnit ? '' : `
       <div class="db-board-card" onclick="go('scr-tools',document.querySelector('[data-scr=\\'scr-tools\\']'))">
         <div class="db-board-top"><div class="db-board-ic">🧰</div><div class="db-board-dot ${toolExpired?'r':toolSoon?'y':'g'}"></div></div>
         <div class="db-board-num">${tools.length}</div>
@@ -4796,7 +4798,7 @@ async function renderTrends(){
         <div class="db-board-top"><div class="db-board-ic">🚙</div><div class="db-board-dot ${vehExpired?'r':vehSoon?'y':'g'}"></div></div>
         <div class="db-board-num">${vehicles.length}</div>
         <div class="db-board-label">רכבים במעקב · ${vehExpired+vehSoon? (vehExpired+vehSoon)+' לטיפול קרוב' : 'הכל בתוקף'}</div>
-      </div>
+      </div>`}
       <div class="db-board-card" onclick="closeMoreAnd('scr-naatim')">
         <div class="db-board-top"><div class="db-board-ic">🗂️</div><div class="db-board-dot ${naatimOpen?'y':'g'}"></div></div>
         <div class="db-board-num">${naatim.length}</div>
