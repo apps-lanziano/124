@@ -1276,9 +1276,9 @@ nav{
   <nav>
     <button class="nav-btn hidden" id="nav-cmd" data-scr="scr-cmd" onclick="go('scr-cmd',this)"><span class="ic">🎖️</span><span>מפקד</span></button>
     <button class="nav-btn active" data-scr="scr-safety" onclick="go('scr-safety',this)"><span class="ic">📄</span><span>קרא וחתום</span><span class="nav-badge hidden" id="badge-safety">0</span></button>
-    <button class="nav-btn" data-scr="scr-morning" onclick="go('scr-morning',this)"><span class="ic">✅</span><span>מטלות</span><span class="nav-badge hidden" id="badge-morning">0</span></button>
+    <button class="nav-btn" id="nav-morning" data-scr="scr-morning" onclick="go('scr-morning',this)"><span class="ic">✅</span><span>מטלות</span><span class="nav-badge hidden" id="badge-morning">0</span></button>
     <button class="nav-btn" data-scr="scr-board" onclick="go('scr-board',this)"><span class="ic">📅</span><span>לוח שבועי</span></button>
-    <button class="nav-btn" data-scr="scr-certs" onclick="go('scr-certs',this)"><span class="ic">🎓</span><span>הסמכות</span></button>
+    <button class="nav-btn" id="nav-certs" data-scr="scr-certs" onclick="go('scr-certs',this)"><span class="ic">🎓</span><span>הסמכות</span></button>
     <button class="nav-btn hidden" id="nav-tools" data-scr="scr-tools" onclick="go('scr-tools',this)"><span class="ic">🧰</span><span>חדר כלים</span></button>
     <button class="nav-btn hidden" id="nav-vehicles" data-scr="scr-vehicles" onclick="go('scr-vehicles',this)"><span class="ic">🚙</span><span>רכבים</span></button>
     <button class="nav-btn" onclick="openMoreSheet()"><span class="ic">⋯</span><span>עוד</span></button>
@@ -1358,10 +1358,10 @@ nav{
   <div class="sheet-bg" id="more-sheet" onclick="if(event.target===this)this.classList.remove('open')">
     <div class="sheet">
       <div class="sheet-handle"></div>
-      <div class="sheet-item" onclick="closeMoreAnd('scr-naatim')"><div class="s-ic">🗂️</div><div class="s-tx"><b>נע"תים</b><span>תחומי אחריות ובדיקה שבועית</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="sheet-naatim" onclick="closeMoreAnd('scr-naatim')"><div class="s-ic">🗂️</div><div class="s-tx"><b>נע"תים</b><span>תחומי אחריות ובדיקה שבועית</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" onclick="closeMoreAnd('scr-faults')"><div class="s-ic">🛠️</div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" onclick="closeMoreAnd('scr-duties')"><div class="s-ic">🔄</div><div class="s-tx"><b>תורנויות</b><span>שיבוץ שמי שבועי</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item" onclick="closeMoreAnd('scr-closeday')"><div class="s-ic">🌙</div><div class="s-tx"><b>סגירת יום</b><span>צ'קליסט סוף משמרת</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="sheet-closeday" onclick="closeMoreAnd('scr-closeday')"><div class="s-ic">🌙</div><div class="s-tx"><b>סגירת יום</b><span>צ'קליסט סוף משמרת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" onclick="closeMoreAnd('scr-training')"><div class="s-ic">📚</div><div class="s-tx"><b>חומרי הדרכה</b><span>מהמנהל הטייסתי</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" onclick="closeMoreAnd('scr-bdays')"><div class="s-ic">🎂</div><div class="s-tx"><b>ימי הולדת</b><span>צוות המסגרת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-team-item" onclick="closeMoreAndFn(openTeamMgmt)"><div class="s-ic">👥</div><div class="s-tx"><b>ניהול צוות</b><span>הוספה, עריכה, ימי הולדת</span></div><span class="s-chev">‹</span></div>
@@ -1422,6 +1422,7 @@ nav{
           <select class="m-input" id="tm-role" style="margin-bottom:0;flex:1"><option value="חייל">חייל</option><option value="מפקד">מפקד</option></select>
           <input class="m-input" id="tm-bday" type="date" style="margin-bottom:0;flex:1" title="תאריך לידה">
         </div>
+        <select class="m-input" id="tm-dept" style="margin-bottom:8px;display:none"></select>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך שחרור (אופציונלי — החייל יוסר אוטומטית ביום זה)</label>
         <input class="m-input" id="tm-release" type="date" style="margin-bottom:10px" title="תאריך שחרור">
         <div style="display:flex;gap:8px">
@@ -2029,8 +2030,11 @@ const SHEDS = [
   {id:"shed2", name:"סככה 2", soldierCode:"1201", commanderCode:"1209"},
   {id:"shed3", name:"סככה 3", soldierCode:"1301", commanderCode:"1309"},
   {id:"shed4", name:"סככה 4", soldierCode:"1401", commanderCode:"1409"},
-  {id:"shed5", name:"סככה 5", soldierCode:"1501", commanderCode:"1509"}
+  {id:"shed5", name:"סככה 5", soldierCode:"1501", commanderCode:"1509"},
+  {id:"dept", name:"מחלקות", soldierCode:"1601", commanderCode:"1609", isDept:true}
 ];
+/* תת-מחלקות תחת יוזר "מחלקות" — תיוג בלבד, לא משפיע על הרשאות */
+const DEPT_NAMES = ["הטסה", "אוה\"ד", "אחזקה", "קה\"ד מ\"מ"];
 const ADMIN_CODE = "9124";   // קוד מנהל-על
 const VEHICLE_OFFICER_CODE = "8124";   // קוד קצין רכב טייסתי
 const BUDGET_OFFICER_CODE = "7124";   // קוד אחראי תקציבים טייסתי
@@ -2135,6 +2139,20 @@ function populateLogin(){
   sel.parentElement.style.display = "";
   selfReg.style.display = "none";
   document.getElementById("login-empty-note").style.display = "none";
+
+  if(currentShed && currentShed.isDept){
+    // יוזר מחלקות — קיבוץ הרשימה לפי מחלקה במקום לפי תפקיד
+    const groups = DEPT_NAMES.map(d=>({ label:d, people: people.filter(p=>p.dept===d) }));
+    const noDept = people.filter(p=>!p.dept || !DEPT_NAMES.includes(p.dept));
+    if(noDept.length) groups.push({label:"ללא מחלקה", people:noDept});
+    groups.filter(g=>g.people.length).forEach(g=>{
+      const og = document.createElement("optgroup"); og.label = g.label;
+      g.people.forEach(p=>{ const o=document.createElement("option"); o.value=p.name; o.textContent=p.name; og.appendChild(o); });
+      sel.appendChild(og);
+    });
+    return;
+  }
+
   const label = enteredRole === "מפקד" ? "🎖️ מפקדים" : "👤 חיילים";
   const og = document.createElement("optgroup"); og.label = label;
   people.forEach(p=>{ const o=document.createElement("option"); o.value=p.name; o.textContent=p.name; og.appendChild(o); });
@@ -2200,6 +2218,14 @@ async function doLogin(){
       document.getElementById("more-team-item").classList.add("hidden");
       document.getElementById("more-tasks-item").classList.add("hidden");
     }
+    // יוזר "מחלקות" — מעקב מבצעי (מטלות/נע"תים/סגירת יום) לא רלוונטי לשני התפקידים;
+    // הסמכות/חדר כלים/רכבים/עריכת מטלות בוקר מוסרים למפקד בלבד
+    const isDeptUnit = !!(currentShed && currentShed.isDept);
+    document.getElementById("nav-morning").classList.toggle("hidden", isDeptUnit);
+    document.getElementById("sheet-naatim").classList.toggle("hidden", isDeptUnit);
+    document.getElementById("sheet-closeday").classList.toggle("hidden", isDeptUnit);
+    document.getElementById("nav-certs").classList.toggle("hidden", isDeptUnit && userRole==="מפקד");
+    if(isDeptUnit && userRole==="מפקד") document.getElementById("more-tasks-item").classList.add("hidden");
     // commander lands on commander screen; soldier on safety —
     // switched before refreshAll() so the wrong screen never flashes underneath the overlay
     if(userRole === "מפקד"){
@@ -2728,6 +2754,7 @@ async function getNaatim(){ return (await sGet("naatim_list")) || []; }
 /* נע"ת חדר כלים / רכבים — מעניק הרשאות הוספה ועריכה למי ששובץ לתחום, בנוסף למפקד.
    ההתאמה היא לפי שם תחום מדויק ("חדר כלים" / "רכבים") ושם החייל המשובץ. */
 async function refreshAreaPermissions(){
+  if(currentShed && currentShed.isDept){ isToolsResp = false; isVehiclesResp = false; return; }
   const list = await getNaatim();
   const has = area => list.some(n => n.area && n.area.trim()===area && n.person===user);
   isToolsResp = userRole==="מפקד" || has("חדר כלים");
@@ -3526,7 +3553,15 @@ async function deleteFault(id){
 }
 
 /* ===== TEAM MGMT (feature 8) ===== */
-function openTeamMgmt(){ cancelEditMember(); document.getElementById("team-modal").classList.add("open"); renderTeamMgmt(); }
+function openTeamMgmt(){
+  cancelEditMember();
+  const deptSel = document.getElementById("tm-dept");
+  const isDeptUnit = !!(currentShed && currentShed.isDept);
+  deptSel.style.display = isDeptUnit ? "" : "none";
+  if(isDeptUnit) deptSel.innerHTML = '<option value="">— בחר מחלקה —</option>' + DEPT_NAMES.map(d=>`<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`).join("");
+  document.getElementById("team-modal").classList.add("open");
+  renderTeamMgmt();
+}
 let editMemberIdx = -1;   // -1 = add mode; otherwise editing index
 
 async function renderTeamMgmt(){
@@ -3540,10 +3575,11 @@ async function renderTeamMgmt(){
     const rel = p.release ? new Date(p.release+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'numeric',year:'2-digit'}) : null;
     const pf = p.role==="חייל" ? pfStatus(p, certs) : null;
     const pfTag = pf ? `<span class="pill ${pf.cls}" style="font-size:9px;margin-right:4px">${pf.tag}</span>` : "";
+    const deptTag = p.dept ? `<span class="role-mini">${escapeHTML(p.dept)}</span>` : "";
     return `
     <div class="mgmt-row">
       <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
-      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini ${p.role==='חייל'?'sol':''}">${p.role}</span> ${pfTag}</b>
+      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini ${p.role==='חייל'?'sol':''}">${p.role}</span> ${deptTag} ${pfTag}</b>
         <span>🎂 ${p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—'}${rel?' · 🗓️ שחרור '+rel:''}</span></div>
       <button class="mr-del" style="background:var(--sky-soft);border-color:#cfe0ff;color:var(--sky)" onclick="startEditMember(${i})">✏️</button>
       <button class="mr-del" onclick="removeTeamMember(${i})">🗑️</button>
@@ -3557,6 +3593,7 @@ function startEditMember(i){
   document.getElementById("tm-role").value = p.role;
   document.getElementById("tm-bday").value = (p.bday && p.bday!=="2000-01-01") ? p.bday : "";
   document.getElementById("tm-release").value = p.release || "";
+  if(currentShed && currentShed.isDept) document.getElementById("tm-dept").value = p.dept || "";
   document.getElementById("tm-form-title").textContent = "✏️ עריכת " + p.name;
   document.getElementById("tm-save-btn").textContent = "💾 שמור שינויים";
   document.getElementById("tm-cancel-btn").style.display = "block";
@@ -3567,6 +3604,7 @@ function cancelEditMember(){
   document.getElementById("tm-name").value="";
   document.getElementById("tm-bday").value="";
   document.getElementById("tm-release").value="";
+  document.getElementById("tm-dept").value="";
   document.getElementById("tm-form-title").textContent = "➕ הוספת איש צוות";
   document.getElementById("tm-save-btn").textContent = "➕ הוסף איש צוות";
   document.getElementById("tm-cancel-btn").style.display = "none";
@@ -3577,7 +3615,10 @@ async function saveTeamMember(){
   const role=document.getElementById("tm-role").value;
   const bday=document.getElementById("tm-bday").value;
   const release=document.getElementById("tm-release").value;
+  const isDeptUnit = !!(currentShed && currentShed.isDept);
+  const dept = isDeptUnit ? document.getElementById("tm-dept").value : "";
   if(name.length<2){ toast("נא להזין שם"); return; }
+  if(isDeptUnit && !dept){ toast("נא לבחור מחלקה"); return; }
   // duplicate check (ignore self when editing)
   const dup = PERSONNEL.some((p,idx)=>p.name===name && idx!==editMemberIdx);
   if(dup){ toast("שם כבר קיים"); return; }
@@ -3587,10 +3628,12 @@ async function saveTeamMember(){
     const p = PERSONNEL[editMemberIdx];
     p.name=name; p.role=role; p.bday=bday||"2000-01-01";
     if(release) p.release=release; else delete p.release;
+    if(isDeptUnit) p.dept=dept;
     toast("הפרטים עודכנו ✓");
   } else {
     const member = {name, role, bday: bday||"2000-01-01", joined: todayKey()};
     if(release) member.release=release;
+    if(isDeptUnit) member.dept=dept;
     PERSONNEL.push(member);
     toast("איש הצוות נוסף ✓");
   }
@@ -3903,6 +3946,7 @@ async function ensureAllShedsSeed(scopeShedId){
   await Promise.all(shedIds.map(async shedId=>{
     try{
       const plan = PLAN[shedId];
+      if(!plan) return; // יחידה שלא בתוכנית הזריעה ההיסטורית (למשל "מחלקות") — אין מה לזרוע
 
       // 1. צוות — נבדק ומתוקן בנפרד מדגל ההסמכות (self-healing),
       //    כדי שלא "יינעל" ריק לצמיתות אם הדגל הישן כבר סומן לפני שהצוות נכתב
