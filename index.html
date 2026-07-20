@@ -2185,7 +2185,8 @@ async function doLogin(){
     document.getElementById("login-overlay").style.display="none";
     document.getElementById("hdr-username").textContent = user;
     document.getElementById("hdr-rank").textContent = userRole === "מפקד" ? "🎖️ מפקד" : "👤 חייל";
-    document.getElementById("hdr-shed").textContent = "דרג א' · " + currentShed.name;
+    const shedLabel = (currentShed.isDept && person.dept) ? person.dept : currentShed.name;
+    document.getElementById("hdr-shed").textContent = "דרג א' · " + shedLabel;
 
     await refreshAreaPermissions();
 
@@ -3166,6 +3167,10 @@ const rowHTML = (name,pill)=>`<div class="cmd-row"><div class="avatar">${initial
 const SITE_URL = "https://eladlanzianog-sys.github.io/124/";
 function waShedName(){
   if(isAdmin) return "כלל המסגרות";
+  if(currentShed && currentShed.isDept){
+    const p = PERSONNEL.find(p=>p.name===user);
+    if(p && p.dept) return p.dept;
+  }
   return currentShed ? currentShed.name : "טייסת 124";
 }
 function waShare(text){
