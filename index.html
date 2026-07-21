@@ -4006,6 +4006,44 @@ async function migrateNameFixes(){
   console.log("✅ תיקוני שמות בוצעו");
 }
 
+/* מזין לכל מי שכבר מוסמך רף (יש לו לפחות הסמכת רף אחת) את 9 פריטי הרף החדשים שנוספו לבנק — בכל הסככות, חד-פעמי */
+async function backfillNewRafCerts(){
+  const flag = "raf_backfill_v1";
+  const already = await sGetRaw(flag);
+  if(already) return;
+  const NEW_RAF_ITEMS = [
+    "🔵 החלפת מכלולי מפסקים במערכות הידראוליות",
+    "🔵 אחזקת להבים ראשיים, שירות, החלפת מתאם",
+    "🔵 הסרה והרכבה כן נסע ראשי ואחורי",
+    "🔵 הסרה והתקנה מנוע עזר APU",
+    "🔵 מתלים ואביזרי הרמה",
+    "🔵 הסרה והתקנת מנוע פין גלגל זנב",
+    "🔵 איזון וניתוב רוטור ראשי",
+    "🔵 איזון וניתוב ציר מקרן",
+    "🔵 איזון וניתוב רוטור אחורי"
+  ];
+  for(const shed of SHEDS){
+    const personnel = (await sGetIn(shed.id,"cfg_personnel")) || [];
+    if(personnel.length===0) continue;
+    let certs = (await sGetIn(shed.id,"certs_list")) || [];
+    if(certs.length===0) continue;
+    let changed = false;
+    for(const p of personnel){
+      const hasRaf = certs.some(c=>c.person===p.name && certLevel(c.name)==="raf");
+      if(!hasRaf) continue;
+      for(const item of NEW_RAF_ITEMS){
+        if(!certs.some(c=>c.person===p.name && c.name===item)){
+          certs.push({id:"cert"+Date.now()+Math.random().toString(36).slice(2,6), person:p.name, name:item, expiry:""});
+          changed = true;
+        }
+      }
+    }
+    if(changed) await sSetIn(shed.id,"certs_list", certs);
+  }
+  await sSetRaw(flag, true);
+  console.log("✅ הסמכות רף חדשות הוזנו לכל המוסמכים");
+}
+
 /* רשימת 15 האנשים המלאה של סככה 1 (השמות המתוקנים) — הופכת גם לרשימת הצוות הרשמית */
 const SHED1_ALL_NAMES = ["יובל גלילוב","הילאי ארבל","יואב יצחק","גבריאל אהרונין","ליעוז יצחק","ליאור כבודי","יואב אולשינקה","מיכל קוגן","אושר אביט","עדי אלמוג","רוני טרייסטר","עדי קטן","נאור ישראל","אור שמעון עזרא","סטס אוליינקוב"];
 
@@ -4058,6 +4096,7 @@ async function reloadPersonnelIfSeeded(){
    ============================================================ */
 async function ensureAllShedsSeed(scopeShedId){
   await migrateNameFixes();
+  await backfillNewRafCerts();
   await syncCertPeopleIntoRoster("shed1", SHED1_ALL_NAMES);
   const SAF = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🟢"));
   const RAF = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🔵"));
