@@ -1033,6 +1033,24 @@ nav{
         <input type="text" id="certs-search" placeholder="חיפוש לפי שם…" oninput="renderCertsPageList()">
       </div>
       <div class="faults-filter" id="certs-filter"></div>
+      <div id="certs-adv-filters" style="display:none;gap:8px;margin-bottom:10px">
+        <select class="m-input" id="certs-sort" style="margin-bottom:0;flex:1" onchange="renderCertsPageList()">
+          <option value="roster">מיון: לפי סדר רשימה</option>
+          <option value="az">מיון: לפי שם (א-ב)</option>
+        </select>
+        <select class="m-input" id="certs-group-filter" style="margin-bottom:0;flex:1" onchange="renderCertsPageList()">
+          <option value="all">קבוצה: הכל</option>
+          <option value="saf">🟢 סף</option>
+          <option value="raf">🔵 רף</option>
+          <option value="himush">🟠 חימוש</option>
+          <option value="elyon">🔴 עליון</option>
+          <option value="stage">🟣 שלבים</option>
+          <option value="other">הסמכות נוספות</option>
+        </select>
+        <select class="m-input" id="certs-stage-filter" style="margin-bottom:0;flex:1" onchange="renderCertsPageList()">
+          <option value="all">שלב: הכל</option>
+        </select>
+      </div>
       <div id="certs-page-list"></div>
     </section>
 
@@ -1158,6 +1176,8 @@ nav{
           <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>פרסום הודעה</b><span>לכל הסככות</span></button>
           <button class="admin-card" onclick="openAdminAlerts()"><span class="a-ic">🔔</span><b>מרכז התראות</b><span>כל הסככות</span></button>
         </div>
+        <div class="cmd-section-title">📄 קרא וחתום שפורסמו — כלל הטייסת</div>
+        <div id="admin-events-list"></div>
         <div class="cmd-section-title">📊 סטטוס לפי מסגרת · לחץ לצלילה</div>
         <div id="admin-sheds-grid"></div>
       </div>
@@ -1174,9 +1194,31 @@ nav{
         <div id="admin-pf-status"></div>
         <div class="cmd-section-title">🎓 הסמכות לפי חייל · כל הסככות</div>
         <div class="matrix-hint">לחץ על חייל לפירוט · ✕ למחיקת הסמכה</div>
-        <select class="m-input" id="admin-cert-shed-filter" style="margin-bottom:12px" onchange="renderAdminCertMatrix()">
+        <select class="m-input" id="admin-cert-shed-filter" style="margin-bottom:8px" onchange="renderAdminCertMatrix()">
           <option value="all">כל הסככות</option>
         </select>
+        <div class="search-box" id="admin-cert-search-box" style="display:flex;margin-bottom:8px">
+          <span class="search-ic">🔍</span>
+          <input type="text" id="admin-cert-search" placeholder="חיפוש לפי שם…" oninput="renderAdminCertMatrix()">
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <select class="m-input" id="admin-cert-sort" style="margin-bottom:0;flex:1" onchange="renderAdminCertMatrix()">
+            <option value="roster">מיון: לפי סדר רשימה</option>
+            <option value="az">מיון: לפי שם (א-ב)</option>
+          </select>
+          <select class="m-input" id="admin-cert-group-filter" style="margin-bottom:0;flex:1" onchange="renderAdminCertMatrix()">
+            <option value="all">קבוצה: הכל</option>
+            <option value="saf">🟢 סף</option>
+            <option value="raf">🔵 רף</option>
+            <option value="himush">🟠 חימוש</option>
+            <option value="elyon">🔴 עליון</option>
+            <option value="stage">🟣 שלבים</option>
+            <option value="other">הסמכות נוספות</option>
+          </select>
+          <select class="m-input" id="admin-cert-stage-filter" style="margin-bottom:0;flex:1" onchange="renderAdminCertMatrix()">
+            <option value="all">שלב: הכל</option>
+          </select>
+        </div>
         <div id="admin-cert-matrix"></div>
       </div>
 
@@ -1676,7 +1718,9 @@ nav{
       <div class="m-sub">תאריך רענון אחרון + תאריך הרענון הבא (פ.ת), נקבע ידנית.</div>
       <div class="team-add-form">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">👤 חייל</label>
-        <select class="m-input" id="reserve-person" style="margin-bottom:8px"></select>
+        <select class="m-input" id="reserve-person" style="margin-bottom:6px"></select>
+        <input class="m-input" id="reserve-person-free" type="text" placeholder="שם מלא" style="margin-bottom:6px;display:none">
+        <div style="text-align:left;margin-bottom:8px"><a href="javascript:void(0)" id="reserve-free-toggle" onclick="toggleReserveFreeEntry()" style="font-size:11.5px;color:var(--sky);text-decoration:underline">✏️ הזנת שם עצמאית (לא מרשימת הצוות)</a></div>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ רענון אחרון</label>
         <input class="m-input" id="reserve-last" type="date" style="margin-bottom:8px">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ רענון הבא (פ.ת)</label>
@@ -4341,6 +4385,7 @@ async function ensureShed2Seed(){
 }
 
 async function renderAdminDashboard(){
+  renderAdminEvents();
   const grid = document.getElementById("admin-sheds-grid");
   grid.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען נתונים מכל המסגרות…</div>';
   let html = "";
@@ -4387,6 +4432,9 @@ function openAdminBoard(){
 
 /* publish event object to every shed */
 async function publishEventToAllSheds(id, title, meta, fileData, thumb){
+  const adminList = await getAdminEventsList();
+  adminList.unshift({id, title, ftype:meta.type, fname:meta.name, mime:meta.mime, thumb, date:new Date().toLocaleDateString("he-IL")});
+  await sSetRaw("admin_events", adminList);
   for(const shed of SHEDS){
     await sSetIn(shed.id, "safety_ev_"+id, fileData);
     const events = (await sGetIn(shed.id, "safety_events")) || [];
@@ -4394,6 +4442,35 @@ async function publishEventToAllSheds(id, title, meta, fileData, thumb){
                     ftype:meta.type, fname:meta.name, mime:meta.mime, thumb});
     await sSetIn(shed.id, "safety_events", events);
   }
+}
+async function getAdminEventsList(){ return (await sGetRaw("admin_events")) || []; }
+async function renderAdminEvents(){
+  const box = document.getElementById("admin-events-list");
+  if(!box) return;
+  const list = await getAdminEventsList();
+  if(list.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">📄</div><h3>אין עדיין פריטי קרא וחתום שפורסמו לכל הסככות</h3><p>פרסם פריט שיופיע לכל 5 המסגרות</p></div>'; return; }
+  box.innerHTML = list.map(e=>{
+    const ft = FTYPE[e.ftype] || FTYPE.image;
+    return `<div class="train-card">
+      <div class="tc-ic">${ft.emoji}</div>
+      <div class="tc-body"><b>${escapeHTML(e.title)}</b><span>${ft.label} · ${e.date}</span></div>
+      <button class="mr-del" onclick="deleteAdminEvent('${e.id}')">🗑️</button>
+    </div>`;
+  }).join("");
+}
+async function deleteAdminEvent(id){
+  if(!confirm("למחוק את הפריט מכל הסככות? הפעולה אינה הפיכה.")) return;
+  let list = await getAdminEventsList();
+  list = list.filter(e=>e.id!==id);
+  await sSetRaw("admin_events", list);
+  for(const shed of SHEDS){
+    let events = (await sGetIn(shed.id, "safety_events")) || [];
+    events = events.filter(e=>e.id!==id);
+    await sSetIn(shed.id, "safety_events", events);
+    await sDelRaw(shed.id+"_safety_ev_"+id);
+  }
+  renderAdminEvents();
+  toast("הפריט נמחק מכל הסככות 🗑️");
 }
 /* publish board to every shed */
 async function publishBoardToAllSheds(id, label, thumb, fullImg){
@@ -4494,6 +4571,25 @@ async function renderAdminCertMatrix(){
   // סינון לפי סככה נבחרת
   const filterSel = document.getElementById("admin-cert-shed-filter");
   const filterShed = filterSel ? filterSel.value : "all";
+  const q = (document.getElementById("admin-cert-search")?.value || "").trim().toLowerCase();
+  const groupFilter = document.getElementById("admin-cert-group-filter")?.value || "all";
+  const stageFilter = document.getElementById("admin-cert-stage-filter")?.value || "all";
+  const sortMode = document.getElementById("admin-cert-sort")?.value || "roster";
+
+  // fetch כל הנתונים מראש — גם כדי לאכלס את רשימת ה"שלב" מכל הסככות, לא רק מהסככה המסוננת
+  const shedData = [];
+  const allStageNames = new Set();
+  for(const shed of SHEDS){
+    const personnel = (await sGetIn(shed.id, "cfg_personnel")) || [];
+    const certs = (await sGetIn(shed.id, "certs_list")) || [];
+    certs.forEach(c=>{ if(certLevel(c.name)==="stage") allStageNames.add(certCleanName(c.name)); });
+    shedData.push({shed, personnel, certs});
+  }
+  const stageSel = document.getElementById("admin-cert-stage-filter");
+  const prevStageVal = stageSel.value;
+  const stageNames = [...allStageNames].sort((a,b)=>a.localeCompare(b,"he"));
+  stageSel.innerHTML = '<option value="all">שלב: הכל</option>' + stageNames.map(s=>`<option value="${escapeHTML(s)}">${escapeHTML(s)}</option>`).join("");
+  if(stageNames.includes(prevStageVal)) stageSel.value = prevStageVal;
 
   let html = `<div class="cert-legend" style="margin-bottom:12px">
     <span class="lvl-tag saf">🟢 סף</span>
@@ -4504,10 +4600,9 @@ async function renderAdminCertMatrix(){
   </div>`;
   let anyPeople = false;
 
-  for(const shed of SHEDS){
+  for(const {shed, certs, personnel: shedPersonnel} of shedData){
     if(filterShed!=="all" && shed.id!==filterShed) continue;
-    let personnel = (await sGetIn(shed.id, "cfg_personnel")) || [];
-    const certs = (await sGetIn(shed.id, "certs_list")) || [];
+    let personnel = shedPersonnel;
 
     // group certs by person
     const byPerson = {};
@@ -4519,6 +4614,17 @@ async function renderAdminCertMatrix(){
       if(namesFromCerts.length===0) continue;   // באמת אין נתונים לסככה זו
       personnel = namesFromCerts.map(n=>({name:n, role:"—"}));
     }
+
+    // סינון: חיפוש שם, קבוצת הסמכה, שלב
+    personnel = personnel.filter(p=>{
+      if(q && !p.name.toLowerCase().includes(q)) return false;
+      const list = byPerson[p.name] || [];
+      if(groupFilter!=="all" && !list.some(c=>certLevel(c.name)===groupFilter)) return false;
+      if(stageFilter!=="all" && !list.some(c=>certCleanName(c.name)===stageFilter)) return false;
+      return true;
+    });
+    if(sortMode==="az") personnel = [...personnel].sort((a,b)=>a.name.localeCompare(b.name,"he"));
+    if(personnel.length===0) continue;
 
     html += `<div class="admin-shed-block"><div class="admin-shed-title">🏢 ${shed.name} · ${personnel.length} אנשי צוות</div>`;
 
@@ -4558,7 +4664,7 @@ async function renderAdminCertMatrix(){
     html += `</div>`;
   }
 
-  box.innerHTML = anyPeople ? html : '<div class="empty-state" style="padding:20px"><div class="ic">📋</div><h3>אין עדיין נתונים</h3><p>הזן צוות והסמכות כדי לראות</p></div>';
+  box.innerHTML = anyPeople ? html : '<div class="empty-state" style="padding:20px"><div class="ic">🔍</div><h3>אין תוצאות</h3><p>נסה חיפוש/סינון אחר, או שטרם הוזנו צוות והסמכות</p></div>';
 }
 
 /* מחיקת הסמכה מרמת המנהל */
@@ -4724,9 +4830,18 @@ async function populateReservePerson(selected){
   sel.innerHTML = html;
 }
 let reserveEditId = null;
+let reserveFreeEntry = false;
+function toggleReserveFreeEntry(forceOn){
+  reserveFreeEntry = (forceOn!==undefined) ? forceOn : !reserveFreeEntry;
+  document.getElementById("reserve-person").style.display = reserveFreeEntry ? "none" : "";
+  document.getElementById("reserve-person-free").style.display = reserveFreeEntry ? "" : "none";
+  document.getElementById("reserve-free-toggle").textContent = reserveFreeEntry ? "📋 בחירה מרשימת הצוות" : "✏️ הזנת שם עצמאית (לא מרשימת הצוות)";
+}
 async function openReserveAdd(){
   reserveEditId = null;
   await populateReservePerson();
+  document.getElementById("reserve-person-free").value = "";
+  toggleReserveFreeEntry(false);
   document.getElementById("reserve-last").value = "";
   document.getElementById("reserve-next").value = "";
   document.getElementById("reserve-title").textContent = "🎖️ הוספת איש מילואים";
@@ -4738,7 +4853,15 @@ async function openReserveEdit(id){
   const r = list.find(x=>x.id===id);
   if(!r) return;
   reserveEditId = id;
+  const isKnownShed = SHEDS.some(s=>s.id===r.shedId);
   await populateReservePerson(r.shedId+"::"+r.person);
+  if(isKnownShed){
+    toggleReserveFreeEntry(false);
+    document.getElementById("reserve-person-free").value = "";
+  } else {
+    toggleReserveFreeEntry(true);
+    document.getElementById("reserve-person-free").value = r.person;
+  }
   document.getElementById("reserve-last").value = r.last || "";
   document.getElementById("reserve-next").value = r.next || "";
   document.getElementById("reserve-title").textContent = "✏️ עריכת איש מילואים";
@@ -4746,11 +4869,18 @@ async function openReserveEdit(id){
   document.getElementById("reserve-modal").classList.add("open");
 }
 async function saveReserve(){
-  const personVal = document.getElementById("reserve-person").value;
   const last = document.getElementById("reserve-last").value;
   const next = document.getElementById("reserve-next").value;
-  if(!personVal){ toast("נא לבחור חייל"); return; }
-  const [shedId, person] = personVal.split("::");
+  let shedId, person;
+  if(reserveFreeEntry){
+    person = document.getElementById("reserve-person-free").value.trim();
+    if(!person){ toast("נא להזין שם"); return; }
+    shedId = "";
+  } else {
+    const personVal = document.getElementById("reserve-person").value;
+    if(!personVal){ toast("נא לבחור חייל"); return; }
+    [shedId, person] = personVal.split("::");
+  }
   const list = await getReserves();
   if(reserveEditId){
     const r = list.find(x=>x.id===reserveEditId);
@@ -4781,7 +4911,7 @@ async function renderReserves(){
     box.innerHTML = `<div class="empty-state"><div class="ic">🎖️</div><h3>אין עדיין אנשי מילואים במעקב</h3><p>הוסף איש מילואים באמצעות "הוספת איש מילואים"</p></div>`;
     return;
   }
-  const shedName = id => (SHEDS.find(s=>s.id===id)||{}).name || id;
+  const shedName = id => id ? ((SHEDS.find(s=>s.id===id)||{}).name || id) : "מילואים (ללא סככה פעילה)";
   const withStatus = list.map(r=>({...r, st: reserveStatus(r)}));
   const order = {r:0, y:1, g:2};
   withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
@@ -5259,12 +5389,20 @@ function renderCertsPageList(){
   </div>`;
 
   document.getElementById("certs-search-box").style.display = certs.length>=4 ? "flex" : "none";
+  document.getElementById("certs-adv-filters").style.display = certs.length>=4 ? "flex" : "none";
 
   if(certs.length===0){
     document.getElementById("certs-filter").innerHTML = "";
     box.innerHTML = trainingCard + `<div class="empty-state"><div class="ic">🎓</div><h3>אין עדיין הסמכות</h3><p>${isCmdr?'הוסף הסמכה באמצעות "+ הסמכה"':'המפקד טרם הזין הסמכות'}</p></div>`;
     return;
   }
+
+  // populate stage sub-filter dynamically from the certs actually present
+  const stageSel = document.getElementById("certs-stage-filter");
+  const stageNames = [...new Set(certs.filter(c=>certLevel(c.name)==="stage").map(c=>certCleanName(c.name)))].sort((a,b)=>a.localeCompare(b,"he"));
+  const prevStageVal = stageSel.value;
+  stageSel.innerHTML = '<option value="all">שלב: הכל</option>' + stageNames.map(s=>`<option value="${escapeHTML(s)}">${escapeHTML(s)}</option>`).join("");
+  if(stageNames.includes(prevStageVal)) stageSel.value = prevStageVal;
 
   // group certs by person, with index for delete
   const byPerson = {};
@@ -5285,9 +5423,15 @@ function renderCertsPageList(){
     <button class="fault-fbtn ${certsFilter==='attention'?'active':''}" onclick="setCertsFilter('attention')">⚠️ דורש טיפול (${attentionCount})</button>`;
 
   const q = (document.getElementById("certs-search")?.value || "").trim().toLowerCase();
+  const groupFilter = document.getElementById("certs-group-filter")?.value || "all";
+  const stageFilter = document.getElementById("certs-stage-filter")?.value || "all";
+  const sortMode = document.getElementById("certs-sort")?.value || "roster";
   let shownNames = names;
   if(certsFilter==="attention") shownNames = shownNames.filter(needsAttention);
   if(q) shownNames = shownNames.filter(n=>n.toLowerCase().includes(q));
+  if(groupFilter!=="all") shownNames = shownNames.filter(n=>(byPerson[n]||[]).some(c=>certLevel(c.name)===groupFilter));
+  if(stageFilter!=="all") shownNames = shownNames.filter(n=>(byPerson[n]||[]).some(c=>certCleanName(c.name)===stageFilter));
+  if(sortMode==="az") shownNames = [...shownNames].sort((a,b)=>a.localeCompare(b,"he"));
 
   // legend
   const legend = `<div class="cert-legend">
