@@ -1172,7 +1172,6 @@ nav{
         <button class="cmd-tab" id="atab-training" onclick="adminTab('training')">📚 הדרכה</button>
         <button class="cmd-tab" id="atab-reserves" onclick="adminTab('reserves')">🎖️ מילואים</button>
         <button class="cmd-tab" id="atab-log" onclick="adminTab('log')">📜 יומן</button>
-        <button class="cmd-tab" id="atab-roles" onclick="adminTab('roles')">🧭 כל היוזרים</button>
       </div>
 
       <!-- PANE: OVERVIEW -->
@@ -1253,15 +1252,6 @@ nav{
         <div class="cmd-section-title">📜 יומן תיעוד כלל-טייסתי</div>
         <div class="matrix-hint">כל הפעולות מכל 5 הסככות, מהחדש לישן</div>
         <div id="admin-log-list"></div>
-      </div>
-
-      <!-- PANE: ROLES (מעבר בפועל לכל תפקיד/מסך באפליקציה — צפייה ועריכה מלאה) -->
-      <div class="admin-pane" id="apane-roles">
-        <div class="matrix-hint">לחיצה על תפקיד מעבירה אליו בפועל, עם גישה מלאה לצפייה ועריכה — בדיוק כמו כניסה רגילה עם הקוד שלו.</div>
-        <div class="cmd-section-title">⭐ תפקידים טייסתיים</div>
-        <div class="admin-actions-row" id="admin-roles-special"></div>
-        <div class="cmd-section-title">🏢 מפקדים וחיילים לפי מסגרת</div>
-        <div id="admin-roles-sheds"></div>
       </div>
     </section>
 
@@ -3988,53 +3978,6 @@ async function techOfficerLogin(){
   toast("ברוך הבא, אור 🔧");
 }
 
-/* ===== PANE: ROLES — לאחראי הדרכה: מעבר בפועל לכל תפקיד/מסך באפליקציה, בגישה מלאה (צפייה ועריכה) ===== */
-function resetRoleFlags(){
-  isAdmin=false; isTechOfficer=false; isVehicleOfficer=false; isBudgetOfficer=false; isCmd=false;
-}
-function renderAdminRoles(){
-  const specialBox = document.getElementById("admin-roles-special");
-  if(specialBox){
-    specialBox.innerHTML = `
-      <button class="admin-card" onclick="adminEnterSpecialRole('tech')"><span class="a-ic">🔧</span><b>קצין טכני</b><span>כל הסככות + רכבים + תקציבים</span></button>
-      <button class="admin-card" onclick="adminEnterSpecialRole('vehicle')"><span class="a-ic">🚙</span><b>קצין רכב טייסתי</b><span>רכבים בכל הסככות</span></button>
-      <button class="admin-card" onclick="adminEnterSpecialRole('budget')"><span class="a-ic">💰</span><b>אחראי תקציבים טייסתי</b><span>תקציב טייסתי כולל</span></button>
-    `;
-  }
-  const shedsBox = document.getElementById("admin-roles-sheds");
-  if(shedsBox){
-    shedsBox.innerHTML = SHEDS.map(s=>`
-      <div class="admin-shed-block">
-        <div class="admin-shed-title">🏢 ${escapeHTML(s.name)}</div>
-        <div class="admin-actions-row">
-          <button class="admin-card" onclick="adminEnterShedRole('${s.id}','מפקד')"><span class="a-ic">🎖️</span><b>מפקד</b><span>${escapeHTML(s.name)}</span></button>
-          <button class="admin-card" onclick="adminEnterShedRole('${s.id}','חייל')"><span class="a-ic">👤</span><b>חייל</b><span>${escapeHTML(s.name)}</span></button>
-        </div>
-      </div>`).join("");
-  }
-}
-function adminEnterSpecialRole(which){
-  resetRoleFlags();
-  if(which==="tech") techOfficerLogin();
-  else if(which==="vehicle") vehicleOfficerLogin();
-  else if(which==="budget") budgetOfficerLogin();
-}
-/* נכנס לשלב בחירת שם, בדיוק כמו הזנת הקוד של הסככה/תפקיד — משם ממשיכים עם doLogin() הרגיל, גישה מלאה */
-async function adminEnterShedRole(shedId, role){
-  const shed = SHEDS.find(s=>s.id===shedId); if(!shed) return;
-  resetRoleFlags();
-  currentShed = shed; enteredRole = role;
-  await loadRuntimeLists();
-  document.getElementById("login-overlay").style.display = "flex";
-  document.getElementById("login-step-code").style.display = "none";
-  document.getElementById("login-step-name").style.display = "block";
-  document.getElementById("login-select").value = "";
-  const banner = document.getElementById("login-role-banner");
-  if(role === "מפקד"){ banner.textContent = "🎖️ " + shed.name + " · כניסת מפקדים"; banner.style.background = "#fff"; banner.style.color = "var(--red)"; }
-  else { banner.textContent = "👤 " + shed.name + " · כניסת חיילים"; banner.style.background = "rgba(255,255,255,.18)"; banner.style.color = "#fff"; }
-  populateLogin();
-}
-
 /* ============================================================
    תיקון שמות + סנכרון רשימת האנשים לרשימת הצוות הרשמית (מצבת)
    ============================================================ */
@@ -4551,7 +4494,7 @@ async function publishBoardToAllSheds(id, label, thumb, fullImg){
    ADMIN v20: certs matrix, expiries, cert bank, training, log, drill
    ============================================================ */
 function adminTab(which){
-  ["overview","certs","training","reserves","log","roles"].forEach(w=>{
+  ["overview","certs","training","reserves","log"].forEach(w=>{
     document.getElementById("atab-"+w).classList.toggle("active", which===w);
     document.getElementById("apane-"+w).classList.toggle("active", which===w);
   });
@@ -4559,7 +4502,6 @@ function adminTab(which){
   if(which==="training") renderAdminTraining();
   if(which==="reserves") renderReserves();
   if(which==="log") renderAdminLog();
-  if(which==="roles") renderAdminRoles();
 }
 
 /* ---- default cert bank ---- */
