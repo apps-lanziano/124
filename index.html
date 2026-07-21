@@ -986,6 +986,7 @@ nav{
           <h2>ימי הולדת 🎂</h2>
           <p id="bdays-desc">צוות המסגרת — ממוינים לפי יום ההולדת הקרוב.</p>
         </div>
+        <button class="add-btn hidden" id="vo-team-add-btn" onclick="openVoTeamMgmt()">+ איש צוות</button>
       </div>
       <div id="bdays-list"></div>
     </section>
@@ -1769,6 +1770,28 @@ nav{
     </div>
   </div>
 
+  <!-- VEHICLE OFFICER — TEAM MODAL (הצוות הפרטי שלו, לצורך ימי הולדת) -->
+  <div class="modal-bg" id="vo-team-modal">
+    <div class="modal">
+      <h3>👥 הצוות שלי</h3>
+      <div class="m-sub">הוספה ועריכה של אנשי הצוות שלך — לצורך מעקב ימי הולדת.</div>
+      <div id="vo-team-list" style="max-height:35vh;overflow-y:auto;margin-bottom:12px"></div>
+      <div class="team-add-form">
+        <div id="vo-team-form-title" style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:8px">➕ הוספת איש צוות</div>
+        <input class="m-input" id="vo-team-name" type="text" placeholder="שם מלא" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🎂 תאריך לידה</label>
+        <input class="m-input" id="vo-team-bday" type="date" style="margin-bottom:10px">
+        <div style="display:flex;gap:8px">
+          <button class="m-btn primary" id="vo-team-save-btn" onclick="saveVoTeamMember()" style="flex:1">➕ הוסף איש צוות</button>
+          <button class="m-btn ghost" id="vo-team-cancel-btn" onclick="cancelEditVoTeamMember()" style="flex:0 0 auto;display:none">ביטול עריכה</button>
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn ghost" onclick="document.getElementById('vo-team-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
   <!-- VEHICLE OFFICER — LICENSE MODAL (כלל הסככות) -->
   <div class="modal-bg" id="vo-license-modal">
     <div class="modal">
@@ -2524,6 +2547,7 @@ function closeMoreAndFn(fn){
 async function getEvents(){ return (await sGet("safety_events")) || []; }
 
 async function renderDocs(){
+  if(isVehicleOfficer) return renderVoDocs();
   const events = await getEvents();
   const reads = (await sGet("sigs_"+safeName(user))) || {};
   const list = document.getElementById("docs-list");
@@ -2570,6 +2594,40 @@ async function renderDocs(){
   updateBadges();
 }
 
+/* קרא וחתום עבור קצין רכב — לצפייה בלבד: מסמכים שאחראי ההדרכה פרסם לכל הסככות, ללא מעקב חתימות */
+async function renderVoDocs(){
+  const events = await getAdminEventsList();
+  const list = document.getElementById("docs-list");
+  document.getElementById("safety-search-box").style.display = events.length>=4 ? "flex" : "none";
+  const q = (document.getElementById("safety-search")?.value || "").trim().toLowerCase();
+  list.innerHTML = "";
+  if(events.length===0){
+    list.innerHTML = `<div class="empty-state"><div class="ic">🗂️</div><h3>אין עדיין פריטים</h3><p>אחראי ההדרכה טרם פרסם פריטים לכלל הסככות</p></div>`;
+    return;
+  }
+  const filtered = q ? events.filter(e=>(e.title||"").toLowerCase().includes(q) || (e.date||"").includes(q)) : events;
+  if(filtered.length===0){
+    list.innerHTML = `<div class="empty-state"><div class="ic">🔍</div><h3>לא נמצאו פריטים</h3><p>נסה מונח חיפוש אחר</p></div>`;
+    return;
+  }
+  filtered.forEach(ev=>{
+    const el = document.createElement("div");
+    el.className = "card doc-item";
+    const ft = FTYPE[ev.ftype] || FTYPE.image;
+    const visual = (ev.ftype==="image" && ev.thumb)
+      ? `<img class="doc-thumb" src="${ev.thumb}" alt="">`
+      : `<div class="doc-thumb file-badge ${ft.badge}"><span class="doc-fileicon">${ft.emoji}</span></div>`;
+    el.innerHTML = `
+      ${visual}
+      <div class="doc-body">
+        <h3>${escapeHTML(ev.title)}</h3>
+        <div class="meta">${ft.label} · ${ev.date}</div>
+      </div>`;
+    el.onclick = ()=>openReader(ev.id, true);
+    list.appendChild(el);
+  });
+}
+
 /* delete safety event (feature 7) */
 async function deleteEvent(id){
   if(!confirm("למחוק את הפריט לצמיתות? החתימות עליו יימחקו גם.")) return;
@@ -2581,14 +2639,21 @@ async function deleteEvent(id){
   renderDocs();
 }
 
-async function openReader(id){
-  const events = await getEvents();
-  currentDoc = events.find(e=>e.id===id);
-  if(!currentDoc) return;
-  const reads = (await sGet("sigs_"+safeName(user))) || {};
+async function openReader(id, adminSourced){
+  let fileData;
+  if(adminSourced){
+    currentDoc = (await getAdminEventsList()).find(e=>e.id===id);
+    if(!currentDoc) return;
+    fileData = await sGetIn(SHEDS[0].id, "safety_ev_"+id);
+  } else {
+    const events = await getEvents();
+    currentDoc = events.find(e=>e.id===id);
+    if(!currentDoc) return;
+    fileData = await sGet("safety_ev_"+currentDoc.id);
+  }
+  const reads = adminSourced ? {} : ((await sGet("sigs_"+safeName(user))) || {});
   const sig = reads[currentDoc.id];
   document.getElementById("reader-title").textContent = currentDoc.title;
-  const fileData = await sGet("safety_ev_"+currentDoc.id);
   const ftype = currentDoc.ftype || "image";
   let viewer = "";
   if(ftype === "image"){
@@ -2606,7 +2671,7 @@ async function openReader(id){
       </div>`;
   }
   document.getElementById("reader-body").innerHTML = `
-    <span class="doc-tag">קרא וחתום · חובת חתימה</span>
+    <span class="doc-tag">${adminSourced ? "פורסם ע\"י אחראי הדרכה טייסתי · לכל הסככות" : "קרא וחתום · חובת חתימה"}</span>
     <div class="sub">הועלה ע"י ${escapeHTML(currentDoc.by)} · ${currentDoc.date} · טייסת 124</div>
     ${viewer}
     ${sig ? `<div class="sig-preview">
@@ -2614,10 +2679,15 @@ async function openReader(id){
         <div class="txt">נחתם ואושר: המסר הועבר ✓<small>${escapeHTML(user)} · ${sig.date}</small></div>
       </div>` : ""}`;
   const btn = document.getElementById("reader-confirm");
-  if(sig){
-    btn.className="confirm-btn done"; btn.textContent="✅ נחתם בתאריך " + sig.date; btn.disabled=true;
+  if(adminSourced){
+    btn.style.display = "none";
   } else {
-    btn.className="confirm-btn"; btn.innerHTML="✍️ חתימה ואישור קריאה"; btn.disabled=false;
+    btn.style.display = "";
+    if(sig){
+      btn.className="confirm-btn done"; btn.textContent="✅ נחתם בתאריך " + sig.date; btn.disabled=true;
+    } else {
+      btn.className="confirm-btn"; btn.innerHTML="✍️ חתימה ואישור קריאה"; btn.disabled=false;
+    }
   }
   document.getElementById("doc-reader").classList.add("open");
 }
@@ -3123,12 +3193,19 @@ function bdayInfo(p){
   const age = next.getFullYear() - b.getFullYear();
   return {days, age, next};
 }
-function renderBdays(){
+async function renderBdays(){
   const desc = document.getElementById("bdays-desc");
-  if(desc){ desc.textContent = (currentShed ? currentShed.name : "צוות המסגרת") + " — ממוינים לפי יום ההולדת הקרוב."; }
+  const isVo = isVehicleOfficer;
+  document.getElementById("vo-team-add-btn")?.classList.toggle("hidden", !isVo);
+  if(desc){ desc.textContent = isVo ? "הצוות שלך — ממוינים לפי יום ההולדת הקרוב." : (currentShed ? currentShed.name : "צוות המסגרת") + " — ממוינים לפי יום ההולדת הקרוב."; }
   const list = document.getElementById("bdays-list");
   list.innerHTML = "";
-  const withInfo = PERSONNEL.map(p=>({...p, ...bdayInfo(p)})).sort((a,b)=>a.days-b.days);
+  const source = isVo ? ((await sGetRaw("vo_personnel")) || []) : PERSONNEL;
+  if(isVo && source.length===0){
+    list.innerHTML = `<div class="empty-state"><div class="ic">🎂</div><h3>אין עדיין אנשי צוות</h3><p>הוסף איש צוות באמצעות "+ איש צוות"</p></div>`;
+    return;
+  }
+  const withInfo = source.map(p=>({...p, ...bdayInfo(p)})).sort((a,b)=>a.days-b.days);
   const fmt = d => d.toLocaleDateString("he-IL",{day:"numeric",month:"long"});
   withInfo.forEach(p=>{
     const isToday = p.days===0;
@@ -3138,15 +3215,87 @@ function renderBdays(){
     el.innerHTML = `
       <div class="bday-avatar">${initials(p.name)}</div>
       <div class="bday-body">
-        <h3>${p.name}<span class="role-mini ${roleCls}">${p.role}</span></h3>
+        <h3>${p.name}${p.role?`<span class="role-mini ${roleCls}">${p.role}</span>`:""}</h3>
         <p>${isToday ? "🎉 חוגג/ת היום " + p.age + "!" : fmt(p.next) + " · יחגוג/תחגוג " + p.age}</p>
       </div>
       <div class="bday-count">
         <b>${isToday ? "🎂" : p.days}</b>
         <span>${isToday ? "היום!" : "ימים"}</span>
-      </div>`;
+      </div>
+      ${isVo?`<button class="mr-del" style="margin-right:6px" onclick="event.stopPropagation();removeVoTeamMember('${p.id}')">✕</button>`:""}`;
     list.appendChild(el);
   });
+}
+
+/* ===== צוות קצין הרכב (לצורך ימי הולדת) ===== */
+let voTeamEditId = null;
+function openVoTeamMgmt(){
+  cancelEditVoTeamMember();
+  document.getElementById("vo-team-modal").classList.add("open");
+  renderVoTeamMgmt();
+}
+async function renderVoTeamMgmt(){
+  const box = document.getElementById("vo-team-list");
+  const team = (await sGetRaw("vo_personnel")) || [];
+  if(team.length===0){
+    box.innerHTML = '<div style="text-align:center;color:var(--ink-3);font-size:13px;padding:16px">אין עדיין אנשי צוות</div>';
+    return;
+  }
+  box.innerHTML = team.map(p=>`
+    <div class="mgmt-row">
+      <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
+      <div class="mr-body"><b>${escapeHTML(p.name)}</b><span>🎂 ${p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—'}</span></div>
+      <button class="mr-del" style="background:var(--sky-soft);border-color:#cfe0ff;color:var(--sky)" onclick="startEditVoTeamMember('${p.id}')">✏️</button>
+      <button class="mr-del" onclick="removeVoTeamMember('${p.id}')">🗑️</button>
+    </div>`).join("");
+}
+async function startEditVoTeamMember(id){
+  const team = (await sGetRaw("vo_personnel")) || [];
+  const p = team.find(x=>x.id===id);
+  if(!p) return;
+  voTeamEditId = id;
+  document.getElementById("vo-team-name").value = p.name;
+  document.getElementById("vo-team-bday").value = (p.bday && p.bday!=="2000-01-01") ? p.bday : "";
+  document.getElementById("vo-team-form-title").textContent = "✏️ עריכת " + p.name;
+  document.getElementById("vo-team-save-btn").textContent = "💾 שמור שינויים";
+  document.getElementById("vo-team-cancel-btn").style.display = "block";
+  document.getElementById("vo-team-name").focus();
+}
+function cancelEditVoTeamMember(){
+  voTeamEditId = null;
+  document.getElementById("vo-team-name").value = "";
+  document.getElementById("vo-team-bday").value = "";
+  document.getElementById("vo-team-form-title").textContent = "➕ הוספת איש צוות";
+  document.getElementById("vo-team-save-btn").textContent = "➕ הוסף איש צוות";
+  document.getElementById("vo-team-cancel-btn").style.display = "none";
+}
+async function saveVoTeamMember(){
+  const name = document.getElementById("vo-team-name").value.trim();
+  const bday = document.getElementById("vo-team-bday").value;
+  if(name.length<2){ toast("נא להזין שם"); return; }
+  const team = (await sGetRaw("vo_personnel")) || [];
+  if(voTeamEditId){
+    const p = team.find(x=>x.id===voTeamEditId);
+    if(p){ p.name=name; p.bday=bday||"2000-01-01"; }
+    toast("הפרטים עודכנו ✓");
+  } else {
+    if(team.some(p=>p.name===name)){ toast("שם כבר קיים"); return; }
+    team.push({id:"vop"+Date.now()+Math.random().toString(36).slice(2,6), name, bday: bday||"2000-01-01"});
+    toast("איש הצוות נוסף ✓");
+  }
+  await sSetRaw("vo_personnel", team);
+  cancelEditVoTeamMember();
+  renderVoTeamMgmt();
+  renderBdays();
+}
+async function removeVoTeamMember(id){
+  const team = (await sGetRaw("vo_personnel")) || [];
+  const p = team.find(x=>x.id===id);
+  if(!p || !confirm(`להסיר את ${p.name} מהצוות?`)) return;
+  await sSetRaw("vo_personnel", team.filter(x=>x.id!==id));
+  toast("הוסר מהצוות");
+  renderVoTeamMgmt();
+  renderBdays();
 }
 
 /* ============ BOARD ARCHIVE (רשימת לוחות + מחיקה) ============ */
@@ -3551,13 +3700,13 @@ async function renderMessages(){
   const area = document.getElementById("messages-area");
   if(!area) return;
   const isCmdr = userRole === "מפקד";
-  const msgs = isAdmin ? ((await sGetRaw("admin_messages")) || []) : ((await sGet("messages_list")) || []);
+  const msgs = (isAdmin || isVehicleOfficer) ? ((await sGetRaw("admin_messages")) || []) : ((await sGet("messages_list")) || []);
   const canDelete = isCmdr || isAdmin;
   if(msgs.length===0){ area.innerHTML=""; area.style.marginBottom="0"; return; }
 
-  // feature 10: mark read by soldier/commander viewing (not admin)
+  // feature 10: mark read by soldier/commander viewing (not admin/vehicle-officer, who see the squadron-wide admin_messages copy)
   let changed = false;
-  if(!isAdmin && user){
+  if(!isAdmin && !isVehicleOfficer && user){
     for(const m of msgs){
       m.reads = m.reads || {};
       if(!m.reads[safeName(user)]){ m.reads[safeName(user)] = {name:user, ts:Date.now()}; changed = true; }
@@ -4062,12 +4211,17 @@ async function vehicleOfficerLogin(){
   document.getElementById("hdr-username").textContent = user;
   document.getElementById("hdr-rank").textContent = "🚙 קצין רכב";
   document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
-  // hide regular nav functions; show only vehicle-officer screen
+  // מסך רכבים + באר תחתון מצומצם: קרא וחתום, ימי הולדת (הצוות שלו), קצין רכב
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
+  document.querySelector('[data-scr="scr-safety"]').classList.remove("hidden");
+  document.getElementById("nav-bdays").classList.remove("hidden");
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
   await ensureShed2Seed();
   await ensureAllShedsSeed();
   go("scr-vehicle-officer", document.getElementById("nav-vehicle-officer"));
+  renderDocs();
+  renderBdays();
+  renderMessages();
   toast("ברוך הבא, קצין רכב 🚙");
 }
 
