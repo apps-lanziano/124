@@ -4163,6 +4163,33 @@ async function seedVehiclesFromSheet(){
   console.log("✅ רכבים תפעוליים ורכבי אחזקה נזרעו מהגיליון");
 }
 
+/* זריעה חד-פעמית: רכבי ליסינג לפי שם מחזיק (מקבצים אוטומטית לסככה לפי שם, אם קיים) */
+async function seedLeasingVehiclesFromSheet(){
+  const flag = "leasing_vehicles_seed_v1";
+  if(await sGetRaw(flag)) return;
+  const LEASING_SEED = [
+    {holder:"אלעד לנציאנו", group:"גף טכני", name:"קיה פיקנטו (שחור)", company:"שלמה", number:"857-07-802"},
+    {holder:"נאור ישראל", group:"גף טכני", name:"סקודה סקאלה", company:"אלדן", number:"452-81-004"},
+    {holder:"נתי פרבר", group:"גף טכני", name:"סקודה קאמיק", company:"אלדן", number:"286-69-304"},
+    {holder:"יורי אסינובסקי", group:"גף טכני", name:"קיה פיקנטו (תמריץ)", company:"פרי", number:"407-89-304"},
+    {holder:"לניאן", group:"גף טכני", name:"קיה פיקנטו (תמריץ)", company:"פרי", number:"405-92-104"},
+    {holder:"מתן וקנין", group:"גף טכני", name:"קיה ריו", company:"שלמה", number:"355-27-103"},
+    {holder:"יוסי שמש", group:"גף טכני", name:"קיה ריו", company:"אלדן", number:"646-01-103"},
+    {holder:"מאיר ישראל", group:"גף טכני", name:"סקודה ריו", company:"אלדן", number:"453-18-704"},
+    {holder:"אור דבח", group:"גף טכני", name:"קיה ריו", company:"אלדן", number:"442-60-503"},
+    {holder:"רימון חורש", group:"גף טיסה", name:"קיה ספורטאז'", company:"פרי", number:"686-08-103"},
+    {holder:"דיוויד מרציאנו", group:"גף טיסה", name:"סקודה קאמיק", company:"שלמה", number:"286-52-504"},
+    {holder:"מתן ליפץ", group:"גף טיסה", name:"סקודה איביזה", company:"שלמה", number:"458-23-502"},
+    {holder:"אבישי פריד", group:"גף טיסה", name:"סקודה איביזה", company:"שלמה", number:"602-47-502"},
+    {holder:"יואב בירם", group:"גף טיסה", name:"סקודה קאמיק", company:"שלמה", number:"476-56-704"}
+  ];
+  const list = (await sGetRaw("admin_leasing_vehicles")) || [];
+  LEASING_SEED.forEach(v=>list.push({id:"lveh"+Date.now()+Math.random().toString(36).slice(2,6), ...v}));
+  await sSetRaw("admin_leasing_vehicles", list);
+  await sSetRaw(flag, true);
+  console.log("✅ רכבי ליסינג נזרעו מהגיליון");
+}
+
 async function backfillNewRafCerts(){
   const flag = "raf_backfill_v1";
   const already = await sGetRaw(flag);
@@ -4254,6 +4281,7 @@ async function ensureAllShedsSeed(scopeShedId){
   await migrateNameFixes();
   await backfillNewRafCerts();
   await seedVehiclesFromSheet();
+  await seedLeasingVehiclesFromSheet();
   await syncCertPeopleIntoRoster("shed1", SHED1_ALL_NAMES);
   const SAF = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🟢"));
   const RAF = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🔵"));
