@@ -1266,7 +1266,9 @@ nav{
 
       <div class="cmd-tabs" style="margin-bottom:16px">
         <button class="cmd-tab active" id="votab-overview" onclick="voTab('overview')">📊 סקירה</button>
-        <button class="cmd-tab" id="votab-vehicles" onclick="voTab('vehicles')">🚙 רכבים</button>
+        <button class="cmd-tab" id="votab-vehicles" onclick="voTab('vehicles')">🚙 תפעוליים</button>
+        <button class="cmd-tab" id="votab-maint" onclick="voTab('maint')">🔧 אחזקה</button>
+        <button class="cmd-tab" id="votab-leasing" onclick="voTab('leasing')">🚗 ליסינג</button>
         <button class="cmd-tab" id="votab-licenses" onclick="voTab('licenses')">🪪 רישיונות והסמכות</button>
       </div>
 
@@ -1275,12 +1277,28 @@ nav{
         <div id="vo-overview-content"></div>
       </div>
 
-      <!-- PANE: VEHICLES -->
+      <!-- PANE: VEHICLES (תפעוליים לפי סככה: מ"ע/טרקטור/פיקו/לפיד) -->
       <div class="admin-pane" id="vopane-vehicles">
         <div class="admin-actions-row">
           <button class="admin-card" style="grid-column:1/-1" onclick="openVoVehicleAdd()"><span class="a-ic">➕</span><b>הוספת רכב</b><span>שיוך לסככה + כל פרטי המעקב</span></button>
         </div>
         <div id="vo-vehicles-list"></div>
+      </div>
+
+      <!-- PANE: MAINTENANCE DEPT VEHICLES (שחורים+שכורים, ללא שיוך לסככה) -->
+      <div class="admin-pane" id="vopane-maint">
+        <div class="admin-actions-row">
+          <button class="admin-card" style="grid-column:1/-1" onclick="openMaintVehicleAdd()"><span class="a-ic">➕</span><b>הוספת רכב אחזקה</b><span>רכבים שחורים ושכורים</span></button>
+        </div>
+        <div id="vo-maint-list"></div>
+      </div>
+
+      <!-- PANE: LEASING VEHICLES (משוייכים לפי שם, מקובצים לפי סככה אוטומטית) -->
+      <div class="admin-pane" id="vopane-leasing">
+        <div class="admin-actions-row">
+          <button class="admin-card" style="grid-column:1/-1" onclick="openLeasingVehicleAdd()"><span class="a-ic">➕</span><b>הוספת רכב ליסינג</b><span>לפי שם המחזיק</span></button>
+        </div>
+        <div id="vo-leasing-list"></div>
       </div>
 
       <!-- PANE: LICENSES -->
@@ -1612,8 +1630,16 @@ nav{
         <select class="m-input" id="vo-vehicle-shed" style="margin-bottom:8px"></select>
         <select class="m-input" id="vo-vehicle-bank-pick" style="margin-bottom:8px" onchange="pickVoVehicleFromBank()"></select>
         <input class="m-input" id="vo-vehicle-name" type="text" placeholder="שם/סוג הרכב" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מספר רכב</label>
-        <input class="m-input" id="vo-vehicle-number" type="text" placeholder="מס' רכב" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מס' רכב אזרחי</label>
+        <input class="m-input" id="vo-vehicle-number" type="text" placeholder="מס' רכב אזרחי" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🪖 מס' רכב צבאי</label>
+        <input class="m-input" id="vo-vehicle-military-number" type="text" placeholder="מס' רכב צבאי" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏢 חברה</label>
+        <input class="m-input" id="vo-vehicle-company" type="text" placeholder="צבאי / שלמה / אלדן / פרי..." style="margin-bottom:8px">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input class="m-input" id="vo-vehicle-code" type="text" placeholder="קוד רכב" style="margin-bottom:0;flex:1">
+          <input class="m-input" id="vo-vehicle-fuel-code" type="text" placeholder="קוד דלק" style="margin-bottom:0;flex:1">
+        </div>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך טיפול הבא</label>
         <input class="m-input" id="vo-vehicle-next-service" type="date" style="margin-bottom:8px">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🛂 תאריך טסט</label>
@@ -1623,7 +1649,21 @@ nav{
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📏 ק"מ לטיפול הבא</label>
         <input class="m-input" id="vo-vehicle-km-service" type="number" min="0" placeholder="לדוגמה: 120000" style="margin-bottom:8px">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">⏱️ שעות מנוע</label>
-        <input class="m-input" id="vo-vehicle-hours" type="number" min="0" placeholder="שעות מנוע נוכחיות" style="margin-bottom:10px">
+        <input class="m-input" id="vo-vehicle-hours" type="number" min="0" placeholder="שעות מנוע נוכחיות" style="margin-bottom:8px">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <div style="flex:1">
+            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ טיפול חודשי/תלת-חודשי</label>
+            <input class="m-input" id="vo-vehicle-monthly-service" type="date" style="margin-bottom:0">
+          </div>
+          <div style="flex:1">
+            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ טיפול שנתי</label>
+            <input class="m-input" id="vo-vehicle-annual-service" type="date" style="margin-bottom:0">
+          </div>
+        </div>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">❄️ ביקורת חורף</label>
+        <input class="m-input" id="vo-vehicle-winter" type="date" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📝 הערות</label>
+        <input class="m-input" id="vo-vehicle-notes" type="text" placeholder="הערות" style="margin-bottom:10px">
         <button class="m-btn primary" onclick="saveVoVehicle()" style="width:100%">➕ הוסף רכב</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
@@ -1643,6 +1683,88 @@ nav{
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('vo-km-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAINTENANCE DEPT VEHICLE MODAL (שחורים+שכורים, ללא שיוך לסככה) -->
+  <div class="modal-bg" id="maint-vehicle-modal">
+    <div class="modal">
+      <h3 id="maint-vehicle-title">🔧 הוספת רכב אחזקה</h3>
+      <div class="m-sub">רכבי מחלקת אחזקה — שחורים ושכורים. גלוי לקצין הרכב בלבד.</div>
+      <div class="team-add-form">
+        <input class="m-input" id="maint-vehicle-name" type="text" placeholder="שם/סוג הרכב" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מס' רכב אזרחי</label>
+        <input class="m-input" id="maint-vehicle-number" type="text" placeholder="מס' רכב אזרחי" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🪖 מס' רכב צבאי</label>
+        <input class="m-input" id="maint-vehicle-military-number" type="text" placeholder="מס' רכב צבאי" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏢 חברה</label>
+        <input class="m-input" id="maint-vehicle-company" type="text" placeholder="צבאי / שלמה / אלדן..." style="margin-bottom:8px">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input class="m-input" id="maint-vehicle-code" type="text" placeholder="קוד רכב" style="margin-bottom:0;flex:1">
+          <input class="m-input" id="maint-vehicle-fuel-code" type="text" placeholder="קוד דלק" style="margin-bottom:0;flex:1">
+        </div>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך טיפול הבא</label>
+        <input class="m-input" id="maint-vehicle-next-service" type="date" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🛂 תאריך טסט</label>
+        <input class="m-input" id="maint-vehicle-test" type="date" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📏 ק"מ נוכחי</label>
+        <input class="m-input" id="maint-vehicle-km" type="number" min="0" placeholder="ק&quot;מ נוכחי" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📏 ק"מ לטיפול הבא</label>
+        <input class="m-input" id="maint-vehicle-km-service" type="number" min="0" placeholder="לדוגמה: 120000" style="margin-bottom:8px">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <div style="flex:1">
+            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ טיפול חודשי/תלת-חודשי</label>
+            <input class="m-input" id="maint-vehicle-monthly-service" type="date" style="margin-bottom:0">
+          </div>
+          <div style="flex:1">
+            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ טיפול שנתי</label>
+            <input class="m-input" id="maint-vehicle-annual-service" type="date" style="margin-bottom:0">
+          </div>
+        </div>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">❄️ ביקורת חורף</label>
+        <input class="m-input" id="maint-vehicle-winter" type="date" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📝 הערות</label>
+        <input class="m-input" id="maint-vehicle-notes" type="text" placeholder="הערות" style="margin-bottom:10px">
+        <button class="m-btn primary" onclick="saveMaintVehicle()" style="width:100%">➕ הוסף רכב</button>
+      </div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn ghost" onclick="document.getElementById('maint-vehicle-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEASING VEHICLE MODAL (משוייך לפי שם מחזיק, מקובץ אוטומטית לסככה) -->
+  <div class="modal-bg" id="leasing-vehicle-modal">
+    <div class="modal">
+      <h3 id="leasing-vehicle-title">🚗 הוספת רכב ליסינג</h3>
+      <div class="m-sub">רכב ליסינג משוייך לפי שם המחזיק. אם השם קיים באחת הסככות, הרכב יופיע גם שם.</div>
+      <div class="team-add-form">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">👤 שם המחזיק ברכב</label>
+        <input class="m-input" id="leasing-vehicle-holder" type="text" placeholder="שם מלא" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏷️ גף</label>
+        <select class="m-input" id="leasing-vehicle-group" style="margin-bottom:8px">
+          <option value="גף טכני">גף טכני</option>
+          <option value="גף טיסה">גף טיסה</option>
+          <option value="אחר">אחר</option>
+        </select>
+        <input class="m-input" id="leasing-vehicle-name" type="text" placeholder="שם/סוג הרכב" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מס' רכב</label>
+        <input class="m-input" id="leasing-vehicle-number" type="text" placeholder="מס' רכב אזרחי" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏢 חברת ליסינג</label>
+        <input class="m-input" id="leasing-vehicle-company" type="text" placeholder="שלמה / אלדן / פרי..." style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך טיפול הבא</label>
+        <input class="m-input" id="leasing-vehicle-next-service" type="date" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📏 ק"מ נוכחי</label>
+        <input class="m-input" id="leasing-vehicle-km" type="number" min="0" placeholder="ק&quot;מ נוכחי" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📏 ק"מ לטיפול הבא</label>
+        <input class="m-input" id="leasing-vehicle-km-service" type="number" min="0" placeholder="לדוגמה: 120000" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📝 הערות</label>
+        <input class="m-input" id="leasing-vehicle-notes" type="text" placeholder="הערות" style="margin-bottom:10px">
+        <button class="m-btn primary" onclick="saveLeasingVehicle()" style="width:100%">➕ הוסף רכב</button>
+      </div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn ghost" onclick="document.getElementById('leasing-vehicle-modal').classList.remove('open')" style="flex:1">סגור</button>
       </div>
     </div>
   </div>
@@ -3943,6 +4065,8 @@ async function vehicleOfficerLogin(){
   // hide regular nav functions; show only vehicle-officer screen
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
+  await ensureShed2Seed();
+  await ensureAllShedsSeed();
   go("scr-vehicle-officer", document.getElementById("nav-vehicle-officer"));
   toast("ברוך הבא, קצין רכב 🚙");
 }
@@ -4008,6 +4132,37 @@ async function migrateNameFixes(){
 }
 
 /* מזין לכל מי שכבר מוסמך רף (יש לו לפחות הסמכת רף אחת) את 9 פריטי הרף החדשים שנוספו לבנק — בכל הסככות, חד-פעמי */
+/* זריעה חד-פעמית: רכבים תפעוליים (מ"ע לפי סככה) + רכבי מחלקת אחזקה, מתוך גיליון מעקב הרכבים */
+async function seedVehiclesFromSheet(){
+  const flag = "vehicles_seed_v1";
+  if(await sGetRaw(flag)) return;
+  const OPERATIONAL_BY_SHED = {
+    shed1: {name:"פיקו קלאב קאר", militaryNumber:"20211", company:"צבאי", hours:42.6, kmService:50, notes:"מ\"ע סככה 1 · טיפול כל 50 שעות מנוע"},
+    shed2: {name:"פיקו קלאב קאר", militaryNumber:"20088", company:"צבאי", hours:50, kmService:100, notes:"מ\"ע סככה 2 · טיפול כל 50 שעות מנוע"},
+    shed3: {name:"פיקו קלאב קאר", militaryNumber:"20265", company:"צבאי", hours:20, kmService:139, notes:"מ\"ע סככה 3 · טיפול כל 50 שעות מנוע"},
+    shed4: {name:"לפיד-מבטייל", militaryNumber:"898461", company:"צבאי", notes:"מ\"ע סככה 4"},
+    shed5: {name:"לפיד-מבטייל", militaryNumber:"898459", company:"צבאי", notes:"מ\"ע סככה 5"}
+  };
+  await Promise.all(Object.keys(OPERATIONAL_BY_SHED).map(async shedId=>{
+    const vehicles = (await sGetIn(shedId,"vehicles_list")) || [];
+    vehicles.push({id:"veh"+Date.now()+Math.random().toString(36).slice(2,6), number:"", ...OPERATIONAL_BY_SHED[shedId]});
+    await sSetIn(shedId,"vehicles_list", vehicles);
+  }));
+
+  const MAINT_VEHICLES = [
+    {name:"סיטרואן ברלינגו-2015", number:"147-841", militaryNumber:"79-692-30", company:"צבאי", kmService:15000, notes:"רכב אחזקה תפעולי"},
+    {name:"רנו קנגו-2018", number:"265-920", militaryNumber:"200-15-001", company:"צבאי", kmService:30000, notes:"רכב אחזקה תפעולי"},
+    {name:"קיה פיקנטו-2024", number:"240-030", company:"צבאי", kmService:15000, notes:"רכב שחור"},
+    {name:"סוזוקי (שכור)", militaryNumber:"657-977-03", company:"שלמה", kmService:15000, notes:"רכב שכור"}
+  ];
+  const maintList = (await sGetRaw("admin_maint_vehicles")) || [];
+  MAINT_VEHICLES.forEach(v=>maintList.push({id:"mveh"+Date.now()+Math.random().toString(36).slice(2,6), ...v}));
+  await sSetRaw("admin_maint_vehicles", maintList);
+
+  await sSetRaw(flag, true);
+  console.log("✅ רכבים תפעוליים ורכבי אחזקה נזרעו מהגיליון");
+}
+
 async function backfillNewRafCerts(){
   const flag = "raf_backfill_v1";
   const already = await sGetRaw(flag);
@@ -4098,6 +4253,7 @@ async function reloadPersonnelIfSeeded(){
 async function ensureAllShedsSeed(scopeShedId){
   await migrateNameFixes();
   await backfillNewRafCerts();
+  await seedVehiclesFromSheet();
   await syncCertPeopleIntoRoster("shed1", SHED1_ALL_NAMES);
   const SAF = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🟢"));
   const RAF = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🔵"));
@@ -5978,17 +6134,38 @@ async function renderVoOverview(){
 }
 
 function voTab(which){
-  ["overview","vehicles","licenses"].forEach(w=>{
+  ["overview","vehicles","maint","leasing","licenses"].forEach(w=>{
     document.getElementById("votab-"+w).classList.toggle("active", which===w);
     document.getElementById("vopane-"+w).classList.toggle("active", which===w);
   });
   if(which==="overview") renderVoOverview();
   if(which==="vehicles") renderVoVehicles();
+  if(which==="maint") renderMaintVehicles();
+  if(which==="leasing") renderLeasingVehicles();
   if(which==="licenses") renderVoLicenses();
 }
 
 let voVehicleCtx = null; // {shedId, id} כשעורכים רכב קיים, null כשמוסיפים חדש
 
+/* כרטיס רכב עשיר משותף — משמש גם למ"ע לפי סככה, גם לרכבי אחזקה, גם לליסינג */
+function vehicleSubtitle(v){
+  const parts = [];
+  parts.push(v.number ? ("מס' "+escapeHTML(v.number)) : (v.militaryNumber ? ("צבאי "+escapeHTML(v.militaryNumber)) : "ללא מספר"));
+  if(v.company) parts.push(escapeHTML(v.company));
+  if(v.km!=null && v.km!=="") parts.push(Number(v.km).toLocaleString()+' ק"מ');
+  return parts.join(" · ");
+}
+function vehicleCardHtml(v, actionsHtml){
+  const st = vehicleStatus(v);
+  return `<div class="cert-sum-card" style="cursor:default">
+    <div class="cert-sum-head">
+      <div class="avatar" style="width:40px;height:40px;font-size:18px">🚙</div>
+      <div class="cert-sum-name"><b>${escapeHTML(v.name)}</b><span>${vehicleSubtitle(v)}</span></div>
+      <span class="pill ${st.cls}" style="font-size:10px;white-space:nowrap">${st.tag}</span>
+      ${actionsHtml}
+    </div>
+  </div>`;
+}
 async function renderVoVehicles(){
   const box = document.getElementById("vo-vehicles-list");
   if(!box) return;
@@ -6002,17 +6179,10 @@ async function renderVoVehicles(){
     const withStatus = vehicles.map(v=>({...v, st: vehicleStatus(v)}));
     const order = {r:0, y:1, g:2};
     withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
-    html += `<div class="cmd-section-title">${shed.name}</div>` + withStatus.map(v=>`
-      <div class="cert-sum-card" style="cursor:default">
-        <div class="cert-sum-head">
-          <div class="avatar" style="width:40px;height:40px;font-size:18px">🚙</div>
-          <div class="cert-sum-name"><b>${escapeHTML(v.name)}</b><span>${v.number?("מס' "+escapeHTML(v.number)):"ללא מספר"}${v.km!=null && v.km!==""?(" · "+Number(v.km).toLocaleString()+' ק"מ'):""}</span></div>
-          <span class="pill ${v.st.cls}" style="font-size:10px;white-space:nowrap">${v.st.tag}</span>
+    html += `<div class="cmd-section-title">${shed.name}</div>` + withStatus.map(v=>vehicleCardHtml(v, `
           <button class="cert-chip-edit" title="עדכון ק&quot;מ" onclick="openVoKmUpdate('${shed.id}','${v.id}')">📏</button>
           <button class="cert-chip-edit" onclick="openVoVehicleEdit('${shed.id}','${v.id}')">✏️</button>
-          <button class="cert-chip-del" onclick="removeVoVehicle('${shed.id}','${v.id}')">✕</button>
-        </div>
-      </div>`).join("");
+          <button class="cert-chip-del" onclick="removeVoVehicle('${shed.id}','${v.id}')">✕</button>`)).join("");
   }
   if(!anyVehicle){
     box.innerHTML = `<div class="empty-state"><div class="ic">🚙</div><h3>אין עדיין רכבים במעקב</h3><p>הוסף רכב באמצעות "הוספת רכב"</p></div>`;
@@ -6028,17 +6198,41 @@ function pickVoVehicleFromBank(){
   const v = document.getElementById("vo-vehicle-bank-pick").value;
   if(v) document.getElementById("vo-vehicle-name").value = v;
 }
+/* שדות משותפים לטופס רכב עשיר (מ"ע/אחזקה/ליסינג) */
+const VO_VEHICLE_FIELDS = [
+  ["name","vo-vehicle-name","text"], ["number","vo-vehicle-number","text"],
+  ["militaryNumber","vo-vehicle-military-number","text"], ["company","vo-vehicle-company","text"],
+  ["vehicleCode","vo-vehicle-code","text"], ["fuelCode","vo-vehicle-fuel-code","text"],
+  ["nextService","vo-vehicle-next-service","date"], ["testDate","vo-vehicle-test","date"],
+  ["km","vo-vehicle-km","number"], ["kmService","vo-vehicle-km-service","number"], ["hours","vo-vehicle-hours","number"],
+  ["monthlyService","vo-vehicle-monthly-service","date"], ["annualService","vo-vehicle-annual-service","date"],
+  ["winterCheck","vo-vehicle-winter","date"], ["notes","vo-vehicle-notes","text"]
+];
+function fillVoVehicleForm(v){
+  VO_VEHICLE_FIELDS.forEach(([key,id,type])=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(!v){ el.value = ""; return; }
+    el.value = type==="number" ? (v[key] ?? "") : (v[key] || "");
+  });
+}
+function readVoVehicleForm(){
+  const data = {};
+  VO_VEHICLE_FIELDS.forEach(([key,id,type])=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const raw = el.value.trim ? el.value.trim() : el.value;
+    if(type==="number") data[key] = raw===""?null:Number(raw);
+    else if(key==="name"||key==="number") data[key] = raw; // אלה מטופלים בנפרד לבדיקת תקינות
+    else data[key] = raw;
+  });
+  return data;
+}
 function openVoVehicleAdd(){
   voVehicleCtx = null;
   document.getElementById("vo-vehicle-shed").innerHTML = voShedOptions();
   document.getElementById("vo-vehicle-bank-pick").innerHTML = vehicleBankOptions();
-  document.getElementById("vo-vehicle-name").value = "";
-  document.getElementById("vo-vehicle-number").value = "";
-  document.getElementById("vo-vehicle-next-service").value = "";
-  document.getElementById("vo-vehicle-test").value = "";
-  document.getElementById("vo-vehicle-km").value = "";
-  document.getElementById("vo-vehicle-km-service").value = "";
-  document.getElementById("vo-vehicle-hours").value = "";
+  fillVoVehicleForm(null);
   document.getElementById("vo-vehicle-title").textContent = "🚙 הוספת רכב למעקב";
   document.querySelector("#vo-vehicle-modal .m-btn.primary").textContent = "➕ הוסף רכב";
   document.getElementById("vo-vehicle-modal").classList.add("open");
@@ -6050,35 +6244,22 @@ async function openVoVehicleEdit(shedId, id){
   voVehicleCtx = {shedId, id};
   document.getElementById("vo-vehicle-shed").innerHTML = voShedOptions(shedId);
   document.getElementById("vo-vehicle-bank-pick").innerHTML = vehicleBankOptions();
-  document.getElementById("vo-vehicle-name").value = v.name;
-  document.getElementById("vo-vehicle-number").value = v.number || "";
-  document.getElementById("vo-vehicle-next-service").value = v.nextService || "";
-  document.getElementById("vo-vehicle-test").value = v.testDate || "";
-  document.getElementById("vo-vehicle-km").value = v.km ?? "";
-  document.getElementById("vo-vehicle-km-service").value = v.kmService ?? "";
-  document.getElementById("vo-vehicle-hours").value = v.hours ?? "";
+  fillVoVehicleForm(v);
   document.getElementById("vo-vehicle-title").textContent = "✏️ עריכת רכב";
   document.querySelector("#vo-vehicle-modal .m-btn.primary").textContent = "💾 שמור שינויים";
   document.getElementById("vo-vehicle-modal").classList.add("open");
 }
 async function saveVoVehicle(){
   const shedId = document.getElementById("vo-vehicle-shed").value;
-  const name = document.getElementById("vo-vehicle-name").value.trim();
-  const number = document.getElementById("vo-vehicle-number").value.trim();
-  const nextService = document.getElementById("vo-vehicle-next-service").value;
-  const testDate = document.getElementById("vo-vehicle-test").value;
-  const kmVal = document.getElementById("vo-vehicle-km").value;
-  const kmServiceVal = document.getElementById("vo-vehicle-km-service").value;
-  const hoursVal = document.getElementById("vo-vehicle-hours").value;
-  if(name.length<2){ toast("נא למלא שם/סוג רכב"); return; }
-  const km = kmVal===""?null:Number(kmVal);
-  const kmService = kmServiceVal===""?null:Number(kmServiceVal);
-  const hours = hoursVal===""?null:Number(hoursVal);
+  const data = readVoVehicleForm();
+  data.name = data.name.trim();
+  data.number = data.number.trim();
+  if(data.name.length<2){ toast("נא למלא שם/סוג רכב"); return; }
 
   if(voVehicleCtx && voVehicleCtx.shedId===shedId){
     const vehicles = (await sGetIn(shedId, "vehicles_list")) || [];
     const v = vehicles.find(x=>x.id===voVehicleCtx.id);
-    if(v){ v.name=name; v.number=number; v.nextService=nextService; v.testDate=testDate; v.km=km; v.kmService=kmService; v.hours=hours; }
+    if(v) Object.assign(v, data);
     await sSetIn(shedId, "vehicles_list", vehicles);
     toast("הרכב עודכן ✓");
   } else {
@@ -6088,7 +6269,7 @@ async function saveVoVehicle(){
       await sSetIn(voVehicleCtx.shedId, "vehicles_list", oldList.filter(x=>x.id!==voVehicleCtx.id));
     }
     const vehicles = (await sGetIn(shedId, "vehicles_list")) || [];
-    vehicles.push({id:"veh"+Date.now(), name, number, nextService, testDate, km, kmService, hours});
+    vehicles.push({id:"veh"+Date.now(), ...data});
     await sSetIn(shedId, "vehicles_list", vehicles);
     toast("הרכב נוסף למעקב ✓");
   }
@@ -6127,6 +6308,186 @@ async function saveVoKmUpdate(){
   document.getElementById("vo-km-modal").classList.remove("open");
   toast('הק"מ עודכן ✓');
   renderVoVehicles();
+}
+
+/* ===== רכבי מחלקת אחזקה (שחורים+שכורים) — רשימה גלובלית, גלויה לקצין הרכב בלבד ===== */
+const MAINT_VEHICLE_FIELDS = [
+  ["name","maint-vehicle-name","text"], ["number","maint-vehicle-number","text"],
+  ["militaryNumber","maint-vehicle-military-number","text"], ["company","maint-vehicle-company","text"],
+  ["vehicleCode","maint-vehicle-code","text"], ["fuelCode","maint-vehicle-fuel-code","text"],
+  ["nextService","maint-vehicle-next-service","date"], ["testDate","maint-vehicle-test","date"],
+  ["km","maint-vehicle-km","number"], ["kmService","maint-vehicle-km-service","number"],
+  ["monthlyService","maint-vehicle-monthly-service","date"], ["annualService","maint-vehicle-annual-service","date"],
+  ["winterCheck","maint-vehicle-winter","date"], ["notes","maint-vehicle-notes","text"]
+];
+async function getMaintVehicles(){ return (await sGetRaw("admin_maint_vehicles")) || []; }
+let maintVehicleEditId = null;
+function fillMaintVehicleForm(v){
+  MAINT_VEHICLE_FIELDS.forEach(([key,id,type])=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(!v){ el.value = ""; return; }
+    el.value = type==="number" ? (v[key] ?? "") : (v[key] || "");
+  });
+}
+function openMaintVehicleAdd(){
+  maintVehicleEditId = null;
+  fillMaintVehicleForm(null);
+  document.getElementById("maint-vehicle-title").textContent = "🔧 הוספת רכב אחזקה";
+  document.querySelector("#maint-vehicle-modal .m-btn.primary").textContent = "➕ הוסף רכב";
+  document.getElementById("maint-vehicle-modal").classList.add("open");
+}
+async function openMaintVehicleEdit(id){
+  const v = (await getMaintVehicles()).find(x=>x.id===id);
+  if(!v) return;
+  maintVehicleEditId = id;
+  fillMaintVehicleForm(v);
+  document.getElementById("maint-vehicle-title").textContent = "✏️ עריכת רכב אחזקה";
+  document.querySelector("#maint-vehicle-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.getElementById("maint-vehicle-modal").classList.add("open");
+}
+async function saveMaintVehicle(){
+  const data = {};
+  MAINT_VEHICLE_FIELDS.forEach(([key,id,type])=>{
+    const raw = document.getElementById(id).value.trim();
+    data[key] = type==="number" ? (raw===""?null:Number(raw)) : raw;
+  });
+  if(data.name.length<2){ toast("נא למלא שם/סוג רכב"); return; }
+  const vehicles = await getMaintVehicles();
+  if(maintVehicleEditId){
+    const v = vehicles.find(x=>x.id===maintVehicleEditId);
+    if(v) Object.assign(v, data);
+    toast("הרכב עודכן ✓");
+  } else {
+    vehicles.push({id:"mveh"+Date.now(), ...data});
+    toast("הרכב נוסף למעקב ✓");
+  }
+  await sSetRaw("admin_maint_vehicles", vehicles);
+  maintVehicleEditId = null;
+  document.getElementById("maint-vehicle-modal").classList.remove("open");
+  renderMaintVehicles();
+}
+async function removeMaintVehicle(id){
+  if(!confirm("להסיר את הרכב מהמעקב?")) return;
+  const vehicles = (await getMaintVehicles()).filter(v=>v.id!==id);
+  await sSetRaw("admin_maint_vehicles", vehicles);
+  toast("הרכב הוסר");
+  renderMaintVehicles();
+}
+async function renderMaintVehicles(){
+  const box = document.getElementById("vo-maint-list");
+  if(!box) return;
+  const vehicles = await getMaintVehicles();
+  if(vehicles.length===0){
+    box.innerHTML = `<div class="empty-state"><div class="ic">🔧</div><h3>אין עדיין רכבי אחזקה במעקב</h3><p>רכבים שחורים ושכורים — לא משוייכים לסככה ספציפית</p></div>`;
+    return;
+  }
+  const withStatus = vehicles.map(v=>({...v, st: vehicleStatus(v)}));
+  const order = {r:0, y:1, g:2};
+  withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
+  box.innerHTML = withStatus.map(v=>vehicleCardHtml(v, `
+      <button class="cert-chip-edit" onclick="openMaintVehicleEdit('${v.id}')">✏️</button>
+      <button class="cert-chip-del" onclick="removeMaintVehicle('${v.id}')">✕</button>`)).join("");
+}
+
+/* ===== רכבי ליסינג — רשימה גלובלית, משוייכת לפי שם המחזיק לסככה (אם קיים ברשימת הצוות שלה) ===== */
+async function getLeasingVehicles(){ return (await sGetRaw("admin_leasing_vehicles")) || []; }
+let leasingVehicleEditId = null;
+const LEASING_VEHICLE_FIELDS = [
+  ["holder","leasing-vehicle-holder","text"], ["group","leasing-vehicle-group","text"],
+  ["name","leasing-vehicle-name","text"], ["number","leasing-vehicle-number","text"],
+  ["company","leasing-vehicle-company","text"], ["nextService","leasing-vehicle-next-service","date"],
+  ["km","leasing-vehicle-km","number"], ["kmService","leasing-vehicle-km-service","number"],
+  ["notes","leasing-vehicle-notes","text"]
+];
+function fillLeasingVehicleForm(v){
+  LEASING_VEHICLE_FIELDS.forEach(([key,id,type])=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(!v){ el.value = type==="text" && key==="group" ? "גף טכני" : ""; return; }
+    el.value = type==="number" ? (v[key] ?? "") : (v[key] || "");
+  });
+}
+function openLeasingVehicleAdd(){
+  leasingVehicleEditId = null;
+  fillLeasingVehicleForm(null);
+  document.getElementById("leasing-vehicle-title").textContent = "🚗 הוספת רכב ליסינג";
+  document.querySelector("#leasing-vehicle-modal .m-btn.primary").textContent = "➕ הוסף רכב";
+  document.getElementById("leasing-vehicle-modal").classList.add("open");
+}
+async function openLeasingVehicleEdit(id){
+  const v = (await getLeasingVehicles()).find(x=>x.id===id);
+  if(!v) return;
+  leasingVehicleEditId = id;
+  fillLeasingVehicleForm(v);
+  document.getElementById("leasing-vehicle-title").textContent = "✏️ עריכת רכב ליסינג";
+  document.querySelector("#leasing-vehicle-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.getElementById("leasing-vehicle-modal").classList.add("open");
+}
+async function saveLeasingVehicle(){
+  const data = {};
+  LEASING_VEHICLE_FIELDS.forEach(([key,id,type])=>{
+    const raw = document.getElementById(id).value.trim();
+    data[key] = type==="number" ? (raw===""?null:Number(raw)) : raw;
+  });
+  if(data.name.length<2){ toast("נא למלא שם/סוג רכב"); return; }
+  if(data.holder.length<2){ toast("נא למלא שם מחזיק"); return; }
+  const vehicles = await getLeasingVehicles();
+  if(leasingVehicleEditId){
+    const v = vehicles.find(x=>x.id===leasingVehicleEditId);
+    if(v) Object.assign(v, data);
+    toast("הרכב עודכן ✓");
+  } else {
+    vehicles.push({id:"lveh"+Date.now(), ...data});
+    toast("הרכב נוסף למעקב ✓");
+  }
+  await sSetRaw("admin_leasing_vehicles", vehicles);
+  leasingVehicleEditId = null;
+  document.getElementById("leasing-vehicle-modal").classList.remove("open");
+  renderLeasingVehicles();
+}
+async function removeLeasingVehicle(id){
+  if(!confirm("להסיר את הרכב מהמעקב?")) return;
+  const vehicles = (await getLeasingVehicles()).filter(v=>v.id!==id);
+  await sSetRaw("admin_leasing_vehicles", vehicles);
+  toast("הרכב הוסר");
+  renderLeasingVehicles();
+}
+/* קובע לאיזו סככה שייך שם מחזיק, לפי חיפוש ברשימות הצוות של כל הסככות (במקביל) */
+async function matchLeasingHolderShed(holderName){
+  const results = await Promise.all(SHEDS.map(async shed=>{
+    const pers = (await sGetIn(shed.id, "cfg_personnel")) || [];
+    return pers.some(p=>p.name===holderName) ? shed : null;
+  }));
+  return results.find(Boolean) || null;
+}
+async function renderLeasingVehicles(){
+  const box = document.getElementById("vo-leasing-list");
+  if(!box) return;
+  box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען…</div>';
+  const vehicles = await getLeasingVehicles();
+  if(vehicles.length===0){
+    box.innerHTML = `<div class="empty-state"><div class="ic">🚗</div><h3>אין עדיין רכבי ליסינג במעקב</h3><p>הוסף רכב לפי שם המחזיק</p></div>`;
+    return;
+  }
+  // שיוך כל רכב לסככה (אם המחזיק קיים ברשימת צוות כלשהי), במקביל
+  const withShed = await Promise.all(vehicles.map(async v=>({...v, shed: await matchLeasingHolderShed(v.holder)})));
+  const groups = {};
+  withShed.forEach(v=>{
+    const key = v.shed ? v.shed.name : "לא משוייך לסככה (לא נמצא ברשימות הצוות)";
+    (groups[key] = groups[key] || []).push(v);
+  });
+  const order = {r:0, y:1, g:2};
+  let html = "";
+  Object.keys(groups).sort((a,b)=> a==="לא משוייך לסככה (לא נמצא ברשימות הצוות)"?1: b==="לא משוייך לסככה (לא נמצא ברשימות הצוות)"?-1: a.localeCompare(b,"he")).forEach(shedName=>{
+    const list = groups[shedName].map(v=>({...v, st: vehicleStatus(v)})).sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
+    html += `<div class="cmd-section-title">${escapeHTML(shedName)}</div>` + list.map(v=>vehicleCardHtml(
+      {...v, name: v.name + " · " + v.holder},
+      `<button class="cert-chip-edit" onclick="openLeasingVehicleEdit('${v.id}')">✏️</button>
+       <button class="cert-chip-del" onclick="removeLeasingVehicle('${v.id}')">✕</button>`
+    )).join("");
+  });
+  box.innerHTML = html;
 }
 
 /* רישיונות והסמכות — נתון טייסתי-רוחבי, לא לפי סככה */
