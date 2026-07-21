@@ -5227,6 +5227,7 @@ async function addTool(){
   toast("הכלי נוסף לחדר הכלים ✓ — ניתן להוסיף עוד");
 }
 async function removeToolById(id){
+  if(!confirm("להסיר את הכלי מחדר הכלים לצמיתות?")) return;
   let tools = await getTools();
   tools = tools.filter(t=>t.id!==id);
   await sSet("tools_list", tools);
@@ -5339,6 +5340,7 @@ async function addVehicle(){
   toast("הרכב נוסף למעקב ✓ — ניתן להוסיף עוד");
 }
 async function removeVehicleById(id){
+  if(!confirm("להסיר את הרכב מהמעקב לצמיתות?")) return;
   let vehicles = await getVehicles();
   vehicles = vehicles.filter(v=>v.id!==id);
   await sSet("vehicles_list", vehicles);
