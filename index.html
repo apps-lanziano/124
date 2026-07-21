@@ -699,6 +699,8 @@ nav{
 .lvl-tag.himush{background:var(--gold-soft);color:var(--gold)}
 .lvl-tag.elyon{background:var(--red-soft);color:var(--red)}
 .lvl-tag.stage{background:#f3e8ff;color:#7c3aed}
+.lvl-tag.pa{background:#f5e6d8;color:#92400e}
+.lvl-tag.safety{background:#e2e8f0;color:#334155}
 .cert-sum-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden;cursor:pointer}
 .cert-sum-head{display:flex;align-items:center;gap:11px;padding:12px 13px;transition:background .2s}
 .cert-sum-head:active{background:var(--red-soft)}
@@ -714,6 +716,8 @@ nav{
 .lvl-count.himush{background:var(--gold-soft);color:var(--gold)}
 .lvl-count.elyon{background:var(--red-soft);color:var(--red)}
 .lvl-count.stage{background:#f3e8ff;color:#7c3aed}
+.lvl-count.pa{background:#f5e6d8;color:#92400e}
+.lvl-count.safety{background:#e2e8f0;color:#334155}
 .lvl-count.zero{background:#f4f0f1;color:#c9bcbf}
 .cert-sum-chev{color:var(--ink-3);font-size:18px;transition:transform .3s;flex-shrink:0}
 .cert-sum-card.open .cert-sum-chev{transform:rotate(-90deg)}
@@ -722,7 +726,7 @@ nav{
 .cert-sum-detail-inner{padding:0 13px 13px}
 .cert-detail-group{margin-top:11px}
 .cert-detail-title{font-size:11.5px;font-weight:800;margin-bottom:7px;padding-bottom:4px;border-bottom:1px solid var(--line)}
-.cert-detail-title.saf{color:var(--green)} .cert-detail-title.raf{color:var(--sky,#2563eb)} .cert-detail-title.himush{color:var(--gold)} .cert-detail-title.elyon{color:var(--red)} .cert-detail-title.stage{color:#7c3aed} .cert-detail-title.other{color:var(--ink-2)}
+.cert-detail-title.saf{color:var(--green)} .cert-detail-title.raf{color:var(--sky,#2563eb)} .cert-detail-title.himush{color:var(--gold)} .cert-detail-title.elyon{color:var(--red)} .cert-detail-title.stage{color:#7c3aed} .cert-detail-title.pa{color:#92400e} .cert-detail-title.safety{color:#334155} .cert-detail-title.other{color:var(--ink-2)}
 .cert-chip-list{display:flex;flex-direction:column;gap:4px}
 .cert-chip-row{display:flex;align-items:center;gap:8px;background:#fbfafa;border:1px solid var(--line);border-radius:9px;padding:7px 10px}
 .cert-chip-name{flex:1;min-width:0;font-size:12px;font-weight:500;color:var(--ink)}
@@ -1045,6 +1049,8 @@ nav{
           <option value="himush">🟠 חימוש</option>
           <option value="elyon">🔴 עליון</option>
           <option value="stage">🟣 שלבים</option>
+          <option value="pa">🟤 פ"א לאור ספרות</option>
+          <option value="safety">⚫ מערכות בטיחותיות</option>
           <option value="other">הסמכות נוספות</option>
         </select>
         <select class="m-input" id="certs-stage-filter" style="margin-bottom:0;flex:1" onchange="renderCertsPageList()">
@@ -1214,6 +1220,8 @@ nav{
             <option value="himush">🟠 חימוש</option>
             <option value="elyon">🔴 עליון</option>
             <option value="stage">🟣 שלבים</option>
+            <option value="pa">🟤 פ"א לאור ספרות</option>
+            <option value="safety">⚫ מערכות בטיחותיות</option>
             <option value="other">הסמכות נוספות</option>
           </select>
           <select class="m-input" id="admin-cert-stage-filter" style="margin-bottom:0;flex:1" onchange="renderAdminCertMatrix()">
@@ -4555,10 +4563,19 @@ function adminTab(which){
 }
 
 /* ---- default cert bank ---- */
-const CERT_BANK_DEFAULT = ["🟢 דמפר ר.ר.ר","🟢 מסנן עוקת ממסר ראשי","🟢 גלגל ראשי/זנב","🟢 מסנן APU","🟢 הגבהת מסוק","🟢 רוברטסון","🟢 מנוף","🟢 מייצב גובה","🟢 גירוז צלחות ר.ר.ר","🟢 כונסי מנוע ראשי","🟢 הוצאה/קבלה","🟢 תדלוק","🟢 ניקוד","🟢 דגימה ספקטרומטרית","🟢 גרירת מסוק","🟢 בדיקת כבלים והארקות","🟢 שטיפת מסוק","🔵 פירוק והרכבת מערכת פאר","🔵 פירוק והרכבת מערכת RADS","🔵 הסרה והתקנת דלתות תא מטען","🔵 הסרה והתקנת סרוו זנב","🔵 הסרה והתקנת מכלול רוטור אחורי","🔵 הסרה והתקנת רכיבים בקבוקי כיבוי אש","🔵 החלפת מכלולי מפסקים במערכת ההיגוי","🔵 הסרה והתקנת סרוואים ראשיים וט\"א","🔵 הסרה והתקנת מנועים ראשיים","🔵 הסרה והתקנת גנרטורים ראשיים ו-APU","🔵 הסרה והתקנת INPUT + חטיבת אביזרים","🔵 הסרה והרכבת רכיבי מערכת התנעה","🔵 הסרה והתקנת רכיבי מערכת דלק","🔵 הסרה והתקנת מערכת איוורור וחימום","🔵 שירות למערכת מזגן","🔵 הסרה והתקנת רכיבי מערכת מיזוג","🔵 קיפול זנב מסוק","🔵 הסרת והתקנת כבלי מסוק בבקרת מנוע","🔵 ר\"צ הגבהת מסוק - נק הגבהה 1","🔵 הסרה והתקנת מעצורים","🔵 העברת תנועה ומסבים","🔵 הסרה והתקנת צירי מניפה ומקרן שמן ממסר ראשי","🔵 הסרה והתקנת ממסר ביניים/אחורי","🔵 הסרה והתקנת משז\"פ רוטור ראשי","🔵 הסרה והתקנת משז\"פ רוטור אחורי","🔵 הסרה והתקנת מכלולי רוטור ראשי","🔵 הסרה והתקנת להבים ראשיים","🔵 פירוק והרכבת מפסקים ומשדרים ממסר ראשי","🔵 שירות כן נסע ראשי/אחורי","🟠 דיונון פ/ה מכלולי מערכת","🟠 דיונון-ביצוע בדיקת test על הקרקע","🟠 כיבוי אש-בדיקת מערכת הפעלת כפ\"טים","🟠 כיבוי אש פ/ה כד\"פ","🟠 מנוף-בדיקת מערכת חיתוך כבל מנוף הצלה","🟠 מנוף פ/ה כד\"פ חיצוני - ביקורת דרג א'","🟠 מתלה מטען - בדיקת מערכת דרג א'","🔴 קיפול להבים ראשיים","🔴 ר\"צ גרירת מסוק בעזרת נעדחף","🔴 ר\"צ גרירת מסוק בעזרת טרקטור","🔴 ר\"צ הגבהת מסוק - 2 נק ומעלה","🔴 התנעת מנוע עזר APU","🔴 הצמדת סטרטר ללא הצתה/שטיף","🔴 ויסות היגוי רוטור ראשי","🔴 ויסות היגוי רוטור אחורי","🔴 ויסות בקרות מנוע","🟣 שלב 7","🟣 שלב 10 סף","🟣 שלב 10 רף","🟣 שלב 12","🟣 שלב 13","הסמכת נדחף","עגורן","ספ\"ם","PF"];
+const CERT_BANK_DEFAULT = ["🟢 דמפר ר.ר.ר","🟢 מסנן עוקת ממסר ראשי","🟢 גלגל ראשי/זנב","🟢 מסנן APU","🟢 הגבהת מסוק","🟢 רוברטסון","🟢 מנוף","🟢 מייצב גובה","🟢 גירוז צלחות ר.ר.ר","🟢 כונסי מנוע ראשי","🟢 הוצאה/קבלה","🟢 תדלוק","🟢 ניקוד","🟢 דגימה ספקטרומטרית","🟢 גרירת מסוק","🟢 בדיקת כבלים והארקות","🟢 שטיפת מסוק","🔵 פירוק והרכבת מערכת פאר","🔵 פירוק והרכבת מערכת RADS","🔵 הסרה והתקנת דלתות תא מטען","🔵 הסרה והתקנת סרוו זנב","🔵 הסרה והתקנת מכלול רוטור אחורי","🔵 הסרה והתקנת רכיבים בקבוקי כיבוי אש","🔵 החלפת מכלולי מפסקים במערכת ההיגוי","🔵 הסרה והתקנת סרוואים ראשיים וט\"א","🔵 הסרה והתקנת מנועים ראשיים","🔵 הסרה והתקנת גנרטורים ראשיים ו-APU","🔵 הסרה והתקנת INPUT + חטיבת אביזרים","🔵 הסרה והרכבת רכיבי מערכת התנעה","🔵 הסרה והתקנת רכיבי מערכת דלק","🔵 הסרה והתקנת מערכת איוורור וחימום","🔵 שירות למערכת מזגן","🔵 הסרה והתקנת רכיבי מערכת מיזוג","🔵 קיפול זנב מסוק","🔵 הסרת והתקנת כבלי מסוק בבקרת מנוע","🔵 ר\"צ הגבהת מסוק - נק הגבהה 1","🔵 הסרה והתקנת מעצורים","🔵 העברת תנועה ומסבים","🔵 הסרה והתקנת צירי מניפה ומקרן שמן ממסר ראשי","🔵 הסרה והתקנת ממסר ביניים/אחורי","🔵 הסרה והתקנת משז\"פ רוטור ראשי","🔵 הסרה והתקנת משז\"פ רוטור אחורי","🔵 הסרה והתקנת מכלולי רוטור ראשי","🔵 הסרה והתקנת להבים ראשיים","🔵 פירוק והרכבת מפסקים ומשדרים ממסר ראשי","🔵 שירות כן נסע ראשי/אחורי","🟠 דיונון פ/ה מכלולי מערכת","🟠 דיונון-ביצוע בדיקת test על הקרקע","🟠 כיבוי אש-בדיקת מערכת הפעלת כפ\"טים","🟠 כיבוי אש פ/ה כד\"פ","🟠 מנוף-בדיקת מערכת חיתוך כבל מנוף הצלה","🟠 מנוף פ/ה כד\"פ חיצוני - ביקורת דרג א'","🟠 מתלה מטען - בדיקת מערכת דרג א'","🔴 קיפול להבים ראשיים","🔴 ר\"צ גרירת מסוק בעזרת נעדחף","🔴 ר\"צ גרירת מסוק בעזרת טרקטור","🔴 ר\"צ הגבהת מסוק - 2 נק ומעלה","🔴 התנעת מנוע עזר APU","🔴 הצמדת סטרטר ללא הצתה/שטיף","🔴 ויסות היגוי רוטור ראשי","🔴 ויסות היגוי רוטור אחורי","🔴 ויסות בקרות מנוע","🟣 שלב 7","🟣 שלב 10 סף","🟣 שלב 10 רף","🟣 שלב 12","🟣 שלב 13","🟤 הוצאת/קבלת מסוק לטיסה","🟤 תדלוק כלי טיס","🟤 הוצאת דגימה ספקטרומטרית","🟤 הוצאת דגימת דלק","🟤 ניקוי מטוס","🟤 גרירת מטוס","🟤 בדיקת כבלים והארקות","⚫ רוטורים","⚫ ממסרים","⚫ מנועים","⚫ כני נסע ומעצורים","⚫ העברת תנועה","⚫ מערכת פניאומטית","⚫ כיבוי אש","⚫ מערכת היגוי","⚫ מערכת הידראולית","⚫ מערכת דלק","⚫ גרירת כלי טיס","⚫ תפעול נדחף בחירום","הסמכת נדחף","עגורן","ספ\"ם","PF"];
 async function getCertBank(){
   const b = await sGetRaw("admin_cert_bank");
-  if(b && Array.isArray(b) && b.length) return b;
+  if(b && Array.isArray(b) && b.length){
+    // ריפוי-עצמי: פריטי בנק חדשים שנוספו בקוד (כמו קטגוריות חדשות) מתמזגים לתוך הבנק הקיים בענן
+    const missing = CERT_BANK_DEFAULT.filter(c=>!b.includes(c));
+    if(missing.length){
+      const merged = [...b, ...missing];
+      await sSetRaw("admin_cert_bank", merged);
+      return merged;
+    }
+    return b;
+  }
   await sSetRaw("admin_cert_bank", CERT_BANK_DEFAULT);
   return CERT_BANK_DEFAULT.slice();
 }
@@ -4655,6 +4672,8 @@ async function renderAdminCertMatrix(){
     <span class="lvl-tag himush">🟠 חימוש</span>
     <span class="lvl-tag elyon">🔴 עליון</span>
     <span class="lvl-tag stage">🟣 שלבים</span>
+    <span class="lvl-tag pa">🟤 פ"א לאור ספרות</span>
+    <span class="lvl-tag safety">⚫ מערכות בטיחותיות</span>
   </div>`;
   let anyPeople = false;
 
@@ -4689,7 +4708,7 @@ async function renderAdminCertMatrix(){
     for(const p of personnel){
       anyPeople = true;
       const list = byPerson[p.name] || [];
-      const counts = {saf:0,raf:0,himush:0,elyon:0,stage:0,other:0};
+      const counts = {saf:0,raf:0,himush:0,elyon:0,stage:0,pa:0,safety:0,other:0};
       list.forEach(c=>{ counts[certLevel(c.name)]++; });
       const total = list.length;
 
@@ -4707,12 +4726,14 @@ async function renderAdminCertMatrix(){
         <div class="cert-sum-head">
           <div class="avatar" style="width:36px;height:36px;font-size:13px">${initials(p.name)}</div>
           <div class="cert-sum-name"><b>${escapeHTML(p.name)}</b><span>${total} הסמכות</span></div>
-          <div class="cert-sum-levels">
+          <div class="cert-sum-levels" style="flex-wrap:wrap;max-width:150px;justify-content:flex-end">
             <div class="lvl-count ${counts.saf?'saf':'zero'}"><b>${counts.saf}</b><span>סף</span></div>
             <div class="lvl-count ${counts.raf?'raf':'zero'}"><b>${counts.raf}</b><span>רף</span></div>
             <div class="lvl-count ${counts.himush?'himush':'zero'}"><b>${counts.himush}</b><span>חימ'</span></div>
             <div class="lvl-count ${counts.elyon?'elyon':'zero'}"><b>${counts.elyon}</b><span>עליון</span></div>
             <div class="lvl-count ${counts.stage?'stage':'zero'}"><b>${counts.stage}</b><span>שלבים</span></div>
+            <div class="lvl-count ${counts.pa?'pa':'zero'}"><b>${counts.pa}</b><span>פ"א</span></div>
+            <div class="lvl-count ${counts.safety?'safety':'zero'}"><b>${counts.safety}</b><span>בטיחות</span></div>
           </div>
           <span class="cert-sum-chev">‹</span>
         </div>
@@ -5401,10 +5422,12 @@ function certLevel(name){
   if(name.startsWith("🟠")) return "himush";
   if(name.startsWith("🔴")) return "elyon";
   if(name.startsWith("🟣")) return "stage";
+  if(name.startsWith("🟤")) return "pa";
+  if(name.startsWith("⚫")) return "safety";
   return "other";
 }
 function certCleanName(name){
-  return String(name).replace(/^(🟢|🔵|🟠|🔴|🟣)\s*/u,"").trim();
+  return String(name).replace(/^(🟢|🔵|🟠|🔴|🟣|🟤|⚫)\s*/u,"").trim();
 }
 const CERT_LEVELS = [
   {key:"saf", label:"🟢 סף", cls:"saf"},
@@ -5412,10 +5435,17 @@ const CERT_LEVELS = [
   {key:"himush", label:"🟠 חימוש", cls:"himush"},
   {key:"elyon", label:"🔴 עליון", cls:"elyon"},
   {key:"stage", label:"🟣 שלבים", cls:"stage"},
+  {key:"pa", label:"🟤 פ\"א לאור ספרות", cls:"pa"},
+  {key:"safety", label:"⚫ מערכות בטיחותיות", cls:"safety"},
   {key:"other", label:"הסמכות נוספות", cls:"other"}
 ];
 /* הסמכות ששייכות אך ורק למפקדים (מסננות את רשימת האנשים בבחירה) */
-const COMMANDER_ONLY_CERTS = ["הסמכת נדחף","עגורן","ספ\"ם"];
+const COMMANDER_ONLY_CERTS = ["הסמכת נדחף","עגורן","ספ\"ם","גרירת כלי טיס","תפעול נדחף בחירום"];
+/* הסמכות שרלוונטיות לחיילים בלבד (קטגוריות פ"א לאור ספרות + מערכות בטיחותיות, למעט הפריטים שסומנו למפקדים) */
+const SOLDIER_ONLY_CERTS = [
+  "הוצאת/קבלת מסוק לטיסה","תדלוק כלי טיס","הוצאת דגימה ספקטרומטרית","הוצאת דגימת דלק","ניקוי מטוס","גרירת מטוס","בדיקת כבלים והארקות",
+  "רוטורים","ממסרים","מנועים","כני נסע ומעצורים","העברת תנועה","מערכת פניאומטית","כיבוי אש","מערכת היגוי","מערכת הידראולית","מערכת דלק"
+];
 /* צביעה נוספת לפריטים תחת "הסמכות נוספות" (בלי לפצל אותם לקטגוריית-על נפרדת) */
 function specialOtherClass(cleanName){
   if(COMMANDER_ONLY_CERTS.includes(cleanName)) return "cmdr";
@@ -5498,6 +5528,8 @@ function renderCertsPageList(){
     <span class="lvl-tag himush">🟠 חימוש</span>
     <span class="lvl-tag elyon">🔴 עליון</span>
     <span class="lvl-tag stage">🟣 שלבים</span>
+    <span class="lvl-tag pa">🟤 פ"א לאור ספרות</span>
+    <span class="lvl-tag safety">⚫ מערכות בטיחותיות</span>
   </div>`;
 
   if(shownNames.length===0){
@@ -5508,7 +5540,7 @@ function renderCertsPageList(){
   const cards = shownNames.map(name=>{
     const list = byPerson[name] || [];
     // count per level
-    const counts = {saf:0, raf:0, himush:0, elyon:0, stage:0, other:0};
+    const counts = {saf:0, raf:0, himush:0, elyon:0, stage:0, pa:0, safety:0, other:0};
     list.forEach(c=>{ counts[certLevel(c.name)]++; });
     const total = list.length;
 
@@ -5537,12 +5569,14 @@ function renderCertsPageList(){
       <div class="cert-sum-head">
         <div class="avatar" style="width:40px;height:40px;font-size:14px">${initials(name)}</div>
         <div class="cert-sum-name"><b>${escapeHTML(name)}</b><span>${roleLabel} · ${total} סה"כ</span></div>
-        <div class="cert-sum-levels">
+        <div class="cert-sum-levels" style="flex-wrap:wrap;max-width:150px;justify-content:flex-end">
           <div class="lvl-count ${counts.saf?'saf':'zero'}"><b>${counts.saf}</b><span>סף</span></div>
           <div class="lvl-count ${counts.raf?'raf':'zero'}"><b>${counts.raf}</b><span>רף</span></div>
           <div class="lvl-count ${counts.himush?'himush':'zero'}"><b>${counts.himush}</b><span>חימ'</span></div>
           <div class="lvl-count ${counts.elyon?'elyon':'zero'}"><b>${counts.elyon}</b><span>עליון</span></div>
           <div class="lvl-count ${counts.stage?'stage':'zero'}"><b>${counts.stage}</b><span>שלבים</span></div>
+          <div class="lvl-count ${counts.pa?'pa':'zero'}"><b>${counts.pa}</b><span>פ"א</span></div>
+          <div class="lvl-count ${counts.safety?'safety':'zero'}"><b>${counts.safety}</b><span>בטיחות</span></div>
         </div>
         <span class="cert-sum-chev">‹</span>
       </div>
@@ -5554,26 +5588,28 @@ function renderCertsPageList(){
 }
 
 function certBankGroupedOptions(){
-  const groups = [["🟢 סף","🟢"],["🔵 רף","🔵"],["🟠 חימוש","🟠"],["🔴 עליון","🔴"],["🟣 שלבים","🟣"]];
+  const groups = [["🟢 סף","🟢"],["🔵 רף","🔵"],["🟠 חימוש","🟠"],["🔴 עליון","🔴"],["🟣 שלבים","🟣"],["🟤 פ\"א לאור ספרות","🟤"],["⚫ מערכות בטיחותיות","⚫"]];
   let html = '<option value="">— בחר מהמאגר —</option>';
   groups.forEach(([label,pfx])=>{
     const items = CERT_BANK_DEFAULT.filter(c=>c.startsWith(pfx));
     if(!items.length) return;
-    html += `<optgroup label="${label}">` + items.map(c=>`<option value="${escapeHTML(c)}">${escapeHTML(c.replace(/^[🟢🔵🟠🔴🟣]\s*/,""))}</option>`).join("") + `</optgroup>`;
+    html += `<optgroup label="${escapeHTML(label)}">` + items.map(c=>`<option value="${escapeHTML(c)}">${escapeHTML(c.replace(/^[🟢🔵🟠🔴🟣🟤⚫]\s*/u,""))}</option>`).join("") + `</optgroup>`;
   });
   // any custom (non-emoji) bank entries — כולל הסמכות למפקדים בלבד
-  const custom = CERT_BANK_DEFAULT.filter(c=>!/^[🟢🔵🟠🔴🟣]/.test(c));
+  const custom = CERT_BANK_DEFAULT.filter(c=>!/^[🟢🔵🟠🔴🟣🟤⚫]/u.test(c));
   if(custom.length) html += `<optgroup label="נוספות">` + custom.map(c=>`<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`).join("") + `</optgroup>`;
   return html;
 }
-/* מרענן את רשימת האנשים לבחירה: אם ההסמכה שנבחרה היא הסמכת-מפקדים-בלבד, מציג רק מפקדים */
+/* מרענן את רשימת האנשים לבחירה: הסמכות-מפקדים-בלבד מציגות רק מפקדים, הסמכות-חיילים-בלבד מציגות רק חיילים */
 function refreshCertPersonOptions(selectId, certName, list){
   const sel = document.getElementById(selectId);
   if(!sel) return;
-  const restrict = COMMANDER_ONLY_CERTS.includes(certName);
-  const filtered = restrict ? list.filter(p=>p.role==="מפקד") : list;
+  const clean = certCleanName(certName);
+  const restrictCmdr = COMMANDER_ONLY_CERTS.includes(clean);
+  const restrictSoldier = SOLDIER_ONLY_CERTS.includes(clean);
+  const filtered = restrictCmdr ? list.filter(p=>p.role==="מפקד") : restrictSoldier ? list.filter(p=>p.role==="חייל") : list;
   const current = sel.value;
-  sel.innerHTML = filtered.length ? filtered.map(p=>`<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)}</option>`).join("") : '<option value="">— אין מפקדים מתאימים —</option>';
+  sel.innerHTML = filtered.length ? filtered.map(p=>`<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)}</option>`).join("") : `<option value="">— אין ${restrictCmdr?'מפקדים':'חיילים'} מתאימים —</option>`;
   if(filtered.some(p=>p.name===current)) sel.value = current;
 }
 function pickCmdCertFromBank(){
