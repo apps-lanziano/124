@@ -2075,6 +2075,7 @@ async function loadRuntimeLists(){
   if(currentShed && currentShed.id !== "shed2"){ await ensureAllShedsSeed(currentShed.id); await reloadPersonnelIfSeeded(); }
   if(currentShed && currentShed.isDept){
     await ensureDeptOfficers();
+    await removeDeptReassignedPeople();
     const p2 = await sGet("cfg_personnel");
     if(p2 && Array.isArray(p2)) PERSONNEL = p2;
   }
@@ -2671,7 +2672,7 @@ async function openReader(id, adminSourced){
       </div>`;
   }
   document.getElementById("reader-body").innerHTML = `
-    <span class="doc-tag">${adminSourced ? "פורסם ע\"י אחראי הדרכה טייסתי · לכל הסככות" : "קרא וחתום · חובת חתימה"}</span>
+    <span class="doc-tag">${adminSourced ? "פורסם ע\"י טומי ליפוביץ · לכל הסככות" : "קרא וחתום · חובת חתימה"}</span>
     <div class="sub">הועלה ע"י ${escapeHTML(currentDoc.by)} · ${currentDoc.date} · טייסת 124</div>
     ${viewer}
     ${sig ? `<div class="sig-preview">
@@ -3747,11 +3748,11 @@ async function saveMessage(){
     // מנהל — פרסום לכל 5 הסככות + עותק ברשימת המנהל
     for(const shed of SHEDS){
       const list = (await sGetIn(shed.id, "messages_list")) || [];
-      list.unshift({...msgObj, by:"אחראי הדרכה טייסתי 🏛️"});
+      list.unshift({...msgObj, by:"טומי ליפוביץ 🏛️"});
       await sSetIn(shed.id, "messages_list", list);
     }
     const adminList = (await sGetRaw("admin_messages")) || [];
-    adminList.unshift({...msgObj, by:"אחראי הדרכה טייסתי 🏛️"});
+    adminList.unshift({...msgObj, by:"טומי ליפוביץ 🏛️"});
     await sSetRaw("admin_messages", adminList);
     toast("ההודעה פורסמה לכל המסגרות 📢");
   } else {
@@ -4189,7 +4190,7 @@ async function exportReport(){
    SUPER-ADMIN (מנהל-על)
    ============================================================ */
 async function adminLogin(){
-  user = "אחראי הדרכה טייסתי"; userRole = "מנהל"; isAdmin = true;
+  user = "טומי ליפוביץ"; userRole = "מנהל"; isAdmin = true;
   document.getElementById("login-overlay").style.display = "none";
   document.getElementById("hdr-username").textContent = user;
   document.getElementById("hdr-rank").textContent = "🏛️ אחראי הדרכה";
@@ -4206,7 +4207,7 @@ async function adminLogin(){
 }
 
 async function vehicleOfficerLogin(){
-  user = "קצין רכב טייסתי"; userRole = "קצין רכב"; isVehicleOfficer = true;
+  user = "שחר שושן"; userRole = "קצין רכב"; isVehicleOfficer = true;
   document.getElementById("login-overlay").style.display = "none";
   document.getElementById("hdr-username").textContent = user;
   document.getElementById("hdr-rank").textContent = "🚙 קצין רכב";
@@ -4415,6 +4416,27 @@ async function ensureDeptOfficers(){
     if(!pers.some(p=>p.name===o.name)){ pers.push(o); changed=true; }
   }
   if(changed) await sSetIn("dept","cfg_personnel", pers);
+  await sSetRaw(flag, true);
+}
+
+/* טומי (אוה"ד) ושחר (אחזקה) יצאו מיוזר מחלקות — טומי הפך לאחראי הדרכה, שחר לקצין רכב (חד-פעמי) */
+async function removeDeptReassignedPeople(){
+  const flag = "dept_reassigned_removed_v1";
+  if(await sGetRaw(flag)) return;
+  const REMOVE = [
+    {dept:"אוה\"ד", nameIncludes:"טומי"},
+    {dept:"אחזקה", nameIncludes:"שחר"}
+  ];
+  let pers = (await sGetIn("dept","cfg_personnel")) || [];
+  const toRemove = pers.filter(p=> REMOVE.some(r=> p.dept===r.dept && p.name.includes(r.nameIncludes)));
+  if(toRemove.length){
+    pers = pers.filter(p=> !toRemove.includes(p));
+    await sSetIn("dept","cfg_personnel", pers);
+    let certs = (await sGetIn("dept","certs_list")) || [];
+    const removedNames = toRemove.map(p=>p.name);
+    const filteredCerts = certs.filter(c=> !removedNames.includes(c.person));
+    if(filteredCerts.length !== certs.length) await sSetIn("dept","certs_list", filteredCerts);
+  }
   await sSetRaw(flag, true);
 }
 
@@ -4811,7 +4833,7 @@ async function publishEventToAllSheds(id, title, meta, fileData, thumb){
   for(const shed of SHEDS){
     await sSetIn(shed.id, "safety_ev_"+id, fileData);
     const events = (await sGetIn(shed.id, "safety_events")) || [];
-    events.unshift({id, title, by:"אחראי הדרכה טייסתי", date:new Date().toLocaleDateString("he-IL"),
+    events.unshift({id, title, by:"טומי ליפוביץ", date:new Date().toLocaleDateString("he-IL"),
                     ftype:meta.type, fname:meta.name, mime:meta.mime, thumb});
     await sSetIn(shed.id, "safety_events", events);
   }
@@ -4850,7 +4872,7 @@ async function publishBoardToAllSheds(id, label, thumb, fullImg){
   for(const shed of SHEDS){
     await sSetIn(shed.id, "board_img_"+id, fullImg);
     const boards = (await sGetIn(shed.id, "boards_list")) || [];
-    boards.unshift({id, label, thumb, by:"אחראי הדרכה טייסתי", date:new Date().toLocaleDateString("he-IL")});
+    boards.unshift({id, label, thumb, by:"טומי ליפוביץ", date:new Date().toLocaleDateString("he-IL")});
     await sSetIn(shed.id, "boards_list", boards);
   }
 }
