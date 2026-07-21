@@ -3153,9 +3153,10 @@ async function renderCommander(){
   cmdEventsCache = events;
   const totalDocs = events.length;
 
-  /* ---- collect all sigs once ---- */
+  /* ---- collect all sigs once (במקביל) ---- */
   const sigMap = {}; // name -> sigs obj
-  for(const p of PERSONNEL){ sigMap[p.name] = (await sGet("sigs_"+safeName(p.name))) || {}; }
+  const sigsArr = await Promise.all(PERSONNEL.map(p => sGet("sigs_"+safeName(p.name))));
+  PERSONNEL.forEach((p,i)=>{ sigMap[p.name] = sigsArr[i] || {}; });
 
   /* ===== SAFETY PANE ===== */
   let totalSigs = 0, fullSign = 0;
@@ -4435,22 +4436,21 @@ async function renderAdminDashboard(){
   renderAdminEvents();
   const grid = document.getElementById("admin-sheds-grid");
   grid.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען נתונים מכל המסגרות…</div>';
-  let html = "";
-  for(const shed of SHEDS){
-    const personnel = (await sGetIn(shed.id, "cfg_personnel")) || [];
-    const events = (await sGetIn(shed.id, "safety_events")) || [];
+  const cards = await Promise.all(SHEDS.map(async shed=>{
+    const [personnel, events] = await Promise.all([
+      sGetIn(shed.id, "cfg_personnel").then(v=>v||[]),
+      sGetIn(shed.id, "safety_events").then(v=>v||[])
+    ]);
 
-    // signatures
+    // signatures — כל אנשי הצוות במקביל, לא סדרתי
+    const sigsList = await Promise.all(personnel.map(p => sGetIn(shed.id, "sigs_" + safeName(p.name))));
     let totalSigs = 0;
-    for(const p of personnel){
-      const sigs = (await sGetIn(shed.id, "sigs_" + safeName(p.name))) || {};
-      totalSigs += events.filter(e=>sigs[e.id]).length;
-    }
+    sigsList.forEach(sigs=>{ const s = sigs || {}; totalSigs += events.filter(e=>s[e.id]).length; });
     const maxSigs = personnel.length * events.length;
     const sigPct = maxSigs ? Math.round(totalSigs/maxSigs*100) : 0;
     const num = shed.id.replace("shed","");
 
-    html += `<div class="shed-card clickable" onclick="drillShed('${shed.id}')">
+    return `<div class="shed-card clickable" onclick="drillShed('${shed.id}')">
       <div class="shed-card-head">
         <h3><span class="shed-num">${num}</span>${shed.name}
           ${personnel.length===0?'<span class="shed-empty-tag">· טרם הוזן צוות</span>':''}</h3>
@@ -4462,8 +4462,8 @@ async function renderAdminDashboard(){
         <div class="shed-stat ${sigPct>=80?'ok':sigPct>=40?'warn':'bad'}"><b>${maxSigs?sigPct+'%':'—'}</b><span>חתימות</span></div>
       </div>
     </div>`;
-  }
-  grid.innerHTML = html;
+  }));
+  grid.innerHTML = cards.join("");
 }
 
 /* ===== ADMIN: publish event to ALL sheds ===== */
@@ -4577,15 +4577,14 @@ async function renderAdminPfStatus(){
   if(!box) return;
   box.innerHTML = '<div style="text-align:center;padding:14px;color:var(--ink-3)">⏳ טוען…</div>';
   const rows = [];
-  for(const shed of SHEDS){
-    const pers = (await sGetIn(shed.id, "cfg_personnel")) || [];
-    const certs = (await sGetIn(shed.id, "certs_list")) || [];
-    for(const p of pers){
+  await Promise.all(SHEDS.map(async shed=>{
+    const [pers, certs] = await Promise.all([sGetIn(shed.id, "cfg_personnel"), sGetIn(shed.id, "certs_list")]);
+    for(const p of (pers||[])){
       if(p.role!=="חייל") continue;
-      const st = pfStatus(p, certs);
+      const st = pfStatus(p, certs||[]);
       if(st) rows.push({name:p.name, shed:shed.name, ...st});
     }
-  }
+  }));
   if(rows.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">✅</div><h3>כולם מוסמכים PF</h3><p>אין חיילים הממתינים להסמכת PF</p></div>'; return; }
   rows.sort((a,b)=> (a.cls==="r"?-1:1) - (b.cls==="r"?-1:1));
   box.innerHTML = rows.map(r=>`<div class="exp-row ${r.cls}">
@@ -4598,7 +4597,7 @@ async function renderAdminCertExpiry(){
   box.innerHTML = '<div style="text-align:center;padding:14px;color:var(--ink-3)">⏳ טוען…</div>';
   const today = new Date(); today.setHours(0,0,0,0);
   const rows = [];
-  for(const shed of SHEDS){
+  await Promise.all(SHEDS.map(async shed=>{
     const certs = (await sGetIn(shed.id, "certs_list")) || [];
     for(const c of certs){
       if(!c.expiry) continue;
@@ -4606,7 +4605,7 @@ async function renderAdminCertExpiry(){
       const d = Math.round((exp-today)/86400000);
       if(d<=90) rows.push({...c, shed:shed.name, days:d});
     }
-  }
+  }));
   rows.sort((a,b)=>a.days-b.days);
   if(rows.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">✅</div><h3>אין הסמכות שעומדות לפוג</h3><p>כל ההסמכות בתוקף ל-90 הימים הקרובים</p></div>'; return; }
   box.innerHTML = rows.map(r=>{
@@ -4632,15 +4631,16 @@ async function renderAdminCertMatrix(){
   const stageFilter = document.getElementById("admin-cert-stage-filter")?.value || "all";
   const sortMode = document.getElementById("admin-cert-sort")?.value || "roster";
 
-  // fetch כל הנתונים מראש — גם כדי לאכלס את רשימת ה"שלב" מכל הסככות, לא רק מהסככה המסוננת
-  const shedData = [];
+  // fetch כל הנתונים מראש (במקביל לכל הסככות) — גם כדי לאכלס את רשימת ה"שלב" מכל הסככות, לא רק מהסככה המסוננת
   const allStageNames = new Set();
-  for(const shed of SHEDS){
-    const personnel = (await sGetIn(shed.id, "cfg_personnel")) || [];
-    const certs = (await sGetIn(shed.id, "certs_list")) || [];
+  const shedData = await Promise.all(SHEDS.map(async shed=>{
+    const [personnel, certs] = await Promise.all([
+      sGetIn(shed.id, "cfg_personnel").then(v=>v||[]),
+      sGetIn(shed.id, "certs_list").then(v=>v||[])
+    ]);
     certs.forEach(c=>{ if(certLevel(c.name)==="stage") allStageNames.add(certCleanName(c.name)); });
-    shedData.push({shed, personnel, certs});
-  }
+    return {shed, personnel, certs};
+  }));
   const stageSel = document.getElementById("admin-cert-stage-filter");
   const prevStageVal = stageSel.value;
   const stageNames = [...allStageNames].sort((a,b)=>a.localeCompare(b,"he"));
@@ -4879,9 +4879,9 @@ function reserveStatus(r){
 }
 async function populateReservePerson(selected){
   const sel = document.getElementById("reserve-person");
+  const perShed = await Promise.all(SHEDS.map(async shed=>({shed, personnel: (await sGetIn(shed.id, "cfg_personnel")) || []})));
   let html = '<option value="">— בחר חייל —</option>';
-  for(const shed of SHEDS){
-    const personnel = (await sGetIn(shed.id, "cfg_personnel")) || [];
+  for(const {shed, personnel} of perShed){
     if(personnel.length===0) continue;
     html += `<optgroup label="${escapeHTML(shed.name)}">` +
       personnel.map(p=>`<option value="${shed.id}::${escapeHTML(p.name)}" ${selected===(shed.id+"::"+p.name)?"selected":""}>${escapeHTML(p.name)}</option>`).join("") +
@@ -5021,10 +5021,10 @@ async function renderAdminLog(){
   const box = document.getElementById("admin-log-list");
   box.innerHTML = '<div style="text-align:center;padding:14px;color:var(--ink-3)">⏳ טוען…</div>';
   let all = [];
-  for(const shed of SHEDS){
+  await Promise.all(SHEDS.map(async shed=>{
     const log = (await sGetIn(shed.id, "audit_log")) || [];
     log.forEach(l=>all.push({...l, shed:shed.name}));
-  }
+  }));
   all.sort((a,b)=>b.ts-a.ts);
   all = all.slice(0,150);
   if(all.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">📜</div><h3>אין עדיין פעולות</h3><p>פעולות מכל הסככות יופיעו כאן</p></div>'; return; }
@@ -5040,15 +5040,19 @@ async function openAdminAlerts(){
   document.getElementById("alerts-modal").classList.add("open");
   body.innerHTML = '<div style="text-align:center;padding:14px;color:var(--ink-3)">⏳ טוען…</div>';
   const today = new Date(); today.setHours(0,0,0,0);
-  const rows = [];
-  for(const shed of SHEDS){
-    const personnel = (await sGetIn(shed.id, "cfg_personnel")) || [];
-    const events = (await sGetIn(shed.id, "safety_events")) || [];
-    const faults = (await sGetIn(shed.id, "faults_list")) || [];
-    // unsigned
+  const rowsPerShed = await Promise.all(SHEDS.map(async shed=>{
+    const rows = [];
+    const [personnel, events, faults, certs] = await Promise.all([
+      sGetIn(shed.id, "cfg_personnel").then(v=>v||[]),
+      sGetIn(shed.id, "safety_events").then(v=>v||[]),
+      sGetIn(shed.id, "faults_list").then(v=>v||[]),
+      sGetIn(shed.id, "certs_list").then(v=>v||[])
+    ]);
+    // unsigned — שולפים את חתימות כל הצוות פעם אחת במקביל, לא בכל אירוע מחדש
+    const sigsList = await Promise.all(personnel.map(p => sGetIn(shed.id, "sigs_"+safeName(p.name))));
     for(const e of events){
       let missing=0;
-      for(const p of personnel){ const s=(await sGetIn(shed.id,"sigs_"+safeName(p.name)))||{}; if(!s[e.id]) missing++; }
+      sigsList.forEach(s=>{ if(!(s||{})[e.id]) missing++; });
       const m=/_(\d{10,})/.exec(e.id); const age=m?Math.floor((Date.now()-Number(m[1]))/86400000):0;
       if(missing>0 && age>=3) rows.push({icon:"⏳", text:`${shed.name}: "${e.title}" — ${missing} לא חתמו`, level:"high"});
     }
@@ -5058,11 +5062,12 @@ async function openAdminAlerts(){
       if(age>=4) rows.push({icon:"🛠️", text:`${shed.name}: תקלה ${age} ימים — "${f.title}"`, level:"high"});
     }
     // certs
-    const certs=(await sGetIn(shed.id,"certs_list"))||[];
     for(const c of certs){ if(!c.expiry) continue; const d=Math.round((new Date(c.expiry+"T00:00:00")-today)/86400000);
       if(d<0) rows.push({icon:"🎓", text:`${shed.name}: ${c.person} — ${c.name} פג`, level:"high"});
       else if(d<=30) rows.push({icon:"🎓", text:`${shed.name}: ${c.person} — ${c.name} בעוד ${d} ימים`, level:"mid"}); }
-  }
+    return rows;
+  }));
+  const rows = rowsPerShed.flat();
   if(rows.length===0){ body.innerHTML='<div style="text-align:center;padding:30px;color:var(--ink-3)"><div style="font-size:40px;margin-bottom:8px">✅</div><b style="font-size:15px;color:var(--green)">אין התראות בכלל הטייסת</b></div>'; return; }
   body.innerHTML = rows.map(a=>`<div class="alert-row ${a.level}"><span class="al-ic">${a.icon}</span><span class="al-tx">${escapeHTML(a.text)}</span></div>`).join("");
 }
@@ -5103,12 +5108,10 @@ async function renderTrends(){
   const events = await getEvents();
   const faults = await getFaults();
 
-  // signatures %
+  // signatures % (במקביל)
   let totalSigs=0;
-  for(const p of PERSONNEL){
-    const sigs=(await sGet("sigs_"+safeName(p.name)))||{};
-    totalSigs += events.filter(e=>sigs[e.id]).length;
-  }
+  const sigsArrT = await Promise.all(PERSONNEL.map(p => sGet("sigs_"+safeName(p.name))));
+  sigsArrT.forEach(sigs=>{ const s = sigs || {}; totalSigs += events.filter(e=>s[e.id]).length; });
   const maxSigs = PERSONNEL.length*events.length;
   const sigPct = maxSigs ? Math.round(totalSigs/maxSigs*100) : 0;
 
@@ -5251,13 +5254,11 @@ async function computeAlerts(){
   const alerts = [];
   if(!currentShed || isAdmin) return alerts;
   const events = await getEvents();
-  // unsigned events (per soldier count)
+  // unsigned events (per soldier count) — שולפים את החתימות של כולם פעם אחת במקביל, לא בכל אירוע מחדש
+  const sigsArrA = await Promise.all(PERSONNEL.map(p => sGet("sigs_"+safeName(p.name))));
   for(const e of events){
     let missing = 0;
-    for(const p of PERSONNEL){
-      const sigs = (await sGet("sigs_"+safeName(p.name))) || {};
-      if(!sigs[e.id]) missing++;
-    }
+    sigsArrA.forEach(sigs=>{ if(!(sigs||{})[e.id]) missing++; });
     const age = eventAgeDays(e.id);
     if(missing>0 && age>=3){
       alerts.push({icon:"⏳", text:`"${e.title}" — ${missing} לא חתמו (${age} ימים)`, level:"high"});
@@ -6666,9 +6667,10 @@ async function renderProfileBanner(){
 }
 
 async function refreshAll(){
-  await renderDocs(); await renderTasks(); await renderDuties(); await renderBoard(); renderBdays();
-  await renderMessages(); await renderFaults(); await updateBadges();
-  await renderBrief(); await renderProfileBanner(); await updateAlertBell();
+  renderBdays();
+  await Promise.all([renderDocs(), renderTasks(), renderDuties(), renderBoard(),
+    renderMessages(), renderFaults(), updateBadges(),
+    renderBrief(), renderProfileBanner(), updateAlertBell()]);
 }
 
 document.getElementById("hdr-date").textContent = new Date().toLocaleDateString("he-IL",{weekday:"long", day:"numeric", month:"long"});
