@@ -3707,7 +3707,8 @@ async function saveTeamMember(){
     else if(profession) member.profession=profession;
     PERSONNEL.push(member);
     // חייל חדש בסככה (לא במחלקות) מקבל אוטומטית שלב 7 — הספירה לשלב 10 מתחילה מהיום
-    if(role==="חייל" && !isDeptUnit){
+    // פקיד כלים לא עובר מסלול הסמכות (לא שלבים ולא PF)
+    if(role==="חייל" && !isDeptUnit && profession!=="פקיד כלים"){
       const certs = await getCerts();
       certs.push({id:"cert"+Date.now()+Math.random().toString(36).slice(2,6), person:name, name:"🟣 שלב 7", expiry:""});
       await sSet("certs_list", certs);
@@ -3754,6 +3755,7 @@ async function processReleases(){
 /* שלב 7 ניתן אוטומטית עם הצטרפות חייל; שנה בדיוק אחרי — הופך אוטומטית לשלב 10 סף */
 const STAGE7_TO_10_DAYS = 365;
 function stage7Status(person, certs){
+  if(person.profession==="פקיד כלים") return null;   // פקיד כלים לא עובר מסלול הסמכות
   if(!person.joined) return null;
   const stage7 = certs.find(c=>c.person===person.name && certCleanName(c.name)==="שלב 7");
   if(!stage7) return null;
@@ -5192,6 +5194,7 @@ const PF_DEADLINE_DAYS = 45;
 function hasPfCert(name, certs){ return certs.some(c=>c.person===name && certCleanName(c.name)==="PF"); }
 /* מחזיר null אם אין מה להציג (מוסמך, או שאין תאריך הצטרפות ידוע) */
 function pfStatus(person, certs){
+  if(person.profession==="פקיד כלים") return null;   // פקיד כלים לא צריך להיות מוסמך PF
   if(hasPfCert(person.name, certs)) return null;
   if(!person.joined) return null;
   const today = new Date(); today.setHours(0,0,0,0);
