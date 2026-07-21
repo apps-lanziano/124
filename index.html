@@ -3906,7 +3906,8 @@ async function budgetOfficerLogin(){
 }
 
 async function techOfficerLogin(){
-  // קצין טכני — רואה את כל המידע שיש באפליקציה, בדיוק כמו מנהל-על (כולל כל הסככות והמחלקות)
+  // קצין טכני — רואה את כל המידע שיש באפליקציה: כל הסככות, כל המחלקות,
+  // ובנוסף גם את מסכי קצין הרכב ואחראי התקציבים (כלל-טייסתיים, לא קשורים לסככה ספציפית)
   user = "אור דבח"; userRole = "קצין טכני"; isTechOfficer = true; isAdmin = true;
   document.getElementById("login-overlay").style.display = "none";
   document.getElementById("hdr-username").textContent = user;
@@ -3914,6 +3915,8 @@ async function techOfficerLogin(){
   document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
   document.getElementById("nav-admin").classList.remove("hidden");
+  document.getElementById("nav-vehicle-officer").classList.remove("hidden");
+  document.getElementById("nav-budget-officer").classList.remove("hidden");
   await ensureShed2Seed();
   await ensureAllShedsSeed();
   go("scr-admin", document.getElementById("nav-admin"));
