@@ -1290,8 +1290,8 @@ nav{
     <button class="nav-btn" id="nav-certs" data-scr="scr-certs" onclick="go('scr-certs',this)"><span class="ic">🎓</span><span>הסמכות</span></button>
     <button class="nav-btn hidden" id="nav-tools" data-scr="scr-tools" onclick="go('scr-tools',this)"><span class="ic">🧰</span><span>חדר כלים</span></button>
     <button class="nav-btn hidden" id="nav-vehicles" data-scr="scr-vehicles" onclick="go('scr-vehicles',this)"><span class="ic">🚙</span><span>רכבים</span></button>
-    <button class="nav-btn" data-scr="scr-faults" onclick="go('scr-faults',this)"><span class="ic">🛠️</span><span>תקלות</span></button>
-    <button class="nav-btn" data-scr="scr-bdays" onclick="go('scr-bdays',this)"><span class="ic">🎂</span><span>ימי הולדת</span></button>
+    <button class="nav-btn" id="nav-faults" data-scr="scr-faults" onclick="go('scr-faults',this)"><span class="ic">🛠️</span><span>תקלות</span></button>
+    <button class="nav-btn" id="nav-bdays" data-scr="scr-bdays" onclick="go('scr-bdays',this)"><span class="ic">🎂</span><span>ימי הולדת</span></button>
     <button class="nav-btn" onclick="openMoreSheet()"><span class="ic">⋯</span><span>עוד</span></button>
     <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic">🏛️</span><span>מנהל</span></button>
     <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic">🚙</span><span>קצין רכב</span></button>
@@ -1375,6 +1375,8 @@ nav{
       <div class="sheet-item" onclick="closeMoreAnd('scr-training')"><div class="s-ic">📚</div><div class="s-tx"><b>חומרי הדרכה</b><span>מהמנהל הטייסתי</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-team-item" onclick="closeMoreAndFn(openTeamMgmt)"><div class="s-ic">👥</div><div class="s-tx"><b>ניהול צוות</b><span>הוספה, עריכה, ימי הולדת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-tasks-item" onclick="closeMoreAndFn(openTaskMgmt)"><div class="s-ic">🧰</div><div class="s-tx"><b>עריכת מטלות בוקר</b><span>הוספה ושינוי מטלות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-faults-item" onclick="closeMoreAnd('scr-faults')"><div class="s-ic">🛠️</div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-bdays-item" onclick="closeMoreAnd('scr-bdays')"><div class="s-ic">🎂</div><div class="s-tx"><b>ימי הולדת</b><span>לוח ימי הולדת הצוות</span></div><span class="s-chev">‹</span></div>
     </div>
   </div>
 
@@ -1432,6 +1434,7 @@ nav{
           <input class="m-input" id="tm-bday" type="date" style="margin-bottom:0;flex:1" title="תאריך לידה">
         </div>
         <select class="m-input" id="tm-dept" style="margin-bottom:8px;display:none"></select>
+        <select class="m-input" id="tm-profession" style="margin-bottom:8px"><option value="">— ללא מקצוע —</option></select>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך שחרור (אופציונלי — החייל יוסר אוטומטית ביום זה)</label>
         <input class="m-input" id="tm-release" type="date" style="margin-bottom:10px" title="תאריך שחרור">
         <div style="display:flex;gap:8px">
@@ -1873,6 +1876,11 @@ async function loadRuntimeLists(){
 
   if(currentShed && currentShed.id === "shed2"){ await seedShed2Certs(); await ensureExtraCertsSeed(currentShed.id); }
   if(currentShed && currentShed.id !== "shed2"){ await ensureAllShedsSeed(currentShed.id); await reloadPersonnelIfSeeded(); }
+  if(currentShed && currentShed.isDept){
+    await ensureDeptOfficers();
+    const p2 = await sGet("cfg_personnel");
+    if(p2 && Array.isArray(p2)) PERSONNEL = p2;
+  }
   await processReleases();   // הסרת חיילים ששוחררו (תאריך שחרור עבר/היום)
   await processStage7Conversions();   // שלב 7 → שלב 10 סף אוטומטית אחרי שנה מהצטרפות
 }
@@ -2065,15 +2073,19 @@ const SHEDS = [
 ];
 /* תת-מחלקות תחת יוזר "מחלקות" — תיוג בלבד, לא משפיע על הרשאות */
 const DEPT_NAMES = ["הטסה", "אוה\"ד", "אחזקה", "קה\"ד מ\"מ"];
+/* מקצועות לחייל בניהול צוות של הסככות (לא רלוונטי ליוזר "מחלקות") — תיוג בלבד */
+const PROFESSIONS = ["טכנאי דרג א'", "פקיד כלים"];
 const ADMIN_CODE = "9124";   // קוד מנהל-על
 const VEHICLE_OFFICER_CODE = "8124";   // קוד קצין רכב טייסתי
 const BUDGET_OFFICER_CODE = "7124";   // קוד אחראי תקציבים טייסתי
+const TECH_OFFICER_CODE = "6124";   // קוד קצין טכני — רואה את כל המידע באפליקציה (כמו מנהל-על)
 
 let currentShed = null;      // {id,name,...} של המסגרת הפעילה
 let isAdmin = false;         // מנהל-על
 let isVehicleOfficer = false; // קצין רכב טייסתי
 let isBudgetOfficer = false; // אחראי תקציבים טייסתי
-let enteredRole = null;      // "חייל" | "מפקד" | "מנהל" | "קצין רכב" | "אחראי תקציבים" after code check
+let isTechOfficer = false;   // קצין טכני
+let enteredRole = null;      // "חייל" | "מפקד" | "מנהל" | "קצין רכב" | "אחראי תקציבים" | "קצין טכני" after code check
 
 /* מפתח storage ממוספר לפי סככה — הפרדת נתונים מלאה */
 function shedKey(key){
@@ -2114,6 +2126,12 @@ async function checkCode(){
     if(code === BUDGET_OFFICER_CODE){
       enteredRole = "אחראי תקציבים"; isBudgetOfficer = true; currentShed = null;
       await budgetOfficerLogin();
+      return;
+    }
+    // technical officer code?
+    if(code === TECH_OFFICER_CODE){
+      enteredRole = "קצין טכני"; isTechOfficer = true; currentShed = null;
+      await techOfficerLogin();
       return;
     }
     // match against shed codes
@@ -2257,6 +2275,11 @@ async function doLogin(){
     document.getElementById("sheet-closeday").classList.toggle("hidden", isDeptUnit);
     document.getElementById("nav-certs").classList.toggle("hidden", isDeptUnit && userRole==="מפקד");
     if(isDeptUnit && userRole==="מפקד") document.getElementById("more-tasks-item").classList.add("hidden");
+    // בסככות (לא במחלקות) — תקלות וימי הולדת עוברים מהבאר התחתון לתפריט "עוד" כדי לצמצם עומס
+    document.getElementById("nav-faults").classList.toggle("hidden", !isDeptUnit);
+    document.getElementById("nav-bdays").classList.toggle("hidden", !isDeptUnit);
+    document.getElementById("more-faults-item").classList.toggle("hidden", isDeptUnit);
+    document.getElementById("more-bdays-item").classList.toggle("hidden", isDeptUnit);
     // commander lands on commander screen; soldier on safety —
     // switched before refreshAll() so the wrong screen never flashes underneath the overlay
     if(userRole === "מפקד"){
@@ -2271,7 +2294,7 @@ async function doLogin(){
   }
 }
 function logout(){
-  user=null; userRole=null; isCmd=false; isAdmin=false; isVehicleOfficer=false; isBudgetOfficer=false; isToolsResp=false; isVehiclesResp=false;
+  user=null; userRole=null; isCmd=false; isAdmin=false; isVehicleOfficer=false; isBudgetOfficer=false; isTechOfficer=false; isToolsResp=false; isVehiclesResp=false;
   // restore regular nav buttons
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.remove("hidden"));
   document.getElementById("nav-cmd").classList.add("hidden");
@@ -2283,6 +2306,8 @@ function logout(){
   document.getElementById("add-event-btn").classList.add("hidden");
   document.getElementById("more-team-item").classList.add("hidden");
   document.getElementById("more-tasks-item").classList.add("hidden");
+  document.getElementById("more-faults-item").classList.add("hidden");
+  document.getElementById("more-bdays-item").classList.add("hidden");
   document.getElementById("login-overlay").style.display="flex";
   document.getElementById("login-select").value="";
   backToCode();
@@ -3591,9 +3616,12 @@ async function deleteFault(id){
 function openTeamMgmt(){
   cancelEditMember();
   const deptSel = document.getElementById("tm-dept");
+  const profSel = document.getElementById("tm-profession");
   const isDeptUnit = !!(currentShed && currentShed.isDept);
   deptSel.style.display = isDeptUnit ? "" : "none";
   if(isDeptUnit) deptSel.innerHTML = '<option value="">— בחר מחלקה —</option>' + DEPT_NAMES.map(d=>`<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`).join("");
+  profSel.style.display = isDeptUnit ? "none" : "";
+  if(!isDeptUnit) profSel.innerHTML = '<option value="">— ללא מקצוע —</option>' + PROFESSIONS.map(p=>`<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`).join("");
   document.getElementById("team-modal").classList.add("open");
   renderTeamMgmt();
 }
@@ -3613,10 +3641,11 @@ async function renderTeamMgmt(){
     const st7 = stage7Status(p, certs);
     const st7Tag = st7 ? `<span class="pill ${st7.cls}" style="font-size:9px;margin-right:4px">${st7.tag}</span>` : "";
     const deptTag = p.dept ? `<span class="role-mini">${escapeHTML(p.dept)}</span>` : "";
+    const profTag = p.profession ? `<span class="role-mini">${escapeHTML(p.profession)}</span>` : "";
     return `
     <div class="mgmt-row">
       <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
-      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini ${p.role==='חייל'?'sol':''}">${p.role}</span> ${deptTag} ${pfTag} ${st7Tag}</b>
+      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini ${p.role==='חייל'?'sol':''}">${p.role}</span> ${deptTag} ${profTag} ${pfTag} ${st7Tag}</b>
         <span>🎂 ${p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—'}${rel?' · 🗓️ שחרור '+rel:''}</span></div>
       <button class="mr-del" style="background:var(--sky-soft);border-color:#cfe0ff;color:var(--sky)" onclick="startEditMember(${i})">✏️</button>
       <button class="mr-del" onclick="removeTeamMember(${i})">🗑️</button>
@@ -3631,6 +3660,7 @@ function startEditMember(i){
   document.getElementById("tm-bday").value = (p.bday && p.bday!=="2000-01-01") ? p.bday : "";
   document.getElementById("tm-release").value = p.release || "";
   if(currentShed && currentShed.isDept) document.getElementById("tm-dept").value = p.dept || "";
+  else document.getElementById("tm-profession").value = p.profession || "";
   document.getElementById("tm-form-title").textContent = "✏️ עריכת " + p.name;
   document.getElementById("tm-save-btn").textContent = "💾 שמור שינויים";
   document.getElementById("tm-cancel-btn").style.display = "block";
@@ -3642,6 +3672,7 @@ function cancelEditMember(){
   document.getElementById("tm-bday").value="";
   document.getElementById("tm-release").value="";
   document.getElementById("tm-dept").value="";
+  document.getElementById("tm-profession").value="";
   document.getElementById("tm-form-title").textContent = "➕ הוספת איש צוות";
   document.getElementById("tm-save-btn").textContent = "➕ הוסף איש צוות";
   document.getElementById("tm-cancel-btn").style.display = "none";
@@ -3654,6 +3685,7 @@ async function saveTeamMember(){
   const release=document.getElementById("tm-release").value;
   const isDeptUnit = !!(currentShed && currentShed.isDept);
   const dept = isDeptUnit ? document.getElementById("tm-dept").value : "";
+  const profession = isDeptUnit ? "" : document.getElementById("tm-profession").value;
   if(name.length<2){ toast("נא להזין שם"); return; }
   if(isDeptUnit && !dept){ toast("נא לבחור מחלקה"); return; }
   // duplicate check (ignore self when editing)
@@ -3666,11 +3698,13 @@ async function saveTeamMember(){
     p.name=name; p.role=role; p.bday=bday||"2000-01-01";
     if(release) p.release=release; else delete p.release;
     if(isDeptUnit) p.dept=dept;
+    else if(profession) p.profession=profession; else delete p.profession;
     toast("הפרטים עודכנו ✓");
   } else {
     const member = {name, role, bday: bday||"2000-01-01", joined: todayKey()};
     if(release) member.release=release;
     if(isDeptUnit) member.dept=dept;
+    else if(profession) member.profession=profession;
     PERSONNEL.push(member);
     // חייל חדש בסככה (לא במחלקות) מקבל אוטומטית שלב 7 — הספירה לשלב 10 מתחילה מהיום
     if(role==="חייל" && !isDeptUnit){
@@ -3871,6 +3905,25 @@ async function budgetOfficerLogin(){
   toast("ברוך הבא, אחראי תקציבים 💰");
 }
 
+async function techOfficerLogin(){
+  // קצין טכני — רואה את כל המידע שיש באפליקציה: כל הסככות, כל המחלקות,
+  // ובנוסף גם את מסכי קצין הרכב ואחראי התקציבים (כלל-טייסתיים, לא קשורים לסככה ספציפית)
+  user = "אור דבח"; userRole = "קצין טכני"; isTechOfficer = true; isAdmin = true;
+  document.getElementById("login-overlay").style.display = "none";
+  document.getElementById("hdr-username").textContent = user;
+  document.getElementById("hdr-rank").textContent = "🔧 קצין טכני";
+  document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
+  document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
+  document.getElementById("nav-admin").classList.remove("hidden");
+  document.getElementById("nav-vehicle-officer").classList.remove("hidden");
+  document.getElementById("nav-budget-officer").classList.remove("hidden");
+  await ensureShed2Seed();
+  await ensureAllShedsSeed();
+  go("scr-admin", document.getElementById("nav-admin"));
+  renderMessages();
+  toast("ברוך הבא, אור 🔧");
+}
+
 /* ============================================================
    תיקון שמות + סנכרון רשימת האנשים לרשימת הצוות הרשמית (מצבת)
    ============================================================ */
@@ -3916,6 +3969,23 @@ async function syncCertPeopleIntoRoster(shedId, names){
     }
   }
   if(changed) await sSetIn(shedId,"cfg_personnel", pers);
+  await sSetRaw(flag, true);
+}
+
+/* מוסיפה קציני מחלקות ידועים לרשימת הצוות של יוזר "מחלקות" (חד-פעמי, לא דורס אנשי צוות קיימים) */
+async function ensureDeptOfficers(){
+  const flag = "dept_officers_seed_v1";
+  const already = await sGetRaw(flag);
+  if(already) return;
+  const OFFICERS = [
+    {name:"דור בן סימון", role:"מפקד", bday:"2000-01-01", dept:"אחזקה"}
+  ];
+  let pers = (await sGetIn("dept","cfg_personnel")) || [];
+  let changed = false;
+  for(const o of OFFICERS){
+    if(!pers.some(p=>p.name===o.name)){ pers.push(o); changed=true; }
+  }
+  if(changed) await sSetIn("dept","cfg_personnel", pers);
   await sSetRaw(flag, true);
 }
 
@@ -4939,7 +5009,7 @@ async function renderTrends(){
       </div>
     </div>
 
-    <div class="cmd-section-title">${priorityFeed.length? '🔴 דורש טיפול עכשיו' : '✅ סטטוס כללי'}${priorityFeed.length?` <span style="background:var(--red-soft);color:var(--red);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${priorityFeed.length}</span>`:''}</div>
+    ${(priorityFeed.length || !isDeptUnit) ? `<div class="cmd-section-title">${priorityFeed.length? '🔴 דורש טיפול עכשיו' : '✅ סטטוס כללי'}${priorityFeed.length?` <span style="background:var(--red-soft);color:var(--red);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${priorityFeed.length}</span>`:''}</div>` : ''}
     ${priorityFeed.length? `<div class="cmd-section-sub">ממוין מהדחוף ביותר — מכל התחומים יחד</div>`:''}
     ${feedHtml}
 
@@ -4949,10 +5019,11 @@ async function renderTrends(){
         <div class="db-ring" style="background:conic-gradient(var(--green) ${sigPct}%, var(--green-soft) 0)"><b>${maxSigs?sigPct+'%':'—'}</b></div>
         <div class="db-ring-body"><b>חתימות</b><span>${totalSigs} מתוך ${maxSigs} חתמו</span></div>
       </div>
+      ${isDeptUnit ? '' : `
       <div class="db-ring-card">
         <div class="db-ring" style="background:conic-gradient(var(--gold) ${MORNING_TASKS.length?Math.round(mDone/MORNING_TASKS.length*100):0}%, var(--gold-soft) 0)"><b>${mDone}/${MORNING_TASKS.length}</b></div>
         <div class="db-ring-body"><b>מטלות בוקר</b><span>${MORNING_TASKS.length-mDone} מטלות עדיין פתוחות</span></div>
-      </div>
+      </div>`}
     </div>
 
     <div class="cmd-section-title">📊 מוכנות לפי תחום</div>
