@@ -1146,6 +1146,7 @@ nav{
         <button class="cmd-tab active" id="atab-overview" onclick="adminTab('overview')">📊 סקירה</button>
         <button class="cmd-tab" id="atab-certs" onclick="adminTab('certs')">🎓 הסמכות</button>
         <button class="cmd-tab" id="atab-training" onclick="adminTab('training')">📚 הדרכה</button>
+        <button class="cmd-tab" id="atab-reserves" onclick="adminTab('reserves')">🎖️ מילואים</button>
         <button class="cmd-tab" id="atab-log" onclick="adminTab('log')">📜 יומן</button>
       </div>
 
@@ -1186,6 +1187,14 @@ nav{
         </div>
         <div class="cmd-section-title">📚 חומרי הדרכה שפורסמו</div>
         <div id="admin-training-list"></div>
+      </div>
+
+      <!-- PANE: RESERVES -->
+      <div class="admin-pane" id="apane-reserves">
+        <div class="admin-actions-row">
+          <button class="admin-card" style="grid-column:1/-1" onclick="openReserveAdd()"><span class="a-ic">➕</span><b>הוספת איש מילואים</b><span>לכל חייל בכל סככה</span></button>
+        </div>
+        <div id="admin-reserves-list"></div>
       </div>
 
       <!-- PANE: LOG -->
@@ -1657,6 +1666,26 @@ nav{
     </div>
   </div>
 
+  <!-- ADMIN — RESERVIST MODAL (כלל הסככות) -->
+  <div class="modal-bg" id="reserve-modal">
+    <div class="modal">
+      <h3 id="reserve-title">🎖️ הוספת איש מילואים</h3>
+      <div class="m-sub">תאריך רענון אחרון + תאריך הרענון הבא (פ.ת), נקבע ידנית.</div>
+      <div class="team-add-form">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">👤 חייל</label>
+        <select class="m-input" id="reserve-person" style="margin-bottom:8px"></select>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ רענון אחרון</label>
+        <input class="m-input" id="reserve-last" type="date" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ רענון הבא (פ.ת)</label>
+        <input class="m-input" id="reserve-next" type="date" style="margin-bottom:10px">
+        <button class="m-btn primary" onclick="saveReserve()" style="width:100%">➕ הוסף</button>
+      </div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn ghost" onclick="document.getElementById('reserve-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
   <!-- BRIEF MODAL (feature 24) -->
   <div class="modal-bg" id="brief-modal">
     <div class="modal">
@@ -1845,6 +1874,7 @@ async function loadRuntimeLists(){
   if(currentShed && currentShed.id === "shed2"){ await seedShed2Certs(); await ensureExtraCertsSeed(currentShed.id); }
   if(currentShed && currentShed.id !== "shed2"){ await ensureAllShedsSeed(currentShed.id); await reloadPersonnelIfSeeded(); }
   await processReleases();   // הסרת חיילים ששוחררו (תאריך שחרור עבר/היום)
+  await processStage7Conversions();   // שלב 7 → שלב 10 סף אוטומטית אחרי שנה מהצטרפות
 }
 
 /* זריעה חד-פעמית של הסמכות סככה 2 מהמאגר הטייסתי (v2 — 4 רמות) */
@@ -3580,11 +3610,13 @@ async function renderTeamMgmt(){
     const rel = p.release ? new Date(p.release+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'numeric',year:'2-digit'}) : null;
     const pf = p.role==="חייל" ? pfStatus(p, certs) : null;
     const pfTag = pf ? `<span class="pill ${pf.cls}" style="font-size:9px;margin-right:4px">${pf.tag}</span>` : "";
+    const st7 = stage7Status(p, certs);
+    const st7Tag = st7 ? `<span class="pill ${st7.cls}" style="font-size:9px;margin-right:4px">${st7.tag}</span>` : "";
     const deptTag = p.dept ? `<span class="role-mini">${escapeHTML(p.dept)}</span>` : "";
     return `
     <div class="mgmt-row">
       <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
-      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini ${p.role==='חייל'?'sol':''}">${p.role}</span> ${deptTag} ${pfTag}</b>
+      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini ${p.role==='חייל'?'sol':''}">${p.role}</span> ${deptTag} ${pfTag} ${st7Tag}</b>
         <span>🎂 ${p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—'}${rel?' · 🗓️ שחרור '+rel:''}</span></div>
       <button class="mr-del" style="background:var(--sky-soft);border-color:#cfe0ff;color:var(--sky)" onclick="startEditMember(${i})">✏️</button>
       <button class="mr-del" onclick="removeTeamMember(${i})">🗑️</button>
@@ -3640,6 +3672,12 @@ async function saveTeamMember(){
     if(release) member.release=release;
     if(isDeptUnit) member.dept=dept;
     PERSONNEL.push(member);
+    // חייל חדש בסככה (לא במחלקות) מקבל אוטומטית שלב 7 — הספירה לשלב 10 מתחילה מהיום
+    if(role==="חייל" && !isDeptUnit){
+      const certs = await getCerts();
+      certs.push({id:"cert"+Date.now()+Math.random().toString(36).slice(2,6), person:name, name:"🟣 שלב 7", expiry:""});
+      await sSet("certs_list", certs);
+    }
     toast("איש הצוות נוסף ✓");
   }
   await sSet("cfg_personnel", PERSONNEL);
@@ -3677,6 +3715,40 @@ async function processReleases(){
     await sSet("cfg_personnel", PERSONNEL);
     for(const p of released){ await removePersonCerts(p.name); }
   }
+}
+
+/* שלב 7 ניתן אוטומטית עם הצטרפות חייל; שנה בדיוק אחרי — הופך אוטומטית לשלב 10 סף */
+const STAGE7_TO_10_DAYS = 365;
+function stage7Status(person, certs){
+  if(!person.joined) return null;
+  const stage7 = certs.find(c=>c.person===person.name && certCleanName(c.name)==="שלב 7");
+  if(!stage7) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const joined = new Date(person.joined+"T00:00:00");
+  const daysLeft = STAGE7_TO_10_DAYS - Math.round((today-joined)/86400000);
+  if(daysLeft<=30) return {tag:daysLeft+" ימים לשלב 10", cls:"y"};
+  return {tag:daysLeft+" ימים לשלב 10", cls:"g"};
+}
+async function processStage7Conversions(){
+  if(!currentShed) return;
+  const certs = await getCerts();
+  const today = new Date(); today.setHours(0,0,0,0);
+  let changed = false;
+  for(const p of PERSONNEL){
+    if(!p.joined) continue;
+    const stage7 = certs.find(c=>c.person===p.name && certCleanName(c.name)==="שלב 7");
+    if(!stage7) continue;
+    const joined = new Date(p.joined+"T00:00:00");
+    const daysPassed = Math.round((today-joined)/86400000);
+    if(daysPassed >= STAGE7_TO_10_DAYS){
+      certs.splice(certs.indexOf(stage7), 1);
+      if(!certs.some(c=>c.person===p.name && certCleanName(c.name)==="שלב 10 סף")){
+        certs.push({id:"cert"+Date.now()+Math.random().toString(36).slice(2,6), person:p.name, name:"🟣 שלב 10 סף", expiry:""});
+      }
+      changed = true;
+    }
+  }
+  if(changed) await sSet("certs_list", certs);
 }
 
 /* ===== TASK MGMT (feature 9) ===== */
@@ -4265,12 +4337,13 @@ async function publishBoardToAllSheds(id, label, thumb, fullImg){
    ADMIN v20: certs matrix, expiries, cert bank, training, log, drill
    ============================================================ */
 function adminTab(which){
-  ["overview","certs","training","log"].forEach(w=>{
+  ["overview","certs","training","reserves","log"].forEach(w=>{
     document.getElementById("atab-"+w).classList.toggle("active", which===w);
     document.getElementById("apane-"+w).classList.toggle("active", which===w);
   });
   if(which==="certs") renderAdminCerts();
   if(which==="training") renderAdminTraining();
+  if(which==="reserves") renderReserves();
   if(which==="log") renderAdminLog();
 }
 
@@ -4555,6 +4628,103 @@ async function publishTrainingToAllSheds(id, title, ftype, fileData, thumb){
     await sSetIn(shed.id, "training_file_"+id, fileData);
   }
 }
+/* ===== מילואים — כלל-טייסתי, רענון ידני (תאריך אחרון + פ.ת הבא) ===== */
+const RESERVE_ALERT_DAYS = 30;
+async function getReserves(){ return (await sGetRaw("admin_reserves_list")) || []; }
+function reserveStatus(r){
+  if(!r.next) return {tag:"אין תאריך", cls:"g"};
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = Math.round((new Date(r.next+"T00:00:00")-today)/86400000);
+  if(d<0) return {tag:"פג תוקף! ("+Math.abs(d)+" ימים)", cls:"r"};
+  if(d<=RESERVE_ALERT_DAYS) return {tag:d+" ימים לרענון", cls:"y"};
+  return {tag:"בתוקף", cls:"g"};
+}
+async function populateReservePerson(selected){
+  const sel = document.getElementById("reserve-person");
+  let html = '<option value="">— בחר חייל —</option>';
+  for(const shed of SHEDS){
+    const personnel = (await sGetIn(shed.id, "cfg_personnel")) || [];
+    if(personnel.length===0) continue;
+    html += `<optgroup label="${escapeHTML(shed.name)}">` +
+      personnel.map(p=>`<option value="${shed.id}::${escapeHTML(p.name)}" ${selected===(shed.id+"::"+p.name)?"selected":""}>${escapeHTML(p.name)}</option>`).join("") +
+      `</optgroup>`;
+  }
+  sel.innerHTML = html;
+}
+let reserveEditId = null;
+async function openReserveAdd(){
+  reserveEditId = null;
+  await populateReservePerson();
+  document.getElementById("reserve-last").value = "";
+  document.getElementById("reserve-next").value = "";
+  document.getElementById("reserve-title").textContent = "🎖️ הוספת איש מילואים";
+  document.querySelector("#reserve-modal .m-btn.primary").textContent = "➕ הוסף";
+  document.getElementById("reserve-modal").classList.add("open");
+}
+async function openReserveEdit(id){
+  const list = await getReserves();
+  const r = list.find(x=>x.id===id);
+  if(!r) return;
+  reserveEditId = id;
+  await populateReservePerson(r.shedId+"::"+r.person);
+  document.getElementById("reserve-last").value = r.last || "";
+  document.getElementById("reserve-next").value = r.next || "";
+  document.getElementById("reserve-title").textContent = "✏️ עריכת איש מילואים";
+  document.querySelector("#reserve-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.getElementById("reserve-modal").classList.add("open");
+}
+async function saveReserve(){
+  const personVal = document.getElementById("reserve-person").value;
+  const last = document.getElementById("reserve-last").value;
+  const next = document.getElementById("reserve-next").value;
+  if(!personVal){ toast("נא לבחור חייל"); return; }
+  const [shedId, person] = personVal.split("::");
+  const list = await getReserves();
+  if(reserveEditId){
+    const r = list.find(x=>x.id===reserveEditId);
+    if(r){ r.shedId=shedId; r.person=person; r.last=last; r.next=next; }
+    reserveEditId = null;
+    toast("העדכון נשמר ✓");
+  } else {
+    list.push({id:"res"+Date.now(), shedId, person, last, next});
+    toast("איש המילואים נוסף ✓");
+  }
+  await sSetRaw("admin_reserves_list", list);
+  document.getElementById("reserve-modal").classList.remove("open");
+  renderReserves();
+}
+async function removeReserve(id){
+  if(!confirm("להסיר את איש המילואים מהמעקב?")) return;
+  let list = await getReserves();
+  list = list.filter(r=>r.id!==id);
+  await sSetRaw("admin_reserves_list", list);
+  toast("הוסר מהמעקב");
+  renderReserves();
+}
+async function renderReserves(){
+  const box = document.getElementById("admin-reserves-list");
+  if(!box) return;
+  const list = await getReserves();
+  if(list.length===0){
+    box.innerHTML = `<div class="empty-state"><div class="ic">🎖️</div><h3>אין עדיין אנשי מילואים במעקב</h3><p>הוסף איש מילואים באמצעות "הוספת איש מילואים"</p></div>`;
+    return;
+  }
+  const shedName = id => (SHEDS.find(s=>s.id===id)||{}).name || id;
+  const withStatus = list.map(r=>({...r, st: reserveStatus(r)}));
+  const order = {r:0, y:1, g:2};
+  withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
+  box.innerHTML = withStatus.map(r=>`
+    <div class="cert-sum-card" style="cursor:default">
+      <div class="cert-sum-head">
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">🎖️</div>
+        <div class="cert-sum-name"><b>${escapeHTML(r.person)}</b><span>${escapeHTML(shedName(r.shedId))}${r.last?(" · רענון אחרון: "+r.last):""}</span></div>
+        <span class="pill ${r.st.cls}" style="font-size:10px;white-space:nowrap">${r.st.tag}</span>
+        <button class="cert-chip-edit" onclick="openReserveEdit('${r.id}')">✏️</button>
+        <button class="cert-chip-del" onclick="removeReserve('${r.id}')">✕</button>
+      </div>
+    </div>`).join("");
+}
+
 async function renderAdminTraining(){
   const box = document.getElementById("admin-training-list");
   const list = await getTrainingList();
