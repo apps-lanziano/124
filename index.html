@@ -1335,7 +1335,7 @@ nav{
     <button class="nav-btn" id="nav-faults" data-scr="scr-faults" onclick="go('scr-faults',this)"><span class="ic">🛠️</span><span>תקלות</span></button>
     <button class="nav-btn" id="nav-bdays" data-scr="scr-bdays" onclick="go('scr-bdays',this)"><span class="ic">🎂</span><span>ימי הולדת</span></button>
     <button class="nav-btn" onclick="openMoreSheet()"><span class="ic">⋯</span><span>עוד</span></button>
-    <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic">🏛️</span><span>מנהל</span></button>
+    <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic">🏛️</span><span>אחראי הדרכה</span></button>
     <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic">🚙</span><span>קצין רכב</span></button>
     <button class="nav-btn hidden" id="nav-budget-officer" data-scr="scr-budget-officer" onclick="go('scr-budget-officer',this)"><span class="ic">💰</span><span>תקציבים</span></button>
   </nav>
@@ -3467,11 +3467,11 @@ async function saveMessage(){
     // מנהל — פרסום לכל 5 הסככות + עותק ברשימת המנהל
     for(const shed of SHEDS){
       const list = (await sGetIn(shed.id, "messages_list")) || [];
-      list.unshift({...msgObj, by:"מנהל מערכת 🏛️"});
+      list.unshift({...msgObj, by:"אחראי הדרכה טייסתי 🏛️"});
       await sSetIn(shed.id, "messages_list", list);
     }
     const adminList = (await sGetRaw("admin_messages")) || [];
-    adminList.unshift({...msgObj, by:"מנהל מערכת 🏛️"});
+    adminList.unshift({...msgObj, by:"אחראי הדרכה טייסתי 🏛️"});
     await sSetRaw("admin_messages", adminList);
     toast("ההודעה פורסמה לכל המסגרות 📢");
   } else {
@@ -3909,20 +3909,20 @@ async function exportReport(){
    SUPER-ADMIN (מנהל-על)
    ============================================================ */
 async function adminLogin(){
-  user = "מנהל מערכת"; userRole = "מנהל"; isAdmin = true;
+  user = "אחראי הדרכה טייסתי"; userRole = "מנהל"; isAdmin = true;
   document.getElementById("login-overlay").style.display = "none";
   document.getElementById("hdr-username").textContent = user;
-  document.getElementById("hdr-rank").textContent = "🏛️ מנהל";
+  document.getElementById("hdr-rank").textContent = "🏛️ אחראי הדרכה";
   document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
   // hide regular nav functions; show only admin screen
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
   document.getElementById("nav-admin").classList.remove("hidden");
-  // ריפוי-עצמי: ודא שכל נתוני הסככות קיימים (אם מנהל נכנס ראשון)
+  // ריפוי-עצמי: ודא שכל נתוני הסככות קיימים (אם אחראי הדרכה נכנס ראשון)
   await ensureShed2Seed();
   await ensureAllShedsSeed();
   go("scr-admin", document.getElementById("nav-admin"));
   renderMessages();
-  toast("ברוך הבא, מנהל 🏛️");
+  toast("ברוך הבא, אחראי הדרכה 🏛️");
 }
 
 async function vehicleOfficerLogin(){
@@ -4438,7 +4438,7 @@ async function publishEventToAllSheds(id, title, meta, fileData, thumb){
   for(const shed of SHEDS){
     await sSetIn(shed.id, "safety_ev_"+id, fileData);
     const events = (await sGetIn(shed.id, "safety_events")) || [];
-    events.unshift({id, title, by:"מנהל מערכת", date:new Date().toLocaleDateString("he-IL"),
+    events.unshift({id, title, by:"אחראי הדרכה טייסתי", date:new Date().toLocaleDateString("he-IL"),
                     ftype:meta.type, fname:meta.name, mime:meta.mime, thumb});
     await sSetIn(shed.id, "safety_events", events);
   }
@@ -4477,7 +4477,7 @@ async function publishBoardToAllSheds(id, label, thumb, fullImg){
   for(const shed of SHEDS){
     await sSetIn(shed.id, "board_img_"+id, fullImg);
     const boards = (await sGetIn(shed.id, "boards_list")) || [];
-    boards.unshift({id, label, thumb, by:"מנהל מערכת", date:new Date().toLocaleDateString("he-IL")});
+    boards.unshift({id, label, thumb, by:"אחראי הדרכה טייסתי", date:new Date().toLocaleDateString("he-IL")});
     await sSetIn(shed.id, "boards_list", boards);
   }
 }
