@@ -1503,6 +1503,7 @@ nav{
           <input class="m-input" id="tm-bday" type="date" style="margin-bottom:0;flex:1" title="תאריך לידה">
         </div>
         <select class="m-input" id="tm-dept" style="margin-bottom:8px;display:none"></select>
+        <select class="m-input" id="tm-officer" style="margin-bottom:8px;display:none"><option value="">— רגיל —</option><option value="קצין">קצין</option></select>
         <select class="m-input" id="tm-profession" style="margin-bottom:8px"><option value="">— ללא מקצוע —</option></select>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך שחרור (אופציונלי — החייל יוסר אוטומטית ביום זה)</label>
         <input class="m-input" id="tm-release" type="date" style="margin-bottom:10px" title="תאריך שחרור">
@@ -3941,10 +3942,12 @@ async function deleteFault(id){
 function openTeamMgmt(){
   cancelEditMember();
   const deptSel = document.getElementById("tm-dept");
+  const officerSel = document.getElementById("tm-officer");
   const profSel = document.getElementById("tm-profession");
   const isDeptUnit = !!(currentShed && currentShed.isDept);
   deptSel.style.display = isDeptUnit ? "" : "none";
   if(isDeptUnit) deptSel.innerHTML = '<option value="">— בחר מחלקה —</option>' + DEPT_NAMES.map(d=>`<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`).join("");
+  officerSel.style.display = isDeptUnit ? "" : "none";
   profSel.style.display = isDeptUnit ? "none" : "";
   if(!isDeptUnit) profSel.innerHTML = '<option value="">— ללא מקצוע —</option>' + PROFESSIONS.map(p=>`<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`).join("");
   document.getElementById("team-modal").classList.add("open");
@@ -3966,11 +3969,12 @@ async function renderTeamMgmt(){
     const st7 = stage7Status(p, certs);
     const st7Tag = st7 ? `<span class="pill ${st7.cls}" style="font-size:9px;margin-right:4px">${st7.tag}</span>` : "";
     const deptTag = p.dept ? `<span class="role-mini">${escapeHTML(p.dept)}</span>` : "";
+    const officerTag = p.officerTag ? `<span class="role-mini">${escapeHTML(p.officerTag)}</span>` : "";
     const profTag = p.profession ? `<span class="role-mini">${escapeHTML(p.profession)}</span>` : "";
     return `
     <div class="mgmt-row">
       <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
-      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini ${p.role==='חייל'?'sol':''}">${p.role}</span> ${deptTag} ${profTag} ${pfTag} ${st7Tag}</b>
+      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini ${p.role==='חייל'?'sol':''}">${p.role}</span> ${deptTag} ${officerTag} ${profTag} ${pfTag} ${st7Tag}</b>
         <span>🎂 ${p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—'}${rel?' · 🗓️ שחרור '+rel:''}</span></div>
       <button class="mr-del" style="background:var(--sky-soft);border-color:#cfe0ff;color:var(--sky)" onclick="startEditMember(${i})">✏️</button>
       <button class="mr-del" onclick="removeTeamMember(${i})">🗑️</button>
@@ -3984,8 +3988,10 @@ function startEditMember(i){
   document.getElementById("tm-role").value = p.role;
   document.getElementById("tm-bday").value = (p.bday && p.bday!=="2000-01-01") ? p.bday : "";
   document.getElementById("tm-release").value = p.release || "";
-  if(currentShed && currentShed.isDept) document.getElementById("tm-dept").value = p.dept || "";
-  else document.getElementById("tm-profession").value = p.profession || "";
+  if(currentShed && currentShed.isDept){
+    document.getElementById("tm-dept").value = p.dept || "";
+    document.getElementById("tm-officer").value = p.officerTag || "";
+  } else document.getElementById("tm-profession").value = p.profession || "";
   document.getElementById("tm-form-title").textContent = "✏️ עריכת " + p.name;
   document.getElementById("tm-save-btn").textContent = "💾 שמור שינויים";
   document.getElementById("tm-cancel-btn").style.display = "block";
@@ -3997,6 +4003,7 @@ function cancelEditMember(){
   document.getElementById("tm-bday").value="";
   document.getElementById("tm-release").value="";
   document.getElementById("tm-dept").value="";
+  document.getElementById("tm-officer").value="";
   document.getElementById("tm-profession").value="";
   document.getElementById("tm-form-title").textContent = "➕ הוספת איש צוות";
   document.getElementById("tm-save-btn").textContent = "➕ הוסף איש צוות";
@@ -4010,6 +4017,7 @@ async function saveTeamMember(){
   const release=document.getElementById("tm-release").value;
   const isDeptUnit = !!(currentShed && currentShed.isDept);
   const dept = isDeptUnit ? document.getElementById("tm-dept").value : "";
+  const officerTag = isDeptUnit ? document.getElementById("tm-officer").value : "";
   const profession = isDeptUnit ? "" : document.getElementById("tm-profession").value;
   if(name.length<2){ toast("נא להזין שם"); return; }
   if(isDeptUnit && !dept){ toast("נא לבחור מחלקה"); return; }
@@ -4022,13 +4030,13 @@ async function saveTeamMember(){
     const p = PERSONNEL[editMemberIdx];
     p.name=name; p.role=role; p.bday=bday||"2000-01-01";
     if(release) p.release=release; else delete p.release;
-    if(isDeptUnit) p.dept=dept;
+    if(isDeptUnit){ p.dept=dept; if(officerTag) p.officerTag=officerTag; else delete p.officerTag; }
     else if(profession) p.profession=profession; else delete p.profession;
     toast("הפרטים עודכנו ✓");
   } else {
     const member = {name, role, bday: bday||"2000-01-01", joined: todayKey()};
     if(release) member.release=release;
-    if(isDeptUnit) member.dept=dept;
+    if(isDeptUnit){ member.dept=dept; if(officerTag) member.officerTag=officerTag; }
     else if(profession) member.profession=profession;
     PERSONNEL.push(member);
     // חייל חדש בסככה (לא במחלקות) מקבל אוטומטית שלב 7 — הספירה לשלב 10 מתחילה מהיום
