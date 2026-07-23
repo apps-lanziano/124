@@ -3459,7 +3459,7 @@ async function renderBdays(){
     el.innerHTML = `
       <div class="bday-avatar">${initials(p.name)}</div>
       <div class="bday-body">
-        <h3>${p.name}${p.role?`<span class="role-mini ${roleCls}">${p.role}</span>`:""}</h3>
+        <h3>${p.name}${isVo?'<span class="role-mini">נהג מקצועי</span>':(p.role?`<span class="role-mini ${roleCls}">${p.role}</span>`:"")}</h3>
         <p>${isToday ? "🎉 חוגג/ת היום " + p.age + "!" : fmt(p.next) + " · יחגוג/תחגוג " + p.age}</p>
       </div>
       <div class="bday-count">
@@ -3488,7 +3488,7 @@ async function renderVoTeamMgmt(){
   box.innerHTML = team.map(p=>`
     <div class="mgmt-row">
       <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
-      <div class="mr-body"><b>${escapeHTML(p.name)}</b><span>🎂 ${p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—'}</span></div>
+      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini">נהג מקצועי</span></b><span>🎂 ${p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—'}</span></div>
       <button class="mr-del" style="background:var(--sky-soft);border-color:#cfe0ff;color:var(--sky)" onclick="startEditVoTeamMember('${p.id}')">✏️</button>
       <button class="mr-del" onclick="removeVoTeamMember('${p.id}')">🗑️</button>
     </div>`).join("");
