@@ -6693,66 +6693,77 @@ function voTab(which){
 let voVehicleCtx = null; // {shedId, id} כשעורכים רכב קיים, null כשמוסיפים חדש
 
 /* סטטוס רכב מפורט — תגית אחת המשלבת את כל הפרטים הרלוונטיים (טיפול/טסט/ק"מ) כטקסט, לפי סוג הרכב */
-function vehicleStatusDetailed(v, checks){
+/* בודק תאריך יעד בודד (טיפול/טסט/וכו') ומחזיר תגית+חומרה, או null אם אין תאריך */
+function vehicleDateCheck(dateStr, alertDays, label){
+  if(!dateStr) return null;
   const today = new Date(); today.setHours(0,0,0,0);
+  const d = Math.round((new Date(dateStr+"T00:00:00")-today)/86400000);
+  if(d<0) return {tag:"🔴 "+label+": עבר המועד ("+Math.abs(d)+" ימים)", cls:"r"};
+  if(d<=alertDays) return {tag:"🟡 "+label+" בעוד "+d+" ימים", cls:"y"};
+  return {tag:"🟢 "+label+" בתוקף", cls:"g"};
+}
+/* בודק את יעד הטיפול לפי ק"מ/שעות מנוע (kmService מול km או hours, לפי מה שקיים) */
+function vehicleKmCheck(v){
+  if(!v.kmService) return null;
+  const current = (v.km!=null && v.km!=="") ? Number(v.km) : ((v.hours!=null && v.hours!=="") ? Number(v.hours) : null);
+  if(current==null) return null;
+  const left = Number(v.kmService) - current;
+  if(left<0) return {tag:'🔴 עבר יעד ק"מ/שעו"מ (חריגה '+Math.abs(left)+')', cls:"r"};
+  if(left<=VEHICLES_KM_ALERT_BUFFER) return {tag:'🟡 עוד '+left+' ק"מ/שעו"מ לטיפול', cls:"y"};
+  return {tag:'🟢 ק"מ/שעו"מ לטיפול בתוקף', cls:"g"};
+}
+function vehicleStatusDetailed(v, checks){
   const order = {r:0,y:1,g:2};
   const parts = [];
   let worst = "g";
-  const bump = cls => { if(order[cls]<order[worst]) worst = cls; };
-
-  if(checks.includes("nextService") && v.nextService){
-    const d = Math.round((new Date(v.nextService+"T00:00:00")-today)/86400000);
-    if(d<0){ parts.push("🔴 טיפול: עבר המועד ("+Math.abs(d)+" ימים)"); bump("r"); }
-    else if(d<=VEHICLES_ALERT_DAYS){ parts.push("🟡 טיפול בעוד "+d+" ימים"); bump("y"); }
-    else parts.push("🟢 טיפול בתוקף");
-  }
-  if(checks.includes("monthlyService") && v.monthlyService){
-    const d = Math.round((new Date(v.monthlyService+"T00:00:00")-today)/86400000);
-    if(d<0){ parts.push("🔴 טיפול חודשי/תלת-חודשי: עבר המועד ("+Math.abs(d)+" ימים)"); bump("r"); }
-    else if(d<=VEHICLES_ALERT_DAYS){ parts.push("🟡 טיפול חודשי/תלת-חודשי בעוד "+d+" ימים"); bump("y"); }
-    else parts.push("🟢 טיפול חודשי/תלת-חודשי בתוקף");
-  }
-  if(checks.includes("annualService") && v.annualService){
-    const d = Math.round((new Date(v.annualService+"T00:00:00")-today)/86400000);
-    if(d<0){ parts.push("🔴 טיפול שנתי: עבר המועד ("+Math.abs(d)+" ימים)"); bump("r"); }
-    else if(d<=VEHICLES_ALERT_DAYS){ parts.push("🟡 טיפול שנתי בעוד "+d+" ימים"); bump("y"); }
-    else parts.push("🟢 טיפול שנתי בתוקף");
-  }
-  if(checks.includes("testDate") && v.testDate){
-    const d = Math.round((new Date(v.testDate+"T00:00:00")-today)/86400000);
-    if(d<0){ parts.push("🔴 טסט: פג תוקף ("+Math.abs(d)+" ימים)"); bump("r"); }
-    else if(d<=VEHICLES_TEST_ALERT_DAYS){ parts.push("🟡 טסט בעוד "+d+" ימים"); bump("y"); }
-    else parts.push("🟢 טסט בתוקף");
-  }
-  if(checks.includes("kmService") && v.kmService){
-    const current = (v.km!=null && v.km!=="") ? Number(v.km) : ((v.hours!=null && v.hours!=="") ? Number(v.hours) : null);
-    if(current!=null){
-      const left = Number(v.kmService) - current;
-      if(left<0){ parts.push('🔴 עבר יעד ק"מ/שעו"מ (חריגה '+Math.abs(left)+')'); bump("r"); }
-      else if(left<=VEHICLES_KM_ALERT_BUFFER){ parts.push('🟡 עוד '+left+' ק"מ/שעו"מ לטיפול'); bump("y"); }
-      else parts.push('🟢 ק"מ/שעו"מ לטיפול בתוקף');
-    }
-  }
+  const add = check => { if(check){ parts.push(check.tag); if(order[check.cls]<order[worst]) worst = check.cls; } };
+  if(checks.includes("nextService")) add(vehicleDateCheck(v.nextService, VEHICLES_ALERT_DAYS, "טיפול"));
+  if(checks.includes("monthlyService")) add(vehicleDateCheck(v.monthlyService, VEHICLES_ALERT_DAYS, "טיפול חודשי/תלת-חודשי"));
+  if(checks.includes("annualService")) add(vehicleDateCheck(v.annualService, VEHICLES_ALERT_DAYS, "טיפול שנתי"));
+  if(checks.includes("testDate")) add(vehicleDateCheck(v.testDate, VEHICLES_TEST_ALERT_DAYS, "טסט"));
+  if(checks.includes("kmService")) add(vehicleKmCheck(v));
   if(parts.length===0) return {tag:"אין נתוני מעקב", cls:"g"};
   return {tag: parts.join(" · "), cls: worst};
 }
-/* כרטיס רכב עשיר משותף — משמש גם למ"ע לפי סככה, גם לרכבי אחזקה, גם לליסינג */
-function vehicleSubtitle(v){
-  const parts = [];
-  parts.push(v.number ? ("מס' "+escapeHTML(v.number)) : (v.militaryNumber ? ("צבאי "+escapeHTML(v.militaryNumber)) : "ללא מספר"));
-  if(v.company) parts.push(escapeHTML(v.company));
-  if(v.km!=null && v.km!=="") parts.push(Number(v.km).toLocaleString()+' ק"מ');
-  return parts.join(" · ");
-}
+/* כרטיס רכב עשיר משותף — משמש גם למ"ע לפי סככה, גם לרכבי אחזקה, גם לליסינג
+   תצוגה ראשונית: מס' רכב + טיפול חודשי/תלת-חודשי + ק"מ/שעו"מ נוכחי + קוד רכב/דלק.
+   בלחיצה נפתחת שאר התמונה: טסט + טיפול לפי ק"מ/שעו"מ + טיפול שנתי/קרוב + חברה/ביקורת חורף/הערות */
 function vehicleCardHtml(v, actionsHtml, checks){
-  const st = checks ? vehicleStatusDetailed(v, checks) : vehicleStatus(v);
-  return `<div class="cert-sum-card" style="cursor:default">
+  checks = checks || ["nextService","monthlyService","annualService","testDate","kmService"];
+  const order = {r:0,y:1,g:2};
+
+  const summaryParts = [];
+  summaryParts.push(v.number ? ("מס' "+escapeHTML(v.number)) : (v.militaryNumber ? ("צבאי "+escapeHTML(v.militaryNumber)) : "ללא מספר"));
+  if(checks.includes("monthlyService")){
+    const mc = vehicleDateCheck(v.monthlyService, VEHICLES_ALERT_DAYS, "טיפול חודשי/תלת-חודשי");
+    summaryParts.push(mc ? mc.tag : "אין תאריך טיפול חודשי/תלת-חודשי");
+  }
+  if(v.km!=null && v.km!=="") summaryParts.push(Number(v.km).toLocaleString()+' ק"מ');
+  else if(v.hours!=null && v.hours!=="") summaryParts.push(Number(v.hours).toLocaleString()+' שעו"מ');
+  if(v.vehicleCode) summaryParts.push("קוד רכב "+escapeHTML(v.vehicleCode));
+  if(v.fuelCode) summaryParts.push("קוד דלק "+escapeHTML(v.fuelCode));
+
+  const restChecks = checks.filter(c=>c!=="monthlyService");
+  const restStatus = restChecks.length ? vehicleStatusDetailed(v, restChecks) : null;
+  const extraLines = [];
+  if(v.company) extraLines.push("🏢 חברה: "+escapeHTML(v.company));
+  if(v.winterCheck) extraLines.push("❄️ ביקורת חורף: "+new Date(v.winterCheck+"T00:00:00").toLocaleDateString('he-IL'));
+  if(v.notes) extraLines.push("📝 "+escapeHTML(v.notes));
+
+  const overall = vehicleStatusDetailed(v, checks);
+
+  return `<div class="cert-sum-card" onclick="this.classList.toggle('open')">
     <div class="cert-sum-head">
       <div class="avatar" style="width:40px;height:40px;font-size:18px">🚙</div>
-      <div class="cert-sum-name"><b>${escapeHTML(v.name)}</b><span>${vehicleSubtitle(v)}</span></div>
-      ${actionsHtml}
+      <div class="cert-sum-name"><b>${escapeHTML(v.name)}</b></div>
+      <div onclick="event.stopPropagation()" style="display:flex;gap:6px">${actionsHtml}</div>
+      <span class="cert-sum-chev">‹</span>
     </div>
-    <div class="veh-status-line pill ${st.cls}">${st.tag}</div>
+    <div class="veh-status-line pill ${overall.cls}">${summaryParts.join(" · ")}</div>
+    <div class="cert-sum-detail"><div class="cert-sum-detail-inner">
+      ${restStatus ? `<div class="veh-status-line pill ${restStatus.cls}" style="margin:0 0 8px">${restStatus.tag}</div>` : ""}
+      ${extraLines.length ? `<div style="font-size:11.5px;color:var(--ink-3);line-height:1.9">${extraLines.join("<br>")}</div>` : ""}
+    </div></div>
   </div>`;
 }
 async function renderVoVehicles(){
