@@ -4453,7 +4453,7 @@ async function updateVehiclesFromSheetV2(){
 }
 
 /* תיקון חד-פעמי לשמות מחזיקים ברכבי ליסינג-גף טכני, לפי אישור ידני: הרכב השחור/שכור (857-07-802)
-   שייך ליחידה "גף טיסה דרום" ולא לאדם; "אור שבח" (לא "אור דבח"); ו-405-92-104 שייך לאלעד לנציאנו
+   שייך ליחידה "גף טיסה דרום" ולא לאדם; "אור דבח" (176-48-703); ו-405-92-104 שייך לאלעד לנציאנו
    (לא "לנציאון"). גם מוודא הסרה של מתן וקנין ונתי פרבר אם קיימים בכל זאת. */
 async function fixLeasingHoldersV3(){
   const flag = "leasing_holders_fix_v3";
@@ -4461,7 +4461,7 @@ async function fixLeasingHoldersV3(){
   let leasingList = (await sGetRaw("admin_leasing_vehicles")) || [];
   const HOLDER_FIXES = {
     "857-07-802": "גף טיסה דרום",
-    "176-48-703": "אור שבח",
+    "176-48-703": "אור דבח",
     "405-92-104": "אלעד לנציאנו"
   };
   leasingList.forEach(v=>{ if(HOLDER_FIXES[v.number]) v.holder = HOLDER_FIXES[v.number]; });
@@ -4470,6 +4470,16 @@ async function fixLeasingHoldersV3(){
   await sSetRaw("admin_leasing_vehicles", leasingList);
   await sSetRaw(flag, true);
   console.log("✅ שמות מחזיקים ברכבי ליסינג-גף טכני תוקנו");
+}
+/* תיקון קטן חד-פעמי: "אור שבח" (שגיאת תמלול קודמת) חוזר להיות "אור דבח" — רץ גם אם fixLeasingHoldersV3 כבר בוצע */
+async function fixOrDevachNameV4(){
+  const flag = "leasing_or_devach_fix_v4";
+  if(await sGetRaw(flag)) return;
+  let leasingList = (await sGetRaw("admin_leasing_vehicles")) || [];
+  let changed = false;
+  leasingList.forEach(v=>{ if(v.number==="176-48-703" && v.holder!=="אור דבח"){ v.holder="אור דבח"; changed=true; } });
+  if(changed) await sSetRaw("admin_leasing_vehicles", leasingList);
+  await sSetRaw(flag, true);
 }
 
 async function backfillNewRafCerts(){
@@ -4587,6 +4597,7 @@ async function ensureAllShedsSeed(scopeShedId){
   await seedLeasingVehiclesFromSheet();
   await updateVehiclesFromSheetV2();
   await fixLeasingHoldersV3();
+  await fixOrDevachNameV4();
   await syncCertPeopleIntoRoster("shed1", SHED1_ALL_NAMES);
   const SAF = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🟢"));
   const RAF = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🔵"));
