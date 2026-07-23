@@ -4596,6 +4596,54 @@ async function fixOrDevachNameV4(){
   await sSetRaw(flag, true);
 }
 
+/* זריעה חד-פעמית: רישיונות/הסמכות רכב (מטריצת "רכז רישיונות והיתרים") — לפי אנשי צוות בכל סככה + מחלקות.
+   הרשאות ספציפיות לרכב (פיקו/חשמלית/טרקטור/מלגזה/וכו') ללא תוקף (סימון V בגיליון), ורישיון צבאי/אזרחי עם תוקף. */
+async function seedLicensesFromSheet(){
+  const flag = "licenses_seed_v1";
+  if(await sGetRaw(flag)) return;
+  const ROWS = [
+    {shedId:"dept", person:"דור בן סימון", types:["מלגזה"], military:"2026-05-09", civilian:"2035-11-04"},
+    {shedId:"dept", person:"שחר לרר", types:["מלגזה"], military:"2026-05-12", civilian:"2034-10-09"},
+    {shedId:"dept", person:"אבירם אלמליח", types:["חשמלית","מלגזה","טרקטור","רב הינע B"], military:"2033-09-19", civilian:"2032-01-22"},
+    {shedId:"dept", person:"תמיר למובקי", types:["מלגזה"], military:"2033-09-19", civilian:"2028-04-13"},
+    {shedId:"dept", person:"חוסי שמש", types:["חשמלית","מלגזה","טרקטור","רב הינע B"], military:"2032-01-22", civilian:"2029-01-02"},
+    {shedId:"dept", person:"שחר שושן", types:["פיקו","חשמלית","מלגזה","טרקטור","רב הינע B","בוקסטייל(84)"], military:"2035-04-20", civilian:"2023-10-22"},
+    {shedId:"dept", person:"אליא מרץ", types:["C1"], military:"2028-02-11", civilian:"2026-08-11"},
+
+    {shedId:"shed1", person:"נאור ישראל", types:["לטיסינו","ברלינגו","רנו קנגו","בוקסטייל(84)","רב הינע B","מלגזה","טרקטור","חשמלית","פיקו"], military:"2032-01-22", civilian:"2029-03-12"},
+    {shedId:"shed1", person:"סטס אוליינקוב", types:["פיקו"], military:"2032-01-22", civilian:"2067-06-26"},
+    {shedId:"shed1", person:"אור שמעון עזרא", types:["פיקו","חשמלית","טרקטור"], military:"2035-02-19", civilian:"2026-10-26"},
+
+    {shedId:"shed2", person:"אלעד לנציאנו", types:["פיקו","חשמלית","טרקטור","מלגזה"], military:"2021-02-29", civilian:"2032-01-22"},
+    {shedId:"shed2", person:"דניאל זאורוב", types:["פיקו","חשמלית","טרקטור","רב הינע B"], military:"2028-12-11", civilian:"2032-01-22"},
+    {shedId:"shed2", person:"טל מלכה", types:["פיקו","טרקטור"], military:"2067-10-25", civilian:"2032-01-22"},
+    {shedId:"shed2", person:"בר כהן", types:["פיקו","טרקטור"], military:"2071-09-27", civilian:"2034-05-26"},
+
+    {shedId:"shed3", person:"אריאל אלמליח", types:["פיקו","טרקטור"], military:"2056-12-04", civilian:"2032-01-22"},
+    {shedId:"shed3", person:"ג'וני גריגוביץ", types:["פיקו","טרקטור"], military:"2063-04-23", civilian:"2032-01-22"},
+    {shedId:"shed3", person:"ינון אמינוב", types:["טרקטור"], military:"2069-06-23", civilian:"2033-08-22"},
+    {shedId:"shed3", person:"נועם קדם", types:["טרקטור"], military:"2027-06-29", civilian:"2035-10-29"},
+
+    {shedId:"shed4", person:"סמי אורסו", types:["פולריס","חשמלית","מלגזה","טרקטור","פיקו","ברלינגו"], military:"2030-03-25", civilian:"2032-01-22"},
+    {shedId:"shed4", person:"יורי אסינובסקי", types:["פולריס","טרקטור"], military:"2028-12-13", civilian:"2032-01-22"},
+
+    {shedId:"shed5", person:"שיראל איפרגן", types:["פיקו"], military:"2027-08-06", civilian:"2032-01-22"},
+    {shedId:"shed5", person:"עידן שלום", types:[], military:"2019-05-08", civilian:"2032-01-22"},
+    {shedId:"shed5", person:"אור מינץ", types:[], military:"2025-12-16", civilian:""}
+  ];
+  const licenses = (await sGetRaw("vo_licenses_list")) || [];
+  ROWS.forEach(r=>{
+    r.types.forEach(type=>{
+      licenses.push({id:"lic"+Date.now()+Math.random().toString(36).slice(2,6), shedId:r.shedId, person:r.person, type, expiry:""});
+    });
+    if(r.military) licenses.push({id:"lic"+Date.now()+Math.random().toString(36).slice(2,6), shedId:r.shedId, person:r.person, type:"רישיון צבאי", expiry:r.military});
+    if(r.civilian) licenses.push({id:"lic"+Date.now()+Math.random().toString(36).slice(2,6), shedId:r.shedId, person:r.person, type:"רישיון אזרחי", expiry:r.civilian});
+  });
+  await sSetRaw("vo_licenses_list", licenses);
+  await sSetRaw(flag, true);
+  console.log("✅ רישיונות והסמכות רכב נזרעו מהגיליון");
+}
+
 async function backfillNewRafCerts(){
   const flag = "raf_backfill_v1";
   const already = await sGetRaw(flag);
@@ -4712,6 +4760,7 @@ async function ensureAllShedsSeed(scopeShedId){
   await updateVehiclesFromSheetV2();
   await fixLeasingHoldersV3();
   await fixOrDevachNameV4();
+  await seedLicensesFromSheet();
   await syncCertPeopleIntoRoster("shed1", SHED1_ALL_NAMES);
   const SAF = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🟢"));
   const RAF = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🔵"));
@@ -7046,7 +7095,7 @@ async function renderLeasingVehicles(){
 }
 
 /* רישיונות והסמכות — נתון טייסתי-רוחבי, לא לפי סככה */
-const LICENSE_BANK_DEFAULT = ["רישיון B", "רישיון C", "רישיון נגרר", "מלגזה", "טרקטור"];
+const LICENSE_BANK_DEFAULT = ["רישיון B", "רישיון C", "רישיון נגרר", "מלגזה", "טרקטור", "פיקו", "חשמלית", "ברלינגו", "רנו קנגו", "בוקסטייל(84)", "רב הינע B", "לטיסינו", "פולריס", "רישיון צבאי", "רישיון אזרחי"];
 const LICENSE_ALERT_DAYS = 30;
 async function getVoLicenses(){ return (await sGetRaw("vo_licenses_list")) || []; }
 
