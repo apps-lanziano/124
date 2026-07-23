@@ -4452,6 +4452,26 @@ async function updateVehiclesFromSheetV2(){
   console.log("✅ מצבת הרכבים עודכנה לפי הגיליון החדש (23/07/2026)");
 }
 
+/* תיקון חד-פעמי לשמות מחזיקים ברכבי ליסינג-גף טכני, לפי אישור ידני: הרכב השחור/שכור (857-07-802)
+   שייך ליחידה "גף טיסה דרום" ולא לאדם; "אור שבח" (לא "אור דבח"); ו-405-92-104 שייך לאלעד לנציאנו
+   (לא "לנציאון"). גם מוודא הסרה של מתן וקנין ונתי פרבר אם קיימים בכל זאת. */
+async function fixLeasingHoldersV3(){
+  const flag = "leasing_holders_fix_v3";
+  if(await sGetRaw(flag)) return;
+  let leasingList = (await sGetRaw("admin_leasing_vehicles")) || [];
+  const HOLDER_FIXES = {
+    "857-07-802": "גף טיסה דרום",
+    "176-48-703": "אור שבח",
+    "405-92-104": "אלעד לנציאנו"
+  };
+  leasingList.forEach(v=>{ if(HOLDER_FIXES[v.number]) v.holder = HOLDER_FIXES[v.number]; });
+  const REMOVE_HOLDERS = ["מתן וקנין","נתי פרבר"];
+  leasingList = leasingList.filter(v=> !REMOVE_HOLDERS.includes(v.holder));
+  await sSetRaw("admin_leasing_vehicles", leasingList);
+  await sSetRaw(flag, true);
+  console.log("✅ שמות מחזיקים ברכבי ליסינג-גף טכני תוקנו");
+}
+
 async function backfillNewRafCerts(){
   const flag = "raf_backfill_v1";
   const already = await sGetRaw(flag);
@@ -4566,6 +4586,7 @@ async function ensureAllShedsSeed(scopeShedId){
   await seedVehiclesFromSheet();
   await seedLeasingVehiclesFromSheet();
   await updateVehiclesFromSheetV2();
+  await fixLeasingHoldersV3();
   await syncCertPeopleIntoRoster("shed1", SHED1_ALL_NAMES);
   const SAF = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🟢"));
   const RAF = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🔵"));
