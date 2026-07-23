@@ -3342,13 +3342,24 @@ async function checkInRollcall(){
   renderRollcallPage();
   toast("סומן שאתה תקין/ה וזמין/ה ✓");
 }
+/* סימון תקינות אישית לבעלי תפקידים כלל-טייסתיים (ללא סככה משלהם) — לפי תפקיד, לא לפי סככה */
+async function checkInOfficerRollcall(){
+  const checkins = (await sGetRaw("rollcall_officer_checkins")) || {};
+  checkins[userRole] = { name: user, at: new Date().toISOString() };
+  await sSetRaw("rollcall_officer_checkins", checkins);
+  renderRollcallPage();
+  toast("סומן שאתה תקין/ה וזמין/ה ✓");
+}
 async function renderRollcallPage(){
   const box = document.getElementById("rollcall-content");
   if(!box) return;
 
   if(!currentShed){
-    // תצוגה מרוכזת (קריאה בלבד) לבעלי תפקידים כלל-טייסתיים — קצין טכני / אחראי הדרכה / מחלקת אחזקה / אחראי תקציבים
+    // בעלי תפקידים כלל-טייסתיים — קצין טכני / אחראי הדרכה / מחלקת אחזקה / אחראי תקציבים:
+    // גם הם מסמנים תקינות אישית, בנוסף לתצוגה המרוכזת (קריאה בלבד) של כל שאר המסגרות
     box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען נתוני נכס מכל המסגרות…</div>';
+    const officerCheckins = (await sGetRaw("rollcall_officer_checkins")) || {};
+    const myOfficerCheckedIn = !!officerCheckins[userRole];
     const rows = await Promise.all(SHEDS.map(async shed=>{
       const [active, checkins, pers] = await Promise.all([
         sGetIn(shed.id, "rollcall_active"),
@@ -3360,7 +3371,12 @@ async function renderRollcallPage(){
       const done = list.filter(p=>chk[p.name]).length;
       return {shed, active: !!active, done, total: list.length};
     }));
-    box.innerHTML = rows.map(r=>{
+    let html = `<div class="all-done-banner" style="display:block;background:${myOfficerCheckedIn?'linear-gradient(135deg,#166534,#22c55e)':'linear-gradient(135deg,#7c2d12,#9a3412)'}">
+      ${myOfficerCheckedIn ? '✅ סימנת שאתה תקין/ה וזמין/ה' : '🚨 נא לסמן שאתה תקין/ה וזמין/ה'}
+    </div>`;
+    if(!myOfficerCheckedIn) html += `<button class="m-btn primary" style="width:100%;margin:10px 0" onclick="checkInOfficerRollcall()">✅ אני תקין/ה וזמין/ה</button>`;
+    html += `<div class="cmd-section-title">📊 סטטוס לפי מסגרת</div>`;
+    html += rows.map(r=>{
       const cls = !r.active ? "g" : (r.total>0 && r.done===r.total ? "g" : (r.done>0 ? "y" : "r"));
       const tag = !r.active ? "אין נכס פעיל" : (r.done+"/"+r.total+" סימנו");
       return `<div class="cert-sum-card" style="cursor:default">
@@ -3371,6 +3387,7 @@ async function renderRollcallPage(){
         </div>
       </div>`;
     }).join("");
+    box.innerHTML = html;
     return;
   }
 
