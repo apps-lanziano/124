@@ -6197,35 +6197,48 @@ function vehicleStatus(v){
   checks.sort((a,b)=> order[a.cls]-order[b.cls] || a.pri-b.pri);
   return checks[0];
 }
+/* רכבי ליסינג המשוייכים לסככה נתונה (לפי שם מחזיק שקיים ברשימת הצוות שלה) — מוצגים גם במסך הרכבים של הסככה עצמה */
+async function getShedLeasingVehicles(shedId){
+  const [leasing, pers] = await Promise.all([
+    sGetRaw("admin_leasing_vehicles"),
+    sGetIn(shedId, "cfg_personnel")
+  ]);
+  const names = new Set((pers||[]).map(p=>p.name));
+  return (leasing||[]).filter(v=>names.has(v.holder));
+}
 async function renderVehiclesPage(){
   const box = document.getElementById("vehicles-page-list");
   if(!box) return;
-  const vehicles = await getVehicles();
+  const OWN_CHECKS = ["nextService","testDate","kmService"];
+  const LEASING_CHECKS = ["testDate","kmService"];
   const isCmdr = isVehiclesResp;
-  if(vehicles.length===0){
+  const [vehicles, leasing] = await Promise.all([
+    getVehicles(),
+    currentShed ? getShedLeasingVehicles(currentShed.id) : Promise.resolve([])
+  ]);
+  if(vehicles.length===0 && leasing.length===0){
     box.innerHTML = `<div class="empty-state"><div class="ic">🚙</div><h3>אין עדיין רכבים במעקב</h3><p>${isCmdr?'הוסף רכב באמצעות "+ רכב"':'המפקד או אחראי הרכבים טרם הזין רכבים'}</p></div>`;
     return;
   }
-  const withStatus = vehicles.map(v=>({...v, st: vehicleStatus(v)}));
-  const urgent = withStatus.filter(v=>v.st.cls==="r" || v.st.cls==="y");
+  const ownWithStatus = vehicles.map(v=>({...v, st: vehicleStatusDetailed(v, OWN_CHECKS), _checks: OWN_CHECKS}));
+  const leasingWithStatus = leasing.map(v=>({...v, name: v.name+" · "+v.holder, st: vehicleStatusDetailed(v, LEASING_CHECKS), _checks: LEASING_CHECKS, _leasing:true}));
+  const all = [...ownWithStatus, ...leasingWithStatus];
+  const order = {r:0, y:1, g:2};
+  all.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
+  const urgent = all.filter(v=>v.st.cls==="r" || v.st.cls==="y");
   let banner = "";
   if(urgent.length>0){
     banner = `<div class="all-done-banner" style="background:linear-gradient(135deg,#7c2d12,#9a3412)">
-      ⚠️ ${urgent.length} רכבים מתקרבים למועד טיפול או שכבר עברו אותו
+      ⚠️ ${urgent.length} רכבים מתקרבים למועד טיפול/טסט או שכבר עברו אותו
       <small>${urgent.map(v=>escapeHTML(v.name)).join(" · ")}</small>
     </div>`;
   }
-  const order = {r:0, y:1, g:2};
-  withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
-  const cards = withStatus.map(v=>`
-    <div class="cert-sum-card" style="cursor:default">
-      <div class="cert-sum-head">
-        <div class="avatar" style="width:40px;height:40px;font-size:18px">🚙</div>
-        <div class="cert-sum-name"><b>${escapeHTML(v.name)}</b><span>${v.number?("מספר רכב: "+escapeHTML(v.number)):"ללא מספר רכב"}</span></div>
-        <span class="pill ${v.st.cls}" style="font-size:10px;white-space:nowrap">${v.st.tag}</span>
-        ${isCmdr?`<button class="cert-chip-edit" onclick="openVehicleEdit('${v.id}')">✏️</button><button class="cert-chip-del" onclick="removeVehicleById('${v.id}')">✕</button>`:''}
-      </div>
-    </div>`).join("");
+  const cards = all.map(v=>{
+    const actions = v._leasing
+      ? `<span class="role-mini">🚗 ליסינג</span>`
+      : (isCmdr ? `<button class="cert-chip-edit" onclick="openVehicleEdit('${v.id}')">✏️</button><button class="cert-chip-del" onclick="removeVehicleById('${v.id}')">✕</button>` : '');
+    return vehicleCardHtml(v, actions, v._checks);
+  }).join("");
   box.innerHTML = banner + cards;
 }
 
@@ -6359,6 +6372,35 @@ function voTab(which){
 
 let voVehicleCtx = null; // {shedId, id} כשעורכים רכב קיים, null כשמוסיפים חדש
 
+/* סטטוס רכב מפורט — תגית אחת המשלבת את כל הפרטים הרלוונטיים (טיפול/טסט/ק"מ) כטקסט, לפי סוג הרכב */
+function vehicleStatusDetailed(v, checks){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const order = {r:0,y:1,g:2};
+  const parts = [];
+  let worst = "g";
+  const bump = cls => { if(order[cls]<order[worst]) worst = cls; };
+
+  if(checks.includes("nextService") && v.nextService){
+    const d = Math.round((new Date(v.nextService+"T00:00:00")-today)/86400000);
+    if(d<0){ parts.push("🔴 טיפול: עבר המועד ("+Math.abs(d)+" ימים)"); bump("r"); }
+    else if(d<=VEHICLES_ALERT_DAYS){ parts.push("🟡 טיפול בעוד "+d+" ימים"); bump("y"); }
+    else parts.push("🟢 טיפול בתוקף");
+  }
+  if(checks.includes("testDate") && v.testDate){
+    const d = Math.round((new Date(v.testDate+"T00:00:00")-today)/86400000);
+    if(d<0){ parts.push("🔴 טסט: פג תוקף ("+Math.abs(d)+" ימים)"); bump("r"); }
+    else if(d<=VEHICLES_TEST_ALERT_DAYS){ parts.push("🟡 טסט בעוד "+d+" ימים"); bump("y"); }
+    else parts.push("🟢 טסט בתוקף");
+  }
+  if(checks.includes("kmService") && v.kmService && v.km!=null && v.km!==""){
+    const left = Number(v.kmService) - Number(v.km);
+    if(left<0){ parts.push('🔴 עבר יעד ק"מ (חריגה '+Math.abs(left)+')'); bump("r"); }
+    else if(left<=VEHICLES_KM_ALERT_BUFFER){ parts.push('🟡 עוד '+left+' ק"מ לטיפול'); bump("y"); }
+    else parts.push('🟢 ק"מ לטיפול בתוקף');
+  }
+  if(parts.length===0) return {tag:"אין נתוני מעקב", cls:"g"};
+  return {tag: parts.join(" · "), cls: worst};
+}
 /* כרטיס רכב עשיר משותף — משמש גם למ"ע לפי סככה, גם לרכבי אחזקה, גם לליסינג */
 function vehicleSubtitle(v){
   const parts = [];
@@ -6367,8 +6409,8 @@ function vehicleSubtitle(v){
   if(v.km!=null && v.km!=="") parts.push(Number(v.km).toLocaleString()+' ק"מ');
   return parts.join(" · ");
 }
-function vehicleCardHtml(v, actionsHtml){
-  const st = vehicleStatus(v);
+function vehicleCardHtml(v, actionsHtml, checks){
+  const st = checks ? vehicleStatusDetailed(v, checks) : vehicleStatus(v);
   return `<div class="cert-sum-card" style="cursor:default">
     <div class="cert-sum-head">
       <div class="avatar" style="width:40px;height:40px;font-size:18px">🚙</div>
@@ -6388,13 +6430,14 @@ async function renderVoVehicles(){
     const vehicles = (await sGetIn(shed.id, "vehicles_list")) || [];
     if(vehicles.length===0) continue;
     anyVehicle = true;
-    const withStatus = vehicles.map(v=>({...v, st: vehicleStatus(v)}));
+    const checks = ["nextService","testDate","kmService"];
+    const withStatus = vehicles.map(v=>({...v, st: vehicleStatusDetailed(v, checks)}));
     const order = {r:0, y:1, g:2};
     withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
     html += `<div class="cmd-section-title">${shed.name}</div>` + withStatus.map(v=>vehicleCardHtml(v, `
           <button class="cert-chip-edit" title="עדכון ק&quot;מ" onclick="openVoKmUpdate('${shed.id}','${v.id}')">📏</button>
           <button class="cert-chip-edit" onclick="openVoVehicleEdit('${shed.id}','${v.id}')">✏️</button>
-          <button class="cert-chip-del" onclick="removeVoVehicle('${shed.id}','${v.id}')">✕</button>`)).join("");
+          <button class="cert-chip-del" onclick="removeVoVehicle('${shed.id}','${v.id}')">✕</button>`, checks)).join("");
   }
   if(!anyVehicle){
     box.innerHTML = `<div class="empty-state"><div class="ic">🚙</div><h3>אין עדיין רכבים במעקב</h3><p>הוסף רכב באמצעות "הוספת רכב"</p></div>`;
@@ -6594,12 +6637,13 @@ async function renderMaintVehicles(){
     box.innerHTML = `<div class="empty-state"><div class="ic">🔧</div><h3>אין עדיין רכבי אחזקה במעקב</h3><p>רכבים שחורים ושכורים — לא משוייכים לסככה ספציפית</p></div>`;
     return;
   }
-  const withStatus = vehicles.map(v=>({...v, st: vehicleStatus(v)}));
+  const checks = ["nextService","testDate","kmService"];
+  const withStatus = vehicles.map(v=>({...v, st: vehicleStatusDetailed(v, checks)}));
   const order = {r:0, y:1, g:2};
   withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
   box.innerHTML = withStatus.map(v=>vehicleCardHtml(v, `
       <button class="cert-chip-edit" onclick="openMaintVehicleEdit('${v.id}')">✏️</button>
-      <button class="cert-chip-del" onclick="removeMaintVehicle('${v.id}')">✕</button>`)).join("");
+      <button class="cert-chip-del" onclick="removeMaintVehicle('${v.id}')">✕</button>`, checks)).join("");
 }
 
 /* ===== רכבי ליסינג — רשימה גלובלית, משוייכת לפי שם המחזיק לסככה (אם קיים ברשימת הצוות שלה) ===== */
@@ -6690,13 +6734,15 @@ async function renderLeasingVehicles(){
     (groups[key] = groups[key] || []).push(v);
   });
   const order = {r:0, y:1, g:2};
+  const checks = ["testDate","kmService"];
   let html = "";
   Object.keys(groups).sort((a,b)=> a==="לא משוייך לסככה (לא נמצא ברשימות הצוות)"?1: b==="לא משוייך לסככה (לא נמצא ברשימות הצוות)"?-1: a.localeCompare(b,"he")).forEach(shedName=>{
-    const list = groups[shedName].map(v=>({...v, st: vehicleStatus(v)})).sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
+    const list = groups[shedName].map(v=>({...v, st: vehicleStatusDetailed(v, checks)})).sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
     html += `<div class="cmd-section-title">${escapeHTML(shedName)}</div>` + list.map(v=>vehicleCardHtml(
       {...v, name: v.name + " · " + v.holder},
       `<button class="cert-chip-edit" onclick="openLeasingVehicleEdit('${v.id}')">✏️</button>
-       <button class="cert-chip-del" onclick="removeLeasingVehicle('${v.id}')">✕</button>`
+       <button class="cert-chip-del" onclick="removeLeasingVehicle('${v.id}')">✕</button>`,
+      checks
     )).join("");
   });
   box.innerHTML = html;
