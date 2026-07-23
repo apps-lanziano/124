@@ -1082,7 +1082,16 @@ nav{
         </div>
         <button class="add-btn hidden" id="vehicles-add-btn" onclick="openVehicleAdd()">+ רכב</button>
       </div>
-      <div id="vehicles-page-list"></div>
+      <div class="cmd-tabs" style="margin-bottom:16px">
+        <button class="cmd-tab active" id="vptab-vehicles" onclick="vehiclesPageTab('vehicles')">🚙 רכבים</button>
+        <button class="cmd-tab" id="vptab-licenses" onclick="vehiclesPageTab('licenses')">🪪 רישיונות והסמכות</button>
+      </div>
+      <div class="admin-pane active" id="vppane-vehicles">
+        <div id="vehicles-page-list"></div>
+      </div>
+      <div class="admin-pane" id="vppane-licenses">
+        <div id="vehicles-page-licenses-list"></div>
+      </div>
     </section>
 
     <!-- ===== TRAINING MATERIALS (shed view) ===== -->
@@ -1256,11 +1265,11 @@ nav{
       </div>
     </section>
 
-    <!-- ===== VEHICLE OFFICER (קצין רכב טייסתי) ===== -->
+    <!-- ===== VEHICLE OFFICER / MAINT DEPT — VEHICLES TAB (מחלקת אחזקה, לשעבר קצין רכב) ===== -->
     <section class="screen" id="scr-vehicle-officer">
       <div class="sec-head">
         <div>
-          <h2>קצין רכב טייסתי 🚙</h2>
+          <h2>רכבים 🚙</h2>
           <p>מעקב רכבים ורישיונות · כלל 5 הסככות</p>
         </div>
       </div>
@@ -1308,6 +1317,37 @@ nav{
           <button class="admin-card" style="grid-column:1/-1" onclick="openVoLicenseAdd()"><span class="a-ic">➕</span><b>הוספת רישיון/הסמכה</b><span>לכל חייל בכל סככה</span></button>
         </div>
         <div id="vo-licenses-list"></div>
+      </div>
+    </section>
+
+    <!-- ===== MAINTENANCE DEPT — MAINT TAB (מחלקת אחזקה: הזמנת חומרים + מעקב כלים מוטוריים) ===== -->
+    <section class="screen" id="scr-maint-dept">
+      <div class="sec-head">
+        <div>
+          <h2>אחזקה 🔧</h2>
+          <p>הזמנת חומרים ומעקב כלים מוטוריים · מחלקת אחזקה</p>
+        </div>
+      </div>
+
+      <div class="cmd-tabs" style="margin-bottom:16px">
+        <button class="cmd-tab active" id="mdtab-materials" onclick="mdTab('materials')">📦 הזמנת חומרים</button>
+        <button class="cmd-tab" id="mdtab-tools" onclick="mdTab('tools')">🔧 מעקב כלים מוטוריים</button>
+      </div>
+
+      <!-- PANE: MATERIALS ORDERS -->
+      <div class="admin-pane active" id="mdpane-materials">
+        <div class="admin-actions-row">
+          <button class="admin-card" style="grid-column:1/-1" onclick="openMaterialAdd()"><span class="a-ic">➕</span><b>הוספת הזמנת חומר</b><span>פריט, כמות וסטטוס</span></button>
+        </div>
+        <div id="md-materials-list"></div>
+      </div>
+
+      <!-- PANE: MOTORIZED TOOLS -->
+      <div class="admin-pane" id="mdpane-tools">
+        <div class="admin-actions-row">
+          <button class="admin-card" style="grid-column:1/-1" onclick="openMotorToolAdd()"><span class="a-ic">➕</span><b>הוספת כלי מוטורי</b><span>מספר סידורי + כיול/טיפול הבא</span></button>
+        </div>
+        <div id="md-tools-list"></div>
       </div>
     </section>
 
@@ -1363,7 +1403,8 @@ nav{
     <button class="nav-btn" id="nav-bdays" data-scr="scr-bdays" onclick="go('scr-bdays',this)"><span class="ic">🎂</span><span>ימי הולדת</span></button>
     <button class="nav-btn" onclick="openMoreSheet()"><span class="ic">⋯</span><span>עוד</span></button>
     <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic">🏛️</span><span>אחראי הדרכה</span></button>
-    <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic">🚙</span><span>קצין רכב</span></button>
+    <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic">🚙</span><span>רכבים</span></button>
+    <button class="nav-btn hidden" id="nav-maint-dept" data-scr="scr-maint-dept" onclick="go('scr-maint-dept',this)"><span class="ic">🔧</span><span>אחזקה</span></button>
     <button class="nav-btn hidden" id="nav-budget-officer" data-scr="scr-budget-officer" onclick="go('scr-budget-officer',this)"><span class="ic">💰</span><span>תקציבים</span></button>
   </nav>
 
@@ -1785,6 +1826,52 @@ nav{
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('leasing-vehicle-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAINT DEPT — MATERIAL ORDER MODAL -->
+  <div class="modal-bg" id="material-modal">
+    <div class="modal">
+      <h3 id="material-title">📦 הוספת הזמנת חומר</h3>
+      <div class="m-sub">מעקב הזמנות חומרים למחלקת אחזקה.</div>
+      <div class="team-add-form">
+        <input class="m-input" id="material-name" type="text" placeholder="שם הפריט" style="margin-bottom:8px">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input class="m-input" id="material-qty" type="number" min="1" placeholder="כמות" style="margin-bottom:0;flex:1">
+          <select class="m-input" id="material-status" style="margin-bottom:0;flex:1">
+            <option value="ממתין להזמנה">ממתין להזמנה</option>
+            <option value="הוזמן">הוזמן</option>
+            <option value="התקבל">התקבל</option>
+          </select>
+        </div>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📝 הערות</label>
+        <input class="m-input" id="material-notes" type="text" placeholder="הערות" style="margin-bottom:10px">
+        <button class="m-btn primary" id="material-save-btn" onclick="saveMaterial()" style="width:100%">➕ הוסף</button>
+      </div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn ghost" onclick="document.getElementById('material-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAINT DEPT — MOTORIZED TOOL MODAL -->
+  <div class="modal-bg" id="motor-tool-modal">
+    <div class="modal">
+      <h3 id="motor-tool-title">🔧 הוספת כלי מוטורי</h3>
+      <div class="m-sub">מעקב כלים מוטוריים של מחלקת אחזקה.</div>
+      <div class="team-add-form">
+        <input class="m-input" id="motor-tool-name" type="text" placeholder="שם הכלי" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מספר סידורי</label>
+        <input class="m-input" id="motor-tool-serial" type="text" placeholder="מספר סידורי" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך כיול/טיפול הבא</label>
+        <input class="m-input" id="motor-tool-next-check" type="date" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📝 הערות</label>
+        <input class="m-input" id="motor-tool-notes" type="text" placeholder="הערות" style="margin-bottom:10px">
+        <button class="m-btn primary" id="motor-tool-save-btn" onclick="saveMotorTool()" style="width:100%">➕ הוסף</button>
+      </div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn ghost" onclick="document.getElementById('motor-tool-modal').classList.remove('open')" style="flex:1">סגור</button>
       </div>
     </div>
   </div>
@@ -2517,6 +2604,7 @@ function logout(){
   document.getElementById("nav-cmd").classList.add("hidden");
   document.getElementById("nav-admin").classList.add("hidden");
   document.getElementById("nav-vehicle-officer").classList.add("hidden");
+  document.getElementById("nav-maint-dept").classList.add("hidden");
   document.getElementById("nav-budget-officer").classList.add("hidden");
   document.getElementById("nav-tools").classList.add("hidden");
   document.getElementById("nav-vehicles").classList.add("hidden");
@@ -2545,11 +2633,12 @@ function go(id, btn){
   if(id==="scr-naatim") renderNaatim();
   if(id==="scr-certs") renderCertsPage();
   if(id==="scr-tools") renderToolsPage();
-  if(id==="scr-vehicles") renderVehiclesPage();
+  if(id==="scr-vehicles") vehiclesPageTab("vehicles");
   if(id==="scr-training") renderTrainingView();
   if(id==="scr-vehicle-officer") renderVoOverview();
+  if(id==="scr-maint-dept") renderMaterials();
   if(id==="scr-budget-officer") renderBoOverview();
-  if(id!=="scr-vehicle-officer" && id!=="scr-budget-officer"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי קצין הרכב/אחראי תקציבים (אין להם סככה)
+  if(id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-budget-officer"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי קצין הרכב/מחלקת אחזקה/אחראי תקציבים (אין להם סככה)
 }
 
 /* ===== MORE SHEET ===== */
@@ -4256,23 +4345,24 @@ async function adminLogin(){
 }
 
 async function vehicleOfficerLogin(){
-  user = "שחר שושן"; userRole = "קצין רכב"; isVehicleOfficer = true;
+  user = "שחר שושן"; userRole = "מחלקת אחזקה"; isVehicleOfficer = true;
   document.getElementById("login-overlay").style.display = "none";
   document.getElementById("hdr-username").textContent = user;
-  document.getElementById("hdr-rank").textContent = "🚙 קצין רכב";
+  document.getElementById("hdr-rank").textContent = "🔧 מחלקת אחזקה";
   document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
-  // מסך רכבים + באר תחתון מצומצם: קרא וחתום, ימי הולדת (הצוות שלו), קצין רכב
+  // מסך רכבים + מסך אחזקה + באר תחתון מצומצם: קרא וחתום, ימי הולדת (הצוות שלו), רכבים, אחזקה
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
   document.querySelector('[data-scr="scr-safety"]').classList.remove("hidden");
   document.getElementById("nav-bdays").classList.remove("hidden");
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
+  document.getElementById("nav-maint-dept").classList.remove("hidden");
   await ensureShed2Seed();
   await ensureAllShedsSeed();
   go("scr-vehicle-officer", document.getElementById("nav-vehicle-officer"));
   renderDocs();
   renderBdays();
   renderMessages();
-  toast("ברוך הבא, קצין רכב 🚙");
+  toast("ברוך הבא, מחלקת אחזקה 🔧");
 }
 
 async function budgetOfficerLogin(){
@@ -4299,6 +4389,7 @@ async function techOfficerLogin(){
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
   document.getElementById("nav-admin").classList.remove("hidden");
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
+  document.getElementById("nav-maint-dept").classList.remove("hidden");
   document.getElementById("nav-budget-officer").classList.remove("hidden");
   await ensureShed2Seed();
   await ensureAllShedsSeed();
@@ -6397,6 +6488,38 @@ async function renderVehiclesPage(){
   box.innerHTML = banner + cards;
 }
 
+/* מעבר בין "רכבים" ל"רישיונות והסמכות" במסך הרכבים של הסככה עצמה (למפקד/אחראי רכבים) */
+function vehiclesPageTab(which){
+  ["vehicles","licenses"].forEach(w=>{
+    document.getElementById("vptab-"+w).classList.toggle("active", which===w);
+    document.getElementById("vppane-"+w).classList.toggle("active", which===w);
+  });
+  document.getElementById("vehicles-add-btn").classList.toggle("hidden", which!=="vehicles" || !isVehiclesResp);
+  if(which==="vehicles") renderVehiclesPage();
+  if(which==="licenses") renderShedLicensesView();
+}
+/* תצוגת רישיונות/הסמכות של אנשי הסככה בלבד — קריאה בלבד (הניהול מרוכז אצל מחלקת אחזקה/קצין טכני) */
+async function renderShedLicensesView(){
+  const box = document.getElementById("vehicles-page-licenses-list");
+  if(!box || !currentShed) return;
+  const licenses = (await getVoLicenses()).filter(l=>l.shedId===currentShed.id);
+  if(licenses.length===0){
+    box.innerHTML = `<div class="empty-state"><div class="ic">🪪</div><h3>אין עדיין רישיונות/הסמכות במעקב</h3><p>מנוהל ע"י מחלקת אחזקה</p></div>`;
+    return;
+  }
+  const withStatus = licenses.map(l=>({...l, st: licenseStatus(l)}));
+  const order = {r:0, y:1, g:2};
+  withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
+  box.innerHTML = withStatus.map(l=>`
+    <div class="cert-sum-card" style="cursor:default">
+      <div class="cert-sum-head">
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">🪪</div>
+        <div class="cert-sum-name"><b>${escapeHTML(l.person)}</b><span>${escapeHTML(l.type)}</span></div>
+        <span class="pill ${l.st.cls}" style="font-size:10px;white-space:nowrap">${l.st.tag}</span>
+      </div>
+    </div>`).join("");
+}
+
 /* ============================================================
    קצין רכב טייסתי — מעקב רכבים ורישיונות בכל 5 הסככות
    ============================================================ */
@@ -6471,7 +6594,7 @@ async function renderVoOverview(){
       <div class="db-hero-top">
         <div>
           <div class="db-eyebrow">כלל 5 הסככות · דרג א׳</div>
-          <div class="db-title">קצין רכב טייסתי 🚙</div>
+          <div class="db-title">מחלקת אחזקה 🔧</div>
           <div class="db-date">${dateStr}</div>
         </div>
         <div class="db-score">
@@ -7028,6 +7151,183 @@ async function renderVoLicenses(){
         <span class="pill ${l.st.cls}" style="font-size:10px;white-space:nowrap">${l.st.tag}</span>
         <button class="cert-chip-edit" onclick="openVoLicenseEdit('${l.id}')">✏️</button>
         <button class="cert-chip-del" onclick="removeVoLicense('${l.id}')">✕</button>
+      </div>
+    </div>`).join("");
+}
+
+/* ============================================================
+   מחלקת אחזקה — הזמנת חומרים + מעקב כלים מוטוריים (לשונית "אחזקה" בבאר התחתון)
+   ============================================================ */
+function mdTab(which){
+  ["materials","tools"].forEach(w=>{
+    document.getElementById("mdtab-"+w).classList.toggle("active", which===w);
+    document.getElementById("mdpane-"+w).classList.toggle("active", which===w);
+  });
+  if(which==="materials") renderMaterials();
+  if(which==="tools") renderMotorTools();
+}
+
+/* --- הזמנת חומרים --- */
+async function getMaterials(){ return (await sGetRaw("maint_materials_list")) || []; }
+let materialEditId = null;
+function materialStatusClass(status){
+  if(status==="התקבל") return "g";
+  if(status==="הוזמן") return "y";
+  return "r"; /* ממתין להזמנה */
+}
+function openMaterialAdd(){
+  materialEditId = null;
+  document.getElementById("material-name").value = "";
+  document.getElementById("material-qty").value = "";
+  document.getElementById("material-status").value = "ממתין להזמנה";
+  document.getElementById("material-notes").value = "";
+  document.getElementById("material-title").textContent = "📦 הוספת הזמנת חומר";
+  document.getElementById("material-save-btn").textContent = "➕ הוסף";
+  document.getElementById("material-modal").classList.add("open");
+}
+async function openMaterialEdit(id){
+  const m = (await getMaterials()).find(x=>x.id===id);
+  if(!m) return;
+  materialEditId = id;
+  document.getElementById("material-name").value = m.name;
+  document.getElementById("material-qty").value = m.qty ?? "";
+  document.getElementById("material-status").value = m.status || "ממתין להזמנה";
+  document.getElementById("material-notes").value = m.notes || "";
+  document.getElementById("material-title").textContent = "✏️ עריכת הזמנת חומר";
+  document.getElementById("material-save-btn").textContent = "💾 שמור שינויים";
+  document.getElementById("material-modal").classList.add("open");
+}
+async function saveMaterial(){
+  const name = document.getElementById("material-name").value.trim();
+  const qtyRaw = document.getElementById("material-qty").value.trim();
+  const status = document.getElementById("material-status").value;
+  const notes = document.getElementById("material-notes").value.trim();
+  if(name.length<2){ toast("נא למלא שם פריט"); return; }
+  const materials = await getMaterials();
+  const data = {name, qty: qtyRaw===""?null:Number(qtyRaw), status, notes};
+  if(materialEditId){
+    const m = materials.find(x=>x.id===materialEditId);
+    if(m) Object.assign(m, data);
+    toast("ההזמנה עודכנה ✓");
+  } else {
+    materials.push({id:"mat"+Date.now()+Math.random().toString(36).slice(2,6), ...data});
+    toast("ההזמנה נוספה ✓");
+  }
+  await sSetRaw("maint_materials_list", materials);
+  materialEditId = null;
+  document.getElementById("material-modal").classList.remove("open");
+  renderMaterials();
+}
+async function removeMaterial(id){
+  if(!confirm("להסיר את ההזמנה?")) return;
+  const materials = (await getMaterials()).filter(m=>m.id!==id);
+  await sSetRaw("maint_materials_list", materials);
+  toast("ההזמנה הוסרה");
+  renderMaterials();
+}
+async function renderMaterials(){
+  const box = document.getElementById("md-materials-list");
+  if(!box) return;
+  const materials = await getMaterials();
+  if(materials.length===0){
+    box.innerHTML = `<div class="empty-state"><div class="ic">📦</div><h3>אין עדיין הזמנות חומרים</h3><p>הוסף הזמנה באמצעות "הוספת הזמנת חומר"</p></div>`;
+    return;
+  }
+  const order = {r:0, y:1, g:2};
+  const sorted = [...materials].sort((a,b)=> order[materialStatusClass(a.status)]-order[materialStatusClass(b.status)]);
+  box.innerHTML = sorted.map(m=>`
+    <div class="cert-sum-card" style="cursor:default">
+      <div class="cert-sum-head">
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">📦</div>
+        <div class="cert-sum-name"><b>${escapeHTML(m.name)}</b><span>${m.qty!=null?("כמות: "+m.qty):"ללא כמות"}${m.notes?(" · "+escapeHTML(m.notes)):""}</span></div>
+        <span class="pill ${materialStatusClass(m.status)}" style="font-size:10px;white-space:nowrap">${escapeHTML(m.status)}</span>
+        <button class="cert-chip-edit" onclick="openMaterialEdit('${m.id}')">✏️</button>
+        <button class="cert-chip-del" onclick="removeMaterial('${m.id}')">✕</button>
+      </div>
+    </div>`).join("");
+}
+
+/* --- מעקב כלים מוטוריים --- */
+const MOTOR_TOOL_ALERT_DAYS = 14;
+async function getMotorTools(){ return (await sGetRaw("maint_motor_tools_list")) || []; }
+let motorToolEditId = null;
+function motorToolStatus(t){
+  if(!t.nextCheck) return {tag:"ללא תאריך", cls:"g"};
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = Math.round((new Date(t.nextCheck+"T00:00:00")-today)/86400000);
+  if(d<0) return {tag:"פג תוקף! ("+Math.abs(d)+" ימים)", cls:"r"};
+  if(d<=MOTOR_TOOL_ALERT_DAYS) return {tag:d+" ימים לכיול/טיפול", cls:"y"};
+  return {tag:"בתוקף", cls:"g"};
+}
+function openMotorToolAdd(){
+  motorToolEditId = null;
+  document.getElementById("motor-tool-name").value = "";
+  document.getElementById("motor-tool-serial").value = "";
+  document.getElementById("motor-tool-next-check").value = "";
+  document.getElementById("motor-tool-notes").value = "";
+  document.getElementById("motor-tool-title").textContent = "🔧 הוספת כלי מוטורי";
+  document.getElementById("motor-tool-save-btn").textContent = "➕ הוסף";
+  document.getElementById("motor-tool-modal").classList.add("open");
+}
+async function openMotorToolEdit(id){
+  const t = (await getMotorTools()).find(x=>x.id===id);
+  if(!t) return;
+  motorToolEditId = id;
+  document.getElementById("motor-tool-name").value = t.name;
+  document.getElementById("motor-tool-serial").value = t.serial || "";
+  document.getElementById("motor-tool-next-check").value = t.nextCheck || "";
+  document.getElementById("motor-tool-notes").value = t.notes || "";
+  document.getElementById("motor-tool-title").textContent = "✏️ עריכת כלי מוטורי";
+  document.getElementById("motor-tool-save-btn").textContent = "💾 שמור שינויים";
+  document.getElementById("motor-tool-modal").classList.add("open");
+}
+async function saveMotorTool(){
+  const name = document.getElementById("motor-tool-name").value.trim();
+  const serial = document.getElementById("motor-tool-serial").value.trim();
+  const nextCheck = document.getElementById("motor-tool-next-check").value;
+  const notes = document.getElementById("motor-tool-notes").value.trim();
+  if(name.length<2){ toast("נא למלא שם כלי"); return; }
+  const tools = await getMotorTools();
+  const data = {name, serial, nextCheck, notes};
+  if(motorToolEditId){
+    const t = tools.find(x=>x.id===motorToolEditId);
+    if(t) Object.assign(t, data);
+    toast("הכלי עודכן ✓");
+  } else {
+    tools.push({id:"mtool"+Date.now()+Math.random().toString(36).slice(2,6), ...data});
+    toast("הכלי נוסף ✓");
+  }
+  await sSetRaw("maint_motor_tools_list", tools);
+  motorToolEditId = null;
+  document.getElementById("motor-tool-modal").classList.remove("open");
+  renderMotorTools();
+}
+async function removeMotorTool(id){
+  if(!confirm("להסיר את הכלי מהמעקב?")) return;
+  const tools = (await getMotorTools()).filter(t=>t.id!==id);
+  await sSetRaw("maint_motor_tools_list", tools);
+  toast("הכלי הוסר");
+  renderMotorTools();
+}
+async function renderMotorTools(){
+  const box = document.getElementById("md-tools-list");
+  if(!box) return;
+  const tools = await getMotorTools();
+  if(tools.length===0){
+    box.innerHTML = `<div class="empty-state"><div class="ic">🔧</div><h3>אין עדיין כלים מוטוריים במעקב</h3><p>הוסף כלי באמצעות "הוספת כלי מוטורי"</p></div>`;
+    return;
+  }
+  const withStatus = tools.map(t=>({...t, st: motorToolStatus(t)}));
+  const order = {r:0, y:1, g:2};
+  withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
+  box.innerHTML = withStatus.map(t=>`
+    <div class="cert-sum-card" style="cursor:default">
+      <div class="cert-sum-head">
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">🔧</div>
+        <div class="cert-sum-name"><b>${escapeHTML(t.name)}</b><span>${t.serial?("מספר סידורי "+escapeHTML(t.serial)):"ללא מספר סידורי"}${t.notes?(" · "+escapeHTML(t.notes)):""}</span></div>
+        <span class="pill ${t.st.cls}" style="font-size:10px;white-space:nowrap">${t.st.tag}</span>
+        <button class="cert-chip-edit" onclick="openMotorToolEdit('${t.id}')">✏️</button>
+        <button class="cert-chip-del" onclick="removeMotorTool('${t.id}')">✕</button>
       </div>
     </div>`).join("");
 }
