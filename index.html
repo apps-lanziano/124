@@ -993,6 +993,17 @@ nav{
       <div id="bdays-list"></div>
     </section>
 
+    <!-- ===== ROLLCALL — נכס (סימון תקינות וזמינות) ===== -->
+    <section class="screen" id="scr-rollcall">
+      <div class="sec-head">
+        <div>
+          <h2>נכס 🛡️</h2>
+          <p>סימון תקינות וזמינות של כלל אנשי הצוות.</p>
+        </div>
+      </div>
+      <div id="rollcall-content"></div>
+    </section>
+
     <!-- ===== DAY CLOSE (feature 5) ===== -->
     <section class="screen" id="scr-closeday">
       <div class="sec-head">
@@ -1408,6 +1419,7 @@ nav{
     <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic">🚙</span><span>רכבים</span></button>
     <button class="nav-btn hidden" id="nav-maint-dept" data-scr="scr-maint-dept" onclick="go('scr-maint-dept',this)"><span class="ic">🔧</span><span>אחזקה</span></button>
     <button class="nav-btn hidden" id="nav-budget-officer" data-scr="scr-budget-officer" onclick="go('scr-budget-officer',this)"><span class="ic">💰</span><span>תקציבים</span></button>
+    <button class="nav-btn hidden" id="nav-rollcall" data-scr="scr-rollcall" onclick="go('scr-rollcall',this)"><span class="ic">🛡️</span><span>נכס</span></button>
   </nav>
 
   <!-- DOC READER -->
@@ -1489,6 +1501,7 @@ nav{
       <div class="sheet-item hidden" id="more-tasks-item" onclick="closeMoreAndFn(openTaskMgmt)"><div class="s-ic">🧰</div><div class="s-tx"><b>עריכת מטלות בוקר</b><span>הוספה ושינוי מטלות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-faults-item" onclick="closeMoreAnd('scr-faults')"><div class="s-ic">🛠️</div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-bdays-item" onclick="closeMoreAnd('scr-bdays')"><div class="s-ic">🎂</div><div class="s-tx"><b>ימי הולדת</b><span>לוח ימי הולדת הצוות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="more-rollcall-item" onclick="closeMoreAnd('scr-rollcall')"><div class="s-ic">🛡️</div><div class="s-tx"><b>נכס</b><span>סימון תקינות וזמינות</span></div><span class="s-chev">‹</span></div>
     </div>
   </div>
 
@@ -2608,6 +2621,7 @@ function logout(){
   document.getElementById("nav-vehicle-officer").classList.add("hidden");
   document.getElementById("nav-maint-dept").classList.add("hidden");
   document.getElementById("nav-budget-officer").classList.add("hidden");
+  document.getElementById("nav-rollcall").classList.add("hidden");
   document.getElementById("nav-tools").classList.add("hidden");
   document.getElementById("nav-vehicles").classList.add("hidden");
   document.getElementById("add-event-btn").classList.add("hidden");
@@ -2640,6 +2654,7 @@ function go(id, btn){
   if(id==="scr-vehicle-officer") renderVoOverview();
   if(id==="scr-maint-dept") renderMaterials();
   if(id==="scr-budget-officer") renderBoOverview();
+  if(id==="scr-rollcall") renderRollcallPage();
   if(id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-budget-officer"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי קצין הרכב/מחלקת אחזקה/אחראי תקציבים (אין להם סככה)
 }
 
@@ -3304,6 +3319,100 @@ function bdayInfo(p){
   const age = next.getFullYear() - b.getFullYear();
   return {days, age, next};
 }
+/* ============================================================
+   נכס — סימון תקינות וזמינות כלל אנשי הצוות (כל מפקד מפעיל עצמאית לסככה/מחלקה שלו)
+   ============================================================ */
+async function activateRollcall(){
+  if(!confirm("להפעיל נכס חדש? כל הסימונים הקודמים יתאפסו ויידרש לסמן מחדש.")) return;
+  await sSet("rollcall_active", true);
+  await sSet("rollcall_started_at", new Date().toISOString());
+  await sSet("rollcall_checkins", {});
+  renderRollcallPage();
+  openWaPrompt("rollcall");
+}
+async function endRollcall(){
+  if(!confirm("לסיים את הנכס הפעיל?")) return;
+  await sSet("rollcall_active", false);
+  renderRollcallPage();
+}
+async function checkInRollcall(){
+  const checkins = (await sGet("rollcall_checkins")) || {};
+  checkins[user] = new Date().toISOString();
+  await sSet("rollcall_checkins", checkins);
+  renderRollcallPage();
+  toast("סומן שאתה תקין/ה וזמין/ה ✓");
+}
+async function renderRollcallPage(){
+  const box = document.getElementById("rollcall-content");
+  if(!box) return;
+
+  if(!currentShed){
+    // תצוגה מרוכזת (קריאה בלבד) לבעלי תפקידים כלל-טייסתיים — קצין טכני / אחראי הדרכה / מחלקת אחזקה / אחראי תקציבים
+    box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען נתוני נכס מכל המסגרות…</div>';
+    const rows = await Promise.all(SHEDS.map(async shed=>{
+      const [active, checkins, pers] = await Promise.all([
+        sGetIn(shed.id, "rollcall_active"),
+        sGetIn(shed.id, "rollcall_checkins"),
+        sGetIn(shed.id, "cfg_personnel")
+      ]);
+      const list = pers || [];
+      const chk = checkins || {};
+      const done = list.filter(p=>chk[p.name]).length;
+      return {shed, active: !!active, done, total: list.length};
+    }));
+    box.innerHTML = rows.map(r=>{
+      const cls = !r.active ? "g" : (r.total>0 && r.done===r.total ? "g" : (r.done>0 ? "y" : "r"));
+      const tag = !r.active ? "אין נכס פעיל" : (r.done+"/"+r.total+" סימנו");
+      return `<div class="cert-sum-card" style="cursor:default">
+        <div class="cert-sum-head">
+          <div class="avatar" style="width:40px;height:40px;font-size:18px">🛡️</div>
+          <div class="cert-sum-name"><b>${escapeHTML(r.shed.name)}</b></div>
+          <span class="pill ${cls}" style="font-size:10px;white-space:nowrap">${tag}</span>
+        </div>
+      </div>`;
+    }).join("");
+    return;
+  }
+
+  const [active, checkins] = await Promise.all([sGet("rollcall_active"), sGet("rollcall_checkins")]);
+  const chk = checkins || {};
+  const isCmdr = userRole === "מפקד";
+  const myCheckedIn = !!chk[user];
+
+  if(!active){
+    let html = `<div class="empty-state"><div class="ic">🛡️</div><h3>אין נכס פעיל כרגע</h3><p>${isCmdr?'לחץ על הכפתור כדי להפעיל נכס ולבקש מכולם לסמן תקינות':'המפקד טרם הפעיל נכס'}</p></div>`;
+    if(isCmdr) html += `<button class="m-btn primary" style="width:100%;margin-top:10px" onclick="activateRollcall()">🚨 הפעל נכס</button>`;
+    box.innerHTML = html;
+    return;
+  }
+
+  let html = `<div class="all-done-banner" style="display:block;background:${myCheckedIn?'linear-gradient(135deg,#166534,#22c55e)':'linear-gradient(135deg,#7c2d12,#9a3412)'}">
+    ${myCheckedIn ? '✅ סימנת שאתה תקין/ה וזמין/ה' : '🚨 נכס פעיל — נא לסמן שאתה תקין/ה וזמין/ה'}
+  </div>`;
+  if(!myCheckedIn) html += `<button class="m-btn primary" style="width:100%;margin:10px 0" onclick="checkInRollcall()">✅ אני תקין/ה וזמין/ה</button>`;
+
+  if(isCmdr){
+    const pers = PERSONNEL;
+    const done = pers.filter(p=>chk[p.name]).length;
+    html += `<div class="cmd-section-title">📋 מעקב סימונים <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${done}/${pers.length}</span></div>`;
+    const sorted = [...pers].sort((a,b)=> (chk[a.name]?1:0) - (chk[b.name]?1:0));
+    html += sorted.map(p=>`
+      <div class="cert-sum-card" style="cursor:default">
+        <div class="cert-sum-head">
+          <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
+          <div class="cert-sum-name"><b>${escapeHTML(p.name)}</b><span>${escapeHTML(p.role)}</span></div>
+          <span class="pill ${chk[p.name]?'g':'r'}" style="font-size:10px;white-space:nowrap">${chk[p.name]?'✅ סימן/ה':'⏳ טרם סימן/ה'}</span>
+        </div>
+      </div>`).join("");
+    html += `<div style="display:flex;gap:8px;margin-top:14px">
+      <button class="m-btn ghost" style="flex:1" onclick="endRollcall()">🔚 סיים נכס</button>
+      <button class="m-btn primary" style="flex:1" onclick="openWaPrompt('rollcall')">📤 שתף בוואטסאפ</button>
+    </div>`;
+  }
+
+  box.innerHTML = html;
+}
+
 async function renderBdays(){
   const desc = document.getElementById("bdays-desc");
   const isVo = isVehicleOfficer;
@@ -3677,6 +3786,7 @@ function openWaPrompt(kind, payload){
   else if(kind==="msg"){ title.textContent="ההודעה פורסמה ✅"; sub.textContent="שלח את ההודעה גם לקבוצת הוואטסאפ"; }
   else if(kind==="brief"){ title.textContent="דגשי הבוקר פורסמו ✅"; sub.textContent="שלח את הדגשים גם לקבוצת הוואטסאפ"; }
   else if(kind==="unsigned"){ title.textContent="הרשימה מוכנה ✅"; sub.textContent="שלח תזכורת לחיילים שטרם חתמו"; }
+  else if(kind==="rollcall"){ title.textContent="הנכס הופעל ✅"; sub.textContent="שלח לצוות בוואטסאפ שיסמנו תקינות וזמינות"; }
   // rebind the button fresh each time
   go.onclick = ()=>{
     if(kind==="event") shareEventWA(payload);
@@ -3684,6 +3794,7 @@ function openWaPrompt(kind, payload){
     else if(kind==="msg") shareMsgWA(payload.text, payload.type);
     else if(kind==="brief") shareBriefWA(payload);
     else if(kind==="unsigned") shareUnsignedWA(payload);
+    else if(kind==="rollcall") shareRollcallWA();
     modal.classList.remove("open");
   };
   modal.classList.add("open");
@@ -3733,6 +3844,14 @@ function shareUnsignedWA(payload){
     "החיילים הבאים טרם קראו וחתמו:\n" +
     payload.unsigned.map(n=>"• "+n).join("\n") + "\n\n" +
     "🙏 נא להיכנס לאפליקציה ולחתום בהקדם.\n" +
+    "🔗 " + SITE_URL;
+  waShare(msg);
+}
+function shareRollcallWA(){
+  const msg =
+    "🚨 *הופעל נכס לאומי — " + waShedName() + "*\n" +
+    "━━━━━━━━━━━━━━\n" +
+    "נא להיכנס לאפליקציה ולסמן שתקינים וזמינים.\n\n" +
     "🔗 " + SITE_URL;
   waShare(msg);
 }
@@ -4338,6 +4457,7 @@ async function adminLogin(){
   // hide regular nav functions; show only admin screen
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
   document.getElementById("nav-admin").classList.remove("hidden");
+  document.getElementById("nav-rollcall").classList.remove("hidden");
   // ריפוי-עצמי: ודא שכל נתוני הסככות קיימים (אם אחראי הדרכה נכנס ראשון)
   await ensureShed2Seed();
   await ensureAllShedsSeed();
@@ -4358,6 +4478,7 @@ async function vehicleOfficerLogin(){
   document.getElementById("nav-bdays").classList.remove("hidden");
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
   document.getElementById("nav-maint-dept").classList.remove("hidden");
+  document.getElementById("nav-rollcall").classList.remove("hidden");
   await ensureShed2Seed();
   await ensureAllShedsSeed();
   go("scr-vehicle-officer", document.getElementById("nav-vehicle-officer"));
@@ -4376,6 +4497,7 @@ async function budgetOfficerLogin(){
   // hide regular nav functions; show only budget-officer screen
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
   document.getElementById("nav-budget-officer").classList.remove("hidden");
+  document.getElementById("nav-rollcall").classList.remove("hidden");
   go("scr-budget-officer", document.getElementById("nav-budget-officer"));
   toast("ברוך הבא, אחראי תקציבים 💰");
 }
@@ -4393,6 +4515,7 @@ async function techOfficerLogin(){
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
   document.getElementById("nav-maint-dept").classList.remove("hidden");
   document.getElementById("nav-budget-officer").classList.remove("hidden");
+  document.getElementById("nav-rollcall").classList.remove("hidden");
   await ensureShed2Seed();
   await ensureAllShedsSeed();
   go("scr-admin", document.getElementById("nav-admin"));
@@ -6374,7 +6497,7 @@ async function renderToolsPage(){
   const urgent = withStatus.filter(t=>t.st.cls==="r" || t.st.cls==="y");
   let banner = "";
   if(urgent.length>0){
-    banner = `<div class="all-done-banner" style="background:linear-gradient(135deg,#7c2d12,#9a3412)">
+    banner = `<div class="all-done-banner" style="display:block;background:linear-gradient(135deg,#7c2d12,#9a3412)">
       ⚠️ ${urgent.length} כלים דורשים כיול תוך שבוע או שכבר פג תוקפם
       <small>${urgent.map(t=>escapeHTML(t.name)).join(" · ")}</small>
     </div>`;
@@ -6525,7 +6648,7 @@ async function renderVehiclesPage(){
   const urgent = all.filter(v=>v.st.cls==="r" || v.st.cls==="y");
   let banner = "";
   if(urgent.length>0){
-    banner = `<div class="all-done-banner" style="background:linear-gradient(135deg,#7c2d12,#9a3412)">
+    banner = `<div class="all-done-banner" style="display:block;background:linear-gradient(135deg,#7c2d12,#9a3412)">
       ⚠️ ${urgent.length} רכבים מתקרבים למועד טיפול/טסט או שכבר עברו אותו
       <small>${urgent.map(v=>escapeHTML(v.name)).join(" · ")}</small>
     </div>`;
