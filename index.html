@@ -4028,6 +4028,27 @@ function cancelEditMember(){
   document.getElementById("tm-cancel-btn").style.display = "none";
 }
 
+/* בעת תיקון שם איש צוות — מעדכן את השם בכל הרשומות שמפנות אליו לפי שם (הסמכות, נט"מים, מילואים),
+   כדי שתיקון שם לא ינתק אותו מהיסטוריית ההסמכות/שיבוצים הקיימת שלו */
+async function renamePersonEverywhere(oldName, newName){
+  const certs = (await sGet("certs_list")) || [];
+  let certsChanged = false;
+  certs.forEach(c=>{ if(c.person===oldName){ c.person=newName; certsChanged=true; } });
+  if(certsChanged) await sSet("certs_list", certs);
+
+  const naatim = (await sGet("naatim_list")) || [];
+  let naatimChanged = false;
+  naatim.forEach(n=>{ if(n.person===oldName){ n.person=newName; naatimChanged=true; } });
+  if(naatimChanged) await sSet("naatim_list", naatim);
+
+  if(currentShed){
+    const reserves = (await sGetRaw("admin_reserves_list")) || [];
+    let reservesChanged = false;
+    reserves.forEach(r=>{ if(r.shedId===currentShed.id && r.person===oldName){ r.person=newName; reservesChanged=true; } });
+    if(reservesChanged) await sSetRaw("admin_reserves_list", reserves);
+  }
+}
+
 async function saveTeamMember(){
   const name=document.getElementById("tm-name").value.trim();
   const role=document.getElementById("tm-role").value;
@@ -4046,10 +4067,12 @@ async function saveTeamMember(){
   if(editMemberIdx>=0){
     // edit existing
     const p = PERSONNEL[editMemberIdx];
+    const oldName = p.name;
     p.name=name; p.role=role; p.bday=bday||"2000-01-01";
     if(release) p.release=release; else delete p.release;
     if(isDeptUnit){ p.dept=dept; if(officerTag) p.officerTag=officerTag; else delete p.officerTag; }
     else if(profession) p.profession=profession; else delete p.profession;
+    if(oldName!==name) await renamePersonEverywhere(oldName, name);
     toast("הפרטים עודכנו ✓");
   } else {
     const member = {name, role, bday: bday||"2000-01-01", joined: todayKey()};
