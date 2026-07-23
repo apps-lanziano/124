@@ -1422,6 +1422,7 @@ nav{
     <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic">🏛️</span><span>אחראי הדרכה</span></button>
     <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic">🚙</span><span>רכבים</span></button>
     <button class="nav-btn hidden" id="nav-maint-dept" data-scr="scr-maint-dept" onclick="go('scr-maint-dept',this)"><span class="ic">🔧</span><span>אחזקה</span></button>
+    <button class="nav-btn hidden" id="nav-vo-team" onclick="openVoTeamMgmt()"><span class="ic">👥</span><span>צוות</span></button>
     <button class="nav-btn hidden" id="nav-budget-officer" data-scr="scr-budget-officer" onclick="go('scr-budget-officer',this)"><span class="ic">💰</span><span>תקציבים</span></button>
     <button class="nav-btn hidden" id="nav-rollcall" data-scr="scr-rollcall" onclick="go('scr-rollcall',this)"><span class="ic">🛡️</span><span>נכס</span></button>
   </nav>
@@ -2624,6 +2625,7 @@ function logout(){
   document.getElementById("nav-admin").classList.add("hidden");
   document.getElementById("nav-vehicle-officer").classList.add("hidden");
   document.getElementById("nav-maint-dept").classList.add("hidden");
+  document.getElementById("nav-vo-team").classList.add("hidden");
   document.getElementById("nav-budget-officer").classList.add("hidden");
   document.getElementById("nav-rollcall").classList.add("hidden");
   document.getElementById("nav-tools").classList.add("hidden");
@@ -4512,6 +4514,7 @@ async function vehicleOfficerLogin(){
   document.getElementById("nav-bdays").classList.remove("hidden");
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
   document.getElementById("nav-maint-dept").classList.remove("hidden");
+  document.getElementById("nav-vo-team").classList.remove("hidden");
   document.getElementById("nav-rollcall").classList.remove("hidden");
   await ensureShed2Seed();
   await ensureAllShedsSeed();
