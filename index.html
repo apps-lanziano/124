@@ -6559,16 +6559,7 @@ async function renderShedLicensesView(){
     return;
   }
   const withStatus = licenses.map(l=>({...l, st: licenseStatus(l)}));
-  const order = {r:0, y:1, g:2};
-  withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
-  box.innerHTML = withStatus.map(l=>`
-    <div class="cert-sum-card" style="cursor:default">
-      <div class="cert-sum-head">
-        <div class="avatar" style="width:40px;height:40px;font-size:18px">🪪</div>
-        <div class="cert-sum-name"><b>${escapeHTML(l.person)}</b><span>${escapeHTML(l.type)}</span></div>
-        <span class="pill ${l.st.cls}" style="font-size:10px;white-space:nowrap">${l.st.tag}</span>
-      </div>
-    </div>`).join("");
+  box.innerHTML = groupLicensesByTypeHtml(withStatus, false);
 }
 
 /* ============================================================
@@ -7109,6 +7100,30 @@ function licenseStatus(l){
   if(d<=LICENSE_ALERT_DAYS) return {tag:d+" ימים לפקיעה", cls:"y"};
   return {tag:"בתוקף", cls:"g"};
 }
+/* מקבץ רישיונות/הסמכות לפי סוג — הפרדה חזותית בין כל סוג (כמו סף/רף/וכו' בהסמכות) */
+function groupLicensesByTypeHtml(withStatus, showShedAndActions){
+  const order = {r:0, y:1, g:2};
+  const groups = {};
+  withStatus.forEach(l=>{ (groups[l.type] = groups[l.type] || []).push(l); });
+  const typeOrder = t => { const i = LICENSE_BANK_DEFAULT.indexOf(t); return i===-1 ? 999 : i; };
+  const types = Object.keys(groups).sort((a,b)=> typeOrder(a)-typeOrder(b) || a.localeCompare(b,"he"));
+  const shedName = id => (SHEDS.find(s=>s.id===id)||{}).name || id;
+  let html = "";
+  types.forEach(type=>{
+    const list = groups[type].sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
+    html += `<div class="cmd-section-title">🪪 ${escapeHTML(type)} <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${list.length}</span></div>` +
+      list.map(l=>`
+      <div class="cert-sum-card" style="cursor:default">
+        <div class="cert-sum-head">
+          <div class="avatar" style="width:40px;height:40px;font-size:18px">🪪</div>
+          <div class="cert-sum-name"><b>${escapeHTML(l.person)}</b>${showShedAndActions?`<span>${escapeHTML(shedName(l.shedId))}</span>`:''}</div>
+          <span class="pill ${l.st.cls}" style="font-size:10px;white-space:nowrap">${l.st.tag}</span>
+          ${showShedAndActions?`<button class="cert-chip-edit" onclick="openVoLicenseEdit('${l.id}')">✏️</button><button class="cert-chip-del" onclick="removeVoLicense('${l.id}')">✕</button>`:''}
+        </div>
+      </div>`).join("");
+  });
+  return html;
+}
 async function populateVoLicensePerson(){
   const sel = document.getElementById("vo-license-person");
   let html = '<option value="">— בחר חייל —</option>';
@@ -7190,20 +7205,8 @@ async function renderVoLicenses(){
     box.innerHTML = `<div class="empty-state"><div class="ic">🪪</div><h3>אין עדיין רישיונות במעקב</h3><p>הוסף רישיון באמצעות "הוספת רישיון/הסמכה"</p></div>`;
     return;
   }
-  const shedName = id => (SHEDS.find(s=>s.id===id)||{}).name || id;
   const withStatus = licenses.map(l=>({...l, st: licenseStatus(l)}));
-  const order = {r:0, y:1, g:2};
-  withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
-  box.innerHTML = withStatus.map(l=>`
-    <div class="cert-sum-card" style="cursor:default">
-      <div class="cert-sum-head">
-        <div class="avatar" style="width:40px;height:40px;font-size:18px">🪪</div>
-        <div class="cert-sum-name"><b>${escapeHTML(l.person)}</b><span>${escapeHTML(l.type)} · ${escapeHTML(shedName(l.shedId))}</span></div>
-        <span class="pill ${l.st.cls}" style="font-size:10px;white-space:nowrap">${l.st.tag}</span>
-        <button class="cert-chip-edit" onclick="openVoLicenseEdit('${l.id}')">✏️</button>
-        <button class="cert-chip-del" onclick="removeVoLicense('${l.id}')">✕</button>
-      </div>
-    </div>`).join("");
+  box.innerHTML = groupLicensesByTypeHtml(withStatus, true);
 }
 
 /* ============================================================
