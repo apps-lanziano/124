@@ -3356,6 +3356,25 @@ async function checkInOfficerRollcall(){
   renderRollcallPage();
   toast("סומן שאתה תקין/ה וזמין/ה ✓");
 }
+/* נכס לצוות הנהגים של מחלקת אחזקה — הנהגים לא מתחברים בעצמם, אז קצין הרכב מסמן עבורם בעצמו (לחיצה על השורה) */
+async function activateVoRollcall(){
+  if(!confirm("להפעיל נכס חדש לצוות הנהגים? כל הסימונים הקודמים יתאפסו.")) return;
+  await sSetRaw("vo_rollcall_active", true);
+  await sSetRaw("vo_rollcall_checkins", {});
+  renderRollcallPage();
+  openWaPrompt("rollcall");
+}
+async function endVoRollcall(){
+  if(!confirm("לסיים את הנכס הפעיל לצוות הנהגים?")) return;
+  await sSetRaw("vo_rollcall_active", false);
+  renderRollcallPage();
+}
+async function toggleVoRollcallCheckin(id){
+  const checkins = (await sGetRaw("vo_rollcall_checkins")) || {};
+  if(checkins[id]) delete checkins[id]; else checkins[id] = new Date().toISOString();
+  await sSetRaw("vo_rollcall_checkins", checkins);
+  renderRollcallPage();
+}
 async function renderRollcallPage(){
   const box = document.getElementById("rollcall-content");
   if(!box) return;
@@ -3381,6 +3400,43 @@ async function renderRollcallPage(){
       ${myOfficerCheckedIn ? '✅ סימנת שאתה תקין/ה וזמין/ה' : '🚨 נא לסמן שאתה תקין/ה וזמין/ה'}
     </div>`;
     if(!myOfficerCheckedIn) html += `<button class="m-btn primary" style="width:100%;margin:10px 0" onclick="checkInOfficerRollcall()">✅ אני תקין/ה וזמין/ה</button>`;
+
+    if(isVehicleOfficer){
+      const [voActive, voCheckins, voTeam] = await Promise.all([
+        sGetRaw("vo_rollcall_active"), sGetRaw("vo_rollcall_checkins"), sGetRaw("vo_personnel")
+      ]);
+      const vChk = voCheckins || {};
+      const team = voTeam || [];
+      if(!voActive){
+        html += `<div class="cmd-section-title">🚗 נכס — צוות הנהגים</div>
+          <div class="empty-state"><div class="ic">🛡️</div><h3>אין נכס פעיל לצוות הנהגים</h3><p>לחץ על הכפתור כדי להפעיל נכס ולסמן עבור הנהגים</p></div>
+          <button class="m-btn primary" style="width:100%;margin-top:10px" onclick="activateVoRollcall()">🚨 הפעל נכס לצוות הנהגים</button>`;
+      } else {
+        const done = team.filter(p=>vChk[p.id]).length;
+        html += `<div class="cmd-section-title">🚗 מעקב נכס — צוות הנהגים <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${done}/${team.length}</span></div>`;
+        if(team.length===0){
+          html += `<div class="empty-state"><div class="ic">👥</div><h3>אין עדיין אנשי צוות</h3><p>הוסף נהגים דרך "ניהול צוות"</p></div>`;
+        } else {
+          const sorted = [...team].sort((a,b)=> (vChk[a.id]?1:0) - (vChk[b.id]?1:0));
+          html += sorted.map(p=>`
+            <div class="cert-sum-card" onclick="toggleVoRollcallCheckin('${p.id}')">
+              <div class="cert-sum-head">
+                <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
+                <div class="cert-sum-name"><b>${escapeHTML(p.name)}</b><span>נהג מקצועי</span></div>
+                <span class="pill ${vChk[p.id]?'g':'r'}" style="font-size:10px;white-space:nowrap">${vChk[p.id]?'✅ תקין וזמין':'⏳ טרם סומן'}</span>
+              </div>
+            </div>`).join("");
+          if(done===team.length){
+            html += `<button class="m-btn primary" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#166534,#22c55e)" onclick="openWaPrompt('rollcall-complete')">✅ דווח בוואטסאפ שהנכס הושלם — כולם תקינים</button>`;
+          }
+        }
+        html += `<div style="display:flex;gap:8px;margin-top:10px">
+          <button class="m-btn ghost" style="flex:1" onclick="endVoRollcall()">🔚 סיים נכס</button>
+          <button class="m-btn primary" style="flex:1" onclick="openWaPrompt('rollcall')">📤 שתף בוואטסאפ</button>
+        </div>`;
+      }
+    }
+
     html += `<div class="cmd-section-title">📊 סטטוס לפי מסגרת</div>`;
     html += rows.map(r=>{
       const cls = !r.active ? "g" : (r.total>0 && r.done===r.total ? "g" : (r.done>0 ? "y" : "r"));
@@ -3791,6 +3847,7 @@ const rowHTML = (name,pill)=>`<div class="cmd-row"><div class="avatar">${initial
    ניתן לשנות לכתובת האתר הסופית שלך ב-GitHub Pages. */
 const SITE_URL = "https://eladlanzianog-sys.github.io/124/";
 function waShedName(){
+  if(isVehicleOfficer) return "מחלקת אחזקה";
   if(isAdmin) return "כלל המסגרות";
   if(currentShed && currentShed.isDept){
     const p = PERSONNEL.find(p=>p.name===user);
