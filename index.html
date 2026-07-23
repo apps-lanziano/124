@@ -3421,7 +3421,10 @@ async function renderRollcallPage(){
           <span class="pill ${chk[p.name]?'g':'r'}" style="font-size:10px;white-space:nowrap">${chk[p.name]?'✅ סימן/ה':'⏳ טרם סימן/ה'}</span>
         </div>
       </div>`).join("");
-    html += `<div style="display:flex;gap:8px;margin-top:14px">
+    if(pers.length>0 && done===pers.length){
+      html += `<button class="m-btn primary" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#166534,#22c55e)" onclick="openWaPrompt('rollcall-complete')">✅ דווח בוואטסאפ שהנכס הושלם — כולם תקינים</button>`;
+    }
+    html += `<div style="display:flex;gap:8px;margin-top:10px">
       <button class="m-btn ghost" style="flex:1" onclick="endRollcall()">🔚 סיים נכס</button>
       <button class="m-btn primary" style="flex:1" onclick="openWaPrompt('rollcall')">📤 שתף בוואטסאפ</button>
     </div>`;
@@ -3804,6 +3807,7 @@ function openWaPrompt(kind, payload){
   else if(kind==="brief"){ title.textContent="דגשי הבוקר פורסמו ✅"; sub.textContent="שלח את הדגשים גם לקבוצת הוואטסאפ"; }
   else if(kind==="unsigned"){ title.textContent="הרשימה מוכנה ✅"; sub.textContent="שלח תזכורת לחיילים שטרם חתמו"; }
   else if(kind==="rollcall"){ title.textContent="הנכס הופעל ✅"; sub.textContent="שלח לצוות בוואטסאפ שיסמנו תקינות וזמינות"; }
+  else if(kind==="rollcall-complete"){ title.textContent="כל הכבוד! 🎉"; sub.textContent="דווח בוואטסאפ שהנכס הושלם וכולם תקינים"; }
   // rebind the button fresh each time
   go.onclick = ()=>{
     if(kind==="event") shareEventWA(payload);
@@ -3812,6 +3816,7 @@ function openWaPrompt(kind, payload){
     else if(kind==="brief") shareBriefWA(payload);
     else if(kind==="unsigned") shareUnsignedWA(payload);
     else if(kind==="rollcall") shareRollcallWA();
+    else if(kind==="rollcall-complete") shareRollcallCompleteWA();
     modal.classList.remove("open");
   };
   modal.classList.add("open");
@@ -3869,6 +3874,14 @@ function shareRollcallWA(){
     "🚨 *הופעל נכס לאומי — " + waShedName() + "*\n" +
     "━━━━━━━━━━━━━━\n" +
     "נא להיכנס לאפליקציה ולסמן שתקינים וזמינים.\n\n" +
+    "🔗 " + SITE_URL;
+  waShare(msg);
+}
+function shareRollcallCompleteWA(){
+  const msg =
+    "✅ *נכס לאומי הושלם — " + waShedName() + "*\n" +
+    "━━━━━━━━━━━━━━\n" +
+    "כל אנשי הצוות תקינים וזמינים.\n\n" +
     "🔗 " + SITE_URL;
   waShare(msg);
 }
