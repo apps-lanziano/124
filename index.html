@@ -3341,12 +3341,18 @@ async function endRollcall(){
   await sSet("rollcall_active", false);
   renderRollcallPage();
 }
-async function checkInRollcall(){
+async function checkInRollcall(location){
   const checkins = (await sGet("rollcall_checkins")) || {};
-  checkins[user] = new Date().toISOString();
+  checkins[user] = { at: new Date().toISOString(), location };
   await sSet("rollcall_checkins", checkins);
   renderRollcallPage();
-  toast("סומן שאתה תקין/ה וזמין/ה ✓");
+  toast("סומן: תקין/ה וזמין/ה · " + (location==="בית"?"🏠 בבית":"🪖 בטייסת") + " ✓");
+}
+/* תומך גם בפורמט ישן (לפני שנוסף מיקום) שבו הערך היה רק חותמת זמן כמחרוזת */
+function rollcallCheckinInfo(v){
+  if(!v) return null;
+  if(typeof v === "string") return { at: v, location: null };
+  return v;
 }
 /* סימון תקינות אישית לבעלי תפקידים כלל-טייסתיים (ללא סככה משלהם) — לפי תפקיד, לא לפי סככה */
 async function checkInOfficerRollcall(){
@@ -3456,7 +3462,8 @@ async function renderRollcallPage(){
   const [active, checkins] = await Promise.all([sGet("rollcall_active"), sGet("rollcall_checkins")]);
   const chk = checkins || {};
   const isCmdr = userRole === "מפקד";
-  const myCheckedIn = !!chk[user];
+  const myCheckin = rollcallCheckinInfo(chk[user]);
+  const myCheckedIn = !!myCheckin;
 
   if(!active){
     let html = `<div class="empty-state"><div class="ic">🛡️</div><h3>אין נכס פעיל כרגע</h3><p>${isCmdr?'לחץ על הכפתור כדי להפעיל נכס ולבקש מכולם לסמן תקינות':'המפקד טרם הפעיל נכס'}</p></div>`;
@@ -3465,24 +3472,39 @@ async function renderRollcallPage(){
     return;
   }
 
+  const locTag = loc => loc==="בית" ? "🏠 בבית" : loc==="טייסת" ? "🪖 בטייסת" : "";
   let html = `<div class="all-done-banner" style="display:block;background:${myCheckedIn?'linear-gradient(135deg,#166534,#22c55e)':'linear-gradient(135deg,#7c2d12,#9a3412)'}">
-    ${myCheckedIn ? '✅ סימנת שאתה תקין/ה וזמין/ה' : '🚨 נכס פעיל — נא לסמן שאתה תקין/ה וזמין/ה'}
+    ${myCheckedIn ? ('✅ סימנת שאתה תקין/ה וזמין/ה' + (myCheckin.location?(' — '+locTag(myCheckin.location)):'')) : '🚨 נכס פעיל — נא לסמן שאתה תקין/ה וזמין/ה'}
   </div>`;
-  if(!myCheckedIn) html += `<button class="m-btn primary" style="width:100%;margin:10px 0" onclick="checkInRollcall()">✅ אני תקין/ה וזמין/ה</button>`;
+  if(!myCheckedIn){
+    html += `<div style="display:flex;gap:8px;margin:10px 0">
+      <button class="m-btn primary" style="flex:1" onclick="checkInRollcall('בית')">🏠 בבית</button>
+      <button class="m-btn primary" style="flex:1" onclick="checkInRollcall('טייסת')">🪖 בטייסת</button>
+    </div>`;
+  } else {
+    html += `<div style="display:flex;gap:8px;margin:10px 0">
+      <button class="m-btn ghost" style="flex:1" onclick="checkInRollcall('בית')">🏠 בבית</button>
+      <button class="m-btn ghost" style="flex:1" onclick="checkInRollcall('טייסת')">🪖 בטייסת</button>
+    </div>`;
+  }
 
   if(isCmdr){
     const pers = PERSONNEL;
     const done = pers.filter(p=>chk[p.name]).length;
     html += `<div class="cmd-section-title">📋 מעקב סימונים <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${done}/${pers.length}</span></div>`;
     const sorted = [...pers].sort((a,b)=> (chk[a.name]?1:0) - (chk[b.name]?1:0));
-    html += sorted.map(p=>`
+    html += sorted.map(p=>{
+      const info = rollcallCheckinInfo(chk[p.name]);
+      const tag = info ? ('✅ '+(info.location?locTag(info.location):'סימן/ה')) : '⏳ טרם סימן/ה';
+      return `
       <div class="cert-sum-card" style="cursor:default">
         <div class="cert-sum-head">
           <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
           <div class="cert-sum-name"><b>${escapeHTML(p.name)}</b><span>${escapeHTML(p.role)}</span></div>
-          <span class="pill ${chk[p.name]?'g':'r'}" style="font-size:10px;white-space:nowrap">${chk[p.name]?'✅ סימן/ה':'⏳ טרם סימן/ה'}</span>
+          <span class="pill ${info?'g':'r'}" style="font-size:10px;white-space:nowrap">${tag}</span>
         </div>
-      </div>`).join("");
+      </div>`;
+    }).join("");
     if(pers.length>0 && done===pers.length){
       html += `<button class="m-btn primary" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#166534,#22c55e)" onclick="openWaPrompt('rollcall-complete')">✅ דווח בוואטסאפ שהנכס הושלם — כולם תקינים</button>`;
     }
