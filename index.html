@@ -1618,6 +1618,7 @@ nav{
     <div class="modal">
       <h3>👥 ניהול צוות</h3>
       <div class="m-sub">הוספה, עריכה והסרה של אנשי צוות. ניתן להגדיר תאריך שחרור.</div>
+      <input class="m-input hidden" id="tm-search" type="text" placeholder="🔎 חיפוש לפי שם…" style="margin-bottom:8px" oninput="renderTeamMgmt()">
       <div id="team-mgmt-list" style="max-height:40vh;overflow-y:auto;margin-bottom:12px"></div>
       <div class="team-add-form">
         <div id="tm-form-title" style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:8px">➕ הוספת איש צוות</div>
@@ -2250,7 +2251,8 @@ async function migrateLegacyShed2(){
 
 async function loadRuntimeLists(){
   if(currentShed && currentShed.id === "shed2"){ await migrateLegacyShed2(); }
-  const p = await sGet("cfg_personnel");
+  // שני המפתחות האלה בלתי-תלויים זה בזה — קוראים במקביל כדי לקצר את זמן הכניסה
+  const [p, t] = await Promise.all([ sGet("cfg_personnel"), sGet("cfg_tasks") ]);
   if(p && Array.isArray(p) && p.length){ PERSONNEL = p; }
   else if(currentShed && currentShed.id === "shed2"){
     // סככה 2 נזרעת מרשימת האקסל המקורית
@@ -2259,7 +2261,6 @@ async function loadRuntimeLists(){
     PERSONNEL = []; // סככה חדשה — המפקד יזין את הצוות
   }
 
-  const t = await sGet("cfg_tasks");
   if(t && Array.isArray(t) && t.length){ MORNING_TASKS = t; }
   else { MORNING_TASKS = MORNING_TASKS_SEED.slice(); await sSet("cfg_tasks", MORNING_TASKS); }
 
@@ -2364,9 +2365,10 @@ const COLLECTION = "sq124";   // מסמכי הנתונים כולם תחת או�
 
 /* App Check — מאמת שהבקשות ל-Firestore מגיעות מהאתר האמיתי ולא מסקריפט חיצוני.
    ה-site key פומבי (בטוח שיהיה גלוי בקוד לקוח, בניגוד ל-secret key שנשאר רק ב-Firebase).
-   ה-debug token פעיל רק על localhost/127.0.0.1 — לבדיקות מקומיות בלבד; בפרודקשן עובד reCAPTCHA האמיתי. */
+   הערה: בכוונה בלי debug token מוטמע בקוד — טוקן debug עוקף את ה-App Check מכל מקור,
+   אז הטמעתו בקוד ציבורי הייתה מבטלת את ההגנה כליל. לבדיקה מקומית עם Firebase אמיתי,
+   יש להגדיר self.FIREBASE_APPCHECK_DEBUG_TOKEN עם טוקן אישי (לא משותף) דרך קונסולת הדפדפן. */
 const APPCHECK_SITE_KEY = "6LdR_1ktAAAAAAlzH7q7W7yA5FAVqmWHedoGXKb6";
-const APPCHECK_DEBUG_TOKEN = "DEA2B845-FC06-41A3-8B03-F03DBE9E21E5";
 
 async function initFirebase(){
   if(!FIREBASE_CONFIG.projectId){ console.log("Firebase not configured → local mode"); return; }
@@ -2376,9 +2378,6 @@ async function initFirebase(){
     const app = appMod.initializeApp(FIREBASE_CONFIG);
 
     try{
-      if(location.hostname === "localhost" || location.hostname === "127.0.0.1"){
-        self.FIREBASE_APPCHECK_DEBUG_TOKEN = APPCHECK_DEBUG_TOKEN;
-      }
       const acMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js");
       acMod.initializeAppCheck(app, { provider: new acMod.ReCaptchaV3Provider(APPCHECK_SITE_KEY), isTokenAutoRefreshEnabled: true });
       console.log("✅ App Check מופעל");
@@ -2395,15 +2394,32 @@ async function initFirebase(){
   }
 }
 
-function showSharedBadge(shared){
+let sharedModeFlag = false, staleDataFlag = false;
+function showSharedBadge(shared){ sharedModeFlag = shared; updateConnectionBadge(); }
+// מסמן שנפלנו לנתונים מקומיים (טיימאאוט/שגיאת רשת) בזמן שהיינו אמורים להיות מחוברים ל-Firestore בפועל
+function markStale(isStale){
+  if(staleDataFlag === isStale) return;
+  staleDataFlag = isStale;
+  updateConnectionBadge();
+}
+function updateConnectionBadge(){
   let el = document.getElementById("share-badge");
   if(!el){
     el = document.createElement("div"); el.id="share-badge";
-    el.style.cssText="position:absolute;bottom:78px;left:8px;z-index:45;font-size:9.5px;font-weight:700;padding:3px 9px;border-radius:99px;pointer-events:none;opacity:.85";
+    el.style.cssText="position:absolute;bottom:78px;left:8px;z-index:45;font-size:9.5px;font-weight:700;padding:3px 9px;border-radius:99px;pointer-events:none;opacity:.9";
     document.getElementById("app").appendChild(el);
   }
-  if(shared){ el.textContent="🟢 משותף"; el.style.cssText+=";background:rgba(7,148,85,.15);color:#079455;border:1px solid #a6f4c5"; }
-  else { el.style.display="none"; }
+  if(staleDataFlag){
+    el.style.display="block";
+    el.textContent="⚠️ לא מעודכן — בעיית רשת";
+    el.style.background="rgba(185,137,0,.15)"; el.style.color="#b98900"; el.style.border="1px solid #f5d38a";
+  } else if(sharedModeFlag){
+    el.style.display="block";
+    el.textContent="🟢 משותף";
+    el.style.background="rgba(7,148,85,.15)"; el.style.color="#079455"; el.style.border="1px solid #a6f4c5";
+  } else {
+    el.style.display="none";
+  }
 }
 
 // Firestore-safe key (no slashes)
@@ -2423,8 +2439,9 @@ async function sGetRaw(key, shared=true){
     try{
       const {doc,getDoc} = fbDB._fs;
       const snap = await withTimeout(getDoc(doc(fbDB, COLLECTION, fsKey(key))));
+      markStale(false);
       return snap.exists() ? snap.data().v : null;
-    }catch(e){ console.error("fbGet",key,e); return mem[key] ?? null; }
+    }catch(e){ console.error("fbGet",key,e); markStale(true); return mem[key] ?? null; }
   }
   try{ const r = await window.storage.get(key, shared); return r ? JSON.parse(r.value) : null; }
   catch(e){ return mem[key] ?? null; }
@@ -2435,16 +2452,17 @@ async function sSetRaw(key, val, shared=true){
     try{
       const {doc,setDoc} = fbDB._fs;
       await withTimeout(setDoc(doc(fbDB, COLLECTION, fsKey(key)), {v:val, updated:Date.now()}));
+      markStale(false);
       return;
-    }catch(e){ console.error("fbSet",key,e); }
+    }catch(e){ console.error("fbSet",key,e); markStale(true); }
   }
   try{ await window.storage.set(key, JSON.stringify(val), shared); }catch(e){}
 }
 async function sDelRaw(key, shared=true){
   delete mem[key];
   if(fbReady){
-    try{ const {doc,deleteDoc} = fbDB._fs; await withTimeout(deleteDoc(doc(fbDB, COLLECTION, fsKey(key)))); return; }
-    catch(e){ console.error("fbDel",key,e); }
+    try{ const {doc,deleteDoc} = fbDB._fs; await withTimeout(deleteDoc(doc(fbDB, COLLECTION, fsKey(key)))); markStale(false); return; }
+    catch(e){ console.error("fbDel",key,e); markStale(true); }
   }
   try{ await window.storage.delete(key, shared); }catch(e){}
 }
@@ -4185,7 +4203,11 @@ async function renderMessages(){
   const area = document.getElementById("messages-area");
   if(!area) return;
   const isCmdr = userRole === "מפקד";
-  const msgs = (isAdmin || isVehicleOfficer) ? ((await sGetRaw("admin_messages")) || []) : ((await sGet("messages_list")) || []);
+  const isDeptUnit = !!(currentShed && currentShed.isDept);
+  const myDept = isDeptUnit ? PERSONNEL.find(p=>p.name===user)?.dept : null;
+  let msgs = (isAdmin || isVehicleOfficer) ? ((await sGetRaw("admin_messages")) || []) : ((await sGet("messages_list")) || []);
+  // ביוזר "מחלקות" כל תת-מחלקה רואה רק הודעות שהתפרסמו על ידה (הודעות ישנות בלי תיוג מחלקה נשארות גלויות לכולם)
+  if(isDeptUnit && myDept) msgs = msgs.filter(m=>!m.dept || m.dept===myDept);
   const canDelete = isCmdr || isAdmin;
   if(msgs.length===0){ area.innerHTML=""; area.style.marginBottom="0"; return; }
 
@@ -4196,14 +4218,20 @@ async function renderMessages(){
       m.reads = m.reads || {};
       if(!m.reads[safeName(user)]){ m.reads[safeName(user)] = {name:user, ts:Date.now()}; changed = true; }
     }
-    if(changed){ await sSet("messages_list", msgs); }
+    if(changed){
+      // כותבים בחזרה את הרשימה המלאה (לא רק המסוננת) כדי לא לאבד הודעות של תת-מחלקות אחרות
+      const allMsgs = (await sGet("messages_list")) || [];
+      msgs.forEach(m=>{ const orig = allMsgs.find(x=>x.id===m.id); if(orig) orig.reads = m.reads; });
+      await sSet("messages_list", allMsgs);
+    }
   }
 
+  const receiptDenom = (isDeptUnit && myDept) ? PERSONNEL.filter(p=>p.dept===myDept).length : PERSONNEL.length;
   area.style.marginBottom = "2px";
   area.innerHTML = msgs.map(m=>{
     const st = MSG_STYLE[m.type] || MSG_STYLE.info;
     const readCount = m.reads ? Object.keys(m.reads).length : 0;
-    const receipt = isCmdr ? `<span class="msg-receipt">👁️ ${readCount}/${PERSONNEL.length}</span>` : "";
+    const receipt = isCmdr ? `<span class="msg-receipt">👁️ ${readCount}/${receiptDenom}</span>` : "";
     return `<div class="msg-card ${st.cls}">
       <span class="m-emoji">${st.emoji}</span>
       <div class="m-body"><p>${escapeHTML(m.text)}</p><small>${escapeHTML(m.by)} · ${m.date}</small></div>
@@ -4227,7 +4255,9 @@ function checkMsgReady(){ document.getElementById("msg-save").disabled = documen
 async function saveMessage(){
   const text = document.getElementById("msg-text").value.trim();
   if(text.length<2) return;
-  const msgObj = {id:"msg_"+Date.now(), text, type:msgType, by:user, date:new Date().toLocaleDateString("he-IL")};
+  const isDeptUnit = !!(currentShed && currentShed.isDept);
+  const myDept = isDeptUnit ? (PERSONNEL.find(p=>p.name===user)?.dept || null) : null;
+  const msgObj = {id:"msg_"+Date.now(), text, type:msgType, by:user, date:new Date().toLocaleDateString("he-IL"), dept: myDept};
   if(isAdmin){
     // מנהל — פרסום לכל 5 הסככות + עותק ברשימת המנהל
     for(const shed of SHEDS){
@@ -4253,7 +4283,10 @@ async function saveMessage(){
   openWaPrompt("msg", {text, type:msgType});
 }
 async function renderMsgExisting(){
-  const msgs = isAdmin ? ((await sGetRaw("admin_messages")) || []) : ((await sGet("messages_list")) || []);
+  const isDeptUnit = !!(currentShed && currentShed.isDept);
+  const myDept = isDeptUnit ? PERSONNEL.find(p=>p.name===user)?.dept : null;
+  let msgs = isAdmin ? ((await sGetRaw("admin_messages")) || []) : ((await sGet("messages_list")) || []);
+  if(isDeptUnit && myDept) msgs = msgs.filter(m=>!m.dept || m.dept===myDept);
   const box = document.getElementById("msg-existing");
   box.innerHTML = msgs.length ? '<div style="font-size:12px;color:var(--ink-3);font-weight:700;margin-bottom:4px">הודעות פעילות:</div>' +
     msgs.map(m=>`<div class="msg-existing-item"><span class="mx-txt">${(MSG_STYLE[m.type]||MSG_STYLE.info).emoji} ${escapeHTML(m.text)}</span><button onclick="deleteMessage('${m.id}',true)">מחק</button></div>`).join("") : "";
@@ -4270,6 +4303,12 @@ async function deleteMessage(id, fromModal){
     await sSetRaw("admin_messages", adminList);
   } else {
     let msgs = (await sGet("messages_list")) || [];
+    const isDeptUnit = !!(currentShed && currentShed.isDept);
+    const myDept = isDeptUnit ? PERSONNEL.find(p=>p.name===user)?.dept : null;
+    if(isDeptUnit && myDept){
+      const target = msgs.find(m=>m.id===id);
+      if(target && target.dept && target.dept!==myDept){ toast("אין הרשאה למחוק הודעה של מחלקה אחרת ⛔"); return; }
+    }
     msgs = msgs.filter(m=>m.id!==id);
     await sSet("messages_list", msgs);
   }
@@ -4612,9 +4651,15 @@ async function renderTeamMgmt(){
   // מפקד ביוזר מחלקות עוקב רק אחרי אנשי הצוות המשויכים למחלקה שלו, לא אחרי כל המחלקות
   const myDept = (isDeptUnit && userRole==="מפקד") ? PERSONNEL.find(p=>p.name===user)?.dept : null;
   const indexed = PERSONNEL.map((p,i)=>({p,i}));
-  const visible = myDept ? indexed.filter(x=>x.p.dept===myDept) : indexed;
+  let visible = myDept ? indexed.filter(x=>x.p.dept===myDept) : indexed;
+
+  const searchBox = document.getElementById("tm-search");
+  searchBox.classList.toggle("hidden", visible.length<6);
+  const q = (searchBox.value||"").trim();
+  if(q) visible = visible.filter(x=>x.p.name.includes(q));
+
   if(visible.length===0){
-    box.innerHTML = '<div style="text-align:center;color:var(--ink-3);font-size:13px;padding:16px">אין עדיין אנשי צוות</div>';
+    box.innerHTML = `<div style="text-align:center;color:var(--ink-3);font-size:13px;padding:16px">${q?'לא נמצאו תוצאות':'אין עדיין אנשי צוות'}</div>`;
     return;
   }
   const certs = isDeptUnit ? [] : await getCerts();
