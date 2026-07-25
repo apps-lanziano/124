@@ -2803,12 +2803,12 @@ async function doLogin(){
     document.getElementById("more-faults-item").classList.toggle("hidden", isDeptUnit);
     document.getElementById("more-bdays-item").classList.toggle("hidden", isDeptUnit);
 
-    /* מסגרת "מ״ע אחזקה" — מסגרת תחזוקה, לא מסגרת מבצעית של סככה.
-       מוסרים ממנה מסכים שאין להם משמעות בהקשר הזה, וכאלה שכבר קיימים
-       לה ברמה הטייסתית (רכבים ותקלות בינוי מנוהלים במסכי מ״ע אחזקה,
-       שם רואים את כל הטייסת ולא רק מסגרת אחת).
+    /* מסגרות "מ״ע אחזקה" ו"הדרכה" — מסגרות תפקידיות, לא מסגרות מבצעיות
+       של סככה. מוסרים מהן מסכים שאין להם משמעות בהקשר הזה, וכאלה שכבר
+       קיימים להן ברמה הטייסתית (רכבים ותקלות בינוי במסכי מ״ע אחזקה,
+       הסמכות והדרכה בדשבורד אחראי ההדרכה — שם רואים את כל הטייסת).
        נשארים: קרא וחתום, הודעות, נכס, ימי הולדת וניהול צוות. */
-    if(currentShed && currentShed.isMaint){
+    if(currentShed && (currentShed.isMaint || currentShed.isTraining)){
       [ "nav-tools",        // חדר כלים
         "tools-add-btn",
         "nav-vehicles",     // מעקב רכבים סככתי — קיים מעקב טייסתי מלא
@@ -6912,9 +6912,10 @@ async function renderTrends(){
 async function computeAlerts(){
   const alerts = [];
   if(!currentShed || isAdmin) return alerts;
-  /* במסגרת "מ״ע אחזקה" הוסרו מטלות בוקר, תקלות, הסמכות, חדר כלים ומעקב רכבים
-     סככתי — אין להתריע על מסכים שלא קיימים בה. נשארות התראות קרא וחתום. */
-  const isMaintUnit = !!currentShed.isMaint;
+  /* במסגרות "מ״ע אחזקה" ו"הדרכה" הוסרו מטלות בוקר, תקלות, הסמכות, חדר כלים
+     ומעקב רכבים סככתי — אין להתריע על מסכים שלא קיימים בהן. נשארות
+     התראות קרא וחתום. */
+  const isTrimmedUnit = !!(currentShed.isMaint || currentShed.isTraining);
   const events = await getEvents();
   // unsigned events (per soldier count) — שולפים את החתימות של כולם פעם אחת במקביל, לא בכל אירוע מחדש
   const sigsArrA = await Promise.all(PERSONNEL.map(p => sGet("sigs_"+safeName(p.name))));
@@ -6928,7 +6929,7 @@ async function computeAlerts(){
       alerts.push({icon:"✍️", text:`"${e.title}" — ${missing} עדיין לא חתמו`, level:"mid"});
     }
   }
-  if(isMaintUnit) return alerts;
+  if(isTrimmedUnit) return alerts;
   // morning past 11
   const done = (await sGet("team_morning_"+todayKey())) || {};
   const openM = MORNING_TASKS.filter(t=>!done[t.id]).length;
