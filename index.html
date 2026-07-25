@@ -2802,6 +2802,39 @@ async function doLogin(){
     document.getElementById("nav-bdays").classList.toggle("hidden", !isDeptUnit);
     document.getElementById("more-faults-item").classList.toggle("hidden", isDeptUnit);
     document.getElementById("more-bdays-item").classList.toggle("hidden", isDeptUnit);
+
+    /* מסגרת "מ״ע אחזקה" — מסגרת תחזוקה, לא מסגרת מבצעית של סככה.
+       מוסרים ממנה מסכים שאין להם משמעות בהקשר הזה, וכאלה שכבר קיימים
+       לה ברמה הטייסתית (רכבים ותקלות בינוי מנוהלים במסכי מ״ע אחזקה,
+       שם רואים את כל הטייסת ולא רק מסגרת אחת).
+       נשארים: קרא וחתום, הודעות, נכס, ימי הולדת וניהול צוות. */
+    if(currentShed && currentShed.isMaint){
+      [ "nav-tools",        // חדר כלים
+        "tools-add-btn",
+        "nav-vehicles",     // מעקב רכבים סככתי — קיים מעקב טייסתי מלא
+        "vehicles-add-btn",
+        "nav-certs",        // הסמכות
+        "cert-add-btn",
+        "nav-morning",      // מטלות בוקר
+        "more-tasks-item",  // עריכת מטלות בוקר
+        "more-binui-item",  // דיווח תקלות בינוי — קיים מסך ריכוז ועריכה
+        "sheet-closeday",   // סגירת יום
+        "close-mgmt-btn",
+        "nav-faults",       // דיווח תקלות
+        "more-faults-item",
+        "sheet-naatim",     // נע"תים
+        "naatim-mgmt-btn"
+      ].forEach(id=>document.getElementById(id).classList.add("hidden"));
+      // ימי הולדת נשארים, ועוברים לתפריט "עוד" כמו בסככות
+      document.getElementById("more-bdays-item").classList.remove("hidden");
+      document.getElementById("nav-bdays").classList.add("hidden");
+      // גם טאב "מטלות" במסך המפקד — אחרת נשארת דרך עוקפת למטלות הבוקר
+      document.getElementById("tab-morning").classList.add("hidden");
+      if(document.getElementById("pane-morning").classList.contains("active")) cmdTab("trends");
+    } else {
+      document.getElementById("tab-morning").classList.remove("hidden");
+    }
+
     // מסגרות שהומרו מיוזר פרטי — המפקד שלהן מקבל בנוסף את ההרשאות הטייסתיות שלו
     if(userRole === "מפקד" && currentShed.isTraining) await applyTrainingCommanderPowers();
     if(userRole === "מפקד" && currentShed.isMaint)    await applyMaintCommanderPowers();
@@ -6879,6 +6912,9 @@ async function renderTrends(){
 async function computeAlerts(){
   const alerts = [];
   if(!currentShed || isAdmin) return alerts;
+  /* במסגרת "מ״ע אחזקה" הוסרו מטלות בוקר, תקלות, הסמכות, חדר כלים ומעקב רכבים
+     סככתי — אין להתריע על מסכים שלא קיימים בה. נשארות התראות קרא וחתום. */
+  const isMaintUnit = !!currentShed.isMaint;
   const events = await getEvents();
   // unsigned events (per soldier count) — שולפים את החתימות של כולם פעם אחת במקביל, לא בכל אירוע מחדש
   const sigsArrA = await Promise.all(PERSONNEL.map(p => sGet("sigs_"+safeName(p.name))));
@@ -6892,6 +6928,7 @@ async function computeAlerts(){
       alerts.push({icon:"✍️", text:`"${e.title}" — ${missing} עדיין לא חתמו`, level:"mid"});
     }
   }
+  if(isMaintUnit) return alerts;
   // morning past 11
   const done = (await sGet("team_morning_"+todayKey())) || {};
   const openM = MORNING_TASKS.filter(t=>!done[t.id]).length;
