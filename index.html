@@ -3534,6 +3534,47 @@ async function toggleVoRollcallCheckin(id){
   await sSetRaw("vo_rollcall_checkins", checkins);
   renderRollcallPage();
 }
+/* בונה את התצוגה המרוכזת (קריאה בלבד) של סטטוס הנכס בכל המסגרות —
+   משמשת גם את בעלי התפקידים הכלל-טייסתיים ללא מסגרת, וגם את מפקד "הדרכה"
+   שיש לו מסגרת משלו אבל שומר על תצוגת-העל הטייסתית שהייתה לו קודם. */
+async function buildSquadronRollcallRowsHtml(){
+  const rows = [];
+  for(const shed of SHEDS){
+    const pers = (await sGetIn(shed.id, "cfg_personnel")) || [];
+    if(shed.isDept){
+      const deptValues = [...new Set([...DEPT_NAMES, ...pers.map(p=>p.dept).filter(Boolean)])];
+      for(const d of deptValues){
+        const subPers = pers.filter(p=>p.dept===d);
+        if(subPers.length===0) continue;
+        const [active, checkins] = await Promise.all([sGetIn(shed.id,"rollcall_active_"+d), sGetIn(shed.id,"rollcall_checkins_"+d)]);
+        const chk = checkins || {};
+        rows.push({name: shed.name+" · "+d, active: !!active, done: subPers.filter(p=>chk[p.name]).length, total: subPers.length});
+      }
+      const noDept = pers.filter(p=>!p.dept);
+      if(noDept.length){
+        const [active, checkins] = await Promise.all([sGetIn(shed.id,"rollcall_active"), sGetIn(shed.id,"rollcall_checkins")]);
+        const chk = checkins || {};
+        rows.push({name: shed.name+" · ללא מחלקה", active: !!active, done: noDept.filter(p=>chk[p.name]).length, total: noDept.length});
+      }
+    } else {
+      const [active, checkins] = await Promise.all([sGetIn(shed.id,"rollcall_active"), sGetIn(shed.id,"rollcall_checkins")]);
+      const chk = checkins || {};
+      rows.push({name: shed.name, active: !!active, done: pers.filter(p=>chk[p.name]).length, total: pers.length});
+    }
+  }
+  return `<div class="cmd-section-title">📊 סטטוס לפי מסגרת</div>` + rows.map(r=>{
+    const cls = !r.active ? "g" : (r.total>0 && r.done===r.total ? "g" : (r.done>0 ? "y" : "r"));
+    const tag = !r.active ? "אין נכס פעיל" : (r.done+"/"+r.total+" סימנו");
+    return `<div class="cert-sum-card" style="cursor:default">
+      <div class="cert-sum-head">
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">🛡️</div>
+        <div class="cert-sum-name"><b>${escapeHTML(r.name)}</b></div>
+        <span class="pill ${cls}" style="font-size:10px;white-space:nowrap">${tag}</span>
+      </div>
+    </div>`;
+  }).join("");
+}
+
 async function renderRollcallPage(){
   const box = document.getElementById("rollcall-content");
   if(!box) return;
@@ -3584,48 +3625,12 @@ async function renderRollcallPage(){
     box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען נתוני נכס מכל המסגרות…</div>';
     const officerCheckins = (await sGetRaw("rollcall_officer_checkins")) || {};
     const myOfficerCheckedIn = !!officerCheckins[userRole];
-    // ביוזר "מחלקות" כל מחלקה (הטסה/אוה"ד/אחזקה/קה"ד מ"מ) מפעילה נכס משלה — לכן מוצגת כאן כשורה נפרדת משלה
-    const rows = [];
-    for(const shed of SHEDS){
-      const pers = (await sGetIn(shed.id, "cfg_personnel")) || [];
-      if(shed.isDept){
-        const deptValues = [...new Set([...DEPT_NAMES, ...pers.map(p=>p.dept).filter(Boolean)])];
-        for(const d of deptValues){
-          const subPers = pers.filter(p=>p.dept===d);
-          if(subPers.length===0) continue;
-          const [active, checkins] = await Promise.all([sGetIn(shed.id,"rollcall_active_"+d), sGetIn(shed.id,"rollcall_checkins_"+d)]);
-          const chk = checkins || {};
-          rows.push({name: shed.name+" · "+d, active: !!active, done: subPers.filter(p=>chk[p.name]).length, total: subPers.length});
-        }
-        const noDept = pers.filter(p=>!p.dept);
-        if(noDept.length){
-          const [active, checkins] = await Promise.all([sGetIn(shed.id,"rollcall_active"), sGetIn(shed.id,"rollcall_checkins")]);
-          const chk = checkins || {};
-          rows.push({name: shed.name+" · ללא מחלקה", active: !!active, done: noDept.filter(p=>chk[p.name]).length, total: noDept.length});
-        }
-      } else {
-        const [active, checkins] = await Promise.all([sGetIn(shed.id,"rollcall_active"), sGetIn(shed.id,"rollcall_checkins")]);
-        const chk = checkins || {};
-        rows.push({name: shed.name, active: !!active, done: pers.filter(p=>chk[p.name]).length, total: pers.length});
-      }
-    }
     let html = `<div class="all-done-banner" style="display:block;background:${myOfficerCheckedIn?'linear-gradient(135deg,#166534,#22c55e)':'linear-gradient(135deg,#7c2d12,#9a3412)'}">
       ${myOfficerCheckedIn ? '✅ סימנת שאתה תקין/ה וזמין/ה' : '🚨 נא לסמן שאתה תקין/ה וזמין/ה'}
     </div>`;
     if(!myOfficerCheckedIn) html += `<button class="m-btn primary" style="width:100%;margin:10px 0" onclick="checkInOfficerRollcall()">✅ אני תקין/ה וזמין/ה</button>`;
 
-    html += `<div class="cmd-section-title">📊 סטטוס לפי מסגרת</div>`;
-    html += rows.map(r=>{
-      const cls = !r.active ? "g" : (r.total>0 && r.done===r.total ? "g" : (r.done>0 ? "y" : "r"));
-      const tag = !r.active ? "אין נכס פעיל" : (r.done+"/"+r.total+" סימנו");
-      return `<div class="cert-sum-card" style="cursor:default">
-        <div class="cert-sum-head">
-          <div class="avatar" style="width:40px;height:40px;font-size:18px">🛡️</div>
-          <div class="cert-sum-name"><b>${escapeHTML(r.name)}</b></div>
-          <span class="pill ${cls}" style="font-size:10px;white-space:nowrap">${tag}</span>
-        </div>
-      </div>`;
-    }).join("");
+    html += await buildSquadronRollcallRowsHtml();
     box.innerHTML = html;
     return;
   }
@@ -3640,6 +3645,8 @@ async function renderRollcallPage(){
   if(!active){
     let html = `<div class="empty-state"><div class="ic">🛡️</div><h3>אין נכס פעיל כרגע</h3><p>${isCmdr?'לחץ על הכפתור כדי להפעיל נכס ולבקש מכולם לסמן תקינות':'המפקד טרם הפעיל נכס'}</p></div>`;
     if(isCmdr) html += `<button class="m-btn primary" style="width:100%;margin-top:10px" onclick="activateRollcall()">🚨 הפעל נכס</button>`;
+    // גם כשאין נכס פעיל במסגרת שלו — אחראי ההדרכה עדיין רואה את מצב כלל המסגרות
+    if(currentShed.isTraining && isCmdr) html += await buildSquadronRollcallRowsHtml();
     box.innerHTML = html;
     return;
   }
@@ -3687,6 +3694,13 @@ async function renderRollcallPage(){
       <button class="m-btn ghost" style="flex:1" onclick="endRollcall()">🔚 סיים נכס</button>
       <button class="m-btn primary" style="flex:1" onclick="openWaPrompt('rollcall')">📤 שתף בוואטסאפ</button>
     </div>`;
+  }
+
+  /* אחראי ההדרכה מנהל נכס למסגרת שלו, ובנוסף שומר על תצוגת-העל הטייסתית
+     (קריאה בלבד) שהייתה לו לפני שהפך למסגרת. מ״ע אחזקה במכוון לא מקבל אותה —
+     תחום האחריות שלו הוא רכבים/רישיונות/בינוי, והנכס שלו הוא ברמת הצוות בלבד. */
+  if(currentShed && currentShed.isTraining && userRole === "מפקד"){
+    html += await buildSquadronRollcallRowsHtml();
   }
 
   box.innerHTML = html;
