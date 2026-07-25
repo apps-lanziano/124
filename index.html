@@ -1377,7 +1377,6 @@ nav{
       <div class="cmd-tabs" style="margin-bottom:16px">
         <button class="cmd-tab active" id="mdtab-materials" onclick="mdTab('materials')">📦 הזמנת חומרים</button>
         <button class="cmd-tab" id="mdtab-tools" onclick="mdTab('tools')">🔧 מעקב כלים מוטוריים</button>
-        <button class="cmd-tab" id="mdtab-binui" onclick="mdTab('binui')">🚧 תקלות בינוי</button>
       </div>
 
       <!-- PANE: MATERIALS ORDERS -->
@@ -1395,11 +1394,17 @@ nav{
         </div>
         <div id="md-tools-list"></div>
       </div>
+    </section>
 
-      <!-- PANE: BINUI FAULTS (ריכוז תקלות בינוי מכל המסגרות) -->
-      <div class="admin-pane" id="mdpane-binui">
-        <div id="md-binui-list"></div>
+    <!-- ===== BINUI FAULTS ADMIN (ריכוז תקלות בינוי מכל המסגרות — מסך נפרד משל עצמו) ===== -->
+    <section class="screen" id="scr-binui-admin">
+      <div class="sec-head">
+        <div>
+          <h2>תקלות בינוי 🚧</h2>
+          <p>ריכוז דיווחי ליקויי בינוי מכל המסגרות · מחלקת אחזקה</p>
+        </div>
       </div>
+      <div id="md-binui-list"></div>
     </section>
 
     <!-- ===== BUDGET OFFICER (אחראי תקציבים טייסתי) ===== -->
@@ -1456,6 +1461,7 @@ nav{
     <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic">🏛️</span><span>אחראי הדרכה</span></button>
     <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic">🚙</span><span>רכבים</span></button>
     <button class="nav-btn hidden" id="nav-maint-dept" data-scr="scr-maint-dept" onclick="go('scr-maint-dept',this)"><span class="ic">🔧</span><span>אחזקה</span></button>
+    <button class="nav-btn hidden" id="nav-binui-admin" data-scr="scr-binui-admin" onclick="go('scr-binui-admin',this)"><span class="ic">🚧</span><span>תקלות בינוי</span><span class="nav-badge hidden" id="badge-binui-admin">0</span></button>
     <button class="nav-btn hidden" id="nav-vo-team" onclick="openVoTeamMgmt()"><span class="ic">👥</span><span>צוות</span></button>
     <button class="nav-btn hidden" id="nav-budget-officer" data-scr="scr-budget-officer" onclick="go('scr-budget-officer',this)"><span class="ic">💰</span><span>תקציבים</span></button>
     <button class="nav-btn hidden" id="nav-rollcall" data-scr="scr-rollcall" onclick="go('scr-rollcall',this)"><span class="ic">🛡️</span><span>נכס</span></button>
@@ -2402,12 +2408,20 @@ function showSharedBadge(shared){
 // Firestore-safe key (no slashes)
 const fsKey = k => k.replace(/[\/\.\#\$\[\]]/g,"_");
 
+// עוטף בקשת Firestore בטיימאאוט — כדי שרשת תקועה/App Check שנופל לא ישאירו את המסך תלוי לנצח על שעון חול
+function withTimeout(promise, ms=9000){
+  return Promise.race([
+    promise,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")), ms))
+  ]);
+}
+
 /* raw accessors — full key, no namespacing */
 async function sGetRaw(key, shared=true){
   if(fbReady){
     try{
       const {doc,getDoc} = fbDB._fs;
-      const snap = await getDoc(doc(fbDB, COLLECTION, fsKey(key)));
+      const snap = await withTimeout(getDoc(doc(fbDB, COLLECTION, fsKey(key))));
       return snap.exists() ? snap.data().v : null;
     }catch(e){ console.error("fbGet",key,e); return mem[key] ?? null; }
   }
@@ -2419,7 +2433,7 @@ async function sSetRaw(key, val, shared=true){
   if(fbReady){
     try{
       const {doc,setDoc} = fbDB._fs;
-      await setDoc(doc(fbDB, COLLECTION, fsKey(key)), {v:val, updated:Date.now()});
+      await withTimeout(setDoc(doc(fbDB, COLLECTION, fsKey(key)), {v:val, updated:Date.now()}));
       return;
     }catch(e){ console.error("fbSet",key,e); }
   }
@@ -2428,7 +2442,7 @@ async function sSetRaw(key, val, shared=true){
 async function sDelRaw(key, shared=true){
   delete mem[key];
   if(fbReady){
-    try{ const {doc,deleteDoc} = fbDB._fs; await deleteDoc(doc(fbDB, COLLECTION, fsKey(key))); return; }
+    try{ const {doc,deleteDoc} = fbDB._fs; await withTimeout(deleteDoc(doc(fbDB, COLLECTION, fsKey(key)))); return; }
     catch(e){ console.error("fbDel",key,e); }
   }
   try{ await window.storage.delete(key, shared); }catch(e){}
@@ -2687,6 +2701,7 @@ function logout(){
   document.getElementById("nav-admin").classList.add("hidden");
   document.getElementById("nav-vehicle-officer").classList.add("hidden");
   document.getElementById("nav-maint-dept").classList.add("hidden");
+  document.getElementById("nav-binui-admin").classList.add("hidden");
   document.getElementById("nav-vo-team").classList.add("hidden");
   document.getElementById("nav-budget-officer").classList.add("hidden");
   document.getElementById("nav-rollcall").classList.add("hidden");
@@ -2723,9 +2738,10 @@ function go(id, btn){
   if(id==="scr-training") renderTrainingView();
   if(id==="scr-vehicle-officer") renderVoOverview();
   if(id==="scr-maint-dept") renderMaterials();
+  if(id==="scr-binui-admin") renderBinuiFaultsAdmin();
   if(id==="scr-budget-officer") renderBoOverview();
   if(id==="scr-rollcall") renderRollcallPage();
-  if(id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-budget-officer"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי קצין הרכב/מחלקת אחזקה/אחראי תקציבים (אין להם סככה)
+  if(id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-binui-admin" && id!=="scr-budget-officer"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי קצין הרכב/מחלקת אחזקה/תקלות בינוי/אחראי תקציבים (אין להם סככה)
 }
 
 /* ===== MORE SHEET ===== */
@@ -4004,6 +4020,7 @@ function openWaPrompt(kind, payload){
   else if(kind==="unsigned"){ title.textContent="הרשימה מוכנה ✅"; sub.textContent="שלח תזכורת לחיילים שטרם חתמו"; }
   else if(kind==="rollcall"){ title.textContent="הנכס הופעל ✅"; sub.textContent="שלח לצוות בוואטסאפ שיסמנו תקינות וזמינות"; }
   else if(kind==="rollcall-complete"){ title.textContent="כל הכבוד! 🎉"; sub.textContent="דווח בוואטסאפ שהנכס הושלם וכולם תקינים"; }
+  else if(kind==="binui"){ title.textContent="התקלה דווחה ✅"; sub.textContent="שלח עדכון לשחר שושן (מחלקת אחזקה) שנפתחה תקלת בינוי"; }
   // rebind the button fresh each time
   go.onclick = ()=>{
     if(kind==="event") shareEventWA(payload);
@@ -4013,6 +4030,7 @@ function openWaPrompt(kind, payload){
     else if(kind==="unsigned") shareUnsignedWA(payload);
     else if(kind==="rollcall") shareRollcallWA();
     else if(kind==="rollcall-complete") shareRollcallCompleteWA();
+    else if(kind==="binui") shareBinuiFaultWA(payload);
     modal.classList.remove("open");
   };
   modal.classList.add("open");
@@ -4078,6 +4096,16 @@ function shareRollcallCompleteWA(){
     "✅ *נכס לאומי הושלם — " + waShedName() + "*\n" +
     "━━━━━━━━━━━━━━\n" +
     "כל אנשי הצוות תקינים וזמינים.\n\n" +
+    "🔗 " + SITE_URL;
+  waShare(msg);
+}
+function shareBinuiFaultWA(payload){
+  const msg =
+    "🚧 *תקלת בינוי חדשה — " + waShedName() + "*\n" +
+    "━━━━━━━━━━━━━━\n" +
+    "שחר, נפתחה תקלת בינוי חדשה שדורשת טיפול:\n" +
+    "\"" + payload.title + "\"\n" +
+    "דווח ע\"י " + payload.by + "\n\n" +
     "🔗 " + SITE_URL;
   waShare(msg);
 }
@@ -4461,6 +4489,7 @@ async function saveBinuiFault(){
     closeAddBinuiFault();
     toast("תקלת הבינוי דווחה 🚧");
     renderBinuiFaults();
+    openWaPrompt("binui", {title, by:user});
   }catch(e){ toast("⚠️ שגיאה בשליחה"); console.error(e); }
   finally{ btn.textContent="שליחת דיווח"; btn.disabled=false; }
 }
@@ -4525,10 +4554,17 @@ async function deleteBinuiFault(id){
   toast("התקלה נמחקה 🗑️");
   renderBinuiFaultsAdmin();
 }
+/* מונה תקלות בינוי פתוחות — מוצג כבאדג' על סמל הניווט התחתון של מחלקת אחזקה/קצין טכני */
+async function updateBinuiAdminBadge(){
+  if(!isVehicleOfficer && !isTechOfficer) return;
+  const faults = await getBinuiFaults();
+  setBadge("badge-binui-admin", faults.filter(f=>f.status==="פתוח").length);
+}
 /* תצוגת מחלקת אחזקה — כל התקלות מכל המסגרות, עם קביעת סטטוס */
 async function renderBinuiFaultsAdmin(){
   const box = document.getElementById("md-binui-list");
   if(!box) return;
+  updateBinuiAdminBadge();
   const faults = await getBinuiFaults();
   if(faults.length===0){
     box.innerHTML = `<div class="empty-state"><div class="ic">🚧</div><h3>אין עדיין תקלות בינוי</h3><p>ידווחו ע"י מפקדי הסככות/מחלקות</p></div>`;
@@ -4868,11 +4904,13 @@ async function vehicleOfficerLogin(){
   document.getElementById("nav-bdays").classList.remove("hidden");
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
   document.getElementById("nav-maint-dept").classList.remove("hidden");
+  document.getElementById("nav-binui-admin").classList.remove("hidden");
   document.getElementById("nav-vo-team").classList.remove("hidden");
   document.getElementById("nav-rollcall").classList.remove("hidden");
   await ensureShed2Seed();
   await ensureAllShedsSeed();
   await processVoReleases();
+  updateBinuiAdminBadge();
   go("scr-vehicle-officer", document.getElementById("nav-vehicle-officer"));
   renderDocs();
   renderBdays();
@@ -4906,10 +4944,12 @@ async function techOfficerLogin(){
   document.getElementById("nav-admin").classList.remove("hidden");
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
   document.getElementById("nav-maint-dept").classList.remove("hidden");
+  document.getElementById("nav-binui-admin").classList.remove("hidden");
   document.getElementById("nav-budget-officer").classList.remove("hidden");
   document.getElementById("nav-rollcall").classList.remove("hidden");
   await ensureShed2Seed();
   await ensureAllShedsSeed();
+  updateBinuiAdminBadge();
   go("scr-admin", document.getElementById("nav-admin"));
   renderMessages();
   toast("ברוך הבא, אור 🔧");
@@ -6480,25 +6520,38 @@ async function computeAlerts(){
   return alerts;
 }
 async function openAlerts(){
-  const alerts = await computeAlerts();
   const body = document.getElementById("alerts-body");
-  if(alerts.length===0){
-    body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)"><div style="font-size:40px;margin-bottom:8px">✅</div><b style="font-size:15px;color:var(--green)">אין התראות פתוחות</b><p style="font-size:13px;margin-top:4px">הכל תחת שליטה</p></div>`;
-  } else {
-    body.innerHTML = alerts.map(a=>`<div class="alert-row ${a.level}"><span class="al-ic">${a.icon}</span><span class="al-tx">${escapeHTML(a.text)}</span></div>`).join("");
-  }
+  // פותחים מיד עם מצב טעינה — כדי שלחיצה על הפעמון תמיד תגיב, גם אם החישוב איטי
+  body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען…</div>';
   document.getElementById("alerts-modal").classList.add("open");
+  try{
+    const alerts = await computeAlerts();
+    if(alerts.length===0){
+      body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)"><div style="font-size:40px;margin-bottom:8px">✅</div><b style="font-size:15px;color:var(--green)">אין התראות פתוחות</b><p style="font-size:13px;margin-top:4px">הכל תחת שליטה</p></div>`;
+    } else {
+      body.innerHTML = alerts.map(a=>`<div class="alert-row ${a.level}"><span class="al-ic">${a.icon}</span><span class="al-tx">${escapeHTML(a.text)}</span></div>`).join("");
+    }
+    updateAlertBell(alerts);
+  }catch(e){
+    console.error("openAlerts failed", e);
+    body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)">⚠️ שגיאה בטעינת ההתראות — נסה שוב</div>`;
+  }
 }
-async function updateAlertBell(){
+async function updateAlertBell(precomputed){
   const bell = document.getElementById("alert-bell");
   if(!bell) return;
   if(userRole !== "מפקד"){ bell.style.display="none"; return; }
   bell.style.display="flex";
-  const alerts = await computeAlerts();
   const badge = document.getElementById("alert-bell-count");
-  const high = alerts.filter(a=>a.level==="high").length;
-  if(alerts.length>0){ badge.textContent = alerts.length>9?"9+":alerts.length; badge.classList.remove("hidden"); badge.classList.toggle("high", high>0); }
-  else badge.classList.add("hidden");
+  try{
+    const alerts = precomputed || await computeAlerts();
+    const high = alerts.filter(a=>a.level==="high").length;
+    if(alerts.length>0){ badge.textContent = alerts.length>9?"9+":alerts.length; badge.classList.remove("hidden"); badge.classList.toggle("high", high>0); }
+    else badge.classList.add("hidden");
+  }catch(e){
+    console.error("updateAlertBell failed", e);
+    badge.classList.add("hidden");
+  }
 }
 
 /* ===== TRAINING MATERIALS (shed users view) ===== */
@@ -7761,13 +7814,12 @@ async function renderVoLicenses(){
    מחלקת אחזקה — הזמנת חומרים + מעקב כלים מוטוריים (לשונית "אחזקה" בבאר התחתון)
    ============================================================ */
 function mdTab(which){
-  ["materials","tools","binui"].forEach(w=>{
+  ["materials","tools"].forEach(w=>{
     document.getElementById("mdtab-"+w).classList.toggle("active", which===w);
     document.getElementById("mdpane-"+w).classList.toggle("active", which===w);
   });
   if(which==="materials") renderMaterials();
   if(which==="tools") renderMotorTools();
-  if(which==="binui") renderBinuiFaultsAdmin();
 }
 
 /* --- הזמנת חומרים --- */
