@@ -1,6 +1,6 @@
-const CACHE_NAME = "tayeset124-v1";
+const CACHE_NAME = "tayeset124-v2";
 const APP_SHELL = [
-  "./index-pwa.html",
+  "./index.html",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -26,17 +26,17 @@ self.addEventListener("activate", event => {
 // ורק אם אין רשת בכלל — נופלים למטמון (שימוש לא מקוון)
 self.addEventListener("fetch", event => {
   const req = event.request;
-  const isAppDoc = req.mode === "navigate" || req.url.endsWith("index-pwa.html");
+  const isAppDoc = req.mode === "navigate" || req.url.endsWith("index.html");
 
   if (isAppDoc) {
     event.respondWith(
       fetch(req)
         .then(res => {
           const copy = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put("./index-pwa.html", copy));
+          caches.open(CACHE_NAME).then(cache => cache.put("./index.html", copy));
           return res;
         })
-        .catch(() => caches.match("./index-pwa.html"))
+        .catch(() => caches.match("./index.html"))
     );
     return;
   }

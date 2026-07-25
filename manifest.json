@@ -2,7 +2,7 @@
   "name": "טייסת 124 · דרג א'",
   "short_name": "טייסת 124",
   "description": "אפליקציית ניהול לגף הטכני של טייסת 124",
-  "start_url": "./index-pwa.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
