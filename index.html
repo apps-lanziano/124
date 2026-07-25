@@ -1286,7 +1286,7 @@ nav{
       <!-- PANE: LOG -->
       <div class="admin-pane" id="apane-log">
         <div class="cmd-section-title">📜 יומן תיעוד כלל-טייסתי</div>
-        <div class="matrix-hint">כל הפעולות מכל 5 הסככות, מהחדש לישן</div>
+        <div class="matrix-hint">כל הפעולות מכל המסגרות, מהחדש לישן</div>
         <div id="admin-log-list"></div>
       </div>
     </section>
@@ -1296,7 +1296,7 @@ nav{
       <div class="sec-head">
         <div>
           <h2>רכבים 🚙</h2>
-          <p>מעקב רכבים ורישיונות · כלל 5 הסככות</p>
+          <p>מעקב רכבים ורישיונות · כלל המסגרות</p>
         </div>
       </div>
 
@@ -2249,8 +2249,46 @@ async function migrateLegacyShed2(){
   console.log("✅ מיגרציית סככה 2 הושלמה");
 }
 
+/* זריעה למסגרות שהומרו מ"יוזר פרטי" למסגרת מלאה (מ״ע אחזקה + הדרכה).
+   בנוסף מיגרציה חד-פעמית: צוות הנהגים שהיה ברשימה נפרדת (vo_personnel) עובר
+   להיות צוות המסגרת עצמה, כך שהנהגים יכולים להיכנס עם קוד החיילים ולסמן נכס בעצמם. */
+async function ensureConvertedFrameworksSeed(){
+  if(!currentShed || !(currentShed.isMaint || currentShed.isTraining)) return;
+
+  if(currentShed.isMaint){
+    let team = (await sGetIn("maint","cfg_personnel")) || [];
+    let changed = false;
+    if(!team.some(p=>p.name==="שחר שושן")){
+      team.unshift({name:"שחר שושן", role:"מפקד", bday:"2000-01-01"});
+      changed = true;
+    }
+    if(!(await sGetRaw("maint_drivers_migrated_v1"))){
+      const drivers = (await sGetRaw("vo_personnel")) || [];
+      drivers.forEach(d=>{
+        if(d && d.name && !team.some(p=>p.name===d.name)){
+          const m = {name:d.name, role:"חייל", bday:d.bday || "2000-01-01", profession:"נהג מקצועי"};
+          if(d.release) m.release = d.release;
+          team.push(m);
+          changed = true;
+        }
+      });
+      await sSetRaw("maint_drivers_migrated_v1", true);
+    }
+    if(changed) await sSetIn("maint","cfg_personnel", team);
+  }
+
+  if(currentShed.isTraining){
+    const team = (await sGetIn("training","cfg_personnel")) || [];
+    if(!team.some(p=>p.name==="טומי ליפוביץ")){
+      team.unshift({name:"טומי ליפוביץ", role:"מפקד", bday:"2000-01-01"});
+      await sSetIn("training","cfg_personnel", team);
+    }
+  }
+}
+
 async function loadRuntimeLists(){
   if(currentShed && currentShed.id === "shed2"){ await migrateLegacyShed2(); }
+  await ensureConvertedFrameworksSeed();
   // שני המפתחות האלה בלתי-תלויים זה בזה — קוראים במקביל כדי לקצר את זמן הכניסה
   const [p, t] = await Promise.all([ sGet("cfg_personnel"), sGet("cfg_tasks") ]);
   if(p && Array.isArray(p) && p.length){ PERSONNEL = p; }
@@ -2485,7 +2523,11 @@ const SHEDS = [
   {id:"shed3", name:"סככה 3", soldierCode:"1301", commanderCode:"1309"},
   {id:"shed4", name:"סככה 4", soldierCode:"1401", commanderCode:"1409"},
   {id:"shed5", name:"סככה 5", soldierCode:"1501", commanderCode:"1509"},
-  {id:"dept", name:"מחלקות", soldierCode:"1601", commanderCode:"1609", isDept:true}
+  {id:"dept", name:"מחלקות", soldierCode:"1601", commanderCode:"1609", isDept:true},
+  /* שתי מסגרות שהיו בעבר "יוזרים פרטיים" (קוד בודד ללא צוות) והפכו למסגרות מלאות
+     עם כניסת חיילים ומפקדים — כדי שיוכלו לנהל צוות משלהם שנכנס לאפליקציה */
+  {id:"maint",    name:"מ״ע אחזקה",   soldierCode:"1701", commanderCode:"1709", isMaint:true},
+  {id:"training", name:"הדרכה",       soldierCode:"1801", commanderCode:"1809", isTraining:true}
 ];
 /* תת-מחלקות תחת יוזר "מחלקות" — תיוג בלבד, לא משפיע על הרשאות */
 const DEPT_NAMES = ["הטסה", "אוה\"ד", "אחזקה", "קה\"ד מ\"מ"];
@@ -2522,22 +2564,15 @@ function setBtnLoading(btn, loading){
 }
 
 async function checkCode(){
-  const code = (document.getElementById("login-code").value || "").trim();
+  let code = (document.getElementById("login-code").value || "").trim();
   const btn = document.getElementById("login-code-btn");
   setBtnLoading(btn, true);
   try{
-    // admin code?
-    if(code === ADMIN_CODE){
-      enteredRole = "מנהל"; isAdmin = true; currentShed = null;
-      await adminLogin();
-      return;
-    }
-    // vehicle officer code?
-    if(code === VEHICLE_OFFICER_CODE){
-      enteredRole = "מ״ע אחזקה"; isVehicleOfficer = true; currentShed = null;
-      await vehicleOfficerLogin();
-      return;
-    }
+    /* הקודים הישנים של מ״ע אחזקה ואחראי הדרכה ממשיכים לעבוד, אך מנותבים
+       למסגרות החדשות (ככניסת מפקד) — כדי שלא ייווצרו שני מסלולי כניסה נפרדים
+       ושאף אחד לא יינעל בחוץ בזמן המעבר. */
+    if(code === VEHICLE_OFFICER_CODE) code = "1709";
+    if(code === ADMIN_CODE) code = "1809";
     // budget officer code?
     if(code === BUDGET_OFFICER_CODE){
       enteredRole = "אחראי תקציבים"; isBudgetOfficer = true; currentShed = null;
@@ -2699,9 +2734,17 @@ async function doLogin(){
     document.getElementById("nav-bdays").classList.toggle("hidden", !isDeptUnit);
     document.getElementById("more-faults-item").classList.toggle("hidden", isDeptUnit);
     document.getElementById("more-bdays-item").classList.toggle("hidden", isDeptUnit);
+    // מסגרות שהומרו מיוזר פרטי — המפקד שלהן מקבל בנוסף את ההרשאות הטייסתיות שלו
+    if(userRole === "מפקד" && currentShed.isTraining) await applyTrainingCommanderPowers();
+    if(userRole === "מפקד" && currentShed.isMaint)    await applyMaintCommanderPowers();
+
     // commander lands on commander screen; soldier on safety —
     // switched before refreshAll() so the wrong screen never flashes underneath the overlay
-    if(userRole === "מפקד"){
+    if(userRole === "מפקד" && currentShed.isTraining){
+      go("scr-admin", document.getElementById("nav-admin"));
+    } else if(userRole === "מפקד" && currentShed.isMaint){
+      go("scr-vehicle-officer", document.getElementById("nav-vehicle-officer"));
+    } else if(userRole === "מפקד"){
       go("scr-cmd", document.querySelector('[data-scr="scr-cmd"]'));
     } else {
       go("scr-safety", document.querySelector('[data-scr="scr-safety"]'));
@@ -2778,7 +2821,7 @@ function closeMoreAndFn(fn){
 async function getEvents(){ return (await sGet("safety_events")) || []; }
 
 async function renderDocs(){
-  if(isVehicleOfficer) return renderVoDocs();
+  if(isVehicleOfficer && !currentShed) return renderVoDocs();
   const events = await getEvents();
   const reads = (await sGet("sigs_"+safeName(user))) || {};
   const list = document.getElementById("docs-list");
@@ -3094,10 +3137,10 @@ async function saveEvent(){
       thumb=t.toDataURL("image/jpeg",.7);
     }
     if(isAdmin && window._adminPublish){
-      // מנהל — פרסום לכל 5 הסככות
+      // מנהל — פרסום לכל המסגרות
       await publishEventToAllSheds(id, title, evFileMeta, evImgData, thumb);
       closeAddEvent();
-      toast("הפריט פורסם לכל 5 המסגרות 📢");
+      toast("הפריט פורסם לכל המסגרות 📢");
       renderAdminDashboard();
       openWaPrompt("event", title);
     } else {
@@ -3651,7 +3694,7 @@ async function renderRollcallPage(){
 
 async function renderBdays(){
   const desc = document.getElementById("bdays-desc");
-  const isVo = isVehicleOfficer;
+  const isVo = isVehicleOfficer && !currentShed;   // הרשימה הנפרדת רלוונטית רק למסלול הישן (ללא מסגרת)
   document.getElementById("vo-team-add-btn")?.classList.toggle("hidden", !isVo);
   if(desc){ desc.textContent = isVo ? "הצוות שלך — ממוינים לפי יום ההולדת הקרוב." : (currentShed ? currentShed.name : "צוות המסגרת") + " — ממוינים לפי יום ההולדת הקרוב."; }
   const list = document.getElementById("bdays-list");
@@ -3835,7 +3878,7 @@ function onBoardFile(e){
       if(isAdmin && window._adminBoardPublish){
         window._adminBoardPublish = false;
         await publishBoardToAllSheds(id, label, thumb, data);
-        toast("הלוח הועלה לכל 5 המסגרות 📅");
+        toast("הלוח הועלה לכל המסגרות 📅");
         renderAdminDashboard();
         openWaPrompt("board");
       } else {
@@ -4205,7 +4248,7 @@ async function renderMessages(){
   const isCmdr = userRole === "מפקד";
   const isDeptUnit = !!(currentShed && currentShed.isDept);
   const myDept = isDeptUnit ? PERSONNEL.find(p=>p.name===user)?.dept : null;
-  let msgs = (isAdmin || isVehicleOfficer) ? ((await sGetRaw("admin_messages")) || []) : ((await sGet("messages_list")) || []);
+  let msgs = isAdmin ? ((await sGetRaw("admin_messages")) || []) : ((await sGet("messages_list")) || []);
   // ביוזר "מחלקות" כל תת-מחלקה רואה רק הודעות שהתפרסמו על ידה (הודעות ישנות בלי תיוג מחלקה נשארות גלויות לכולם)
   if(isDeptUnit && myDept) msgs = msgs.filter(m=>!m.dept || m.dept===myDept);
   const canDelete = isCmdr || isAdmin;
@@ -4213,7 +4256,7 @@ async function renderMessages(){
 
   // feature 10: mark read by soldier/commander viewing (not admin/vehicle-officer, who see the squadron-wide admin_messages copy)
   let changed = false;
-  if(!isAdmin && !isVehicleOfficer && user){
+  if(!isAdmin && user){
     for(const m of msgs){
       m.reads = m.reads || {};
       if(!m.reads[safeName(user)]){ m.reads[safeName(user)] = {name:user, ts:Date.now()}; changed = true; }
@@ -4259,7 +4302,7 @@ async function saveMessage(){
   const myDept = isDeptUnit ? (PERSONNEL.find(p=>p.name===user)?.dept || null) : null;
   const msgObj = {id:"msg_"+Date.now(), text, type:msgType, by:user, date:new Date().toLocaleDateString("he-IL"), dept: myDept};
   if(isAdmin){
-    // מנהל — פרסום לכל 5 הסככות + עותק ברשימת המנהל
+    // מנהל — פרסום לכל המסגרות + עותק ברשימת המנהל
     for(const shed of SHEDS){
       const list = (await sGetIn(shed.id, "messages_list")) || [];
       list.unshift({...msgObj, by:"טומי ליפוביץ 🏛️"});
@@ -4920,48 +4963,27 @@ async function exportReport(){
 /* ============================================================
    SUPER-ADMIN (מנהל-על)
    ============================================================ */
-async function adminLogin(){
-  user = "טומי ליפוביץ"; userRole = "מנהל"; isAdmin = true;
-  document.getElementById("login-overlay").style.display = "none";
-  document.getElementById("hdr-username").textContent = user;
+/* ===== הרשאות מפקדי שתי המסגרות שהומרו =====
+   מפקד "הדרכה" מקבל את הרשאות אחראי ההדרכה הטייסתי (תצוגה כלל-טייסתית),
+   ומפקד "מ״ע אחזקה" את הרשאות מ״ע אחזקה (רכבים/רישיונות/תקלות בינוי בכל המסגרות).
+   חיילי המסגרות האלה מקבלים מסכי חייל רגילים בלבד. */
+async function applyTrainingCommanderPowers(){
+  isAdmin = true;
   document.getElementById("hdr-rank").textContent = "🏛️ אחראי הדרכה";
-  document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
-  // hide regular nav functions; show only admin screen
-  document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
   document.getElementById("nav-admin").classList.remove("hidden");
-  document.getElementById("nav-rollcall").classList.remove("hidden");
-  // ריפוי-עצמי: ודא שכל נתוני הסככות קיימים (אם אחראי הדרכה נכנס ראשון)
   await ensureShed2Seed();
-  await ensureAllShedsSeed();
-  go("scr-admin", document.getElementById("nav-admin"));
-  renderMessages();
-  toast("ברוך הבא, אחראי הדרכה 🏛️");
+  await ensureAllShedsSeed();   // ללא scope — הוא רואה את כל המסגרות
 }
 
-async function vehicleOfficerLogin(){
-  user = "שחר שושן"; userRole = "מ״ע אחזקה"; isVehicleOfficer = true;
-  document.getElementById("login-overlay").style.display = "none";
-  document.getElementById("hdr-username").textContent = user;
+async function applyMaintCommanderPowers(){
+  isVehicleOfficer = true;
   document.getElementById("hdr-rank").textContent = "🔧 מ״ע אחזקה";
-  document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
-  // מסך רכבים + מסך אחזקה + באר תחתון מצומצם: קרא וחתום, ימי הולדת (הצוות שלו), רכבים, אחזקה
-  document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
-  document.querySelector('[data-scr="scr-safety"]').classList.remove("hidden");
-  document.getElementById("nav-bdays").classList.remove("hidden");
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
   document.getElementById("nav-maint-dept").classList.remove("hidden");
   document.getElementById("nav-binui-admin").classList.remove("hidden");
-  document.getElementById("nav-vo-team").classList.remove("hidden");
-  document.getElementById("nav-rollcall").classList.remove("hidden");
   await ensureShed2Seed();
-  await ensureAllShedsSeed();
-  await processVoReleases();
+  await ensureAllShedsSeed();   // רכבים/רישיונות נשלפים מכל המסגרות
   updateBinuiAdminBadge();
-  go("scr-vehicle-officer", document.getElementById("nav-vehicle-officer"));
-  renderDocs();
-  renderBdays();
-  renderMessages();
-  toast("ברוך הבא, מ״ע אחזקה 🔧");
 }
 
 async function budgetOfficerLogin(){
@@ -5749,7 +5771,7 @@ async function renderAdminEvents(){
   const box = document.getElementById("admin-events-list");
   if(!box) return;
   const list = await getAdminEventsList();
-  if(list.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">📄</div><h3>אין עדיין פריטי קרא וחתום שפורסמו לכל הסככות</h3><p>פרסם פריט שיופיע לכל 5 המסגרות</p></div>'; return; }
+  if(list.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">📄</div><h3>אין עדיין פריטי קרא וחתום שפורסמו לכל הסככות</h3><p>פרסם פריט שיופיע לכל המסגרות</p></div>'; return; }
   box.innerHTML = list.map(e=>{
     const ft = FTYPE[e.ftype] || FTYPE.image;
     return `<div class="train-card">
@@ -7177,7 +7199,7 @@ async function renderShedLicensesView(){
 }
 
 /* ============================================================
-   מ״ע אחזקה טייסתי — מעקב רכבים ורישיונות בכל 5 הסככות
+   מ״ע אחזקה טייסתי — מעקב רכבים ורישיונות בכל המסגרות
    ============================================================ */
 /* סקירה כללית — מד מוכנות צי, פיד דחיפויות מאוחד (רכבים+רישיונות) ופילוח לפי סככה */
 async function renderVoOverview(){
@@ -7249,7 +7271,7 @@ async function renderVoOverview(){
     <div class="db-hero">
       <div class="db-hero-top">
         <div>
-          <div class="db-eyebrow">כלל 5 הסככות · דרג א׳</div>
+          <div class="db-eyebrow">כלל המסגרות · דרג א׳</div>
           <div class="db-title">מ״ע אחזקה 🔧</div>
           <div class="db-date">${dateStr}</div>
         </div>
