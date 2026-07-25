@@ -2449,7 +2449,12 @@ const FIREBASE_CONFIG = {
   appId: "1:752623099673:web:e5362a81c7bca1e9e2ef88",
   measurementId: "G-JXKH429E9L"
 };
-let fbDB = null, fbReady = false;
+let fbDB = null, fbReady = false, fbAuth = null;
+/* מצב אימות — "legacy": כניסה כמו היום (השוואת קוד בדפדפן, בלי אימות שרת).
+   "firebase": מפעיל אימות אמיתי מול Firebase (ראה initFirebase ו-SECURITY.md).
+   נשאר "legacy" עד שהחשבונות נוצרו, הכללים פורסמו ואכיפת App Check הודלקה —
+   אז מחליפים כאן לשורה אחת ל-"firebase". כך המעבר הדרגתי ובטוח. */
+const AUTH_MODE = "legacy";
 const COLLECTION = "sq124";   // מסמכי הנתונים כולם תחת אוסף אחד
 
 /* App Check — מאמת שהבקשות ל-Firestore מגיעות מהאתר האמיתי ולא מסקריפט חיצוני.
@@ -2474,6 +2479,29 @@ async function initFirebase(){
 
     fbDB = fsMod.getFirestore(app);
     fbDB._fs = fsMod; // stash module fns
+
+    /* אבטחה — שלב א': אימות אנונימי לפני הקריאה הראשונה.
+       כשכללי ה-Firestore ידרשו אימות (ראה firestore.rules), חובה להיות
+       מחוברים לפני כל קריאה. אימות אנונימי + אכיפת App Check סוגרים יחד
+       את הפרצה: האימות מוכיח "מי" (משתמש תקף), App Check מוכיח "מאיפה"
+       (מהאתר האמיתי). מופעל רק כש-AUTH_MODE="firebase", כדי שהפריסה
+       תהיה הדרגתית ואף אחד לא יינעל בחוץ לפני שהחשבונות והכללים מוכנים. */
+    if(AUTH_MODE === "firebase"){
+      try{
+        const authMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+        fbAuth = authMod.getAuth(app);
+        fbAuth._am = authMod;
+        await authMod.signInAnonymously(fbAuth);
+        console.log("✅ אימות פעיל");
+      }catch(e){
+        // אם האימות נכשל (ספק לא מופעל / רשת) — לא ממשיכים למצב משותף,
+        // כדי לא להיתקע בקריאות שייחסמו. נופלים לאחסון מקומי.
+        console.error("Auth failed → local mode", e);
+        showSharedBadge(false);
+        return;
+      }
+    }
+
     fbReady = true;
     console.log("✅ Firebase מחובר — מצב משותף פעיל");
     showSharedBadge(true);

@@ -1,0 +1,66 @@
+rules_version = '2';
+
+/*
+  כללי אבטחה ל-Firestore — טייסת 124
+  ------------------------------------
+  כל נתוני האפליקציה יושבים באוסף אחד: sq124. כל רשומה היא מסמך בודד
+  ששמו הוא המפתח (למשל "shed3_cfg_personnel"). האפליקציה תמיד קוראת
+  מסמך בודד לפי מפתח מדויק — היא לעולם לא מבצעת שאילתת רשימה (list).
+
+  ── גרסה 1 (מה שמופעל כאן) ─────────────────────────────────────────
+  שלוש שכבות שסוגרות את הפרצה הקריטית שהודגמה (המסד היה קריא ומחיק
+  מהאינטרנט הפתוח, בלי שום התחברות):
+    1. חובת אימות — בלי התחברות אין גישה לשום נתון.
+    2. בלי list   — אי אפשר לשאוב את כל המסד בבקשה אחת.
+    3. בלי delete — מחיקה מבחוץ חסומה; מחיקות דרך הקונסולה בלבד.
+
+  גרסה 1 עובדת עם כל מודל חשבונות (אפילו חשבון אפליקציה יחיד) ומשתלבת
+  עם אכיפת App Check שיש להפעיל בנפרד בקונסולה. שילוב השניים חזק:
+  האימות מוודא "מי", ו-App Check מוודא "מאיפה" (מהאתר האמיתי בלבד).
+
+  ── גרסה 2 (עתידי, בהערה למטה) ─────────────────────────────────────
+  הפרדה מלאה בין מסגרות בשרת, לפי כתובת המייל של החשבון המחובר. דורשת
+  שכל מסגרת תהיה חשבון נפרד וכן הסדרה של חשבונות-העל הרואים את כל
+  הטייסת (מנהל מערכת / קצין טכני / אחראי הדרכה). ראה SECURITY.md.
+*/
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    match /sq124/{docId} {
+      allow get:            if isAuthed();
+      allow create, update: if isAuthed();
+      allow list:           if false;   // בלי שאיבה המונית של כל המסד
+      allow delete:         if false;   // מחיקה דרך הקונסולה בלבד
+    }
+
+    // כל שאר האוספים — סגורים.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    /* ── גרסה 2 — הפרדה בין מסגרות (להחליף את הבלוק של sq124 כשהחשבונות מוכנים) ──
+    function myPrefix() {
+      // "shed3.cmd@sq124.app" -> "shed3_"
+      return request.auth.token.email.split('@')[0].split('.')[0] + '_';
+    }
+    function isSquadronWide() {
+      // חשבונות שרואים את כל הטייסת
+      return isAuthed() &&
+             request.auth.token.email.matches('^(owner|tech|budget|training)[.@].*');
+    }
+    match /sq124/{docId} {
+      allow get, create, update:
+        if isSquadronWide()
+        || (isAuthed() && ( docId.matches('^' + myPrefix() + '.*')
+                            || docId.matches('^admin_.*') ));
+      allow list:   if false;
+      allow delete: if false;
+    }
+    */
+  }
+}
