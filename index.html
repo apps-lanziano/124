@@ -970,12 +970,12 @@ nav{
       <div id="faults-list"></div>
     </section>
 
-    <!-- ===== BINUI FAULTS (תקלות בינוי — מרוכז אצל מחלקת אחזקה) ===== -->
+    <!-- ===== BINUI FAULTS (תקלות בינוי — מרוכז אצל מ״ע אחזקה) ===== -->
     <section class="screen" id="scr-binui-faults">
       <div class="sec-head">
         <div>
           <h2>תקלות בינוי 🚧</h2>
-          <p>דיווח על ליקוי מבנה/בינוי, עם תמונה. מטופל ע"י מחלקת אחזקה.</p>
+          <p>דיווח על ליקוי מבנה/בינוי, עם תמונה. מטופל ע"י מ״ע אחזקה.</p>
         </div>
         <button class="add-btn" id="add-binui-fault-btn" onclick="openAddBinuiFault()">+ תקלה</button>
       </div>
@@ -1291,7 +1291,7 @@ nav{
       </div>
     </section>
 
-    <!-- ===== VEHICLE OFFICER / MAINT DEPT — VEHICLES TAB (מחלקת אחזקה, לשעבר קצין רכב) ===== -->
+    <!-- ===== VEHICLE OFFICER / MAINT DEPT — VEHICLES TAB (מ״ע אחזקה, לשעבר קצין רכב) ===== -->
     <section class="screen" id="scr-vehicle-officer">
       <div class="sec-head">
         <div>
@@ -1366,12 +1366,12 @@ nav{
       </div>
     </section>
 
-    <!-- ===== MAINTENANCE DEPT — MAINT TAB (מחלקת אחזקה: הזמנת חומרים + מעקב כלים מוטוריים) ===== -->
+    <!-- ===== MAINTENANCE DEPT — MAINT TAB (מ״ע אחזקה: הזמנת חומרים + מעקב כלים מוטוריים) ===== -->
     <section class="screen" id="scr-maint-dept">
       <div class="sec-head">
         <div>
           <h2>אחזקה 🔧</h2>
-          <p>הזמנת חומרים ומעקב כלים מוטוריים · מחלקת אחזקה</p>
+          <p>הזמנת חומרים ומעקב כלים מוטוריים · מ״ע אחזקה</p>
         </div>
       </div>
 
@@ -1402,7 +1402,7 @@ nav{
       <div class="sec-head">
         <div>
           <h2>תקלות בינוי 🚧</h2>
-          <p>ריכוז דיווחי ליקויי בינוי מכל המסגרות · מחלקת אחזקה</p>
+          <p>ריכוז דיווחי ליקויי בינוי מכל המסגרות · מ״ע אחזקה</p>
         </div>
       </div>
       <div id="md-binui-list"></div>
@@ -1577,7 +1577,7 @@ nav{
   <div class="modal-bg" id="binui-fault-modal">
     <div class="modal">
       <h3>🚧 דיווח תקלת בינוי</h3>
-      <div class="m-sub">תאר את הליקוי שהתגלה. מחלקת אחזקה תטפל ותעדכן סטטוס.</div>
+      <div class="m-sub">תאר את הליקוי שהתגלה. מ״ע אחזקה תטפל ותעדכן סטטוס.</div>
       <input class="m-input" id="binui-fault-title" type="text" placeholder="כותרת התקלה (לדוגמה: דלת חדר כלים לא נסגרת)" oninput="checkBinuiFaultReady()">
       <textarea class="m-input" id="binui-fault-desc" rows="3" placeholder="פירוט (אופציונלי): מיקום, חומרה, מה נדרש…" style="resize:none"></textarea>
       <div class="m-file" id="binui-fault-file-label" onclick="document.getElementById('binui-fault-file').click()">📷 צירוף תמונה (אופציונלי)</div>
@@ -1819,7 +1819,7 @@ nav{
   <div class="modal-bg" id="maint-vehicle-modal">
     <div class="modal">
       <h3 id="maint-vehicle-title">🔧 הוספת רכב אחזקה</h3>
-      <div class="m-sub">רכבי מחלקת אחזקה — שחורים ושכורים. גלוי לקצין הרכב בלבד.</div>
+      <div class="m-sub">רכבי מ״ע אחזקה — שחורים ושכורים. גלוי למ״ע אחזקה בלבד.</div>
       <div class="team-add-form">
         <input class="m-input" id="maint-vehicle-name" type="text" placeholder="שם/סוג הרכב" style="margin-bottom:8px">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מס' רכב אזרחי</label>
@@ -1919,7 +1919,7 @@ nav{
   <div class="modal-bg" id="material-modal">
     <div class="modal">
       <h3 id="material-title">📦 הוספת הזמנת חומר</h3>
-      <div class="m-sub">מעקב הזמנות חומרים למחלקת אחזקה.</div>
+      <div class="m-sub">מעקב הזמנות חומרים למ״ע אחזקה.</div>
       <div class="team-add-form">
         <input class="m-input" id="material-name" type="text" placeholder="שם הפריט" style="margin-bottom:8px">
         <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -1944,7 +1944,7 @@ nav{
   <div class="modal-bg" id="motor-tool-modal">
     <div class="modal">
       <h3 id="motor-tool-title">🔧 הוספת כלי מוטורי</h3>
-      <div class="m-sub">מעקב כלים מוטוריים של מחלקת אחזקה.</div>
+      <div class="m-sub">מעקב כלים מוטוריים של מ״ע אחזקה.</div>
       <div class="team-add-form">
         <input class="m-input" id="motor-tool-name" type="text" placeholder="שם הכלי" style="margin-bottom:8px">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מספר סידורי</label>
@@ -2492,16 +2492,16 @@ const DEPT_NAMES = ["הטסה", "אוה\"ד", "אחזקה", "קה\"ד מ\"מ"];
 /* מקצועות לחייל בניהול צוות של הסככות (לא רלוונטי ליוזר "מחלקות") — תיוג בלבד */
 const PROFESSIONS = ["טכנאי דרג א'", "פקיד כלים"];
 const ADMIN_CODE = "9124";   // קוד מנהל-על
-const VEHICLE_OFFICER_CODE = "8124";   // קוד קצין רכב טייסתי
+const VEHICLE_OFFICER_CODE = "8124";   // קוד מ״ע אחזקה טייסתי
 const BUDGET_OFFICER_CODE = "7124";   // קוד אחראי תקציבים טייסתי
 const TECH_OFFICER_CODE = "6124";   // קוד קצין טכני — רואה את כל המידע באפליקציה (כמו מנהל-על)
 
 let currentShed = null;      // {id,name,...} של המסגרת הפעילה
 let isAdmin = false;         // מנהל-על
-let isVehicleOfficer = false; // קצין רכב טייסתי
+let isVehicleOfficer = false; // מ״ע אחזקה טייסתי
 let isBudgetOfficer = false; // אחראי תקציבים טייסתי
 let isTechOfficer = false;   // קצין טכני
-let enteredRole = null;      // "חייל" | "מפקד" | "מנהל" | "קצין רכב" | "אחראי תקציבים" | "קצין טכני" after code check
+let enteredRole = null;      // "חייל" | "מפקד" | "מנהל" | "מ״ע אחזקה" | "אחראי תקציבים" | "קצין טכני" after code check
 
 /* מפתח storage ממוספר לפי סככה — הפרדת נתונים מלאה */
 function shedKey(key){
@@ -2534,7 +2534,7 @@ async function checkCode(){
     }
     // vehicle officer code?
     if(code === VEHICLE_OFFICER_CODE){
-      enteredRole = "קצין רכב"; isVehicleOfficer = true; currentShed = null;
+      enteredRole = "מ״ע אחזקה"; isVehicleOfficer = true; currentShed = null;
       await vehicleOfficerLogin();
       return;
     }
@@ -2760,7 +2760,7 @@ function go(id, btn){
   if(id==="scr-binui-admin") renderBinuiFaultsAdmin();
   if(id==="scr-budget-officer") renderBoOverview();
   if(id==="scr-rollcall") renderRollcallPage();
-  if(id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-binui-admin" && id!=="scr-budget-officer"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי קצין הרכב/מחלקת אחזקה/תקלות בינוי/אחראי תקציבים (אין להם סככה)
+  if(id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-binui-admin" && id!=="scr-budget-officer"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי מ״ע אחזקה/תקלות בינוי/אחראי תקציבים (אין להם סככה)
 }
 
 /* ===== MORE SHEET ===== */
@@ -2825,7 +2825,7 @@ async function renderDocs(){
   updateBadges();
 }
 
-/* קרא וחתום עבור קצין רכב — לצפייה בלבד: מסמכים שאחראי ההדרכה פרסם לכל הסככות, ללא מעקב חתימות */
+/* קרא וחתום עבור מ״ע אחזקה — לצפייה בלבד: מסמכים שאחראי ההדרכה פרסם לכל הסככות, ללא מעקב חתימות */
 async function renderVoDocs(){
   const events = await getAdminEventsList();
   const list = document.getElementById("docs-list");
@@ -3472,7 +3472,7 @@ async function checkInOfficerRollcall(){
   renderRollcallPage();
   toast("סומן שאתה תקין/ה וזמין/ה ✓");
 }
-/* נכס לצוות הנהגים של מחלקת אחזקה — הנהגים לא מתחברים בעצמם, אז קצין הרכב מסמן עבורם בעצמו (לחיצה על השורה) */
+/* נכס לצוות הנהגים של מ״ע אחזקה — הנהגים לא מתחברים בעצמם, אז מ״ע אחזקה מסמן עבורם בעצמו (לחיצה על השורה) */
 async function activateVoRollcall(){
   if(!confirm("להפעיל נכס חדש לצוות הנהגים? כל הסימונים הקודמים יתאפסו.")) return;
   await sSetRaw("vo_rollcall_active", true);
@@ -3496,7 +3496,7 @@ async function renderRollcallPage(){
   if(!box) return;
 
   if(!currentShed && isVehicleOfficer){
-    // מחלקת אחזקה: רק נכס לצוות הנהגים שלה — בלי מעקב אישי ובלי תצוגה מרוכזת של כל הטייסת
+    // מ״ע אחזקה: רק נכס לצוות הנהגים שלה — בלי מעקב אישי ובלי תצוגה מרוכזת של כל הטייסת
     box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען…</div>';
     const [voActive, voCheckins, voTeam] = await Promise.all([
       sGetRaw("vo_rollcall_active"), sGetRaw("vo_rollcall_checkins"), sGetRaw("vo_personnel")
@@ -3683,7 +3683,7 @@ async function renderBdays(){
   });
 }
 
-/* ===== צוות קצין הרכב (לצורך ימי הולדת) ===== */
+/* ===== צוות מ״ע אחזקה (לצורך ימי הולדת) ===== */
 let voTeamEditId = null;
 function openVoTeamMgmt(){
   cancelEditVoTeamMember();
@@ -4015,7 +4015,7 @@ const rowHTML = (name,pill)=>`<div class="cmd-row"><div class="avatar">${initial
    ניתן לשנות לכתובת האתר הסופית שלך ב-GitHub Pages. */
 const SITE_URL = "https://eladlanzianog-sys.github.io/124/";
 function waShedName(){
-  if(isVehicleOfficer) return "מחלקת אחזקה";
+  if(isVehicleOfficer) return "מ״ע אחזקה";
   if(isAdmin) return "כלל המסגרות";
   if(currentShed && currentShed.isDept){
     const p = PERSONNEL.find(p=>p.name===user);
@@ -4039,7 +4039,7 @@ function openWaPrompt(kind, payload){
   else if(kind==="unsigned"){ title.textContent="הרשימה מוכנה ✅"; sub.textContent="שלח תזכורת לחיילים שטרם חתמו"; }
   else if(kind==="rollcall"){ title.textContent="הנכס הופעל ✅"; sub.textContent="שלח לצוות בוואטסאפ שיסמנו תקינות וזמינות"; }
   else if(kind==="rollcall-complete"){ title.textContent="כל הכבוד! 🎉"; sub.textContent="דווח בוואטסאפ שהנכס הושלם וכולם תקינים"; }
-  else if(kind==="binui"){ title.textContent="התקלה דווחה ✅"; sub.textContent="שלח עדכון לשחר שושן (מחלקת אחזקה) שנפתחה תקלת בינוי"; }
+  else if(kind==="binui"){ title.textContent="התקלה דווחה ✅"; sub.textContent="שלח עדכון לשחר שושן (מ״ע אחזקה) שנפתחה תקלת בינוי"; }
   // rebind the button fresh each time
   go.onclick = ()=>{
     if(kind==="event") shareEventWA(payload);
@@ -4461,7 +4461,7 @@ async function deleteFault(id){
 }
 
 /* ============================================================
-   תקלות בינוי — כל מפקד בכל מסגרת מדווח (עם תמונה), ומחלקת אחזקה
+   תקלות בינוי — כל מפקד בכל מסגרת מדווח (עם תמונה), ומ״ע אחזקה
    (שחר שושן) מרכזת את הכל וקובעת סטטוס. אחסון גלובלי (לא לפי סככה).
    ============================================================ */
 const BINUI_STATUSES = [{key:"פתוח",cls:"r"},{key:"בטיפול",cls:"y"},{key:"טופל",cls:"g"}];
@@ -4533,7 +4533,7 @@ async function saveBinuiFault(){
   }catch(e){ toast("⚠️ שגיאה בשליחה"); console.error(e); }
   finally{ btn.textContent="שליחת דיווח"; btn.disabled=false; }
 }
-/* תצוגת מפקד — רק התקלות שהמסגרת/מחלקה שלו דיווחה, קריאה בלבד לסטטוס (הסטטוס נקבע ע"י מחלקת אחזקה בלבד) */
+/* תצוגת מפקד — רק התקלות שהמסגרת/מחלקה שלו דיווחה, קריאה בלבד לסטטוס (הסטטוס נקבע ע"י מ״ע אחזקה בלבד) */
 async function renderBinuiFaults(){
   const list = document.getElementById("binui-faults-list");
   if(!list) return;
@@ -4594,13 +4594,13 @@ async function deleteBinuiFault(id){
   toast("התקלה נמחקה 🗑️");
   renderBinuiFaultsAdmin();
 }
-/* מונה תקלות בינוי פתוחות — מוצג כבאדג' על סמל הניווט התחתון של מחלקת אחזקה/קצין טכני */
+/* מונה תקלות בינוי פתוחות — מוצג כבאדג' על סמל הניווט התחתון של מ״ע אחזקה/קצין טכני */
 async function updateBinuiAdminBadge(){
   if(!isVehicleOfficer && !isTechOfficer) return;
   const faults = await getBinuiFaults();
   setBadge("badge-binui-admin", faults.filter(f=>f.status==="פתוח").length);
 }
-/* תצוגת מחלקת אחזקה — כל התקלות מכל המסגרות, עם קביעת סטטוס */
+/* תצוגת מ״ע אחזקה — כל התקלות מכל המסגרות, עם קביעת סטטוס */
 async function renderBinuiFaultsAdmin(){
   const box = document.getElementById("md-binui-list");
   if(!box) return;
@@ -4939,10 +4939,10 @@ async function adminLogin(){
 }
 
 async function vehicleOfficerLogin(){
-  user = "שחר שושן"; userRole = "מחלקת אחזקה"; isVehicleOfficer = true;
+  user = "שחר שושן"; userRole = "מ״ע אחזקה"; isVehicleOfficer = true;
   document.getElementById("login-overlay").style.display = "none";
   document.getElementById("hdr-username").textContent = user;
-  document.getElementById("hdr-rank").textContent = "🔧 מחלקת אחזקה";
+  document.getElementById("hdr-rank").textContent = "🔧 מ״ע אחזקה";
   document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
   // מסך רכבים + מסך אחזקה + באר תחתון מצומצם: קרא וחתום, ימי הולדת (הצוות שלו), רכבים, אחזקה
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
@@ -4961,7 +4961,7 @@ async function vehicleOfficerLogin(){
   renderDocs();
   renderBdays();
   renderMessages();
-  toast("ברוך הבא, מחלקת אחזקה 🔧");
+  toast("ברוך הבא, מ״ע אחזקה 🔧");
 }
 
 async function budgetOfficerLogin(){
@@ -4980,7 +4980,7 @@ async function budgetOfficerLogin(){
 
 async function techOfficerLogin(){
   // קצין טכני — רואה את כל המידע שיש באפליקציה: כל הסככות, כל המחלקות,
-  // ובנוסף גם את מסכי קצין הרכב ואחראי התקציבים (כלל-טייסתיים, לא קשורים לסככה ספציפית)
+  // ובנוסף גם את מסכי מ״ע אחזקה ואחראי התקציבים (כלל-טייסתיים, לא קשורים לסככה ספציפית)
   user = "אור דבח"; userRole = "קצין טכני"; isTechOfficer = true; isAdmin = true;
   document.getElementById("login-overlay").style.display = "none";
   document.getElementById("hdr-username").textContent = user;
@@ -5030,7 +5030,7 @@ async function migrateNameFixes(){
 }
 
 /* מזין לכל מי שכבר מוסמך רף (יש לו לפחות הסמכת רף אחת) את 9 פריטי הרף החדשים שנוספו לבנק — בכל הסככות, חד-פעמי */
-/* זריעה חד-פעמית: רכבים תפעוליים (מ"ע לפי סככה) + רכבי מחלקת אחזקה, מתוך גיליון מעקב הרכבים */
+/* זריעה חד-פעמית: רכבים תפעוליים (מ"ע לפי סככה) + רכבי מ״ע אחזקה, מתוך גיליון מעקב הרכבים */
 async function seedVehiclesFromSheet(){
   const flag = "vehicles_seed_v1";
   if(await sGetRaw(flag)) return;
@@ -5321,7 +5321,7 @@ async function ensureDeptOfficers(){
   await sSetRaw(flag, true);
 }
 
-/* טומי (אוה"ד) ושחר (אחזקה) יצאו מיוזר מחלקות — טומי הפך לאחראי הדרכה, שחר לקצין רכב (חד-פעמי) */
+/* טומי (אוה"ד) ושחר (אחזקה) יצאו מיוזר מחלקות — טומי הפך לאחראי הדרכה, שחר למ״ע אחזקה (חד-פעמי) */
 async function removeDeptReassignedPeople(){
   const flag = "dept_reassigned_removed_v1";
   if(await sGetRaw(flag)) return;
@@ -7163,13 +7163,13 @@ function vehiclesPageTab(which){
   if(which==="vehicles") renderVehiclesPage();
   if(which==="licenses") renderShedLicensesView();
 }
-/* תצוגת רישיונות/הסמכות של אנשי הסככה בלבד — קריאה בלבד (הניהול מרוכז אצל מחלקת אחזקה/קצין טכני) */
+/* תצוגת רישיונות/הסמכות של אנשי הסככה בלבד — קריאה בלבד (הניהול מרוכז אצל מ״ע אחזקה/קצין טכני) */
 async function renderShedLicensesView(){
   const box = document.getElementById("vehicles-page-licenses-list");
   if(!box || !currentShed) return;
   const licenses = (await getVoLicenses()).filter(l=>l.shedId===currentShed.id);
   if(licenses.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🪪</div><h3>אין עדיין רישיונות/הסמכות במעקב</h3><p>מנוהל ע"י מחלקת אחזקה</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">🪪</div><h3>אין עדיין רישיונות/הסמכות במעקב</h3><p>מנוהל ע"י מ״ע אחזקה</p></div>`;
     return;
   }
   const withStatus = licenses.map(l=>({...l, st: licenseStatus(l)}));
@@ -7177,7 +7177,7 @@ async function renderShedLicensesView(){
 }
 
 /* ============================================================
-   קצין רכב טייסתי — מעקב רכבים ורישיונות בכל 5 הסככות
+   מ״ע אחזקה טייסתי — מעקב רכבים ורישיונות בכל 5 הסככות
    ============================================================ */
 /* סקירה כללית — מד מוכנות צי, פיד דחיפויות מאוחד (רכבים+רישיונות) ופילוח לפי סככה */
 async function renderVoOverview(){
@@ -7250,7 +7250,7 @@ async function renderVoOverview(){
       <div class="db-hero-top">
         <div>
           <div class="db-eyebrow">כלל 5 הסככות · דרג א׳</div>
-          <div class="db-title">מחלקת אחזקה 🔧</div>
+          <div class="db-title">מ״ע אחזקה 🔧</div>
           <div class="db-date">${dateStr}</div>
         </div>
         <div class="db-score">
@@ -7525,7 +7525,7 @@ async function saveVoKmUpdate(){
   renderVoVehicles();
 }
 
-/* ===== רכבי מחלקת אחזקה (שחורים+שכורים) — רשימה גלובלית, גלויה לקצין הרכב בלבד ===== */
+/* ===== רכבי מ״ע אחזקה (שחורים+שכורים) — רשימה גלובלית, גלויה למ״ע אחזקה בלבד ===== */
 const MAINT_VEHICLE_FIELDS = [
   ["name","maint-vehicle-name","text"], ["number","maint-vehicle-number","text"],
   ["militaryNumber","maint-vehicle-military-number","text"], ["company","maint-vehicle-company","text"],
@@ -7857,7 +7857,7 @@ async function renderVoLicenses(){
 }
 
 /* ============================================================
-   מחלקת אחזקה — הזמנת חומרים + מעקב כלים מוטוריים (לשונית "אחזקה" בבאר התחתון)
+   מ״ע אחזקה — הזמנת חומרים + מעקב כלים מוטוריים (לשונית "אחזקה" בבאר התחתון)
    ============================================================ */
 function mdTab(which){
   ["materials","tools"].forEach(w=>{
