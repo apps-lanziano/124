@@ -1445,7 +1445,26 @@ nav{
       </div>
     </section>
 
+    <!-- ===== USER ADMINISTRATION — מנהל מערכת (בעל האפליקציה) ===== -->
+    <section class="screen" id="scr-users">
+      <div class="sec-head">
+        <div>
+          <h2>ניהול משתמשים 👑</h2>
+          <p>כל המשתמשים בכל המסגרות · צפייה, עריכה וכניסה בתור</p>
+        </div>
+      </div>
+      <div id="users-stats" style="margin-bottom:12px"></div>
+      <input class="m-input" id="users-search" type="text" placeholder="🔎 חיפוש משתמש לפי שם, מסגרת או תפקיד…" style="margin-bottom:12px" oninput="renderUsersAdmin()">
+      <div id="users-list"></div>
+    </section>
+
   </main>
+
+  <!-- באנר "כניסה בתור" — מוצג למנהל המערכת בזמן צפייה/עריכה בתור משתמש אחר -->
+  <div id="impersonate-bar" class="hidden" style="position:fixed;top:0;left:0;right:0;z-index:60;background:linear-gradient(135deg,#7c2d12,#b45309);color:#fff;padding:7px 12px;display:flex;align-items:center;gap:10px;font-size:12px;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.25)">
+    <span id="impersonate-txt" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    <button onclick="exitImpersonation()" style="flex:0 0 auto;background:#fff;color:#7c2d12;border:0;border-radius:8px;padding:5px 10px;font-weight:800;font-size:11.5px;cursor:pointer">⬅ חזרה לניהול</button>
+  </div>
 
   <!-- NAV -->
   <nav>
@@ -1466,6 +1485,7 @@ nav{
     <button class="nav-btn hidden" id="nav-vo-team" onclick="openVoTeamMgmt()"><span class="ic">👥</span><span>צוות</span></button>
     <button class="nav-btn hidden" id="nav-budget-officer" data-scr="scr-budget-officer" onclick="go('scr-budget-officer',this)"><span class="ic">💰</span><span>תקציבים</span></button>
     <button class="nav-btn hidden" id="nav-rollcall" data-scr="scr-rollcall" onclick="go('scr-rollcall',this)"><span class="ic">🛡️</span><span>נכס</span></button>
+    <button class="nav-btn hidden" id="nav-users" data-scr="scr-users" onclick="go('scr-users',this)"><span class="ic">👑</span><span>משתמשים</span></button>
   </nav>
 
   <!-- DOC READER -->
@@ -1492,6 +1512,31 @@ nav{
   </div>
 
   <!-- SIGNATURE MODAL -->
+  <div class="modal-bg" id="user-edit-modal">
+    <div class="modal">
+      <h3 id="ue-title">✏️ עריכת משתמש</h3>
+      <div class="m-sub" id="ue-sub">שינוי פרטי המשתמש. השם מתעדכן בכל מקום באפליקציה.</div>
+      <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">מסגרת</label>
+      <select class="m-input" id="ue-shed" style="margin-bottom:8px"></select>
+      <input class="m-input" id="ue-name" type="text" placeholder="שם מלא" style="margin-bottom:8px">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <select class="m-input" id="ue-role" style="margin-bottom:0;flex:1"><option value="חייל">חייל</option><option value="מפקד">מפקד</option></select>
+        <input class="m-input" id="ue-bday" type="date" style="margin-bottom:0;flex:1" title="תאריך לידה">
+      </div>
+      <div id="ue-dept-wrap">
+        <input class="m-input" id="ue-dept" list="tm-dept-list" placeholder="מחלקה (טקסט חופשי)" style="margin-bottom:8px">
+        <select class="m-input" id="ue-officer" style="margin-bottom:8px"><option value="">— רגיל (משויך למחלקה) —</option><option value="קצין">🎖️ קצין — משויך לצוות "קצינים"</option></select>
+      </div>
+      <select class="m-input" id="ue-profession" style="margin-bottom:8px"><option value="">— ללא מקצוע —</option></select>
+      <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך שחרור (אופציונלי)</label>
+      <input class="m-input" id="ue-release" type="date" style="margin-bottom:10px">
+      <div style="display:flex;gap:8px">
+        <button class="m-btn primary" style="flex:1" onclick="saveUserEdit()">💾 שמירה</button>
+        <button class="m-btn ghost" style="flex:0 0 auto" onclick="document.getElementById('user-edit-modal').classList.remove('open')">ביטול</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-bg" id="sig-modal">
     <div class="modal">
       <h3>✍️ חתימה על פריט</h3>
@@ -2252,10 +2297,16 @@ async function migrateLegacyShed2(){
 /* זריעה למסגרות שהומרו מ"יוזר פרטי" למסגרת מלאה (מ״ע אחזקה + הדרכה).
    בנוסף מיגרציה חד-פעמית: צוות הנהגים שהיה ברשימה נפרדת (vo_personnel) עובר
    להיות צוות המסגרת עצמה, כך שהנהגים יכולים להיכנס עם קוד החיילים ולסמן נכס בעצמם. */
-async function ensureConvertedFrameworksSeed(){
-  if(!currentShed || !(currentShed.isMaint || currentShed.isTraining)) return;
+async function ensureConvertedFrameworksSeed(scope){
+  // scope: "maint" | "training" | "all". ללא ערך — נגזר מהמסגרת הפעילה.
+  if(!scope){
+    if(!currentShed || !(currentShed.isMaint || currentShed.isTraining)) return;
+    scope = currentShed.isMaint ? "maint" : "training";
+  }
+  const doMaint = scope==="all" || scope==="maint";
+  const doTraining = scope==="all" || scope==="training";
 
-  if(currentShed.isMaint){
+  if(doMaint){
     let team = (await sGetIn("maint","cfg_personnel")) || [];
     let changed = false;
     if(!team.some(p=>p.name==="שחר שושן")){
@@ -2277,7 +2328,7 @@ async function ensureConvertedFrameworksSeed(){
     if(changed) await sSetIn("maint","cfg_personnel", team);
   }
 
-  if(currentShed.isTraining){
+  if(doTraining){
     const team = (await sGetIn("training","cfg_personnel")) || [];
     if(!team.some(p=>p.name==="טומי ליפוביץ")){
       team.unshift({name:"טומי ליפוביץ", role:"מפקד", bday:"2000-01-01"});
@@ -2545,12 +2596,15 @@ const ADMIN_CODE = "9124";   // קוד מנהל-על
 const VEHICLE_OFFICER_CODE = "8124";   // קוד מ״ע אחזקה טייסתי
 const BUDGET_OFFICER_CODE = "7124";   // קוד אחראי תקציבים טייסתי
 const TECH_OFFICER_CODE = "6124";   // קוד קצין טכני — רואה את כל המידע באפליקציה (כמו מנהל-על)
+const OWNER_CODE = "5124";   // קוד מנהל מערכת (בעל האפליקציה) — ניהול כל המשתמשים בכל המסגרות
 
 let currentShed = null;      // {id,name,...} של המסגרת הפעילה
 let isAdmin = false;         // מנהל-על
 let isVehicleOfficer = false; // מ״ע אחזקה טייסתי
 let isBudgetOfficer = false; // אחראי תקציבים טייסתי
 let isTechOfficer = false;   // קצין טכני
+let isOwner = false;         // מנהל מערכת — בעל האפליקציה
+let impersonating = null;    // {shedId,name} כשמנהל המערכת צופה/עורך בתור משתמש אחר
 let enteredRole = null;      // "חייל" | "מפקד" | "מנהל" | "מ״ע אחזקה" | "אחראי תקציבים" | "קצין טכני" after code check
 
 /* מפתח storage ממוספר לפי סככה — הפרדת נתונים מלאה */
@@ -2585,6 +2639,12 @@ async function checkCode(){
     if(code === BUDGET_OFFICER_CODE){
       enteredRole = "אחראי תקציבים"; isBudgetOfficer = true; currentShed = null;
       await budgetOfficerLogin();
+      return;
+    }
+    // system owner code?
+    if(code === OWNER_CODE){
+      enteredRole = "מנהל מערכת"; isOwner = true; currentShed = null;
+      await ownerLogin();
       return;
     }
     // technical officer code?
@@ -2765,6 +2825,9 @@ async function doLogin(){
 }
 function logout(){
   user=null; userRole=null; isCmd=false; isAdmin=false; isVehicleOfficer=false; isBudgetOfficer=false; isTechOfficer=false; isToolsResp=false; isVehiclesResp=false;
+  isOwner=false; impersonating=null;
+  document.getElementById("impersonate-bar").classList.add("hidden");
+  document.body.style.paddingTop = "";
   // restore regular nav buttons
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.remove("hidden"));
   document.getElementById("nav-cmd").classList.add("hidden");
@@ -2775,6 +2838,7 @@ function logout(){
   document.getElementById("nav-vo-team").classList.add("hidden");
   document.getElementById("nav-budget-officer").classList.add("hidden");
   document.getElementById("nav-rollcall").classList.add("hidden");
+  document.getElementById("nav-users").classList.add("hidden");
   document.getElementById("nav-tools").classList.add("hidden");
   document.getElementById("nav-vehicles").classList.add("hidden");
   document.getElementById("add-event-btn").classList.add("hidden");
@@ -2811,7 +2875,8 @@ function go(id, btn){
   if(id==="scr-binui-admin") renderBinuiFaultsAdmin();
   if(id==="scr-budget-officer") renderBoOverview();
   if(id==="scr-rollcall") renderRollcallPage();
-  if(id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-binui-admin" && id!=="scr-budget-officer"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי מ״ע אחזקה/תקלות בינוי/אחראי תקציבים (אין להם סככה)
+  if(id==="scr-users") renderUsersAdmin();
+  if(id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-binui-admin" && id!=="scr-budget-officer" && id!=="scr-users"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי מ״ע אחזקה/תקלות בינוי/אחראי תקציבים (אין להם סככה)
 }
 
 /* ===== MORE SHEET ===== */
@@ -5023,6 +5088,266 @@ async function budgetOfficerLogin(){
   document.getElementById("nav-rollcall").classList.remove("hidden");
   go("scr-budget-officer", document.getElementById("nav-budget-officer"));
   toast("ברוך הבא, אחראי תקציבים 💰");
+}
+
+/* ===================== מנהל מערכת (בעל האפליקציה) =====================
+   הרשאת-על על כל המשתמשים בכל המסגרות: צפייה בפרטים, עריכה, הוספה והסרה,
+   וכן "כניסה בתור" — מעבר לחוויה המלאה של משתמש מסוים לצורך בדיקה ותמיכה.
+   כל פעולה נרשמת ביומן המנהל, כולל בזמן כניסה בתור. */
+async function ownerLogin(){
+  user = "מנהל מערכת"; userRole = "מנהל מערכת";
+  isOwner = true; isAdmin = true; isTechOfficer = true;
+  isVehicleOfficer = true; isBudgetOfficer = true;
+  impersonating = null; currentShed = null;
+  document.getElementById("impersonate-bar").classList.add("hidden");
+  document.body.style.paddingTop = "";
+  document.getElementById("login-overlay").style.display = "none";
+  document.getElementById("hdr-username").textContent = user;
+  document.getElementById("hdr-rank").textContent = "👑 מנהל מערכת";
+  document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
+  document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
+  ["nav-users","nav-admin","nav-vehicle-officer","nav-maint-dept","nav-binui-admin","nav-budget-officer","nav-rollcall"]
+    .forEach(id=>document.getElementById(id).classList.remove("hidden"));
+  await ensureShed2Seed();
+  await ensureAllShedsSeed();
+  await ensureAllFrameworkTeamsSeed();
+  updateBinuiAdminBadge();
+  go("scr-users", document.getElementById("nav-users"));
+  toast("ברוך הבא, מנהל המערכת 👑");
+}
+
+/* מריצה את זריעות הצוות של כל המסגרות — נדרש למנהל המערכת, שרואה את כולן
+   בבת אחת ולא "נכנס" לאף אחת מהן (הזריעות הרגילות רצות רק בכניסה למסגרת). */
+async function ensureAllFrameworkTeamsSeed(){
+  await ensureConvertedFrameworksSeed("all");
+  await ensureDeptOfficers();
+  await removeDeptReassignedPeople();
+}
+
+/* שולף את כל המשתמשים מכל המסגרות. מחזיר [{shed, people:[{p,idx}]}] */
+async function loadAllUsers(){
+  const out = [];
+  for(const shed of SHEDS){
+    const pers = (await sGetIn(shed.id, "cfg_personnel")) || [];
+    out.push({shed, people: pers.map((p,idx)=>({p, idx}))});
+  }
+  return out;
+}
+
+async function renderUsersAdmin(){
+  const box = document.getElementById("users-list");
+  const statsBox = document.getElementById("users-stats");
+  if(!box) return;
+  box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען משתמשים מכל המסגרות…</div>';
+  const all = await loadAllUsers();
+  const q = (document.getElementById("users-search").value || "").trim();
+
+  const total = all.reduce((n,g)=>n+g.people.length, 0);
+  const cmdrs = all.reduce((n,g)=>n+g.people.filter(x=>x.p.role==="מפקד").length, 0);
+  statsBox.innerHTML = `<div style="display:flex;gap:8px">
+    <div class="cert-sum-card" style="flex:1;cursor:default;text-align:center"><b style="font-size:20px">${total}</b><div style="font-size:11px;color:var(--ink-3)">משתמשים</div></div>
+    <div class="cert-sum-card" style="flex:1;cursor:default;text-align:center"><b style="font-size:20px">${cmdrs}</b><div style="font-size:11px;color:var(--ink-3)">מפקדים</div></div>
+    <div class="cert-sum-card" style="flex:1;cursor:default;text-align:center"><b style="font-size:20px">${SHEDS.length}</b><div style="font-size:11px;color:var(--ink-3)">מסגרות</div></div>
+  </div>`;
+
+  let html = "";
+  for(const g of all){
+    const matches = g.people.filter(x=>{
+      if(!q) return true;
+      const hay = [x.p.name, g.shed.name, x.p.role, personDept(x.p), x.p.profession].filter(Boolean).join(" ");
+      return hay.includes(q);
+    });
+    if(q && matches.length===0) continue;
+    html += `<div class="cmd-section-title">${escapeHTML(g.shed.name)} <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${matches.length}</span></div>`;
+    html += `<button class="m-btn ghost" style="width:100%;margin-bottom:8px" onclick="openUserEdit('${g.shed.id}',-1)">➕ הוסף משתמש ל${escapeHTML(g.shed.name)}</button>`;
+    if(matches.length===0){
+      html += `<div class="empty-state" style="padding:14px"><div class="ic">👤</div><p>אין עדיין משתמשים במסגרת זו</p></div>`;
+      continue;
+    }
+    html += matches.map(x=>{
+      const p = x.p;
+      const dept = personDept(p);
+      const tags = [
+        `<span class="role-mini ${p.role==='חייל'?'sol':''}">${escapeHTML(p.role)}</span>`,
+        dept ? `<span class="role-mini">${escapeHTML(dept)}</span>` : "",
+        p.officerTag ? `<span class="role-mini">🎖️ ${escapeHTML(p.officerTag)}</span>` : "",
+        p.profession ? `<span class="role-mini">${escapeHTML(p.profession)}</span>` : "",
+        p.release ? `<span class="role-mini">🗓️ ${escapeHTML(p.release)}</span>` : ""
+      ].filter(Boolean).join(" ");
+      return `<div class="cert-sum-card" style="cursor:default">
+        <div class="cert-sum-head">
+          <div class="avatar" style="width:36px;height:36px;font-size:13px">${initials(p.name)}</div>
+          <div class="cert-sum-name" style="flex:1"><b>${escapeHTML(p.name)}</b><span>${tags}</span></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <button class="m-btn ghost" style="flex:1;font-size:11.5px;padding:7px" onclick="openUserEdit('${g.shed.id}',${x.idx})">✏️ עריכה</button>
+          <button class="m-btn ghost" style="flex:1;font-size:11.5px;padding:7px" onclick="impersonateUser('${g.shed.id}','${escapeHTML(p.name)}')">👁️ כניסה בתור</button>
+          <button class="m-btn ghost" style="flex:0 0 auto;font-size:11.5px;padding:7px" onclick="deleteUserAsOwner('${g.shed.id}',${x.idx})">🗑️</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+  box.innerHTML = html || `<div class="empty-state"><div class="ic">🔎</div><h3>לא נמצאו משתמשים</h3><p>נסה חיפוש אחר</p></div>`;
+}
+
+let ueShedId = null, ueIdx = -1;
+async function openUserEdit(shedId, idx){
+  ueShedId = shedId; ueIdx = idx;
+  const shed = SHEDS.find(s=>s.id===shedId);
+  const pers = (await sGetIn(shedId,"cfg_personnel")) || [];
+  const p = idx>=0 ? pers[idx] : null;
+  document.getElementById("ue-title").textContent = p ? "✏️ עריכת משתמש" : "➕ הוספת משתמש";
+  document.getElementById("ue-sub").textContent = p
+    ? "שינוי פרטי המשתמש. שינוי שם מתעדכן בכל מקום באפליקציה; שינוי מסגרת מעביר אותו למסגרת אחרת."
+    : "הוספת משתמש חדש למסגרת שנבחרה.";
+  const shedSel = document.getElementById("ue-shed");
+  shedSel.innerHTML = SHEDS.map(x=>`<option value="${x.id}">${escapeHTML(x.name)}</option>`).join("");
+  shedSel.value = shedId;
+  document.getElementById("ue-name").value = p ? p.name : "";
+  document.getElementById("ue-role").value = p ? p.role : "חייל";
+  document.getElementById("ue-bday").value = p ? (p.bday||"") : "";
+  document.getElementById("ue-dept").value = p ? (p.dept||"") : "";
+  document.getElementById("ue-officer").value = p ? (p.officerTag||"") : "";
+  document.getElementById("ue-release").value = p ? (p.release||"") : "";
+  const profSel = document.getElementById("ue-profession");
+  profSel.innerHTML = '<option value="">— ללא מקצוע —</option>' + PROFESSIONS.map(x=>`<option value="${escapeHTML(x)}">${escapeHTML(x)}</option>`).join("");
+  profSel.value = p ? (p.profession||"") : "";
+  ueSyncFields();
+  shedSel.onchange = ueSyncFields;
+  document.getElementById("tm-dept-list").innerHTML = [...new Set([...DEPT_NAMES])].map(d=>`<option value="${escapeHTML(d)}">`).join("");
+  document.getElementById("user-edit-modal").classList.add("open");
+}
+/* שדות מחלקה/קצין רלוונטיים רק ליוזר "מחלקות"; מקצוע רק לשאר המסגרות */
+function ueSyncFields(){
+  const shed = SHEDS.find(x=>x.id===document.getElementById("ue-shed").value);
+  const isDeptUnit = !!(shed && shed.isDept);
+  document.getElementById("ue-dept-wrap").style.display = isDeptUnit ? "" : "none";
+  document.getElementById("ue-profession").style.display = isDeptUnit ? "none" : "";
+}
+
+async function saveUserEdit(){
+  const name = (document.getElementById("ue-name").value||"").trim();
+  if(name.length<2){ toast("נא להזין שם"); return; }
+  const targetShedId = document.getElementById("ue-shed").value;
+  const targetShed = SHEDS.find(x=>x.id===targetShedId);
+  const isDeptUnit = !!(targetShed && targetShed.isDept);
+  const role = document.getElementById("ue-role").value;
+  const bday = document.getElementById("ue-bday").value || "2000-01-01";
+  const release = document.getElementById("ue-release").value;
+  const dept = isDeptUnit ? document.getElementById("ue-dept").value.trim() : "";
+  const officerTag = isDeptUnit ? document.getElementById("ue-officer").value : "";
+  const profession = isDeptUnit ? "" : document.getElementById("ue-profession").value;
+
+  const srcList = (await sGetIn(ueShedId,"cfg_personnel")) || [];
+  const oldName = ueIdx>=0 ? srcList[ueIdx]?.name : null;
+  const movingShed = ueIdx>=0 && targetShedId !== ueShedId;
+
+  // בדיקת כפילות במסגרת היעד (מתעלמת מהרשומה הנערכת עצמה)
+  const destList = targetShedId===ueShedId ? srcList : ((await sGetIn(targetShedId,"cfg_personnel")) || []);
+  const dupIdx = destList.findIndex(x=>x.name===name);
+  if(dupIdx>=0 && !(targetShedId===ueShedId && dupIdx===ueIdx)){ toast("שם כבר קיים במסגרת היעד ⛔"); return; }
+
+  const build = base => {
+    const m = Object.assign({}, base||{}, {name, role, bday});
+    if(release) m.release = release; else delete m.release;
+    if(isDeptUnit){
+      if(dept) m.dept = dept; else delete m.dept;
+      if(officerTag) m.officerTag = officerTag; else delete m.officerTag;
+      delete m.profession;
+    } else {
+      if(profession) m.profession = profession; else delete m.profession;
+      delete m.dept; delete m.officerTag;
+    }
+    if(!m.joined) m.joined = todayKey();
+    return m;
+  };
+
+  if(ueIdx<0){
+    destList.push(build(null));
+    await sSetIn(targetShedId,"cfg_personnel", destList);
+    await ownerLog(`הוסיף משתמש "${name}" ל${targetShed.name}`);
+    toast("המשתמש נוסף ✓");
+  } else if(movingShed){
+    const moved = build(srcList[ueIdx]);
+    srcList.splice(ueIdx,1);
+    await sSetIn(ueShedId,"cfg_personnel", srcList);
+    destList.push(moved);
+    await sSetIn(targetShedId,"cfg_personnel", destList);
+    await ownerLog(`העביר את "${name}" מ${SHEDS.find(x=>x.id===ueShedId).name} ל${targetShed.name}`);
+    toast("המשתמש הועבר למסגרת החדשה ✓");
+  } else {
+    srcList[ueIdx] = build(srcList[ueIdx]);
+    await sSetIn(ueShedId,"cfg_personnel", srcList);
+    await ownerLog(`ערך את המשתמש "${name}" ב${targetShed.name}`);
+    toast("הפרטים עודכנו ✓");
+  }
+
+  // שינוי שם — מתפשט לכל הנתונים של המסגרת שבה המשתמש נמצא
+  if(oldName && oldName!==name){
+    const keepShed = currentShed;
+    currentShed = SHEDS.find(x=>x.id===(movingShed?targetShedId:ueShedId));
+    try{ await renamePersonEverywhere(oldName, name); } finally { currentShed = keepShed; }
+  }
+  document.getElementById("user-edit-modal").classList.remove("open");
+  renderUsersAdmin();
+}
+
+async function deleteUserAsOwner(shedId, idx){
+  const list = (await sGetIn(shedId,"cfg_personnel")) || [];
+  const p = list[idx];
+  if(!p) return;
+  if(!confirm(`להסיר את "${p.name}" מ${SHEDS.find(x=>x.id===shedId).name}?\nהפעולה מסירה אותו מרשימת הצוות.`)) return;
+  list.splice(idx,1);
+  await sSetIn(shedId,"cfg_personnel", list);
+  await ownerLog(`הסיר את המשתמש "${p.name}" מ${SHEDS.find(x=>x.id===shedId).name}`);
+  toast("המשתמש הוסר");
+  renderUsersAdmin();
+}
+
+/* כניסה בתור משתמש — מנהל המערכת רואה ופועל בדיוק כמוהו, עם באנר חזרה */
+async function impersonateUser(shedId, name){
+  const shed = SHEDS.find(x=>x.id===shedId);
+  const pers = (await sGetIn(shedId,"cfg_personnel")) || [];
+  const person = pers.find(x=>x.name===name);
+  if(!shed || !person){ toast("המשתמש לא נמצא"); return; }
+  // doLogin חוסם משתמש ששוחרר — בודקים לפני איפוס ההרשאות, כדי לא להיתקע במצב ביניים
+  if(person.release && person.release <= todayKey()){
+    toast("המשתמש שוחרר מהמסגרת — לא ניתן להיכנס בתורו ⛔"); return;
+  }
+
+  await ownerLog(`נכנס בתור "${name}" (${shed.name})`);
+  impersonating = {shedId, name};
+  // איפוס הרשאות-העל כדי לקבל בדיוק את החוויה של המשתמש
+  isOwner = false; isAdmin = false; isTechOfficer = false;
+  isVehicleOfficer = false; isBudgetOfficer = false;
+  currentShed = shed; enteredRole = person.role;
+  document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.remove("hidden"));
+  ["nav-cmd","nav-admin","nav-vehicle-officer","nav-maint-dept","nav-binui-admin",
+   "nav-vo-team","nav-budget-officer","nav-rollcall","nav-users","nav-tools","nav-vehicles"]
+    .forEach(id=>document.getElementById(id).classList.add("hidden"));
+  await loadRuntimeLists();
+  const sel = document.getElementById("login-select");
+  sel.innerHTML = `<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`;
+  sel.value = name;
+  await doLogin();
+  const bar = document.getElementById("impersonate-bar");
+  document.getElementById("impersonate-txt").textContent = `👑 מנהל מערכת — צופה בתור ${name} · ${shed.name}`;
+  bar.classList.remove("hidden");
+  document.body.style.paddingTop = bar.offsetHeight + "px";
+}
+
+async function exitImpersonation(){
+  impersonating = null;
+  await ownerLogin();
+}
+
+/* יומן פעולות מנהל המערכת — נשמר גלובלית, לא ברמת מסגרת */
+async function ownerLog(text){
+  try{
+    const log = (await sGetRaw("owner_log")) || [];
+    log.unshift({text, date:new Date().toLocaleString("he-IL")});
+    await sSetRaw("owner_log", log.slice(0,300));
+  }catch(e){ console.error("ownerLog", e); }
 }
 
 async function techOfficerLogin(){
