@@ -969,6 +969,18 @@ nav{
       <div id="faults-list"></div>
     </section>
 
+    <!-- ===== BINUI FAULTS (תקלות בינוי — מרוכז אצל מחלקת אחזקה) ===== -->
+    <section class="screen" id="scr-binui-faults">
+      <div class="sec-head">
+        <div>
+          <h2>תקלות בינוי 🚧</h2>
+          <p>דיווח על ליקוי מבנה/בינוי, עם תמונה. מטופל ע"י מחלקת אחזקה.</p>
+        </div>
+        <button class="add-btn" id="add-binui-fault-btn" onclick="openAddBinuiFault()">+ תקלה</button>
+      </div>
+      <div id="binui-faults-list"></div>
+    </section>
+
     <!-- ===== BOARD ===== -->
     <section class="screen" id="scr-board">
       <div class="sec-head">
@@ -1365,6 +1377,7 @@ nav{
       <div class="cmd-tabs" style="margin-bottom:16px">
         <button class="cmd-tab active" id="mdtab-materials" onclick="mdTab('materials')">📦 הזמנת חומרים</button>
         <button class="cmd-tab" id="mdtab-tools" onclick="mdTab('tools')">🔧 מעקב כלים מוטוריים</button>
+        <button class="cmd-tab" id="mdtab-binui" onclick="mdTab('binui')">🚧 תקלות בינוי</button>
       </div>
 
       <!-- PANE: MATERIALS ORDERS -->
@@ -1381,6 +1394,11 @@ nav{
           <button class="admin-card" style="grid-column:1/-1" onclick="openMotorToolAdd()"><span class="a-ic">➕</span><b>הוספת כלי מוטורי</b><span>מספר סידורי + כיול/טיפול הבא</span></button>
         </div>
         <div id="md-tools-list"></div>
+      </div>
+
+      <!-- PANE: BINUI FAULTS (ריכוז תקלות בינוי מכל המסגרות) -->
+      <div class="admin-pane" id="mdpane-binui">
+        <div id="md-binui-list"></div>
       </div>
     </section>
 
@@ -1523,6 +1541,7 @@ nav{
       <div class="sheet-item hidden" id="more-faults-item" onclick="closeMoreAnd('scr-faults')"><div class="s-ic">🛠️</div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-bdays-item" onclick="closeMoreAnd('scr-bdays')"><div class="s-ic">🎂</div><div class="s-tx"><b>ימי הולדת</b><span>לוח ימי הולדת הצוות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="more-rollcall-item" onclick="closeMoreAnd('scr-rollcall')"><div class="s-ic">🛡️</div><div class="s-tx"><b>נכס</b><span>סימון תקינות וזמינות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-binui-item" onclick="closeMoreAnd('scr-binui-faults')"><div class="s-ic">🚧</div><div class="s-tx"><b>תקלות בינוי</b><span>דיווח ליקויי מבנה, עם תמונה</span></div><span class="s-chev">‹</span></div>
     </div>
   </div>
 
@@ -1545,6 +1564,27 @@ nav{
   <!-- FAULT DETAIL MODAL -->
   <div class="modal-bg" id="faultdetail-modal">
     <div class="modal" id="faultdetail-body"></div>
+  </div>
+
+  <!-- ADD BINUI FAULT MODAL (תקלות בינוי) -->
+  <div class="modal-bg" id="binui-fault-modal">
+    <div class="modal">
+      <h3>🚧 דיווח תקלת בינוי</h3>
+      <div class="m-sub">תאר את הליקוי שהתגלה. מחלקת אחזקה תטפל ותעדכן סטטוס.</div>
+      <input class="m-input" id="binui-fault-title" type="text" placeholder="כותרת התקלה (לדוגמה: דלת חדר כלים לא נסגרת)" oninput="checkBinuiFaultReady()">
+      <textarea class="m-input" id="binui-fault-desc" rows="3" placeholder="פירוט (אופציונלי): מיקום, חומרה, מה נדרש…" style="resize:none"></textarea>
+      <div class="m-file" id="binui-fault-file-label" onclick="document.getElementById('binui-fault-file').click()">📷 צירוף תמונה (אופציונלי)</div>
+      <input type="file" id="binui-fault-file" accept="image/*" class="hidden" onchange="onBinuiFaultFile(event)">
+      <div class="modal-actions">
+        <button class="m-btn ghost" onclick="closeAddBinuiFault()">ביטול</button>
+        <button class="m-btn primary" id="binui-fault-save" onclick="saveBinuiFault()" disabled>שליחת דיווח</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BINUI FAULT DETAIL MODAL -->
+  <div class="modal-bg" id="binuifaultdetail-modal">
+    <div class="modal" id="binuifaultdetail-body"></div>
   </div>
 
   <!-- MESSAGE MGMT MODAL (feature 11) -->
@@ -2604,12 +2644,14 @@ async function doLogin(){
       document.getElementById("cert-add-btn").classList.remove("hidden");
       document.getElementById("more-team-item").classList.remove("hidden");
       document.getElementById("more-tasks-item").classList.remove("hidden");
+      document.getElementById("more-binui-item").classList.remove("hidden");
     } else {
       document.getElementById("close-mgmt-btn").classList.add("hidden");
       document.getElementById("naatim-mgmt-btn").classList.add("hidden");
       document.getElementById("cert-add-btn").classList.add("hidden");
       document.getElementById("more-team-item").classList.add("hidden");
       document.getElementById("more-tasks-item").classList.add("hidden");
+      document.getElementById("more-binui-item").classList.add("hidden");
     }
     // יוזר "מחלקות" — מעקב מבצעי (מטלות/נע"תים/סגירת יום) לא רלוונטי לשני התפקידים;
     // הסמכות/חדר כלים/רכבים/עריכת מטלות בוקר מוסרים למפקד בלבד
@@ -2655,6 +2697,7 @@ function logout(){
   document.getElementById("more-tasks-item").classList.add("hidden");
   document.getElementById("more-faults-item").classList.add("hidden");
   document.getElementById("more-bdays-item").classList.add("hidden");
+  document.getElementById("more-binui-item").classList.add("hidden");
   document.getElementById("login-overlay").style.display="flex";
   document.getElementById("login-select").value="";
   backToCode();
@@ -2670,6 +2713,7 @@ function go(id, btn){
   document.getElementById("main").scrollTop = 0;
   if(id==="scr-cmd") renderCommander();
   if(id==="scr-faults") renderFaults();
+  if(id==="scr-binui-faults") renderBinuiFaults();
   if(id==="scr-admin") renderAdminDashboard();
   if(id==="scr-closeday") renderCloseDay();
   if(id==="scr-naatim") renderNaatim();
@@ -4346,6 +4390,162 @@ async function deleteFault(id){
   document.getElementById("faultdetail-modal").classList.remove("open");
   toast("התקלה נמחקה 🗑️");
   renderFaults();
+}
+
+/* ============================================================
+   תקלות בינוי — כל מפקד בכל מסגרת מדווח (עם תמונה), ומחלקת אחזקה
+   (שחר שושן) מרכזת את הכל וקובעת סטטוס. אחסון גלובלי (לא לפי סככה).
+   ============================================================ */
+const BINUI_STATUSES = [{key:"פתוח",cls:"r"},{key:"בטיפול",cls:"y"},{key:"טופל",cls:"g"}];
+function binuiStatusCls(status){ return (BINUI_STATUSES.find(s=>s.key===status)||BINUI_STATUSES[0]).cls; }
+async function getBinuiFaults(){ return (await sGetRaw("binui_faults_list")) || []; }
+/* מזהה את המסגרת המדווחת — סככה, או ביוזר מחלקות: הסככה + המחלקה הספציפית של המדווח */
+function myBinuiOrigin(){
+  if(!currentShed) return null;
+  const dept = currentShed.isDept ? (PERSONNEL.find(p=>p.name===user)?.dept || null) : null;
+  return { shedId: currentShed.id, shedName: (currentShed.isDept && dept) ? (currentShed.name+" · "+dept) : currentShed.name, dept };
+}
+
+let binuiFaultImgData = null;
+function openAddBinuiFault(){
+  binuiFaultImgData = null;
+  document.getElementById("binui-fault-title").value = "";
+  document.getElementById("binui-fault-desc").value = "";
+  const lbl = document.getElementById("binui-fault-file-label");
+  lbl.classList.remove("has"); lbl.textContent = "📷 צירוף תמונה (אופציונלי)";
+  const p = document.getElementById("binui-fault-preview"); if(p) p.remove();
+  document.getElementById("binui-fault-save").disabled = true;
+  document.getElementById("binui-fault-modal").classList.add("open");
+}
+function closeAddBinuiFault(){ document.getElementById("binui-fault-modal").classList.remove("open"); }
+function checkBinuiFaultReady(){ document.getElementById("binui-fault-save").disabled = document.getElementById("binui-fault-title").value.trim().length<3; }
+function onBinuiFaultFile(e){
+  const file=e.target.files[0]; if(!file) return;
+  const lbl=document.getElementById("binui-fault-file-label");
+  lbl.textContent="⏳ טוען…";
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      let q=.7,data,tries=0;
+      const maxW=760,scale=Math.min(1,maxW/img.width);
+      const c=document.createElement("canvas");
+      c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);
+      const cx=c.getContext("2d");cx.fillStyle="#fff";cx.fillRect(0,0,c.width,c.height);
+      cx.drawImage(img,0,0,c.width,c.height);
+      data=c.toDataURL("image/jpeg",q);
+      while(data.length>600_000&&tries<6){q-=.1;data=c.toDataURL("image/jpeg",Math.max(.3,q));tries++;}
+      binuiFaultImgData=data;
+      lbl.classList.add("has"); lbl.textContent="✅ תמונה צורפה";
+      let prev=document.getElementById("binui-fault-preview");
+      if(!prev){prev=document.createElement("img");prev.id="binui-fault-preview";prev.style.cssText="width:100%;border-radius:12px;margin-top:8px;border:1px solid var(--line);display:block";lbl.after(prev);}
+      prev.src=data;
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value="";
+}
+async function saveBinuiFault(){
+  const title=document.getElementById("binui-fault-title").value.trim();
+  if(title.length<3) return;
+  const desc=document.getElementById("binui-fault-desc").value.trim();
+  const origin = myBinuiOrigin();
+  const id="binui_"+Date.now();
+  const btn=document.getElementById("binui-fault-save"); btn.disabled=true; btn.textContent="שולח…";
+  try{
+    if(binuiFaultImgData){ await sSetRaw("binui_fault_img_"+id, binuiFaultImgData); }
+    const faults=await getBinuiFaults();
+    faults.unshift({id, title, desc, by:user, shedId: origin?origin.shedId:null, shedName: origin?origin.shedName:"—", dept: origin?origin.dept:null, date:new Date().toLocaleDateString("he-IL"), status:"פתוח", img:!!binuiFaultImgData});
+    await sSetRaw("binui_faults_list", faults);
+    closeAddBinuiFault();
+    toast("תקלת הבינוי דווחה 🚧");
+    renderBinuiFaults();
+  }catch(e){ toast("⚠️ שגיאה בשליחה"); console.error(e); }
+  finally{ btn.textContent="שליחת דיווח"; btn.disabled=false; }
+}
+/* תצוגת מפקד — רק התקלות שהמסגרת/מחלקה שלו דיווחה, קריאה בלבד לסטטוס (הסטטוס נקבע ע"י מחלקת אחזקה בלבד) */
+async function renderBinuiFaults(){
+  const list = document.getElementById("binui-faults-list");
+  if(!list) return;
+  const origin = myBinuiOrigin();
+  const all = await getBinuiFaults();
+  const mine = all.filter(f=> origin && f.shedId===origin.shedId && (origin.dept ? f.dept===origin.dept : true));
+  if(mine.length===0){
+    list.innerHTML = `<div class="empty-state"><div class="ic">🚧</div><h3>אין עדיין תקלות בינוי</h3><p>דווח באמצעות כפתור "+ תקלה"</p></div>`;
+    return;
+  }
+  list.innerHTML = mine.map(f=>{
+    const cls = binuiStatusCls(f.status);
+    return `<div class="card fault-item" onclick="openBinuiFaultDetail('${f.id}')">
+      <div class="f-ic">🚧</div>
+      <div class="f-body"><h3>${escapeHTML(f.title)}</h3><div class="f-meta">דווח ע"י ${escapeHTML(f.by)} · ${f.date}${f.img?' · 📷':''}</div></div>
+      <div class="f-status ${cls==='g'?'closed':'open'}">${escapeHTML(f.status)}</div>
+    </div>`;
+  }).join("");
+}
+const BINUI_COLOR_MAP = {r:"var(--red)", y:"var(--gold)", g:"var(--green)"};
+async function openBinuiFaultDetail(id){
+  const faults = await getBinuiFaults();
+  const f = faults.find(x=>x.id===id); if(!f) return;
+  let imgHtml="";
+  if(f.img){ const d=await sGetRaw("binui_fault_img_"+id); if(d) imgHtml=`<img class="fault-detail-img" src="${d}" alt="">`; }
+  const canManage = isVehicleOfficer;
+  document.getElementById("binuifaultdetail-body").innerHTML = `
+    <h3>${escapeHTML(f.title)}</h3>
+    <div class="m-sub">דווח ע"י ${escapeHTML(f.by)}${f.shedName?(' · '+escapeHTML(f.shedName)):''} · ${f.date} · <b style="color:${BINUI_COLOR_MAP[binuiStatusCls(f.status)]}">${escapeHTML(f.status)}</b></div>
+    ${imgHtml}
+    ${f.desc?`<div class="fault-detail-desc">${escapeHTML(f.desc)}</div>`:""}
+    ${canManage?`
+    <label style="font-size:11.5px;color:var(--ink-3);display:block;margin:10px 0 3px">סטטוס</label>
+    <select class="m-input" onchange="setBinuiFaultStatus('${id}', this.value)">${BINUI_STATUSES.map(s=>`<option value="${s.key}" ${s.key===f.status?'selected':''}>${s.key}</option>`).join("")}</select>`:""}
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="m-btn ghost" onclick="document.getElementById('binuifaultdetail-modal').classList.remove('open')" style="flex:1">סגור חלון</button>
+    </div>
+    ${canManage?`<button class="m-btn" onclick="deleteBinuiFault('${id}')" style="width:100%;margin-top:8px;background:var(--red-soft);color:var(--red);border:1px solid var(--red-line)">🗑️ מחק תקלה לצמיתות</button>`:""}`;
+  document.getElementById("binuifaultdetail-modal").classList.add("open");
+}
+async function setBinuiFaultStatus(id, status){
+  const faults = await getBinuiFaults();
+  const f = faults.find(x=>x.id===id);
+  if(!f) return;
+  f.status = status;
+  await sSetRaw("binui_faults_list", faults);
+  toast("הסטטוס עודכן ✓");
+  renderBinuiFaultsAdmin();
+}
+async function deleteBinuiFault(id){
+  if(!confirm("למחוק את התקלה לצמיתות? הפעולה אינה הפיכה.")) return;
+  let faults = await getBinuiFaults();
+  const f = faults.find(x=>x.id===id);
+  faults = faults.filter(x=>x.id!==id);
+  await sSetRaw("binui_faults_list", faults);
+  if(f && f.img) await sDelRaw("binui_fault_img_"+id);
+  document.getElementById("binuifaultdetail-modal").classList.remove("open");
+  toast("התקלה נמחקה 🗑️");
+  renderBinuiFaultsAdmin();
+}
+/* תצוגת מחלקת אחזקה — כל התקלות מכל המסגרות, עם קביעת סטטוס */
+async function renderBinuiFaultsAdmin(){
+  const box = document.getElementById("md-binui-list");
+  if(!box) return;
+  const faults = await getBinuiFaults();
+  if(faults.length===0){
+    box.innerHTML = `<div class="empty-state"><div class="ic">🚧</div><h3>אין עדיין תקלות בינוי</h3><p>ידווחו ע"י מפקדי הסככות/מחלקות</p></div>`;
+    return;
+  }
+  const order = {"פתוח":0,"בטיפול":1,"טופל":2};
+  const sorted = [...faults].sort((a,b)=> (order[a.status]??0)-(order[b.status]??0));
+  box.innerHTML = sorted.map(f=>{
+    const statusOptions = BINUI_STATUSES.map(s=>`<option value="${s.key}" ${s.key===f.status?'selected':''}>${s.key}</option>`).join("");
+    return `<div class="cert-sum-card" style="cursor:pointer" onclick="openBinuiFaultDetail('${f.id}')">
+      <div class="cert-sum-head">
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">🚧</div>
+        <div class="cert-sum-name"><b>${escapeHTML(f.title)}</b><span>${escapeHTML(f.shedName||'—')} · ${escapeHTML(f.by)} · ${f.date}${f.img?' · 📷':''}</span></div>
+        <select class="m-input" style="margin-bottom:0;width:auto;font-size:11px;padding:6px 8px" onclick="event.stopPropagation()" onchange="event.stopPropagation();setBinuiFaultStatus('${f.id}', this.value)">${statusOptions}</select>
+      </div>
+    </div>`;
+  }).join("");
 }
 
 /* ===== TEAM MGMT (feature 8) ===== */
@@ -7561,12 +7761,13 @@ async function renderVoLicenses(){
    מחלקת אחזקה — הזמנת חומרים + מעקב כלים מוטוריים (לשונית "אחזקה" בבאר התחתון)
    ============================================================ */
 function mdTab(which){
-  ["materials","tools"].forEach(w=>{
+  ["materials","tools","binui"].forEach(w=>{
     document.getElementById("mdtab-"+w).classList.toggle("active", which===w);
     document.getElementById("mdpane-"+w).classList.toggle("active", which===w);
   });
   if(which==="materials") renderMaterials();
   if(which==="tools") renderMotorTools();
+  if(which==="binui") renderBinuiFaultsAdmin();
 }
 
 /* --- הזמנת חומרים --- */
