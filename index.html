@@ -3347,24 +3347,35 @@ function bdayInfo(p){
 }
 /* ============================================================
    נכס — סימון תקינות וזמינות כלל אנשי הצוות (כל מפקד מפעיל עצמאית לסככה/מחלקה שלו)
+   ביוזר "מחלקות" יש כמה מפקדים עצמאיים (הטסה/אוה"ד/אחזקה/קה"ד מ"מ) שחולקים אותו currentShed —
+   לכן מפתח האחסון של הנכס מקבל סיומת לפי המחלקה הספציפית של המפקד המחובר, כדי שכל מחלקה תפעיל נכס משלה
    ============================================================ */
+function rollcallKeySuffix(){
+  if(currentShed && currentShed.isDept){
+    const myDept = PERSONNEL.find(p=>p.name===user)?.dept;
+    if(myDept) return "_"+myDept;
+  }
+  return "";
+}
 async function activateRollcall(){
   if(!confirm("להפעיל נכס חדש? כל הסימונים הקודמים יתאפסו ויידרש לסמן מחדש.")) return;
-  await sSet("rollcall_active", true);
-  await sSet("rollcall_started_at", new Date().toISOString());
-  await sSet("rollcall_checkins", {});
+  const suf = rollcallKeySuffix();
+  await sSet("rollcall_active"+suf, true);
+  await sSet("rollcall_started_at"+suf, new Date().toISOString());
+  await sSet("rollcall_checkins"+suf, {});
   renderRollcallPage();
   openWaPrompt("rollcall");
 }
 async function endRollcall(){
   if(!confirm("לסיים את הנכס הפעיל?")) return;
-  await sSet("rollcall_active", false);
+  await sSet("rollcall_active"+rollcallKeySuffix(), false);
   renderRollcallPage();
 }
 async function checkInRollcall(location){
-  const checkins = (await sGet("rollcall_checkins")) || {};
+  const suf = rollcallKeySuffix();
+  const checkins = (await sGet("rollcall_checkins"+suf)) || {};
   checkins[user] = { at: new Date().toISOString(), location };
-  await sSet("rollcall_checkins", checkins);
+  await sSet("rollcall_checkins"+suf, checkins);
   renderRollcallPage();
   toast("סומן: תקין/ה וזמין/ה · " + (location==="בית"?"🏠 בבית":"🪖 בטייסת") + " ✓");
 }
@@ -3451,17 +3462,31 @@ async function renderRollcallPage(){
     box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען נתוני נכס מכל המסגרות…</div>';
     const officerCheckins = (await sGetRaw("rollcall_officer_checkins")) || {};
     const myOfficerCheckedIn = !!officerCheckins[userRole];
-    const rows = await Promise.all(SHEDS.map(async shed=>{
-      const [active, checkins, pers] = await Promise.all([
-        sGetIn(shed.id, "rollcall_active"),
-        sGetIn(shed.id, "rollcall_checkins"),
-        sGetIn(shed.id, "cfg_personnel")
-      ]);
-      const list = pers || [];
-      const chk = checkins || {};
-      const done = list.filter(p=>chk[p.name]).length;
-      return {shed, active: !!active, done, total: list.length};
-    }));
+    // ביוזר "מחלקות" כל מחלקה (הטסה/אוה"ד/אחזקה/קה"ד מ"מ) מפעילה נכס משלה — לכן מוצגת כאן כשורה נפרדת משלה
+    const rows = [];
+    for(const shed of SHEDS){
+      const pers = (await sGetIn(shed.id, "cfg_personnel")) || [];
+      if(shed.isDept){
+        const deptValues = [...new Set([...DEPT_NAMES, ...pers.map(p=>p.dept).filter(Boolean)])];
+        for(const d of deptValues){
+          const subPers = pers.filter(p=>p.dept===d);
+          if(subPers.length===0) continue;
+          const [active, checkins] = await Promise.all([sGetIn(shed.id,"rollcall_active_"+d), sGetIn(shed.id,"rollcall_checkins_"+d)]);
+          const chk = checkins || {};
+          rows.push({name: shed.name+" · "+d, active: !!active, done: subPers.filter(p=>chk[p.name]).length, total: subPers.length});
+        }
+        const noDept = pers.filter(p=>!p.dept);
+        if(noDept.length){
+          const [active, checkins] = await Promise.all([sGetIn(shed.id,"rollcall_active"), sGetIn(shed.id,"rollcall_checkins")]);
+          const chk = checkins || {};
+          rows.push({name: shed.name+" · ללא מחלקה", active: !!active, done: noDept.filter(p=>chk[p.name]).length, total: noDept.length});
+        }
+      } else {
+        const [active, checkins] = await Promise.all([sGetIn(shed.id,"rollcall_active"), sGetIn(shed.id,"rollcall_checkins")]);
+        const chk = checkins || {};
+        rows.push({name: shed.name, active: !!active, done: pers.filter(p=>chk[p.name]).length, total: pers.length});
+      }
+    }
     let html = `<div class="all-done-banner" style="display:block;background:${myOfficerCheckedIn?'linear-gradient(135deg,#166534,#22c55e)':'linear-gradient(135deg,#7c2d12,#9a3412)'}">
       ${myOfficerCheckedIn ? '✅ סימנת שאתה תקין/ה וזמין/ה' : '🚨 נא לסמן שאתה תקין/ה וזמין/ה'}
     </div>`;
@@ -3474,7 +3499,7 @@ async function renderRollcallPage(){
       return `<div class="cert-sum-card" style="cursor:default">
         <div class="cert-sum-head">
           <div class="avatar" style="width:40px;height:40px;font-size:18px">🛡️</div>
-          <div class="cert-sum-name"><b>${escapeHTML(r.shed.name)}</b></div>
+          <div class="cert-sum-name"><b>${escapeHTML(r.name)}</b></div>
           <span class="pill ${cls}" style="font-size:10px;white-space:nowrap">${tag}</span>
         </div>
       </div>`;
@@ -3483,7 +3508,8 @@ async function renderRollcallPage(){
     return;
   }
 
-  const [active, checkins] = await Promise.all([sGet("rollcall_active"), sGet("rollcall_checkins")]);
+  const rcSuf = rollcallKeySuffix();
+  const [active, checkins] = await Promise.all([sGet("rollcall_active"+rcSuf), sGet("rollcall_checkins"+rcSuf)]);
   const chk = checkins || {};
   const isCmdr = userRole === "מפקד";
   const myCheckin = rollcallCheckinInfo(chk[user]);
