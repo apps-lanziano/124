@@ -8416,11 +8416,14 @@ document.getElementById("hdr-date").textContent = new Date().toLocaleDateString(
 if("serviceWorker" in navigator){
   window.addEventListener("load", async ()=>{
     try{
+      // חשוב לבדוק את זה *לפני* register() — צריך להבדיל בין "התקנה ראשונה" (אין להציג רענון)
+      // לבין "עדכון גרסה קיימת" (אז כן). אחרת clients.claim() בהתקנה ראשונה מפעיל controllerchange
+      // בדיוק כמו עדכון אמיתי, וגורם לרענון מיותר (ובמקרים מסוימים ללולאת רענון שנראית כמו תקיעה).
+      const hadController = !!navigator.serviceWorker.controller;
       const reg = await navigator.serviceWorker.register("service-worker.js");
-      // גרסה חדשה תפסה שליטה (אחרי עדכון) — רענון חד-פעמי כדי שהמסך יעודכן אוטומטית
       let refreshed = false;
       navigator.serviceWorker.addEventListener("controllerchange", ()=>{
-        if(refreshed) return;
+        if(refreshed || !hadController) return;
         refreshed = true;
         location.reload();
       });

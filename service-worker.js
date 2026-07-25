@@ -1,4 +1,4 @@
-const CACHE_NAME = "tayeset124-v2";
+const CACHE_NAME = "tayeset124-v3";
 const APP_SHELL = [
   "./index.html",
   "./manifest.json",
@@ -22,15 +22,24 @@ self.addEventListener("activate", event => {
   );
 });
 
+// עוטף בקשת רשת בטיימאאוט — כדי שרשת תקועה (לא בהכרח שגיאה, סתם לא עונה) לא תשאיר
+// את טעינת הדף תלויה לנצח על שעון חול; נופלים למטמון אחרי 8 שניות בלי תגובה
+function fetchWithTimeout(req, ms=8000){
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error("timeout")), ms);
+    fetch(req).then(res => { clearTimeout(t); resolve(res); }, err => { clearTimeout(t); reject(err); });
+  });
+}
+
 // דף האפליקציה עצמו: תמיד קודם מהרשת (כדי שעדכון שדחפנו יגיע מיד),
-// ורק אם אין רשת בכלל — נופלים למטמון (שימוש לא מקוון)
+// ורק אם אין רשת/הרשת תקועה — נופלים למטמון (שימוש לא מקוון)
 self.addEventListener("fetch", event => {
   const req = event.request;
   const isAppDoc = req.mode === "navigate" || req.url.endsWith("index.html");
 
   if (isAppDoc) {
     event.respondWith(
-      fetch(req)
+      fetchWithTimeout(req)
         .then(res => {
           const copy = res.clone();
           caches.open(CACHE_NAME).then(cache => cache.put("./index.html", copy));
