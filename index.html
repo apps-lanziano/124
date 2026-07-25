@@ -1329,6 +1329,26 @@ nav{
         <div class="admin-actions-row">
           <button class="admin-card" style="grid-column:1/-1" onclick="openVoLicenseAdd()"><span class="a-ic">➕</span><b>הוספת רישיון/הסמכה</b><span>לכל חייל בכל סככה</span></button>
         </div>
+        <div class="search-box">
+          <span class="search-ic">🔍</span>
+          <input type="text" id="vo-license-search" placeholder="חיפוש לפי שם…" oninput="renderVoLicenses()">
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <select class="m-input" id="vo-license-sort" style="margin-bottom:0;flex:1" onchange="renderVoLicenses()">
+            <option value="status">מיון: לפי דחיפות</option>
+            <option value="az">מיון: לפי שם (א-ב)</option>
+            <option value="expiry">מיון: לפי תאריך תפוגה</option>
+          </select>
+          <select class="m-input" id="vo-license-status-filter" style="margin-bottom:0;flex:1" onchange="renderVoLicenses()">
+            <option value="all">סטטוס: הכל</option>
+            <option value="r">🔴 פג תוקף</option>
+            <option value="y">🟡 עומד לפוג</option>
+            <option value="g">🟢 בתוקף</option>
+          </select>
+          <select class="m-input" id="vo-license-shed-filter" style="margin-bottom:0;flex:1" onchange="renderVoLicenses()">
+            <option value="all">סככה: הכל</option>
+          </select>
+        </div>
         <div id="vo-licenses-list"></div>
       </div>
     </section>
@@ -1340,10 +1360,6 @@ nav{
           <h2>אחזקה 🔧</h2>
           <p>הזמנת חומרים ומעקב כלים מוטוריים · מחלקת אחזקה</p>
         </div>
-      </div>
-
-      <div class="admin-actions-row" style="margin-bottom:12px">
-        <button class="admin-card" style="grid-column:1/-1" onclick="openVoTeamMgmt()"><span class="a-ic">👥</span><b>ניהול צוות</b><span>הוספה, עריכה ומחיקה — לצורך ימי הולדת</span></button>
       </div>
 
       <div class="cmd-tabs" style="margin-bottom:16px">
@@ -1563,7 +1579,8 @@ nav{
           <select class="m-input" id="tm-role" style="margin-bottom:0;flex:1"><option value="חייל">חייל</option><option value="מפקד">מפקד</option></select>
           <input class="m-input" id="tm-bday" type="date" style="margin-bottom:0;flex:1" title="תאריך לידה">
         </div>
-        <select class="m-input" id="tm-dept" style="margin-bottom:8px;display:none"></select>
+        <input class="m-input" id="tm-dept" list="tm-dept-list" placeholder="מחלקה (טקסט חופשי)" style="margin-bottom:8px;display:none">
+        <datalist id="tm-dept-list"></datalist>
         <select class="m-input" id="tm-officer" style="margin-bottom:8px;display:none"><option value="">— רגיל —</option><option value="קצין">קצין</option></select>
         <select class="m-input" id="tm-profession" style="margin-bottom:8px"><option value="">— ללא מקצוע —</option></select>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך שחרור (אופציונלי — החייל יוסר אוטומטית ביום זה)</label>
@@ -1906,7 +1923,9 @@ nav{
         <div id="vo-team-form-title" style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:8px">➕ הוספת איש צוות</div>
         <input class="m-input" id="vo-team-name" type="text" placeholder="שם מלא" style="margin-bottom:8px">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🎂 תאריך לידה</label>
-        <input class="m-input" id="vo-team-bday" type="date" style="margin-bottom:10px">
+        <input class="m-input" id="vo-team-bday" type="date" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך שחרור (אופציונלי — יוסר אוטומטית ביום זה)</label>
+        <input class="m-input" id="vo-team-release" type="date" style="margin-bottom:10px" title="תאריך שחרור">
         <div style="display:flex;gap:8px">
           <button class="m-btn primary" id="vo-team-save-btn" onclick="saveVoTeamMember()" style="flex:1">➕ הוסף איש צוות</button>
           <button class="m-btn ghost" id="vo-team-cancel-btn" onclick="cancelEditVoTeamMember()" style="flex:0 0 auto;display:none">ביטול עריכה</button>
@@ -2513,9 +2532,10 @@ function populateLogin(){
   document.getElementById("login-empty-note").style.display = "none";
 
   if(currentShed && currentShed.isDept){
-    // יוזר מחלקות — קיבוץ הרשימה לפי מחלקה במקום לפי תפקיד
-    const groups = DEPT_NAMES.map(d=>({ label:d, people: people.filter(p=>p.dept===d) }));
-    const noDept = people.filter(p=>!p.dept || !DEPT_NAMES.includes(p.dept));
+    // יוזר מחלקות — קיבוץ הרשימה לפי מחלקה (טקסט חופשי) במקום לפי תפקיד
+    const deptValues = [...new Set(people.map(p=>p.dept).filter(Boolean))];
+    const groups = deptValues.map(d=>({ label:d, people: people.filter(p=>p.dept===d) }));
+    const noDept = people.filter(p=>!p.dept);
     if(noDept.length) groups.push({label:"ללא מחלקה", people:noDept});
     groups.filter(g=>g.people.length).forEach(g=>{
       const og = document.createElement("optgroup"); og.label = g.label;
@@ -3385,9 +3405,49 @@ async function renderRollcallPage(){
   const box = document.getElementById("rollcall-content");
   if(!box) return;
 
+  if(!currentShed && isVehicleOfficer){
+    // מחלקת אחזקה: רק נכס לצוות הנהגים שלה — בלי מעקב אישי ובלי תצוגה מרוכזת של כל הטייסת
+    box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען…</div>';
+    const [voActive, voCheckins, voTeam] = await Promise.all([
+      sGetRaw("vo_rollcall_active"), sGetRaw("vo_rollcall_checkins"), sGetRaw("vo_personnel")
+    ]);
+    const vChk = voCheckins || {};
+    const team = voTeam || [];
+    let html = "";
+    if(!voActive){
+      html += `<div class="empty-state"><div class="ic">🛡️</div><h3>אין נכס פעיל למחלקה</h3><p>לחץ על הכפתור כדי להפעיל נכס ולסמן עבור הנהגים</p></div>
+        <button class="m-btn primary" style="width:100%;margin-top:10px" onclick="activateVoRollcall()">🚨 הפעל נכס למחלקה</button>`;
+    } else {
+      const done = team.filter(p=>vChk[p.id]).length;
+      html += `<div class="cmd-section-title">📋 מעקב סימונים <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${done}/${team.length}</span></div>`;
+      if(team.length===0){
+        html += `<div class="empty-state"><div class="ic">👥</div><h3>אין עדיין אנשי צוות</h3><p>הוסף נהגים דרך "ניהול צוות"</p></div>`;
+      } else {
+        const sorted = [...team].sort((a,b)=> (vChk[a.id]?1:0) - (vChk[b.id]?1:0));
+        html += sorted.map(p=>`
+          <div class="cert-sum-card" onclick="toggleVoRollcallCheckin('${p.id}')">
+            <div class="cert-sum-head">
+              <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
+              <div class="cert-sum-name"><b>${escapeHTML(p.name)}</b><span>נהג מקצועי</span></div>
+              <span class="pill ${vChk[p.id]?'g':'r'}" style="font-size:10px;white-space:nowrap">${vChk[p.id]?'✅ תקין וזמין':'⏳ טרם סומן'}</span>
+            </div>
+          </div>`).join("");
+        if(team.length>0 && done===team.length){
+          html += `<button class="m-btn primary" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#166534,#22c55e)" onclick="openWaPrompt('rollcall-complete')">✅ דווח בוואטסאפ שהנכס הושלם — כולם תקינים</button>`;
+        }
+      }
+      html += `<div style="display:flex;gap:8px;margin-top:10px">
+        <button class="m-btn ghost" style="flex:1" onclick="endVoRollcall()">🔚 סיים נכס</button>
+        <button class="m-btn primary" style="flex:1" onclick="openWaPrompt('rollcall')">📤 שתף בוואטסאפ</button>
+      </div>`;
+    }
+    box.innerHTML = html;
+    return;
+  }
+
   if(!currentShed){
-    // בעלי תפקידים כלל-טייסתיים — קצין טכני / אחראי הדרכה / מחלקת אחזקה / אחראי תקציבים:
-    // גם הם מסמנים תקינות אישית, בנוסף לתצוגה המרוכזת (קריאה בלבד) של כל שאר המסגרות
+    // שאר בעלי תפקידים כלל-טייסתיים — קצין טכני / אחראי הדרכה / אחראי תקציבים:
+    // מסמנים תקינות אישית, ורואים תצוגה מרוכזת (קריאה בלבד) של כל המסגרות
     box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען נתוני נכס מכל המסגרות…</div>';
     const officerCheckins = (await sGetRaw("rollcall_officer_checkins")) || {};
     const myOfficerCheckedIn = !!officerCheckins[userRole];
@@ -3406,42 +3466,6 @@ async function renderRollcallPage(){
       ${myOfficerCheckedIn ? '✅ סימנת שאתה תקין/ה וזמין/ה' : '🚨 נא לסמן שאתה תקין/ה וזמין/ה'}
     </div>`;
     if(!myOfficerCheckedIn) html += `<button class="m-btn primary" style="width:100%;margin:10px 0" onclick="checkInOfficerRollcall()">✅ אני תקין/ה וזמין/ה</button>`;
-
-    if(isVehicleOfficer){
-      const [voActive, voCheckins, voTeam] = await Promise.all([
-        sGetRaw("vo_rollcall_active"), sGetRaw("vo_rollcall_checkins"), sGetRaw("vo_personnel")
-      ]);
-      const vChk = voCheckins || {};
-      const team = voTeam || [];
-      if(!voActive){
-        html += `<div class="cmd-section-title">🚗 נכס — צוות הנהגים</div>
-          <div class="empty-state"><div class="ic">🛡️</div><h3>אין נכס פעיל לצוות הנהגים</h3><p>לחץ על הכפתור כדי להפעיל נכס ולסמן עבור הנהגים</p></div>
-          <button class="m-btn primary" style="width:100%;margin-top:10px" onclick="activateVoRollcall()">🚨 הפעל נכס לצוות הנהגים</button>`;
-      } else {
-        const done = team.filter(p=>vChk[p.id]).length;
-        html += `<div class="cmd-section-title">🚗 מעקב נכס — צוות הנהגים <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${done}/${team.length}</span></div>`;
-        if(team.length===0){
-          html += `<div class="empty-state"><div class="ic">👥</div><h3>אין עדיין אנשי צוות</h3><p>הוסף נהגים דרך "ניהול צוות"</p></div>`;
-        } else {
-          const sorted = [...team].sort((a,b)=> (vChk[a.id]?1:0) - (vChk[b.id]?1:0));
-          html += sorted.map(p=>`
-            <div class="cert-sum-card" onclick="toggleVoRollcallCheckin('${p.id}')">
-              <div class="cert-sum-head">
-                <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
-                <div class="cert-sum-name"><b>${escapeHTML(p.name)}</b><span>נהג מקצועי</span></div>
-                <span class="pill ${vChk[p.id]?'g':'r'}" style="font-size:10px;white-space:nowrap">${vChk[p.id]?'✅ תקין וזמין':'⏳ טרם סומן'}</span>
-              </div>
-            </div>`).join("");
-          if(done===team.length){
-            html += `<button class="m-btn primary" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#166534,#22c55e)" onclick="openWaPrompt('rollcall-complete')">✅ דווח בוואטסאפ שהנכס הושלם — כולם תקינים</button>`;
-          }
-        }
-        html += `<div style="display:flex;gap:8px;margin-top:10px">
-          <button class="m-btn ghost" style="flex:1" onclick="endVoRollcall()">🔚 סיים נכס</button>
-          <button class="m-btn primary" style="flex:1" onclick="openWaPrompt('rollcall')">📤 שתף בוואטסאפ</button>
-        </div>`;
-      }
-    }
 
     html += `<div class="cmd-section-title">📊 סטטוס לפי מסגרת</div>`;
     html += rows.map(r=>{
@@ -3489,7 +3513,10 @@ async function renderRollcallPage(){
   }
 
   if(isCmdr){
-    const pers = PERSONNEL;
+    // מפקד ביוזר מחלקות עוקב רק אחרי אנשי הצוות המשויכים למחלקה שלו
+    const isDeptUnit = !!(currentShed && currentShed.isDept);
+    const myDept = isDeptUnit ? PERSONNEL.find(p=>p.name===user)?.dept : null;
+    const pers = myDept ? PERSONNEL.filter(p=>p.dept===myDept) : PERSONNEL;
     const done = pers.filter(p=>chk[p.name]).length;
     html += `<div class="cmd-section-title">📋 מעקב סימונים <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${done}/${pers.length}</span></div>`;
     const sorted = [...pers].sort((a,b)=> (chk[a.name]?1:0) - (chk[b.name]?1:0));
@@ -3565,13 +3592,15 @@ async function renderVoTeamMgmt(){
     box.innerHTML = '<div style="text-align:center;color:var(--ink-3);font-size:13px;padding:16px">אין עדיין אנשי צוות</div>';
     return;
   }
-  box.innerHTML = team.map(p=>`
+  box.innerHTML = team.map(p=>{
+    const rel = p.release ? new Date(p.release+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'numeric',year:'2-digit'}) : null;
+    return `
     <div class="mgmt-row">
       <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
-      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini">נהג מקצועי</span></b><span>🎂 ${p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—'}</span></div>
+      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini">נהג מקצועי</span></b><span>🎂 ${p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—'}${rel?' · 🗓️ שחרור '+rel:''}</span></div>
       <button class="mr-del" style="background:var(--sky-soft);border-color:#cfe0ff;color:var(--sky)" onclick="startEditVoTeamMember('${p.id}')">✏️</button>
       <button class="mr-del" onclick="removeVoTeamMember('${p.id}')">🗑️</button>
-    </div>`).join("");
+    </div>`;}).join("");
 }
 async function startEditVoTeamMember(id){
   const team = (await sGetRaw("vo_personnel")) || [];
@@ -3580,6 +3609,7 @@ async function startEditVoTeamMember(id){
   voTeamEditId = id;
   document.getElementById("vo-team-name").value = p.name;
   document.getElementById("vo-team-bday").value = (p.bday && p.bday!=="2000-01-01") ? p.bday : "";
+  document.getElementById("vo-team-release").value = p.release || "";
   document.getElementById("vo-team-form-title").textContent = "✏️ עריכת " + p.name;
   document.getElementById("vo-team-save-btn").textContent = "💾 שמור שינויים";
   document.getElementById("vo-team-cancel-btn").style.display = "block";
@@ -3589,6 +3619,7 @@ function cancelEditVoTeamMember(){
   voTeamEditId = null;
   document.getElementById("vo-team-name").value = "";
   document.getElementById("vo-team-bday").value = "";
+  document.getElementById("vo-team-release").value = "";
   document.getElementById("vo-team-form-title").textContent = "➕ הוספת איש צוות";
   document.getElementById("vo-team-save-btn").textContent = "➕ הוסף איש צוות";
   document.getElementById("vo-team-cancel-btn").style.display = "none";
@@ -3596,21 +3627,31 @@ function cancelEditVoTeamMember(){
 async function saveVoTeamMember(){
   const name = document.getElementById("vo-team-name").value.trim();
   const bday = document.getElementById("vo-team-bday").value;
+  const release = document.getElementById("vo-team-release").value;
   if(name.length<2){ toast("נא להזין שם"); return; }
   const team = (await sGetRaw("vo_personnel")) || [];
   if(voTeamEditId){
     const p = team.find(x=>x.id===voTeamEditId);
-    if(p){ p.name=name; p.bday=bday||"2000-01-01"; }
+    if(p){ p.name=name; p.bday=bday||"2000-01-01"; if(release) p.release=release; else delete p.release; }
     toast("הפרטים עודכנו ✓");
   } else {
     if(team.some(p=>p.name===name)){ toast("שם כבר קיים"); return; }
-    team.push({id:"vop"+Date.now()+Math.random().toString(36).slice(2,6), name, bday: bday||"2000-01-01"});
+    const member = {id:"vop"+Date.now()+Math.random().toString(36).slice(2,6), name, bday: bday||"2000-01-01"};
+    if(release) member.release = release;
+    team.push(member);
     toast("איש הצוות נוסף ✓");
   }
   await sSetRaw("vo_personnel", team);
   cancelEditVoTeamMember();
   renderVoTeamMgmt();
   renderBdays();
+}
+/* הסרה אוטומטית של נהגים ששוחררו (תאריך שחרור עבר/היום) — כמו בסככות, אך על vo_personnel הגלובלי */
+async function processVoReleases(){
+  const today = todayKey();
+  const team = (await sGetRaw("vo_personnel")) || [];
+  const stayed = team.filter(p=> !(p.release && p.release <= today));
+  if(stayed.length !== team.length) await sSetRaw("vo_personnel", stayed);
 }
 async function removeVoTeamMember(id){
   const team = (await sGetRaw("vo_personnel")) || [];
@@ -4284,12 +4325,16 @@ async function deleteFault(id){
 /* ===== TEAM MGMT (feature 8) ===== */
 function openTeamMgmt(){
   cancelEditMember();
-  const deptSel = document.getElementById("tm-dept");
+  const deptInput = document.getElementById("tm-dept");
   const officerSel = document.getElementById("tm-officer");
   const profSel = document.getElementById("tm-profession");
   const isDeptUnit = !!(currentShed && currentShed.isDept);
-  deptSel.style.display = isDeptUnit ? "" : "none";
-  if(isDeptUnit) deptSel.innerHTML = '<option value="">— בחר מחלקה —</option>' + DEPT_NAMES.map(d=>`<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`).join("");
+  deptInput.style.display = isDeptUnit ? "" : "none";
+  if(isDeptUnit){
+    const knownDepts = [...new Set([...DEPT_NAMES, ...PERSONNEL.map(p=>p.dept).filter(Boolean)])];
+    document.getElementById("tm-dept-list").innerHTML = knownDepts.map(d=>`<option value="${escapeHTML(d)}">`).join("");
+    deptInput.value = PERSONNEL.find(p=>p.name===user)?.dept || "";
+  }
   officerSel.style.display = isDeptUnit ? "" : "none";
   profSel.style.display = isDeptUnit ? "none" : "";
   if(!isDeptUnit) profSel.innerHTML = '<option value="">— ללא מקצוע —</option>' + PROFESSIONS.map(p=>`<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`).join("");
@@ -4300,16 +4345,21 @@ let editMemberIdx = -1;   // -1 = add mode; otherwise editing index
 
 async function renderTeamMgmt(){
   const box=document.getElementById("team-mgmt-list");
-  if(PERSONNEL.length===0){
+  const isDeptUnit = !!(currentShed && currentShed.isDept);
+  // מפקד ביוזר מחלקות עוקב רק אחרי אנשי הצוות המשויכים למחלקה שלו, לא אחרי כל המחלקות
+  const myDept = (isDeptUnit && userRole==="מפקד") ? PERSONNEL.find(p=>p.name===user)?.dept : null;
+  const indexed = PERSONNEL.map((p,i)=>({p,i}));
+  const visible = myDept ? indexed.filter(x=>x.p.dept===myDept) : indexed;
+  if(visible.length===0){
     box.innerHTML = '<div style="text-align:center;color:var(--ink-3);font-size:13px;padding:16px">אין עדיין אנשי צוות</div>';
     return;
   }
-  const certs = await getCerts();
-  box.innerHTML = PERSONNEL.map((p,i)=>{
+  const certs = isDeptUnit ? [] : await getCerts();
+  box.innerHTML = visible.map(({p,i})=>{
     const rel = p.release ? new Date(p.release+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'numeric',year:'2-digit'}) : null;
-    const pf = p.role==="חייל" ? pfStatus(p, certs) : null;
+    const pf = (!isDeptUnit && p.role==="חייל") ? pfStatus(p, certs) : null;
     const pfTag = pf ? `<span class="pill ${pf.cls}" style="font-size:9px;margin-right:4px">${pf.tag}</span>` : "";
-    const st7 = stage7Status(p, certs);
+    const st7 = isDeptUnit ? null : stage7Status(p, certs);
     const st7Tag = st7 ? `<span class="pill ${st7.cls}" style="font-size:9px;margin-right:4px">${st7.tag}</span>` : "";
     const deptTag = p.dept ? `<span class="role-mini">${escapeHTML(p.dept)}</span>` : "";
     const officerTag = p.officerTag ? `<span class="role-mini">${escapeHTML(p.officerTag)}</span>` : "";
@@ -4380,11 +4430,10 @@ async function saveTeamMember(){
   const bday=document.getElementById("tm-bday").value;
   const release=document.getElementById("tm-release").value;
   const isDeptUnit = !!(currentShed && currentShed.isDept);
-  const dept = isDeptUnit ? document.getElementById("tm-dept").value : "";
+  const dept = isDeptUnit ? document.getElementById("tm-dept").value.trim() : "";
   const officerTag = isDeptUnit ? document.getElementById("tm-officer").value : "";
   const profession = isDeptUnit ? "" : document.getElementById("tm-profession").value;
   if(name.length<2){ toast("נא להזין שם"); return; }
-  if(isDeptUnit && !dept){ toast("נא לבחור מחלקה"); return; }
   // duplicate check (ignore self when editing)
   const dup = PERSONNEL.some((p,idx)=>p.name===name && idx!==editMemberIdx);
   if(dup){ toast("שם כבר קיים"); return; }
@@ -4395,14 +4444,14 @@ async function saveTeamMember(){
     const oldName = p.name;
     p.name=name; p.role=role; p.bday=bday||"2000-01-01";
     if(release) p.release=release; else delete p.release;
-    if(isDeptUnit){ p.dept=dept; if(officerTag) p.officerTag=officerTag; else delete p.officerTag; }
+    if(isDeptUnit){ if(dept) p.dept=dept; else delete p.dept; if(officerTag) p.officerTag=officerTag; else delete p.officerTag; }
     else if(profession) p.profession=profession; else delete p.profession;
     if(oldName!==name) await renamePersonEverywhere(oldName, name);
     toast("הפרטים עודכנו ✓");
   } else {
     const member = {name, role, bday: bday||"2000-01-01", joined: todayKey()};
     if(release) member.release=release;
-    if(isDeptUnit){ member.dept=dept; if(officerTag) member.officerTag=officerTag; }
+    if(isDeptUnit){ if(dept) member.dept=dept; if(officerTag) member.officerTag=officerTag; }
     else if(profession) member.profession=profession;
     PERSONNEL.push(member);
     // חייל חדש בסככה (לא במחלקות) מקבל אוטומטית שלב 7 — הספירה לשלב 10 מתחילה מהיום
@@ -4597,6 +4646,7 @@ async function vehicleOfficerLogin(){
   document.getElementById("nav-rollcall").classList.remove("hidden");
   await ensureShed2Seed();
   await ensureAllShedsSeed();
+  await processVoReleases();
   go("scr-vehicle-officer", document.getElementById("nav-vehicle-officer"));
   renderDocs();
   renderBdays();
@@ -6025,7 +6075,7 @@ async function renderTrends(){
     if(d<0){ certExpired++; priorityFeed.push({cls:"r", ic:"🎓", title:`${c.person} — ${certCleanName(c.name)}`, sub:`פג תוקף לפני ${Math.abs(d)} ימים`, tag:"פג תוקף", days:d, go:"goCertsPage()"}); }
     else if(d<=30){ certSoon++; priorityFeed.push({cls:"y", ic:"🎓", title:`${c.person} — ${certCleanName(c.name)}`, sub:`פג בעוד ${d} ימים`, tag:d+" ימים", days:d, go:"goCertsPage()"}); }
   });
-  const pfList = PERSONNEL.filter(p=>p.role==="חייל").map(p=>({p, st:pfStatus(p, certs)})).filter(x=>x.st);
+  const pfList = isDeptUnit ? [] : PERSONNEL.filter(p=>p.role==="חייל").map(p=>({p, st:pfStatus(p, certs)})).filter(x=>x.st);
   pfList.forEach(({p,st})=>{
     priorityFeed.push({cls:st.cls==="r"?"r":"y", ic:"🟡", title:`${p.name} — הסמכת PF`, sub:st.tag, tag:st.cls==="r"?"פג המועד":"בקרוב", days:0, go:"openTeamMgmt()"});
   });
@@ -7351,16 +7401,21 @@ function licenseStatus(l){
   return {tag:"בתוקף", cls:"g"};
 }
 /* מקבץ רישיונות/הסמכות לפי סוג — הפרדה חזותית בין כל סוג (כמו סף/רף/וכו' בהסמכות) */
-function groupLicensesByTypeHtml(withStatus, showShedAndActions){
+function groupLicensesByTypeHtml(withStatus, showShedAndActions, sortMode){
   const order = {r:0, y:1, g:2};
   const groups = {};
   withStatus.forEach(l=>{ (groups[l.type] = groups[l.type] || []).push(l); });
   const typeOrder = t => { const i = LICENSE_BANK_DEFAULT.indexOf(t); return i===-1 ? 999 : i; };
   const types = Object.keys(groups).sort((a,b)=> typeOrder(a)-typeOrder(b) || a.localeCompare(b,"he"));
   const shedName = id => (SHEDS.find(s=>s.id===id)||{}).name || id;
+  const sortFn = (a,b)=>{
+    if(sortMode==="az") return a.person.localeCompare(b.person,"he");
+    if(sortMode==="expiry") return (a.expiry||"9999-99-99").localeCompare(b.expiry||"9999-99-99");
+    return order[a.st.cls]-order[b.st.cls];
+  };
   let html = "";
   types.forEach(type=>{
-    const list = groups[type].sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
+    const list = groups[type].sort(sortFn);
     html += `<div class="cmd-section-title">🪪 ${escapeHTML(type)} <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${list.length}</span></div>` +
       list.map(l=>`
       <div class="cert-sum-card" style="cursor:default">
@@ -7455,8 +7510,25 @@ async function renderVoLicenses(){
     box.innerHTML = `<div class="empty-state"><div class="ic">🪪</div><h3>אין עדיין רישיונות במעקב</h3><p>הוסף רישיון באמצעות "הוספת רישיון/הסמכה"</p></div>`;
     return;
   }
-  const withStatus = licenses.map(l=>({...l, st: licenseStatus(l)}));
-  box.innerHTML = groupLicensesByTypeHtml(withStatus, true);
+  const shedSel = document.getElementById("vo-license-shed-filter");
+  if(shedSel && shedSel.options.length<=1){
+    shedSel.innerHTML = '<option value="all">סככה: הכל</option>' + SHEDS.map(s=>`<option value="${s.id}">${escapeHTML(s.name)}</option>`).join("");
+  }
+  const search = (document.getElementById("vo-license-search")?.value || "").trim();
+  const statusFilter = document.getElementById("vo-license-status-filter")?.value || "all";
+  const shedFilter = document.getElementById("vo-license-shed-filter")?.value || "all";
+  const sortMode = document.getElementById("vo-license-sort")?.value || "status";
+
+  let withStatus = licenses.map(l=>({...l, st: licenseStatus(l)}));
+  if(search) withStatus = withStatus.filter(l=>l.person.includes(search));
+  if(statusFilter!=="all") withStatus = withStatus.filter(l=>l.st.cls===statusFilter);
+  if(shedFilter!=="all") withStatus = withStatus.filter(l=>l.shedId===shedFilter);
+
+  if(withStatus.length===0){
+    box.innerHTML = `<div class="empty-state"><div class="ic">🔍</div><h3>אין תוצאות</h3><p>נסה לשנות את החיפוש או הסינון</p></div>`;
+    return;
+  }
+  box.innerHTML = groupLicensesByTypeHtml(withStatus, true, sortMode);
 }
 
 /* ============================================================
