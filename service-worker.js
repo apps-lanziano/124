@@ -1,4 +1,4 @@
-const CACHE_NAME = "tayeset124-v3";
+const CACHE_NAME = "tayeset124-v5";
 const APP_SHELL = [
   "./index.html",
   "./manifest.json",
@@ -11,7 +11,9 @@ self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL))
   );
-  self.skipWaiting(); // גרסה חדשה מתחילה לפעול מיד — לא מחכה שכל הטאבים הישנים ייסגרו
+  // בכוונה בלי self.skipWaiting() כאן — גרסה חדשה נשארת "ממתינה" עד
+  // שהמשתמש עצמו לוחץ על "רענון" (ר' listener להודעה למטה). כך אף עדכון
+  // לא קופץ ומרענן את המסך בכוח באמצע שימוש/מילוי טופס.
 });
 
 self.addEventListener("activate", event => {
@@ -20,6 +22,11 @@ self.addEventListener("activate", event => {
       Promise.all(names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n)))
     ).then(() => self.clients.claim())
   );
+});
+
+// המסך שולח את זה רק כשהמשתמש לוחץ בעצמו על "גרסה חדשה זמינה"
+self.addEventListener("message", event => {
+  if (event.data === "SKIP_WAITING") self.skipWaiting();
 });
 
 // עוטף בקשת רשת בטיימאאוט — כדי שרשת תקועה (לא בהכרח שגיאה, סתם לא עונה) לא תשאיר

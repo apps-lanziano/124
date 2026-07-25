@@ -8416,20 +8416,53 @@ document.getElementById("hdr-date").textContent = new Date().toLocaleDateString(
 if("serviceWorker" in navigator){
   window.addEventListener("load", async ()=>{
     try{
-      // חשוב לבדוק את זה *לפני* register() — צריך להבדיל בין "התקנה ראשונה" (אין להציג רענון)
-      // לבין "עדכון גרסה קיימת" (אז כן). אחרת clients.claim() בהתקנה ראשונה מפעיל controllerchange
-      // בדיוק כמו עדכון אמיתי, וגורם לרענון מיותר (ובמקרים מסוימים ללולאת רענון שנראית כמו תקיעה).
+      // חשוב לבדוק את זה *לפני* register() — צריך להבדיל בין "התקנה ראשונה" (אין להציג כלום)
+      // לבין "עדכון גרסה קיימת" (אז מציגים כפתור). אחרת clients.claim() בהתקנה ראשונה מפעיל
+      // controllerchange בדיוק כמו עדכון אמיתי.
       const hadController = !!navigator.serviceWorker.controller;
-      const reg = await navigator.serviceWorker.register("service-worker.js");
-      let refreshed = false;
+      // updateViaCache:"none" — לא סומכים על caching heuristics של השרת בכלל;
+      // תמיד בודקים מול הרשת אם יש גרסה חדשה בפועל (בייטים), כדי שעדכון לעולם לא "ייתקע" ולא יתגלה
+      const reg = await navigator.serviceWorker.register("service-worker.js", { updateViaCache: "none" });
+
+      // עדכון לא מרענן אף פעם בכוח — רק מציג כפתור עדין; המשתמש לוחץ כשנוח לו
+      function checkWaiting(){
+        if(hadController && reg.waiting) showUpdateHint(reg.waiting);
+      }
+      checkWaiting();
+      reg.addEventListener("updatefound", ()=>{
+        const nw = reg.installing;
+        if(!nw) return;
+        nw.addEventListener("statechange", ()=>{ if(nw.state==="installed") checkWaiting(); });
+        // בדיקה חוזרת קצרה כגיבוי — המעבר ל"installed" עלול לקרות מהר יותר מהספק
+        // שהאזנת ה-statechange תספיק להתחבר, ואז ה-event מוחמץ
+        let tries=0;
+        const poll = setInterval(()=>{
+          checkWaiting();
+          if(reg.waiting || ++tries>10) clearInterval(poll);
+        }, 300);
+      });
+
+      let reloaded = false;
       navigator.serviceWorker.addEventListener("controllerchange", ()=>{
-        if(refreshed || !hadController) return;
-        refreshed = true;
+        if(reloaded || !hadController) return;   // מרעננים רק אחרי שהמשתמש עצמו אישר (postMessage למטה)
+        reloaded = true;
         location.reload();
       });
+
       reg.update();
+      // בדיקה תקופתית — כדי שגם טאב שנשאר פתוח שעות ארוכות בלי לצאת ולהיכנס מחדש יגלה עדכון
+      setInterval(()=>{ reg.update().catch(()=>{}); }, 30*60*1000);
     }catch(e){ console.error("service worker registration failed", e); }
   });
+}
+function showUpdateHint(waitingWorker){
+  if(document.getElementById("update-hint")) return;
+  const b = document.createElement("button");
+  b.id="update-hint";
+  b.textContent="🔄 גרסה חדשה זמינה — לחץ לרענון";
+  b.style.cssText="position:absolute;bottom:96px;left:50%;transform:translateX(-50%);z-index:59;background:var(--red);color:#fff;border:none;font-family:'Heebo';font-weight:800;font-size:13px;padding:11px 20px;border-radius:99px;box-shadow:0 10px 26px -6px rgba(179,15,38,.5);cursor:pointer";
+  b.onclick = ()=>{ waitingWorker.postMessage("SKIP_WAITING"); b.remove(); };
+  document.getElementById("app").appendChild(b);
 }
 
 // install prompt (feature 14)
