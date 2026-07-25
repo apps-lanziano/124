@@ -1629,7 +1629,7 @@ nav{
         </div>
         <input class="m-input" id="tm-dept" list="tm-dept-list" placeholder="מחלקה (טקסט חופשי)" style="margin-bottom:8px;display:none">
         <datalist id="tm-dept-list"></datalist>
-        <select class="m-input" id="tm-officer" style="margin-bottom:8px;display:none"><option value="">— רגיל —</option><option value="קצין">קצין</option></select>
+        <select class="m-input" id="tm-officer" style="margin-bottom:8px;display:none"><option value="">— רגיל (משויך למחלקה) —</option><option value="קצין">🎖️ קצין — משויך לצוות "קצינים"</option></select>
         <select class="m-input" id="tm-profession" style="margin-bottom:8px"><option value="">— ללא מקצוע —</option></select>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך שחרור (אופציונלי — החייל יוסר אוטומטית ביום זה)</label>
         <input class="m-input" id="tm-release" type="date" style="margin-bottom:10px" title="תאריך שחרור">
@@ -2531,6 +2531,14 @@ const SHEDS = [
 ];
 /* תת-מחלקות תחת יוזר "מחלקות" — תיוג בלבד, לא משפיע על הרשאות */
 const DEPT_NAMES = ["הטסה", "אוה\"ד", "אחזקה", "קה\"ד מ\"מ"];
+const OFFICERS_DEPT = "קצינים";   // תת-מחלקה ביוזר "מחלקות" — מאוכלסת ממי שמסומן "קצין"
+/* המחלקה האפקטיבית של איש צוות ביוזר "מחלקות": מי שמסומן קצין משויך לצוות
+   "קצינים" ולא למחלקת המקור שלו — כך הוא מקבל נכס, הודעות וניהול צוות משלו.
+   שדה dept המקורי נשמר כמות שהוא, כדי שהסרת הסימון תחזיר אותו למחלקתו. */
+function personDept(p){
+  if(!p) return "";
+  return p.officerTag === "קצין" ? OFFICERS_DEPT : (p.dept || "");
+}
 /* מקצועות לחייל בניהול צוות של הסככות (לא רלוונטי ליוזר "מחלקות") — תיוג בלבד */
 const PROFESSIONS = ["טכנאי דרג א'", "פקיד כלים"];
 const ADMIN_CODE = "9124";   // קוד מנהל-על
@@ -2641,9 +2649,9 @@ function populateLogin(){
 
   if(currentShed && currentShed.isDept){
     // יוזר מחלקות — קיבוץ הרשימה לפי מחלקה (טקסט חופשי) במקום לפי תפקיד
-    const deptValues = [...new Set(people.map(p=>p.dept).filter(Boolean))];
-    const groups = deptValues.map(d=>({ label:d, people: people.filter(p=>p.dept===d) }));
-    const noDept = people.filter(p=>!p.dept);
+    const deptValues = [...new Set(people.map(p=>personDept(p)).filter(Boolean))];
+    const groups = deptValues.map(d=>({ label:d, people: people.filter(p=>personDept(p)===d) }));
+    const noDept = people.filter(p=>!personDept(p));
     if(noDept.length) groups.push({label:"ללא מחלקה", people:noDept});
     groups.filter(g=>g.people.length).forEach(g=>{
       const og = document.createElement("optgroup"); og.label = g.label;
@@ -2685,7 +2693,7 @@ async function doLogin(){
     document.getElementById("login-overlay").style.display="none";
     document.getElementById("hdr-username").textContent = user;
     document.getElementById("hdr-rank").textContent = userRole === "מפקד" ? "🎖️ מפקד" : "👤 חייל";
-    const shedLabel = (currentShed.isDept && person.dept) ? person.dept : currentShed.name;
+    const shedLabel = (currentShed.isDept && personDept(person)) ? personDept(person) : currentShed.name;
     document.getElementById("hdr-shed").textContent = "דרג א' · " + shedLabel;
 
     await refreshAreaPermissions();
@@ -3474,7 +3482,7 @@ function bdayInfo(p){
    ============================================================ */
 function rollcallKeySuffix(){
   if(currentShed && currentShed.isDept){
-    const myDept = PERSONNEL.find(p=>p.name===user)?.dept;
+    const myDept = personDept(PERSONNEL.find(p=>p.name===user));
     if(myDept) return "_"+myDept;
   }
   return "";
@@ -3542,15 +3550,15 @@ async function buildSquadronRollcallRowsHtml(){
   for(const shed of SHEDS){
     const pers = (await sGetIn(shed.id, "cfg_personnel")) || [];
     if(shed.isDept){
-      const deptValues = [...new Set([...DEPT_NAMES, ...pers.map(p=>p.dept).filter(Boolean)])];
+      const deptValues = [...new Set([...DEPT_NAMES, OFFICERS_DEPT, ...pers.map(p=>personDept(p)).filter(Boolean)])];
       for(const d of deptValues){
-        const subPers = pers.filter(p=>p.dept===d);
+        const subPers = pers.filter(p=>personDept(p)===d);
         if(subPers.length===0) continue;
         const [active, checkins] = await Promise.all([sGetIn(shed.id,"rollcall_active_"+d), sGetIn(shed.id,"rollcall_checkins_"+d)]);
         const chk = checkins || {};
         rows.push({name: shed.name+" · "+d, active: !!active, done: subPers.filter(p=>chk[p.name]).length, total: subPers.length});
       }
-      const noDept = pers.filter(p=>!p.dept);
+      const noDept = pers.filter(p=>!personDept(p));
       if(noDept.length){
         const [active, checkins] = await Promise.all([sGetIn(shed.id,"rollcall_active"), sGetIn(shed.id,"rollcall_checkins")]);
         const chk = checkins || {};
@@ -3670,8 +3678,8 @@ async function renderRollcallPage(){
   if(isCmdr){
     // מפקד ביוזר מחלקות עוקב רק אחרי אנשי הצוות המשויכים למחלקה שלו
     const isDeptUnit = !!(currentShed && currentShed.isDept);
-    const myDept = isDeptUnit ? PERSONNEL.find(p=>p.name===user)?.dept : null;
-    const pers = myDept ? PERSONNEL.filter(p=>p.dept===myDept) : PERSONNEL;
+    const myDept = isDeptUnit ? personDept(PERSONNEL.find(p=>p.name===user)) : null;
+    const pers = myDept ? PERSONNEL.filter(p=>personDept(p)===myDept) : PERSONNEL;
     const done = pers.filter(p=>chk[p.name]).length;
     html += `<div class="cmd-section-title">📋 מעקב סימונים <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${done}/${pers.length}</span></div>`;
     const sorted = [...pers].sort((a,b)=> (chk[a.name]?1:0) - (chk[b.name]?1:0));
@@ -4076,7 +4084,7 @@ function waShedName(){
   if(isAdmin) return "כלל המסגרות";
   if(currentShed && currentShed.isDept){
     const p = PERSONNEL.find(p=>p.name===user);
-    if(p && p.dept) return p.dept;
+    if(p && personDept(p)) return personDept(p);
   }
   return currentShed ? currentShed.name : "טייסת 124";
 }
@@ -4261,7 +4269,7 @@ async function renderMessages(){
   if(!area) return;
   const isCmdr = userRole === "מפקד";
   const isDeptUnit = !!(currentShed && currentShed.isDept);
-  const myDept = isDeptUnit ? PERSONNEL.find(p=>p.name===user)?.dept : null;
+  const myDept = isDeptUnit ? personDept(PERSONNEL.find(p=>p.name===user)) : null;
   let msgs = isAdmin ? ((await sGetRaw("admin_messages")) || []) : ((await sGet("messages_list")) || []);
   // ביוזר "מחלקות" כל תת-מחלקה רואה רק הודעות שהתפרסמו על ידה (הודעות ישנות בלי תיוג מחלקה נשארות גלויות לכולם)
   if(isDeptUnit && myDept) msgs = msgs.filter(m=>!m.dept || m.dept===myDept);
@@ -4283,7 +4291,7 @@ async function renderMessages(){
     }
   }
 
-  const receiptDenom = (isDeptUnit && myDept) ? PERSONNEL.filter(p=>p.dept===myDept).length : PERSONNEL.length;
+  const receiptDenom = (isDeptUnit && myDept) ? PERSONNEL.filter(p=>personDept(p)===myDept).length : PERSONNEL.length;
   area.style.marginBottom = "2px";
   area.innerHTML = msgs.map(m=>{
     const st = MSG_STYLE[m.type] || MSG_STYLE.info;
@@ -4313,7 +4321,7 @@ async function saveMessage(){
   const text = document.getElementById("msg-text").value.trim();
   if(text.length<2) return;
   const isDeptUnit = !!(currentShed && currentShed.isDept);
-  const myDept = isDeptUnit ? (PERSONNEL.find(p=>p.name===user)?.dept || null) : null;
+  const myDept = isDeptUnit ? (personDept(PERSONNEL.find(p=>p.name===user)) || null) : null;
   const msgObj = {id:"msg_"+Date.now(), text, type:msgType, by:user, date:new Date().toLocaleDateString("he-IL"), dept: myDept};
   if(isAdmin){
     // מנהל — פרסום לכל המסגרות + עותק ברשימת המנהל
@@ -4341,7 +4349,7 @@ async function saveMessage(){
 }
 async function renderMsgExisting(){
   const isDeptUnit = !!(currentShed && currentShed.isDept);
-  const myDept = isDeptUnit ? PERSONNEL.find(p=>p.name===user)?.dept : null;
+  const myDept = isDeptUnit ? personDept(PERSONNEL.find(p=>p.name===user)) : null;
   let msgs = isAdmin ? ((await sGetRaw("admin_messages")) || []) : ((await sGet("messages_list")) || []);
   if(isDeptUnit && myDept) msgs = msgs.filter(m=>!m.dept || m.dept===myDept);
   const box = document.getElementById("msg-existing");
@@ -4361,7 +4369,7 @@ async function deleteMessage(id, fromModal){
   } else {
     let msgs = (await sGet("messages_list")) || [];
     const isDeptUnit = !!(currentShed && currentShed.isDept);
-    const myDept = isDeptUnit ? PERSONNEL.find(p=>p.name===user)?.dept : null;
+    const myDept = isDeptUnit ? personDept(PERSONNEL.find(p=>p.name===user)) : null;
     if(isDeptUnit && myDept){
       const target = msgs.find(m=>m.id===id);
       if(target && target.dept && target.dept!==myDept){ toast("אין הרשאה למחוק הודעה של מחלקה אחרת ⛔"); return; }
@@ -4527,7 +4535,7 @@ async function getBinuiFaults(){ return (await sGetRaw("binui_faults_list")) || 
 /* מזהה את המסגרת המדווחת — סככה, או ביוזר מחלקות: הסככה + המחלקה הספציפית של המדווח */
 function myBinuiOrigin(){
   if(!currentShed) return null;
-  const dept = currentShed.isDept ? (PERSONNEL.find(p=>p.name===user)?.dept || null) : null;
+  const dept = currentShed.isDept ? (personDept(PERSONNEL.find(p=>p.name===user)) || null) : null;
   return { shedId: currentShed.id, shedName: (currentShed.isDept && dept) ? (currentShed.name+" · "+dept) : currentShed.name, dept };
 }
 
@@ -4692,7 +4700,10 @@ function openTeamMgmt(){
   if(isDeptUnit){
     const knownDepts = [...new Set([...DEPT_NAMES, ...PERSONNEL.map(p=>p.dept).filter(Boolean)])];
     document.getElementById("tm-dept-list").innerHTML = knownDepts.map(d=>`<option value="${escapeHTML(d)}">`).join("");
-    deptInput.value = PERSONNEL.find(p=>p.name===user)?.dept || "";
+    const me = PERSONNEL.find(p=>p.name===user);
+    deptInput.value = me?.dept || "";
+    // מפקד צוות "קצינים" מוסיף כברירת מחדל לצוות שלו, ולא למחלקת המקור שלו
+    if(personDept(me) === OFFICERS_DEPT) officerSel.value = "קצין";
   }
   officerSel.style.display = isDeptUnit ? "" : "none";
   profSel.style.display = isDeptUnit ? "none" : "";
@@ -4706,9 +4717,9 @@ async function renderTeamMgmt(){
   const box=document.getElementById("team-mgmt-list");
   const isDeptUnit = !!(currentShed && currentShed.isDept);
   // מפקד ביוזר מחלקות עוקב רק אחרי אנשי הצוות המשויכים למחלקה שלו, לא אחרי כל המחלקות
-  const myDept = (isDeptUnit && userRole==="מפקד") ? PERSONNEL.find(p=>p.name===user)?.dept : null;
+  const myDept = (isDeptUnit && userRole==="מפקד") ? personDept(PERSONNEL.find(p=>p.name===user)) : null;
   const indexed = PERSONNEL.map((p,i)=>({p,i}));
-  let visible = myDept ? indexed.filter(x=>x.p.dept===myDept) : indexed;
+  let visible = myDept ? indexed.filter(x=>personDept(x.p)===myDept) : indexed;
 
   const searchBox = document.getElementById("tm-search");
   searchBox.classList.toggle("hidden", visible.length<6);
@@ -4726,8 +4737,8 @@ async function renderTeamMgmt(){
     const pfTag = pf ? `<span class="pill ${pf.cls}" style="font-size:9px;margin-right:4px">${pf.tag}</span>` : "";
     const st7 = isDeptUnit ? null : stage7Status(p, certs);
     const st7Tag = st7 ? `<span class="pill ${st7.cls}" style="font-size:9px;margin-right:4px">${st7.tag}</span>` : "";
-    const deptTag = p.dept ? `<span class="role-mini">${escapeHTML(p.dept)}</span>` : "";
-    const officerTag = p.officerTag ? `<span class="role-mini">${escapeHTML(p.officerTag)}</span>` : "";
+    const deptTag = personDept(p) ? `<span class="role-mini">${escapeHTML(personDept(p))}</span>` : "";
+    const officerTag = p.officerTag ? `<span class="role-mini">🎖️ ${escapeHTML(p.officerTag)}</span>` : "";
     const profTag = p.profession ? `<span class="role-mini">${escapeHTML(p.profession)}</span>` : "";
     return `
     <div class="mgmt-row">
