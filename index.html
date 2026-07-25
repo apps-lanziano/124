@@ -1213,10 +1213,10 @@ nav{
       <!-- PANE: OVERVIEW -->
       <div class="admin-pane active" id="apane-overview">
         <div class="admin-actions-row">
-          <button class="admin-card" onclick="openAdminEvent()"><span class="a-ic">📄</span><b>פרסום קרא וחתום</b><span>לכל הסככות</span></button>
-          <button class="admin-card" onclick="openAdminBoard()"><span class="a-ic">📅</span><b>העלאת לוח צוות</b><span>לכל הסככות</span></button>
-          <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>פרסום הודעה</b><span>לכל הסככות</span></button>
-          <button class="admin-card" onclick="openAdminAlerts()"><span class="a-ic">🔔</span><b>מרכז התראות</b><span>כל הסככות</span></button>
+          <button class="admin-card" onclick="openAdminEvent()"><span class="a-ic">📄</span><b>פרסום קרא וחתום</b><span>לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openAdminBoard()"><span class="a-ic">📅</span><b>העלאת לוח צוות</b><span>לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>פרסום הודעה</b><span>לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openAdminAlerts()"><span class="a-ic">🔔</span><b>מרכז התראות</b><span>כל המסגרות</span></button>
         </div>
         <div class="cmd-section-title">📄 קרא וחתום שפורסמו — כלל הטייסת</div>
         <div id="admin-events-list"></div>
@@ -1227,17 +1227,17 @@ nav{
       <!-- PANE: CERTS -->
       <div class="admin-pane" id="apane-certs">
         <div class="admin-actions-row">
-          <button class="admin-card" onclick="openAdminCertAdd()"><span class="a-ic">➕</span><b>הזנת הסמכה</b><span>לכל חייל בכל סככה</span></button>
+          <button class="admin-card" onclick="openAdminCertAdd()"><span class="a-ic">➕</span><b>הזנת הסמכה</b><span>לכל חייל בכל מסגרת</span></button>
           <button class="admin-card" onclick="openCertBank()"><span class="a-ic">🗃️</span><b>בנק הסמכות</b><span>רשימה סטנדרטית</span></button>
         </div>
         <div class="cmd-section-title">⏳ הסמכות שעומדות לפוג — כלל הטייסת</div>
         <div id="admin-cert-expiry"></div>
         <div class="cmd-section-title">🟡 חיילים שטרם הוסמכו PF — כלל הטייסת</div>
         <div id="admin-pf-status"></div>
-        <div class="cmd-section-title">🎓 הסמכות לפי חייל · כל הסככות</div>
+        <div class="cmd-section-title">🎓 הסמכות לפי חייל · כל המסגרות</div>
         <div class="matrix-hint">לחץ על חייל לפירוט · ✕ למחיקת הסמכה</div>
         <select class="m-input" id="admin-cert-shed-filter" style="margin-bottom:8px" onchange="renderAdminCertMatrix()">
-          <option value="all">כל הסככות</option>
+          <option value="all">כל המסגרות</option>
         </select>
         <div class="search-box" id="admin-cert-search-box" style="display:flex;margin-bottom:8px">
           <span class="search-ic">🔍</span>
@@ -1269,7 +1269,7 @@ nav{
       <!-- PANE: TRAINING -->
       <div class="admin-pane" id="apane-training">
         <div class="admin-actions-row">
-          <button class="admin-card" onclick="openTrainingUpload()" style="grid-column:1/-1"><span class="a-ic">📚</span><b>פרסום חומר הדרכה</b><span>מצגת / מסמך לכל הסככות</span></button>
+          <button class="admin-card" onclick="openTrainingUpload()" style="grid-column:1/-1"><span class="a-ic">📚</span><b>פרסום חומר הדרכה</b><span>מצגת / מסמך לכל המסגרות</span></button>
         </div>
         <div class="cmd-section-title">📚 חומרי הדרכה שפורסמו</div>
         <div id="admin-training-list"></div>
@@ -1278,7 +1278,7 @@ nav{
       <!-- PANE: RESERVES -->
       <div class="admin-pane" id="apane-reserves">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openReserveAdd()"><span class="a-ic">➕</span><b>הוספת איש מילואים</b><span>לכל חייל בכל סככה</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openReserveAdd()"><span class="a-ic">➕</span><b>הוספת איש מילואים</b><span>לכל חייל בכל מסגרת</span></button>
         </div>
         <div id="admin-reserves-list"></div>
       </div>
@@ -1340,7 +1340,7 @@ nav{
       <!-- PANE: LICENSES -->
       <div class="admin-pane" id="vopane-licenses">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openVoLicenseAdd()"><span class="a-ic">➕</span><b>הוספת רישיון/הסמכה</b><span>לכל חייל בכל סככה</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openVoLicenseAdd()"><span class="a-ic">➕</span><b>הוספת רישיון/הסמכה</b><span>לכל חייל בכל מסגרת</span></button>
         </div>
         <div class="search-box">
           <span class="search-ic">🔍</span>
@@ -2034,7 +2034,7 @@ nav{
   <div class="modal-bg" id="vo-license-modal">
     <div class="modal">
       <h3 id="vo-license-title">🪪 הוספת רישיון/הסמכה</h3>
-      <div class="m-sub">רישיונות נהיגה והסמכות רכב, לכל חייל בכל סככה.</div>
+      <div class="m-sub">רישיונות נהיגה והסמכות רכב, לכל חייל בכל מסגרת.</div>
       <div class="team-add-form">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">👤 חייל</label>
         <select class="m-input" id="vo-license-person" style="margin-bottom:8px"></select>
@@ -3051,7 +3051,7 @@ async function openReader(id, adminSourced){
       </div>`;
   }
   document.getElementById("reader-body").innerHTML = `
-    <span class="doc-tag">${adminSourced ? "פורסם ע\"י טומי ליפוביץ · לכל הסככות" : "קרא וחתום · חובת חתימה"}</span>
+    <span class="doc-tag">${adminSourced ? "פורסם לכל המסגרות" : "קרא וחתום · חובת חתימה"}</span>
     <div class="sub">הועלה ע"י ${escapeHTML(currentDoc.by)} · ${currentDoc.date} · טייסת 124</div>
     ${viewer}
     ${sig ? `<div class="sig-preview">
@@ -4415,6 +4415,15 @@ function selMsgType(t, btn){
   if(btn) btn.classList.add("active");
 }
 function checkMsgReady(){ document.getElementById("msg-save").disabled = document.getElementById("msg-text").value.trim().length<2; }
+/* חתימת המפרסם לתוכן כלל-טייסתי (הודעות, קרא וחתום, לוחות).
+   הייתה מקובעת ל"טומי ליפוביץ", ולכן כל פרסום של קצין טכני או מנהל
+   מערכת הופיע על שמו. נגזרת עכשיו מהמשתמש שמפרסם בפועל. */
+function squadronPublisher(){
+  if(isOwner) return (user || "מנהל מערכת") + " 👑";
+  if(isTechOfficer) return (user || "קצין טכני") + " 🔧";
+  return (user || "אחראי הדרכה") + " 🏛️";
+}
+
 async function saveMessage(){
   const text = document.getElementById("msg-text").value.trim();
   if(text.length<2) return;
@@ -4425,11 +4434,11 @@ async function saveMessage(){
     // מנהל — פרסום לכל המסגרות + עותק ברשימת המנהל
     for(const shed of SHEDS){
       const list = (await sGetIn(shed.id, "messages_list")) || [];
-      list.unshift({...msgObj, by:"טומי ליפוביץ 🏛️"});
+      list.unshift({...msgObj, by:squadronPublisher()});
       await sSetIn(shed.id, "messages_list", list);
     }
     const adminList = (await sGetRaw("admin_messages")) || [];
-    adminList.unshift({...msgObj, by:"טומי ליפוביץ 🏛️"});
+    adminList.unshift({...msgObj, by:squadronPublisher()});
     await sSetRaw("admin_messages", adminList);
     toast("ההודעה פורסמה לכל המסגרות 📢");
   } else {
@@ -6144,7 +6153,7 @@ async function publishEventToAllSheds(id, title, meta, fileData, thumb){
   for(const shed of SHEDS){
     await sSetIn(shed.id, "safety_ev_"+id, fileData);
     const events = (await sGetIn(shed.id, "safety_events")) || [];
-    events.unshift({id, title, by:"טומי ליפוביץ", date:new Date().toLocaleDateString("he-IL"),
+    events.unshift({id, title, by:squadronPublisher(), date:new Date().toLocaleDateString("he-IL"),
                     ftype:meta.type, fname:meta.name, mime:meta.mime, thumb});
     await sSetIn(shed.id, "safety_events", events);
   }
@@ -6154,7 +6163,7 @@ async function renderAdminEvents(){
   const box = document.getElementById("admin-events-list");
   if(!box) return;
   const list = await getAdminEventsList();
-  if(list.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">📄</div><h3>אין עדיין פריטי קרא וחתום שפורסמו לכל הסככות</h3><p>פרסם פריט שיופיע לכל המסגרות</p></div>'; return; }
+  if(list.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">📄</div><h3>אין עדיין פריטי קרא וחתום שפורסמו לכל המסגרות</h3><p>פרסם פריט שיופיע לכל המסגרות</p></div>'; return; }
   box.innerHTML = list.map(e=>{
     const ft = FTYPE[e.ftype] || FTYPE.image;
     return `<div class="train-card">
@@ -6165,7 +6174,7 @@ async function renderAdminEvents(){
   }).join("");
 }
 async function deleteAdminEvent(id){
-  if(!confirm("למחוק את הפריט מכל הסככות? הפעולה אינה הפיכה.")) return;
+  if(!confirm("למחוק את הפריט מכל המסגרות? הפעולה אינה הפיכה.")) return;
   let list = await getAdminEventsList();
   list = list.filter(e=>e.id!==id);
   await sSetRaw("admin_events", list);
@@ -6176,14 +6185,14 @@ async function deleteAdminEvent(id){
     await sDelRaw(shed.id+"_safety_ev_"+id);
   }
   renderAdminEvents();
-  toast("הפריט נמחק מכל הסככות 🗑️");
+  toast("הפריט נמחק מכל המסגרות 🗑️");
 }
 /* publish board to every shed */
 async function publishBoardToAllSheds(id, label, thumb, fullImg){
   for(const shed of SHEDS){
     await sSetIn(shed.id, "board_img_"+id, fullImg);
     const boards = (await sGetIn(shed.id, "boards_list")) || [];
-    boards.unshift({id, label, thumb, by:"טומי ליפוביץ", date:new Date().toLocaleDateString("he-IL")});
+    boards.unshift({id, label, thumb, by:squadronPublisher(), date:new Date().toLocaleDateString("he-IL")});
     await sSetIn(shed.id, "boards_list", boards);
   }
 }
@@ -6225,7 +6234,7 @@ async function renderAdminCerts(){
   // populate shed filter once
   const filterSel = document.getElementById("admin-cert-shed-filter");
   if(filterSel && filterSel.options.length<=1){
-    filterSel.innerHTML = '<option value="all">כל הסככות</option>' + SHEDS.map(s=>`<option value="${s.id}">${s.name}</option>`).join("");
+    filterSel.innerHTML = '<option value="all">כל המסגרות</option>' + SHEDS.map(s=>`<option value="${s.id}">${s.name}</option>`).join("");
   }
   await renderAdminCertExpiry();
   await renderAdminPfStatus();
@@ -6494,7 +6503,7 @@ function onTrainingFile(e){
         data=c.toDataURL("image/jpeg",q);
         while(data.length>700_000 && tries<6){ q-=.1; data=c.toDataURL("image/jpeg",Math.max(.3,q)); tries++; }
         await publishTrainingToAllSheds(id, file.name, ftype, data, data);
-        toast("חומר ההדרכה פורסם לכל הסככות 📚");
+        toast("חומר ההדרכה פורסם לכל המסגרות 📚");
         renderAdminTraining();
       };
       img.src = ev.target.result;
@@ -6506,7 +6515,7 @@ function onTrainingFile(e){
       const data = ev.target.result;
       if(data.length > 900_000){ toast("⚠️ הקובץ גדול מדי (מקס' ~650KB)"); return; }
       await publishTrainingToAllSheds(id, file.name, ftype, data, null);
-      toast("חומר ההדרכה פורסם לכל הסככות 📚");
+      toast("חומר ההדרכה פורסם לכל המסגרות 📚");
       renderAdminTraining();
     };
     reader.readAsDataURL(file);
@@ -6649,7 +6658,7 @@ async function renderReserves(){
 async function renderAdminTraining(){
   const box = document.getElementById("admin-training-list");
   const list = await getTrainingList();
-  if(list.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">📚</div><h3>אין עדיין חומרי הדרכה</h3><p>העלה מצגת או מסמך שיופיע לכל הסככות</p></div>'; return; }
+  if(list.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">📚</div><h3>אין עדיין חומרי הדרכה</h3><p>העלה מצגת או מסמך שיופיע לכל המסגרות</p></div>'; return; }
   box.innerHTML = list.map(t=>{
     const ft = FTYPE[t.ftype] || FTYPE.image;
     return `<div class="train-card">
@@ -6660,7 +6669,7 @@ async function renderAdminTraining(){
   }).join("");
 }
 async function deleteTraining(id){
-  if(!confirm("למחוק את חומר ההדרכה מכל הסככות?")) return;
+  if(!confirm("למחוק את חומר ההדרכה מכל המסגרות?")) return;
   let list = await getTrainingList();
   list = list.filter(t=>t.id!==id);
   await sSetRaw("admin_training", list);
@@ -6686,7 +6695,7 @@ async function renderAdminLog(){
   }));
   all.sort((a,b)=>b.ts-a.ts);
   all = all.slice(0,150);
-  if(all.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">📜</div><h3>אין עדיין פעולות</h3><p>פעולות מכל הסככות יופיעו כאן</p></div>'; return; }
+  if(all.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">📜</div><h3>אין עדיין פעולות</h3><p>פעולות מכל המסגרות יופיעו כאן</p></div>'; return; }
   box.innerHTML = all.map(l=>`<div class="audit-row">
     <div class="audit-main"><b>${escapeHTML(l.action)}</b>${l.detail?` · <span>${escapeHTML(l.detail)}</span>`:""}</div>
     <div class="audit-meta">${escapeHTML(l.shed)} · ${escapeHTML(l.by)} · ${fmtLogTime(l.ts)}</div>
