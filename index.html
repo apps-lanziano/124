@@ -840,7 +840,7 @@ nav{
     <!-- STEP 1: code entry -->
     <!-- STEP 0: quick login (remembered devices — pick user, PIN only) -->
     <div id="login-step-quick" style="width:100%;max-width:320px;display:none">
-      <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:12px">בחר משתמש</div>
+      <div id="quick-title" style="font-size:15px;font-weight:800;color:#fff;margin-bottom:12px">בחר משתמש</div>
       <div id="quick-users"></div>
       <div id="quick-pin-area" style="display:none;margin-top:6px">
         <div id="quick-hello" style="font-size:13.5px;color:#ffd3d9;margin-bottom:8px"></div>
@@ -2819,7 +2819,19 @@ function initLoginScreen(){
   const q = document.getElementById("login-step-quick");
   const cstep = document.getElementById("login-step-code");
   const nstep = document.getElementById("login-step-name");
-  if(users.length){
+  if(users.length === 1){
+    // מכשיר אישי — משתמש אחד זכור: ישר לשדה ה-PIN, בלי בחירה ובלי קוד מסגרת
+    quickSelected = users[0];
+    document.getElementById("quick-title").style.display = "none";
+    document.getElementById("quick-users").innerHTML = "";
+    document.getElementById("quick-hello").textContent = "שלום, " + users[0].name;
+    document.getElementById("quick-pin").value = "";
+    document.getElementById("quick-pin-area").style.display = "block";
+    q.style.display="block"; cstep.style.display="none"; nstep.style.display="none";
+    setTimeout(()=>document.getElementById("quick-pin").focus(), 100);
+  } else if(users.length > 1){
+    // כמה משתמשים במכשיר — בחירה ואז PIN
+    document.getElementById("quick-title").style.display = "";
     renderQuickUsers();
     quickSelected = null;
     document.getElementById("quick-pin-area").style.display = "none";
