@@ -44,25 +44,35 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    /* ── גרסה 2 — הפרדה בין מסגרות (להחליף את הבלוק של sq124 כשהחשבונות מוכנים) ──
+    /* ── גרסה 2 — הפרדה בין מסגרות (להחליף את הבלוק של sq124 שלמעלה) ──
+       מודל: "חסום מסגרות אחרות, התר את השאר". הנתונים הפרטיים של כל מסגרת
+       נשמרים עם קידומת המסגרת (shed3_, dept_, maint_, training_ ...), ולכן
+       מסגרת אחת אינה יכולה לקרוא אותם של אחרת. מסמכים משותפים בכוונה
+       (admin_*, vo_licenses_list, binui_faults_list, boards וכו') אינם נושאים
+       קידומת מסגרת ולכן נשארים נגישים לכל מאומת — כפי שהאפליקציה מצפה.
+
     function myPrefix() {
       // "shed3.cmd@sq124.app" -> "shed3_"
       return request.auth.token.email.split('@')[0].split('.')[0] + '_';
     }
     function isSquadronWide() {
-      // חשבונות שרואים את כל הטייסת: מנהל מערכת / קצין טכני / אחראי תקציבים,
-      // וכן מפקדי "הדרכה" ו"מ״ע אחזקה" (הם ורק הם — לא חיילי המסגרות האלה).
+      // רואים את כל הטייסת: מנהל מערכת / קצין טכני / אחראי תקציבים,
+      // וכן מפקדי "הדרכה" ו"מ״ע אחזקה" (הם ורק הם — לא חיילי המסגרות).
       return isAuthed() && (
         request.auth.token.email.matches('^(owner|tech|budget)@.*')
         || request.auth.token.email.matches('^(training|maint)[.]cmd@.*')
       );
     }
+    function isOtherFrameworkDoc(docId) {
+      // מסמך ששייך למסגרת כלשהי אך לא לשלי
+      return docId.matches('^(shed[0-9]+|dept|maint|training)_.*')
+             && !docId.matches('^' + myPrefix() + '.*');
+    }
     match /sq124/{docId} {
       allow get, create, update, delete:
         if isSquadronWide()
-        || (isAuthed() && ( docId.matches('^' + myPrefix() + '.*')
-                            || docId.matches('^admin_.*') ));
-      allow list:   if false;
+        || (isAuthed() && !isOtherFrameworkDoc(docId));
+      allow list: if false;
     }
     */
   }
