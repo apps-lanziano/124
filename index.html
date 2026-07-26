@@ -2365,8 +2365,25 @@ async function ensureConvertedFrameworksSeed(scope){
 async function loadRuntimeLists(){
   if(currentShed && currentShed.id === "shed2"){ await migrateLegacyShed2(); }
   await ensureConvertedFrameworksSeed();
-  // שני המפתחות האלה בלתי-תלויים זה בזה — קוראים במקביל כדי לקצר את זמן הכניסה
-  const [p, t] = await Promise.all([ sGet("cfg_personnel"), sGet("cfg_tasks") ]);
+
+  // קריאת הצוות עמידה למרוץ טוקן: אחרי החלפת זהות ב-Firebase, הקריאה הראשונה
+  // עלולה להיכשל (טוקן עדיין לא מוכן). מבחינים בין "כשל קריאה" ל"סככה ריקה
+  // באמת" — ועל כשל מנסים שוב, כדי לא להציג מסך ריק/רישום עצמי שידרוס נתונים.
+  let p = null;
+  for(let attempt=0; attempt<3; attempt++){
+    fbReadFailed = false;
+    p = await sGet("cfg_personnel");
+    if(p && Array.isArray(p) && p.length) break;   // נטען בהצלחה
+    if(!fbReadFailed) break;                        // ריק באמת (סככה חדשה)
+    await new Promise(r=>setTimeout(r, 350*(attempt+1)));   // כשל — המתנה וניסיון חוזר
+  }
+  // כשל קריאה מתמשך (לא ריק אמיתי) — עוצרים בלי לדרוס נתונים קיימים
+  if(fbReadFailed && !(p && Array.isArray(p) && p.length)){
+    console.error("cfg_personnel read failed after retries:", currentShed && currentShed.id);
+    return false;
+  }
+
+  const t = await sGet("cfg_tasks");
   if(p && Array.isArray(p) && p.length){ PERSONNEL = p; }
   else if(currentShed && currentShed.id === "shed2"){
     // סככה 2 נזרעת מרשימת האקסל המקורית
@@ -2388,6 +2405,7 @@ async function loadRuntimeLists(){
   }
   await processReleases();   // הסרת חיילים ששוחררו (תאריך שחרור עבר/היום)
   await processStage7Conversions();   // שלב 7 → שלב 10 סף אוטומטית אחרי שנה מהצטרפות
+  return true;
 }
 
 /* זריעה חד-פעמית של הסמכות סככה 2 מהמאגר הטייסתי (v2 — 4 רמות) */
@@ -2475,6 +2493,10 @@ const FIREBASE_CONFIG = {
   measurementId: "G-JXKH429E9L"
 };
 let fbDB = null, fbReady = false, fbAuth = null;
+/* מסומן ל-true כשקריאת Firestore נכשלה (שגיאה, לא "מסמך ריק"). מאפשר להבחין
+   בין סככה ריקה באמת לבין כשל קריאה זמני (למשל מרוץ טוקן אחרי החלפת זהות),
+   כדי לא להציג "רישום עצמי" ולדרוס נתונים קיימים על כשל. */
+let fbReadFailed = false;
 /* מצב אימות — "legacy": כניסה כמו היום (השוואת קוד בדפדפן, בלי אימות שרת).
    "firebase": מפעיל אימות אמיתי מול Firebase (ראה initFirebase ו-SECURITY.md).
    נשאר "legacy" עד שהחשבונות נוצרו, הכללים פורסמו ואכיפת App Check הודלקה —
@@ -2528,6 +2550,9 @@ async function signInAs(email, password){
   if(AUTH_MODE !== "scoped" || !fbAuth || !fbAuth._am) return true;
   try{
     await fbAuth._am.signInWithEmailAndPassword(fbAuth, email, password);
+    // חשוב: מכריחים את הטוקן החדש להיות מוכן לפני הקריאה הראשונה, אחרת
+    // Firestore עלול להשתמש עדיין בטוקן האנונימי הישן והקריאה תיחסם (מרוץ תזמון).
+    try{ if(fbAuth.currentUser) await fbAuth.currentUser.getIdToken(true); }catch(_){}
     return true;
   }catch(e){
     console.error("signInAs", email, e && e.code);
@@ -2637,7 +2662,7 @@ async function sGetRaw(key, shared=true){
       const snap = await withTimeout(getDoc(doc(fbDB, COLLECTION, fsKey(key))));
       markStale(false);
       return snap.exists() ? snap.data().v : null;
-    }catch(e){ console.error("fbGet",key,e); markStale(true); return mem[key] ?? null; }
+    }catch(e){ console.error("fbGet",key,e); markStale(true); fbReadFailed = true; return mem[key] ?? null; }
   }
   try{ const r = await window.storage.get(key, shared); return r ? JSON.parse(r.value) : null; }
   catch(e){ return mem[key] ?? null; }
@@ -2781,8 +2806,14 @@ async function checkCode(){
     enteredRole = matched.role;
     isAdmin = false;
 
-    // load this shed's personnel & tasks before showing names
-    await loadRuntimeLists();
+    // load this shed's personnel & tasks before showing names.
+    // כשל קריאה מתמשך — לא ממשיכים למסך השמות (שהיה מופיע ריק ומזמין רישום
+    // עצמי שדורס). המשתמש ינסה שוב.
+    if((await loadRuntimeLists()) === false){
+      toast("בעיית טעינת נתונים — נסה שוב 🔄");
+      document.getElementById("login-code").value="";
+      return;
+    }
 
     document.getElementById("login-step-code").style.display = "none";
     document.getElementById("login-step-name").style.display = "block";
