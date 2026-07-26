@@ -1873,8 +1873,10 @@ nav{
         <input class="m-input" id="vo-vehicle-km" type="number" min="0" placeholder="ק&quot;מ נוכחי" style="margin-bottom:8px">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📏 ק"מ לטיפול הבא</label>
         <input class="m-input" id="vo-vehicle-km-service" type="number" min="0" placeholder="לדוגמה: 120000" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">⏱️ שעות מנוע</label>
-        <input class="m-input" id="vo-vehicle-hours" type="number" min="0" placeholder="שעות מנוע נוכחיות" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">⏱️ שעות מנוע נוכחיות</label>
+        <input class="m-input" id="vo-vehicle-hours" type="number" min="0" placeholder="שעו&quot;מ נוכחי (לפיקו וכו')" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔧 טיפול הבא בשעו"מ (רכב מבוסס שעות — פיקו)</label>
+        <input class="m-input" id="vo-vehicle-hours-next" type="number" min="0" placeholder="לדוגמה: 50 · הסטטוס יחושב לפי שעות" style="margin-bottom:8px">
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <div style="flex:1">
             <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ טיפול חודשי/תלת-חודשי</label>
@@ -5918,6 +5920,27 @@ async function migrateNameFixes(){
 
 /* מזין לכל מי שכבר מוסמך רף (יש לו לפחות הסמכת רף אחת) את 9 פריטי הרף החדשים שנוספו לבנק — בכל הסככות, חד-פעמי */
 /* זריעה חד-פעמית: רכבים תפעוליים (מ"ע לפי סככה) + רכבי מ״ע אחזקה, מתוך גיליון מעקב הרכבים */
+/* מיגרציה חד-פעמית: הזנת "טיפול הבא בשעו"מ" לכל הפיקו בכל המסגרות.
+   הפיקו מטופל כל 50 שעות מנוע — היעד נקבע ל-50 הבא מעל השעות הנוכחיות.
+   בלי זה הסטטוס נקבע לפי תאריכי טיפול לא רלוונטיים והראה "לא בתוקף". */
+async function migratePicoHoursService(){
+  const flag = "pico_hours_seed_v1";
+  if(await sGetRaw(flag)) return;
+  const isPico = v => (v.name||"").includes("פיקו");
+  const nextFor = h => (Math.floor((Number(h)||0)/50)+1)*50;   // 50 הבא מעל השעות
+  let maint = (await sGetRaw("admin_maint_vehicles")) || [];
+  let mch = false;
+  maint.forEach(v=>{ if(isPico(v) && (v.hoursNext==null||v.hoursNext==="")){ v.hoursNext = nextFor(v.hours); mch=true; } });
+  if(mch) await sSetRaw("admin_maint_vehicles", maint);
+  for(const shed of SHEDS){
+    let list = (await sGetIn(shed.id,"vehicles_list")) || [];
+    let c = false;
+    list.forEach(v=>{ if(isPico(v) && (v.hoursNext==null||v.hoursNext==="")){ v.hoursNext = nextFor(v.hours); c=true; } });
+    if(c) await sSetIn(shed.id,"vehicles_list", list);
+  }
+  await sSetRaw(flag, true);
+  console.log("✅ פיקו — טיפול לפי שעות מנוע נזרע לכל המסגרות");
+}
 async function seedVehiclesFromSheet(){
   const flag = "vehicles_seed_v1";
   if(await sGetRaw(flag)) return;
@@ -6248,6 +6271,7 @@ async function ensureAllShedsSeed(scopeShedId){
   await seedVehiclesFromSheet();
   await seedLeasingVehiclesFromSheet();
   await updateVehiclesFromSheetV2();
+  await migratePicoHoursService();
   await fixLeasingHoldersV3();
   await fixOrDevachNameV4();
   await seedLicensesFromSheet();
@@ -8217,6 +8241,18 @@ function vehicleDateCheck(dateStr, alertDays, label){
   return {tag:"🟢 "+label+" בתוקף", cls:"g"};
 }
 /* בודק את יעד הטיפול לפי ק"מ/שעות מנוע (kmService מול km או hours, לפי מה שקיים) */
+/* בדיקת טיפול לפי שעות מנוע (פיקו וכו') — לפי "טיפול הבא בשעו"מ". */
+const VEHICLES_HOURS_ALERT_BUFFER = 5;   // 5 שעו"מ לפני היעד = צהוב
+function vehicleHoursCheck(v){
+  if(v.hoursNext==null || v.hoursNext==="") return null;
+  const cur = (v.hours!=null && v.hours!=="") ? Number(v.hours) : 0;
+  const left = Number(v.hoursNext) - cur;
+  if(left<0) return {tag:'🔴 עבר יעד הטיפול (חריגה '+Math.abs(left).toFixed(1)+' שעו"מ)', cls:"r"};
+  if(left<=VEHICLES_HOURS_ALERT_BUFFER) return {tag:'🟡 עוד '+left.toFixed(1)+' שעו"מ לטיפול', cls:"y"};
+  return {tag:'🟢 טיפול (שעו"מ) בתוקף — עוד '+left.toFixed(1), cls:"g"};
+}
+/* רכב מבוסס-שעות (יש לו "טיפול הבא בשעו"מ") — הסטטוס נקבע לפי שעות בלבד. */
+function isHoursVehicle(v){ return v.hoursNext!=null && v.hoursNext!==""; }
 function vehicleKmCheck(v){
   if(!v.kmService) return null;
   const current = (v.km!=null && v.km!=="") ? Number(v.km) : ((v.hours!=null && v.hours!=="") ? Number(v.hours) : null);
@@ -8228,6 +8264,11 @@ function vehicleKmCheck(v){
 }
 function vehicleStatusDetailed(v, checks){
   const order = {r:0,y:1,g:2};
+  // רכב מבוסס-שעות (פיקו): סטטוס לפי שעות מנוע בלבד — מתעלמים מתאריכי טיפול/טסט
+  if(isHoursVehicle(v)){
+    const h = vehicleHoursCheck(v);
+    return h || {tag:"אין נתוני מעקב", cls:"g"};
+  }
   const parts = [];
   let worst = "g";
   const add = check => { if(check){ parts.push(check.tag); if(order[check.cls]<order[worst]) worst = check.cls; } };
@@ -8248,12 +8289,18 @@ function vehicleCardHtml(v, actionsHtml, checks){
 
   const summaryParts = [];
   summaryParts.push(v.number ? ("מס' "+escapeHTML(v.number)) : (v.militaryNumber ? ("צבאי "+escapeHTML(v.militaryNumber)) : "ללא מספר"));
-  if(checks.includes("monthlyService")){
-    const mc = vehicleDateCheck(v.monthlyService, VEHICLES_ALERT_DAYS, "טיפול חודשי/תלת-חודשי");
-    summaryParts.push(mc ? mc.tag : "אין תאריך טיפול חודשי/תלת-חודשי");
+  if(isHoursVehicle(v)){
+    // רכב מבוסס-שעות (פיקו) — מציגים שעו"מ נוכחי ויעד, בלי תאריכי טיפול לא רלוונטיים
+    if(v.hours!=null && v.hours!=="") summaryParts.push(Number(v.hours).toLocaleString()+' שעו"מ');
+    const hc = vehicleHoursCheck(v); if(hc) summaryParts.push(hc.tag);
+  } else {
+    if(checks.includes("monthlyService")){
+      const mc = vehicleDateCheck(v.monthlyService, VEHICLES_ALERT_DAYS, "טיפול חודשי/תלת-חודשי");
+      summaryParts.push(mc ? mc.tag : "אין תאריך טיפול חודשי/תלת-חודשי");
+    }
+    if(v.km!=null && v.km!=="") summaryParts.push(Number(v.km).toLocaleString()+' ק"מ');
+    else if(v.hours!=null && v.hours!=="") summaryParts.push(Number(v.hours).toLocaleString()+' שעו"מ');
   }
-  if(v.km!=null && v.km!=="") summaryParts.push(Number(v.km).toLocaleString()+' ק"מ');
-  else if(v.hours!=null && v.hours!=="") summaryParts.push(Number(v.hours).toLocaleString()+' שעו"מ');
   if(v.vehicleCode) summaryParts.push("קוד רכב "+escapeHTML(v.vehicleCode));
   if(v.fuelCode) summaryParts.push("קוד דלק "+escapeHTML(v.fuelCode));
 
@@ -8319,7 +8366,7 @@ const VO_VEHICLE_FIELDS = [
   ["militaryNumber","vo-vehicle-military-number","text"], ["company","vo-vehicle-company","text"],
   ["vehicleCode","vo-vehicle-code","text"], ["fuelCode","vo-vehicle-fuel-code","text"],
   ["nextService","vo-vehicle-next-service","date"], ["testDate","vo-vehicle-test","date"],
-  ["km","vo-vehicle-km","number"], ["kmService","vo-vehicle-km-service","number"], ["hours","vo-vehicle-hours","number"],
+  ["km","vo-vehicle-km","number"], ["kmService","vo-vehicle-km-service","number"], ["hours","vo-vehicle-hours","number"], ["hoursNext","vo-vehicle-hours-next","number"],
   ["monthlyService","vo-vehicle-monthly-service","date"], ["annualService","vo-vehicle-annual-service","date"],
   ["winterCheck","vo-vehicle-winter","date"], ["notes","vo-vehicle-notes","text"]
 ];
