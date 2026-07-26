@@ -7819,7 +7819,7 @@ async function renderVehiclesPage(){
   }
   const cards = all.map(v=>{
     const actions = v._leasing
-      ? `<span class="role-mini">🚗 ליסינג</span>`
+      ? `<span class="role-mini">🚗 ליסינג</span>` + (isCmdr ? `<button class="cert-chip-edit" onclick="openLeasingEditFull('${v.id}')">✏️</button>` : '')
       : (isCmdr ? `<button class="cert-chip-edit" onclick="openShedVehicleFull('${v.id}')">✏️</button><button class="cert-chip-del" onclick="removeVehicleById('${v.id}')">✕</button>` : '');
     return vehicleCardHtml(v, actions, v._checks);
   }).join("");
@@ -8119,12 +8119,26 @@ function readVoVehicleForm(){
 /* מצב "מפקד מסגרת" — אותו טופס מלא של מ״ע אחזקה, אבל נעול למסגרת של המפקד
    (בורר הסככה מוסתר), ובשמירה מרענן את מסך הרכבים של המסגרת. */
 let shedVehicleFullMode = false;
+let leasingEditId = null;   // כשעורכים רכב ליסינג ("על שמו") מהמאגר המרכזי
 function toggleVoShedSelector(show){
   const w = document.getElementById("vo-vehicle-shed-wrap");
   if(w) w.style.display = show ? "" : "none";
 }
+/* עריכת רכב ליסינג הרשום על שם איש צוות במסגרת — אותו טופס מלא, נעול
+   (בלי בורר סככה), נשמר במאגר הליסינג המרכזי. */
+async function openLeasingEditFull(id){
+  shedVehicleFullMode = false; voVehicleCtx = null; leasingEditId = id;
+  toggleVoShedSelector(false);
+  document.getElementById("vo-vehicle-bank-pick").innerHTML = vehicleBankOptions();
+  const v = ((await sGetRaw("admin_leasing_vehicles")) || []).find(x=>x.id===id);
+  if(!v){ toast("הרכב לא נמצא"); leasingEditId=null; return; }
+  fillVoVehicleForm(v);
+  document.getElementById("vo-vehicle-title").textContent = "✏️ עריכת רכב ליסינג — " + escapeHTML(v.holder||"");
+  document.querySelector("#vo-vehicle-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.getElementById("vo-vehicle-modal").classList.add("open");
+}
 async function openShedVehicleFull(id){
-  shedVehicleFullMode = true;
+  shedVehicleFullMode = true; leasingEditId = null;
   toggleVoShedSelector(false);   // המפקד נעול למסגרת שלו
   const shedSel = document.getElementById("vo-vehicle-shed");
   shedSel.innerHTML = `<option value="${currentShed.id}">${escapeHTML(currentShed.name)}</option>`;
@@ -8140,7 +8154,7 @@ async function openShedVehicleFull(id){
 }
 function openVoVehicleAdd(){
   voVehicleCtx = null;
-  shedVehicleFullMode = false;
+  shedVehicleFullMode = false; leasingEditId = null;
   toggleVoShedSelector(true);
   document.getElementById("vo-vehicle-shed").innerHTML = voShedOptions();
   document.getElementById("vo-vehicle-bank-pick").innerHTML = vehicleBankOptions();
@@ -8154,7 +8168,7 @@ async function openVoVehicleEdit(shedId, id){
   const v = vehicles.find(x=>x.id===id);
   if(!v) return;
   voVehicleCtx = {shedId, id};
-  shedVehicleFullMode = false;
+  shedVehicleFullMode = false; leasingEditId = null;
   toggleVoShedSelector(true);
   document.getElementById("vo-vehicle-shed").innerHTML = voShedOptions(shedId);
   document.getElementById("vo-vehicle-bank-pick").innerHTML = vehicleBankOptions();
@@ -8164,11 +8178,27 @@ async function openVoVehicleEdit(shedId, id){
   document.getElementById("vo-vehicle-modal").classList.add("open");
 }
 async function saveVoVehicle(){
-  const shedId = document.getElementById("vo-vehicle-shed").value;
   const data = readVoVehicleForm();
   data.name = data.name.trim();
   data.number = data.number.trim();
   if(data.name.length<2){ toast("נא למלא שם/סוג רכב"); return; }
+
+  // מצב עריכת רכב ליסינג ("על שמו") — נשמר במאגר הליסינג המרכזי לפי id.
+  // holder/group/id אינם בטופס ולכן נשמרים כמות שהם.
+  if(leasingEditId){
+    const list = (await sGetRaw("admin_leasing_vehicles")) || [];
+    const v = list.find(x=>x.id===leasingEditId);
+    if(v) Object.assign(v, data);
+    await sSetRaw("admin_leasing_vehicles", list);
+    leasingEditId = null;
+    document.getElementById("vo-vehicle-modal").classList.remove("open");
+    toggleVoShedSelector(true);
+    renderVehiclesPage(); updateAlertBell();
+    toast("רכב הליסינג עודכן ✓");
+    return;
+  }
+
+  const shedId = document.getElementById("vo-vehicle-shed").value;
 
   if(voVehicleCtx && voVehicleCtx.shedId===shedId){
     const vehicles = (await sGetIn(shedId, "vehicles_list")) || [];
