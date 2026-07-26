@@ -1703,6 +1703,16 @@ nav{
         <select class="m-input" id="tm-profession" style="margin-bottom:8px"><option value="">— ללא מקצוע —</option></select>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך שחרור (אופציונלי — החייל יוסר אוטומטית ביום זה)</label>
         <input class="m-input" id="tm-release" type="date" style="margin-bottom:10px" title="תאריך שחרור">
+        <div style="border-top:1px solid var(--line);padding-top:10px;margin-bottom:10px">
+          <label style="font-size:11.5px;color:var(--ink-3);display:flex;justify-content:space-between;margin-bottom:3px">
+            <span>🔒 PIN אישי (4 ספרות)</span><span id="tm-pin-status" style="font-weight:800"></span>
+          </label>
+          <input class="m-input" id="tm-pin" type="text" inputmode="numeric" maxlength="4" autocomplete="off"
+            placeholder="השאר ריק — ללא שינוי" style="margin-bottom:6px">
+          <label style="font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" id="tm-pin-remove" style="width:auto;margin:0"> הסר PIN קיים (כניסה ללא נעילה)
+          </label>
+        </div>
         <div style="display:flex;gap:8px">
           <button class="m-btn primary" id="tm-save-btn" onclick="saveTeamMember()" style="flex:1">➕ הוסף איש צוות</button>
           <button class="m-btn ghost" id="tm-cancel-btn" onclick="cancelEditMember()" style="flex:0 0 auto;display:none">ביטול עריכה</button>
@@ -5039,10 +5049,11 @@ async function renderTeamMgmt(){
     const deptTag = personDept(p) ? `<span class="role-mini">${escapeHTML(personDept(p))}</span>` : "";
     const officerTag = p.officerTag ? `<span class="role-mini">🎖️ ${escapeHTML(p.officerTag)}</span>` : "";
     const profTag = p.profession ? `<span class="role-mini">${escapeHTML(p.profession)}</span>` : "";
+    const pinTag = p.pinHash ? `<span class="role-mini" title="PIN מוגדר">🔒</span>` : "";
     return `
     <div class="mgmt-row">
       <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
-      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini ${p.role==='חייל'?'sol':''}">${p.role}</span> ${deptTag} ${officerTag} ${profTag} ${pfTag} ${st7Tag}</b>
+      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini ${p.role==='חייל'?'sol':''}">${p.role}</span> ${deptTag} ${officerTag} ${profTag} ${pinTag} ${pfTag} ${st7Tag}</b>
         <span>🎂 ${p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—'}${rel?' · 🗓️ שחרור '+rel:''}</span></div>
       <button class="mr-del" style="background:var(--sky-soft);border-color:#cfe0ff;color:var(--sky)" onclick="startEditMember(${i})">✏️</button>
       <button class="mr-del" onclick="removeTeamMember(${i})">🗑️</button>
@@ -5060,6 +5071,11 @@ function startEditMember(i){
     document.getElementById("tm-dept").value = p.dept || "";
     document.getElementById("tm-officer").value = p.officerTag || "";
   } else document.getElementById("tm-profession").value = p.profession || "";
+  document.getElementById("tm-pin").value = "";
+  document.getElementById("tm-pin-remove").checked = false;
+  const tps = document.getElementById("tm-pin-status");
+  tps.textContent = p.pinHash ? "מוגדר ✓" : "אין";
+  tps.style.color = p.pinHash ? "var(--green,#22c55e)" : "var(--ink-3)";
   document.getElementById("tm-form-title").textContent = "✏️ עריכת " + p.name;
   document.getElementById("tm-save-btn").textContent = "💾 שמור שינויים";
   document.getElementById("tm-cancel-btn").style.display = "block";
@@ -5073,6 +5089,9 @@ function cancelEditMember(){
   document.getElementById("tm-dept").value="";
   document.getElementById("tm-officer").value="";
   document.getElementById("tm-profession").value="";
+  document.getElementById("tm-pin").value="";
+  document.getElementById("tm-pin-remove").checked=false;
+  { const tps=document.getElementById("tm-pin-status"); if(tps){ tps.textContent=""; } }
   document.getElementById("tm-form-title").textContent = "➕ הוספת איש צוות";
   document.getElementById("tm-save-btn").textContent = "➕ הוסף איש צוות";
   document.getElementById("tm-cancel-btn").style.display = "none";
@@ -5113,6 +5132,23 @@ async function saveTeamMember(){
   const dup = PERSONNEL.some((p,idx)=>p.name===name && idx!==editMemberIdx);
   if(dup){ toast("שם כבר קיים"); return; }
 
+  // PIN: ריק=ללא שינוי | "הסר"=מחיקה | 4 ספרות=הגדרה/איפוס
+  const pinInput = (document.getElementById("tm-pin").value||"").trim();
+  const pinRemove = document.getElementById("tm-pin-remove").checked;
+  let pinFields = null;
+  if(pinRemove){ pinFields = {remove:true}; }
+  else if(pinInput){
+    if(!validPinFormat(pinInput)){ toast("PIN חייב להיות 4 ספרות ⛔"); return; }
+    if(isWeakPin(pinInput)){ toast("PIN שכיח מדי — בחר קוד אחר ⛔"); return; }
+    const salt = genSalt();
+    pinFields = {pinHash: await hashPin(pinInput, salt), pinSalt: salt};
+  }
+  const applyPin = m => {
+    if(!pinFields) return;
+    if(pinFields.remove){ delete m.pinHash; delete m.pinSalt; }
+    else { m.pinHash = pinFields.pinHash; m.pinSalt = pinFields.pinSalt; }
+  };
+
   if(editMemberIdx>=0){
     // edit existing
     const p = PERSONNEL[editMemberIdx];
@@ -5121,6 +5157,7 @@ async function saveTeamMember(){
     if(release) p.release=release; else delete p.release;
     if(isDeptUnit){ if(dept) p.dept=dept; else delete p.dept; if(officerTag) p.officerTag=officerTag; else delete p.officerTag; }
     else if(profession) p.profession=profession; else delete p.profession;
+    applyPin(p);
     if(oldName!==name) await renamePersonEverywhere(oldName, name);
     toast("הפרטים עודכנו ✓");
   } else {
@@ -5128,6 +5165,7 @@ async function saveTeamMember(){
     if(release) member.release=release;
     if(isDeptUnit){ if(dept) member.dept=dept; if(officerTag) member.officerTag=officerTag; }
     else if(profession) member.profession=profession;
+    applyPin(member);
     PERSONNEL.push(member);
     // חייל חדש בסככה (לא במחלקות) מקבל אוטומטית שלב 7 — הספירה לשלב 10 מתחילה מהיום
     // פקיד כלים לא עובר מסלול הסמכות (לא שלבים ולא PF)
