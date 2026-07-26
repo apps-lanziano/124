@@ -838,15 +838,18 @@ nav{
     <p>מערכת תפעול וניהול הגף הטכני</p>
 
     <!-- STEP 1: code entry -->
-    <!-- STEP 0: quick login (remembered device — PIN only) -->
+    <!-- STEP 0: quick login (remembered devices — pick user, PIN only) -->
     <div id="login-step-quick" style="width:100%;max-width:320px;display:none">
-      <div id="quick-hello" style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px"></div>
-      <div id="quick-sub" style="font-size:12.5px;color:#ffd3d9;margin-bottom:14px"></div>
-      <input id="quick-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
-        placeholder="🔒 הזן PIN אישי"
-        style="width:100%;padding:15px 18px;border-radius:14px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;font-family:'Heebo';font-size:16px;text-align:center;letter-spacing:6px;outline:none;backdrop-filter:blur(8px)">
-      <button class="login-go" id="quick-go-btn" onclick="quickLogin()" style="margin-top:14px">כניסה ←</button>
-      <button onclick="switchUser()" style="margin-top:10px;width:100%;background:none;border:none;color:#ffd3d9;font-family:'Heebo';font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px">לא אתה? כניסה עם קוד מסגרת</button>
+      <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:12px">בחר משתמש</div>
+      <div id="quick-users"></div>
+      <div id="quick-pin-area" style="display:none;margin-top:6px">
+        <div id="quick-hello" style="font-size:13.5px;color:#ffd3d9;margin-bottom:8px"></div>
+        <input id="quick-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
+          placeholder="🔒 הזן PIN אישי"
+          style="width:100%;padding:15px 18px;border-radius:14px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;font-family:'Heebo';font-size:16px;text-align:center;letter-spacing:6px;outline:none;backdrop-filter:blur(8px)">
+        <button class="login-go" id="quick-go-btn" onclick="quickLogin()" style="margin-top:14px">כניסה ←</button>
+      </div>
+      <button onclick="switchUser()" style="margin-top:14px;width:100%;background:none;border:none;color:#ffd3d9;font-family:'Heebo';font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px">+ משתמש אחר — כניסה עם קוד מסגרת</button>
     </div>
 
     <div id="login-step-code" style="width:100%;max-width:320px">
@@ -2786,34 +2789,81 @@ function setBtnLoading(btn, loading){
   }
 }
 
-/* ===== זכירת מכשיר — כניסה עם PIN בלבד ===== */
+/* ===== זכירת מכשיר — כניסה עם PIN בלבד (מספר משתמשים) ===== */
 let lastEnteredCode = null;   // הקוד ששימש להתחברות המסגרת (נשמר לזכירת המכשיר)
-function getDeviceUser(){ try{ return JSON.parse(localStorage.getItem("sq124_device")||"null"); }catch(_){ return null; } }
-function saveDeviceUser(o){ try{ localStorage.setItem("sq124_device", JSON.stringify(o)); }catch(_){ } }
-function clearDeviceUser(){ try{ localStorage.removeItem("sq124_device"); }catch(_){ } }
+let quickSelected = null;     // המשתמש שנבחר במסך הכניסה המהירה
+function getDeviceUsers(){
+  try{
+    const arr = JSON.parse(localStorage.getItem("sq124_devices")||"null");
+    if(Array.isArray(arr)) return arr;
+    // מיגרציה מהפורמט הישן (משתמש בודד)
+    const old = JSON.parse(localStorage.getItem("sq124_device")||"null");
+    if(old && old.name){ localStorage.setItem("sq124_devices", JSON.stringify([old])); localStorage.removeItem("sq124_device"); return [old]; }
+    return [];
+  }catch(_){ return []; }
+}
+function saveDeviceUsers(arr){ try{ localStorage.setItem("sq124_devices", JSON.stringify(arr.slice(0,8))); }catch(_){ } }
+/* מוסיף/מעדכן משתמש זכור (המשתמש האחרון בראש הרשימה) */
+function addDeviceUser(o){
+  const arr = getDeviceUsers().filter(u=>!(u.shedId===o.shedId && u.name===o.name));
+  arr.unshift(o);
+  saveDeviceUsers(arr);
+}
+function removeDeviceUser(shedId, name){
+  saveDeviceUsers(getDeviceUsers().filter(u=>!(u.shedId===shedId && u.name===name)));
+}
 
-/* קובע איזה שלב כניסה להציג: אם המכשיר "זוכר" משתמש — מסך PIN מהיר; אחרת קוד מסגרת. */
+/* קובע איזה שלב כניסה להציג: אם יש משתמשים זכורים — מסך בחירה+PIN; אחרת קוד. */
 function initLoginScreen(){
-  const dev = getDeviceUser();
+  const users = getDeviceUsers();
   const q = document.getElementById("login-step-quick");
   const cstep = document.getElementById("login-step-code");
   const nstep = document.getElementById("login-step-name");
-  if(dev){
-    const shed = SHEDS.find(s=>s.id===dev.shedId);
-    document.getElementById("quick-hello").textContent = "שלום, " + dev.name;
-    document.getElementById("quick-sub").textContent = (shed?shed.name:"") + " · הזן PIN לכניסה";
-    document.getElementById("quick-pin").value = "";
+  if(users.length){
+    renderQuickUsers();
+    quickSelected = null;
+    document.getElementById("quick-pin-area").style.display = "none";
     q.style.display="block"; cstep.style.display="none"; nstep.style.display="none";
   } else {
     q.style.display="none"; cstep.style.display="block"; nstep.style.display="none";
   }
 }
-/* כניסה מהירה — משתמש זכור: PIN בלבד. מאמת מול חשבון המסגרת שמור ברקע. */
+function renderQuickUsers(){
+  const users = getDeviceUsers();
+  const box = document.getElementById("quick-users");
+  box.innerHTML = users.map((u,i)=>{
+    const shed = SHEDS.find(s=>s.id===u.shedId);
+    return `<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+      <button onclick="selectQuickUser(${i})" style="flex:1;text-align:right;padding:13px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;font-family:'Heebo';font-size:15px;font-weight:700;cursor:pointer;backdrop-filter:blur(8px)">
+        👤 ${escapeHTML(u.name)} <span style="opacity:.7;font-size:12px;font-weight:400">· ${escapeHTML(shed?shed.name:"")}</span>
+      </button>
+      <button onclick="forgetQuickUser(${i})" title="הסר מהמכשיר" style="flex:0 0 auto;padding:13px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#ffd3d9;font-size:14px;cursor:pointer">✕</button>
+    </div>`;
+  }).join("");
+}
+function selectQuickUser(i){
+  const users = getDeviceUsers();
+  quickSelected = users[i];
+  if(!quickSelected) return;
+  document.getElementById("quick-hello").textContent = "שלום, " + quickSelected.name + " — הזן PIN";
+  document.getElementById("quick-pin").value = "";
+  document.getElementById("quick-pin-area").style.display = "block";
+  document.getElementById("quick-pin").focus();
+}
+function forgetQuickUser(i){
+  const users = getDeviceUsers();
+  const u = users[i]; if(!u) return;
+  removeDeviceUser(u.shedId, u.name);
+  quickSelected = null;
+  document.getElementById("quick-pin-area").style.display = "none";
+  if(getDeviceUsers().length) renderQuickUsers(); else switchUser();
+}
+/* כניסה מהירה — למשתמש שנבחר: PIN בלבד. מאמת מול חשבון המסגרת שמור ברקע. */
 async function quickLogin(){
-  const dev = getDeviceUser();
+  const dev = quickSelected || getDeviceUsers()[0];
   if(!dev){ switchUser(); return; }
   const shed = SHEDS.find(s=>s.id===dev.shedId);
-  if(!shed){ switchUser(); return; }
+  if(!shed){ removeDeviceUser(dev.shedId, dev.name); switchUser(); return; }
   const btn = document.getElementById("quick-go-btn");
   const pinEl = document.getElementById("quick-pin");
   const entered = (pinEl.value||"").trim();
@@ -2826,10 +2876,10 @@ async function quickLogin(){
     currentShed = shed; enteredRole = dev.role; isAdmin = false; lastEnteredCode = dev.code;
     if((await loadRuntimeLists()) === false){ toast("בעיית טעינה — נסה שוב 🔄"); return; }
     const person = PERSONNEL.find(p=>p.name===dev.name);
-    if(!person || person.role!==dev.role){ toast("המשתמש לא נמצא — התחבר עם קוד"); switchUser(); return; }
-    if(!person.pinHash){ toast("ה-PIN אופס — התחבר עם קוד מסגרת"); switchUser(); return; }
+    if(!person || person.role!==dev.role){ toast("המשתמש לא נמצא — התחבר עם קוד"); removeDeviceUser(dev.shedId, dev.name); switchUser(); return; }
+    if(!person.pinHash){ toast("ה-PIN אופס — התחבר עם קוד מסגרת"); removeDeviceUser(dev.shedId, dev.name); switchUser(); return; }
     if(!(await verifyPin(person, entered))){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
-    // מאומת — מריצים את מסלול הכניסה הרגיל (שער ה-PIN יעבור עם אותו קוד)
+    // מאומת — מריצים את מסלול הכניסה הרגיל
     document.getElementById("login-step-quick").style.display="none";
     document.getElementById("login-step-name").style.display="block";
     const sel = document.getElementById("login-select");
@@ -2840,9 +2890,10 @@ async function quickLogin(){
     await doLogin();
   } finally { setBtnLoading(btn, false); }
 }
-/* "לא אתה?" — שוכח את המכשיר וחוזר לכניסה עם קוד מסגרת. */
+/* "משתמש אחר" — מעבר לכניסה עם קוד מסגרת, בלי למחוק את המשתמשים הזכורים.
+   אחרי כניסה מוצלחת המשתמש החדש יתווסף לרשימת המכשיר. */
 function switchUser(){
-  clearDeviceUser();
+  quickSelected = null;
   enteredRole=null; currentShed=null; isAdmin=false;
   document.getElementById("quick-pin").value="";
   document.getElementById("login-code").value="";
@@ -3136,9 +3187,9 @@ async function doLogin(){
       go("scr-safety", document.querySelector('[data-scr="scr-safety"]'));
     }
     await refreshAll();
-    // זכירת מכשיר — כך שכניסה הבאה תהיה עם PIN בלבד, בלי קוד מסגרת
+    // זכירת מכשיר — המשתמש מתווסף לרשימה (מספר משתמשים לכל מכשיר)
     if(currentShed && user && person.pinHash && lastEnteredCode){
-      saveDeviceUser({shedId: currentShed.id, role: enteredRole, code: lastEnteredCode, name: user});
+      addDeviceUser({shedId: currentShed.id, role: enteredRole, code: lastEnteredCode, name: user});
     }
     toast("ברוך הבא, " + user.split(" ")[0] + " 👋");
   } finally {
