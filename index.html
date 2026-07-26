@@ -1476,13 +1476,14 @@ nav{
       </div>
       <div id="users-stats" style="margin-bottom:12px"></div>
       <details style="margin-bottom:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px">
-        <summary style="cursor:pointer;font-weight:800;font-size:13px">🔐 אבטחה — הקמת חשבונות אימות</summary>
+        <summary style="cursor:pointer;font-weight:800;font-size:13px">🔐 אבטחה — הקמת חשבון אימות (ידני)</summary>
         <p style="font-size:12px;color:var(--ink-3);line-height:1.6;margin:8px 0">
-          פעולה חד-פעמית לקראת הפרדת המסגרות. יוצרת חשבון Firebase לכל מסגרת
-          ובעל תפקיד, לפי הקודים הקיימים. בטוח להרצה חוזרת. יש להפעיל קודם
-          ספק Email/Password בקונסולה (ראה SECURITY.md).
+          החשבונות של כל המסגרות ובעלי-התפקיד כבר הוקמו. הקודים הוסרו מקוד המקור,
+          ולכן הכניסה נעשית מול השרת ואין קודים לקרוא ב-F12. כפתור זה נשאר למקרים
+          נדירים בלבד: הוספת מסגרת חדשה או תיקון חשבון בודד — תזין את הקוד (רק אתה
+          יודע אותו) ותבחר למי הוא שייך. בטוח להרצה חוזרת.
         </p>
-        <button class="m-btn ghost" style="width:100%" onclick="provisionAuthAccounts()">🔐 הקם חשבונות אימות</button>
+        <button class="m-btn ghost" style="width:100%" onclick="provisionAuthAccounts()">🔐 הקם חשבון אימות (ידני)</button>
       </details>
       <input class="m-input" id="users-search" type="text" placeholder="🔎 חיפוש משתמש לפי שם, מסגרת או תפקיד…" style="margin-bottom:12px" oninput="renderUsersAdmin()">
       <div id="users-list"></div>
@@ -2561,14 +2562,10 @@ async function hashPin(pin, salt){
   const buf = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(buf), b=>b.toString(16).padStart(2,"0")).join("");
 }
-/* חוסם PIN שזהה לקוד כניסה תפוס של מסגרת/תפקיד — כדי שלא ייווצר בלבול עם
-   קודי הכניסה. קוד "חלש" (0000/1234) מותר לפי בקשה. */
-function isReservedCode(pin){
-  const codes = new Set();
-  SHEDS.forEach(s=>{ if(s.soldierCode) codes.add(s.soldierCode); if(s.commanderCode) codes.add(s.commanderCode); });
-  [OWNER_CODE, VEHICLE_OFFICER_CODE, BUDGET_OFFICER_CODE, TECH_OFFICER_CODE, ADMIN_CODE].forEach(c=>{ if(c) codes.add(c); });
-  return codes.has(pin);
-}
+/* בעבר חסמנו PIN שזהה לקוד כניסה. מרגע שהקודים הוסרו מהמקור, אין דרך (ולא צורך)
+   להשוות מולם: הכניסה נעשית מול השרת, וה-PIN הוא נעילה אישית נפרדת. לכן אין קוד
+   "שמור" — כל PIN בן 4 ספרות מותר. (השארנו את הפונקציה כדי לא לשבור קריאות קיימות.) */
+function isReservedCode(pin){ return false; }
 function validPinFormat(pin){ return /^\d{4}$/.test(pin); }
 /* מאמת PIN מול רשומת אדם. אם אין ל-אדם PIN — עובר (אין נעילה). */
 async function verifyPin(person, pin){
@@ -2733,19 +2730,23 @@ async function sGetIn(shedId, key){ return sGetRaw(shedId + "_" + key); }
 async function sSetIn(shedId, key, val){ return sSetRaw(shedId + "_" + key, val); }
 
 /* ============ LOGIN ============ */
-/* ===== SHEDS & ACCESS CODES =====
-   5 מסגרות עצמאיות + מנהל-על. ניתן לשנות קודים כאן. */
+/* ===== SHEDS =====
+   רשימת המסגרות. שים לב: קודי הכניסה כבר אינם כאן (ולא בשום מקום במקור) —
+   הם הוסרו מטעמי אבטחה. הכניסה נעשית במצב "server": הקוד שמוקלד נבדק מול
+   Firebase Auth, והשרת מחזיר את המסגרת/התפקיד (מסמך authprofile). כך אין
+   שום קוד לקרוא ב-F12. הוספת מסגרת חדשה דורשת גם הקמת חשבון+פרופיל לקוד שלה
+   (כפתור "הקמת חשבון אימות ידני" במסך ניהול המשתמשים). */
 const SHEDS = [
-  {id:"shed1", name:"סככה 1", soldierCode:"1101", commanderCode:"1109"},
-  {id:"shed2", name:"סככה 2", soldierCode:"1201", commanderCode:"1209"},
-  {id:"shed3", name:"סככה 3", soldierCode:"1301", commanderCode:"1309"},
-  {id:"shed4", name:"סככה 4", soldierCode:"1401", commanderCode:"1409"},
-  {id:"shed5", name:"סככה 5", soldierCode:"1501", commanderCode:"1509"},
-  {id:"dept", name:"מחלקות", soldierCode:"1601", commanderCode:"1609", isDept:true},
+  {id:"shed1", name:"סככה 1"},
+  {id:"shed2", name:"סככה 2"},
+  {id:"shed3", name:"סככה 3"},
+  {id:"shed4", name:"סככה 4"},
+  {id:"shed5", name:"סככה 5"},
+  {id:"dept", name:"מחלקות", isDept:true},
   /* שתי מסגרות שהיו בעבר "יוזרים פרטיים" (קוד בודד ללא צוות) והפכו למסגרות מלאות
      עם כניסת חיילים ומפקדים — כדי שיוכלו לנהל צוות משלהם שנכנס לאפליקציה */
-  {id:"maint",    name:"מ״ע אחזקה",   soldierCode:"1701", commanderCode:"1709", isMaint:true},
-  {id:"training", name:"הדרכה",       soldierCode:"1801", commanderCode:"1809", isTraining:true}
+  {id:"maint",    name:"מ״ע אחזקה",   isMaint:true},
+  {id:"training", name:"הדרכה",       isTraining:true}
 ];
 /* תת-מחלקות תחת יוזר "מחלקות" — תיוג בלבד, לא משפיע על הרשאות */
 const DEPT_NAMES = ["הטסה", "אוה\"ד", "אחזקה", "קה\"ד מ\"מ"];
@@ -2759,11 +2760,9 @@ function personDept(p){
 }
 /* מקצועות לחייל בניהול צוות של הסככות (לא רלוונטי ליוזר "מחלקות") — תיוג בלבד */
 const PROFESSIONS = ["טכנאי דרג א'", "פקיד כלים"];
-const ADMIN_CODE = "9124";   // קוד מנהל-על
-const VEHICLE_OFFICER_CODE = "8124";   // קוד מ״ע אחזקה טייסתי
-const BUDGET_OFFICER_CODE = "7124";   // קוד אחראי תקציבים טייסתי
-const TECH_OFFICER_CODE = "6124";   // קוד קצין טכני — רואה את כל המידע באפליקציה (כמו מנהל-על)
-const OWNER_CODE = "5124";   // קוד מנהל מערכת (בעל האפליקציה) — ניהול כל המשתמשים בכל המסגרות
+/* קודי בעלי-התפקיד (מנהל מערכת / קצין טכני / אחראי תקציבים / מ״ע / הדרכה) הוסרו
+   מהמקור מטעמי אבטחה — כמו קודי המסגרות. הניתוב שלהם נעשה מהשרת (מסמכי authprofile)
+   אחרי כניסה מוצלחת, בדיוק כמו קודי המסגרות. */
 
 let currentShed = null;      // {id,name,...} של המסגרת הפעילה
 let isAdmin = false;         // מנהל-על
@@ -2981,78 +2980,20 @@ async function checkCode(){
   if(loginLockedGuard()){ document.getElementById("login-code").value=""; return; }
   setBtnLoading(btn, true);
   try{
-    /* מצב "server" — הדפדפן לא יודע שום מיפוי קוד→מסגרת. נכנסים עם זהות שנגזרת
-       מהקוד, וקוראים מהשרת "מי אתה" רק אחרי כניסה מוצלחת. כך אין קודים במקור.
-       אם הכניסה נכשלת (קוד שגוי, או חשבון שעדיין לא הוקם) — נופלים בחזרה למסלול
-       הטבלה למטה, כדי שלא ננעל אף אחד בזמן המעבר. */
-    if(CODE_LOGIN === "server" && fbAuth && fbAuth._am){
-      if(await signInAs(authEmailFromCode(code), deriveAuthPassword(code))){
-        const prof = await sGetRaw(await codeProfileKey(code));
-        if(prof && prof.kind){ await routeByAuthProfile(prof, code); return; }
-        console.warn("server-login: נכנס אך אין פרופיל לקוד — נופל למסלול הטבלה");
-      }
-    }
-    /* הקודים הישנים של מ״ע אחזקה ואחראי הדרכה ממשיכים לעבוד, אך מנותבים
-       למסגרות החדשות (ככניסת מפקד) — כדי שלא ייווצרו שני מסלולי כניסה נפרדים
-       ושאף אחד לא יינעל בחוץ בזמן המעבר. */
-    if(code === VEHICLE_OFFICER_CODE) code = "1709";
-    if(code === ADMIN_CODE) code = "1809";
-    // budget officer code?
-    if(code === BUDGET_OFFICER_CODE){
-      if(!(await signInAs(roleAuthEmail("budget"), deriveAuthPassword(code)))){ registerLoginFail(); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return; }
-      enteredRole = "אחראי תקציבים"; isBudgetOfficer = true; currentShed = null;
-      await budgetOfficerLogin();
-      return;
-    }
-    // system owner code?
-    if(code === OWNER_CODE){
-      if(!(await signInAs(roleAuthEmail("owner"), deriveAuthPassword(code)))){ registerLoginFail(); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return; }
-      enteredRole = "מנהל מערכת"; isOwner = true; currentShed = null;
-      await ownerLogin();
-      return;
-    }
-    // technical officer code?
-    if(code === TECH_OFFICER_CODE){
-      if(!(await signInAs(roleAuthEmail("tech"), deriveAuthPassword(code)))){ registerLoginFail(); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return; }
-      enteredRole = "קצין טכני"; isTechOfficer = true; currentShed = null;
-      await techOfficerLogin();
-      return;
-    }
-    // match against shed codes
-    let matched = null;
-    for(const s of SHEDS){
-      if(code === s.commanderCode){ matched = {shed:s, role:"מפקד"}; break; }
-      if(code === s.soldierCode){ matched = {shed:s, role:"חייל"}; break; }
-    }
-    if(!matched){ registerLoginFail(); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return; }
-
-    // אימות מול חשבון המסגרת+תפקיד — מעביר מזהות אנונימית לזהות המסגרת,
-    // כדי שהכללים יאפשרו קריאה של נתוני המסגרת הזו בלבד (וייחסמו אחרות).
-    if(!(await signInAs(frameworkAuthEmail(matched.shed.id, matched.role), deriveAuthPassword(code)))){
+    /* כניסה מבוססת-שרת בלבד. הדפדפן אינו מחזיק שום מיפוי קוד→מסגרת (הקודים
+       הוסרו מהמקור). נכנסים עם זהות שנגזרת מהקוד (u<code>@), והשרת מחזיר "מי
+       אתה" (מסמך authprofile) רק אחרי כניסה מוצלחת. כך אין שום קוד לקרוא ב-F12.
+       ניחוש נעצר ע"י נעילת-הכניסה המדורגת + App Check. כל הניתוב (מסגרת/מפקד/
+       חייל/מנהל/קצין/תקציבים, כולל הקודים הישנים של מ״ע/הדרכה) ב-routeByAuthProfile. */
+    if(!(fbAuth && fbAuth._am)){ toast("החיבור עדיין נטען — נסה שוב 🔄"); document.getElementById("login-code").value=""; return; }
+    if(!(await signInAs(authEmailFromCode(code), deriveAuthPassword(code)))){
       registerLoginFail(); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return;
     }
-    lastEnteredCode = code;   // לזכירת המכשיר אחרי כניסה מוצלחת
-
-    currentShed = matched.shed;
-    enteredRole = matched.role;
-    isAdmin = false;
-
-    // load this shed's personnel & tasks before showing names.
-    // כשל קריאה מתמשך — לא ממשיכים למסך השמות (שהיה מופיע ריק ומזמין רישום
-    // עצמי שדורס). המשתמש ינסה שוב.
-    if((await loadRuntimeLists()) === false){
-      toast("בעיית טעינת נתונים — נסה שוב 🔄");
-      document.getElementById("login-code").value="";
-      return;
+    const prof = await sGetRaw(await codeProfileKey(code));
+    if(!(prof && prof.kind)){
+      registerLoginFail(); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return;
     }
-
-    document.getElementById("login-step-code").style.display = "none";
-    document.getElementById("login-step-name").style.display = "block";
-    document.getElementById("login-pin-wrap").style.display = "none";   // מוסתר עד שנבחר שם עם PIN
-    const banner = document.getElementById("login-role-banner");
-    if(enteredRole === "מפקד"){ banner.textContent = "🎖️ " + currentShed.name + " · כניסת מפקדים"; banner.style.background = "#fff"; banner.style.color = "var(--red)"; }
-    else { banner.textContent = "👤 " + currentShed.name + " · כניסת חיילים"; banner.style.background = "rgba(255,255,255,.18)"; banner.style.color = "#fff"; }
-    populateLogin();
+    await routeByAuthProfile(prof, code);
   } finally {
     setBtnLoading(btn, false);
   }
@@ -5907,65 +5848,45 @@ async function ownerLog(text){
   }catch(e){ console.error("ownerLog", e); }
 }
 
-/* הקמת חשבונות האימות (חד-פעמי) — יוצרת ב-Firebase Auth חשבון לכל
-   מסגרת+תפקיד ולכל חשבון-על, כשהסיסמה נגזרת מהקוד הקיים. מריץ המנהל
-   פעם אחת אחרי הפעלת ספק Email/Password בקונסולה, ולפני מעבר ל-scoped.
-   בטוח להרצה חוזרת — חשבון שכבר קיים מדולג. */
+/* הקמת חשבון אימות — ידנית לקוד בודד. מאז שהקודים הוסרו מהמקור, אין יותר טבלה
+   אוטומטית להקמה המונית; ההקמה של כל החשבונות כבר בוצעה פעם אחת. הפונקציה הזו
+   נשארת למקרים נדירים: הוספת מסגרת חדשה, או תיקון/יצירה מחדש של חשבון בודד.
+   המנהל מזין את הקוד (הוא היחיד שיודע אותו — הוא לא במקור) ובוחר למי הוא שייך;
+   נוצר חשבון u<code>@ + נכתב פרופיל הניתוב בשרת. בטוח להרצה חוזרת. */
 async function provisionAuthAccounts(){
   if(!fbAuth || !fbAuth._am){ toast("Firebase לא מחובר ⛔"); return; }
-  if(!confirm("להקים את חשבונות האימות לכל המסגרות ובעלי התפקידים?\nפעולה חד-פעמית, בטוחה להרצה חוזרת.")) return;
+  const code = (prompt("הקמת חשבון אימות (ידנית).\n\nהזן את קוד הכניסה בן 4 הספרות שברצונך להקים או לעדכן:")||"").trim();
+  if(!code) return;
+  if(!/^\d{4}$/.test(code)){ alert("קוד לא תקין — נדרשות בדיוק 4 ספרות."); return; }
+
+  // בניית רשימת יעדים אפשריים (מסגרת+תפקיד / בעלי תפקיד)
+  const opts = [];
+  for(const s of SHEDS) opts.push({label:s.name+" · מפקד", profile:{kind:"framework", shedId:s.id, role:"מפקד"}});
+  for(const s of SHEDS) opts.push({label:s.name+" · חייל", profile:{kind:"framework", shedId:s.id, role:"חייל"}});
+  opts.push({label:"מנהל מערכת", profile:{kind:"owner"}});
+  opts.push({label:"קצין טכני",  profile:{kind:"tech"}});
+  opts.push({label:"אחראי תקציבים", profile:{kind:"budget"}});
+
+  const menu = opts.map((o,i)=> (i+1)+") "+o.label).join("\n");
+  const pick = (prompt("למי שייך הקוד "+code+"? הזן מספר:\n\n"+menu)||"").trim();
+  const idx = parseInt(pick,10) - 1;
+  if(!(idx>=0 && idx<opts.length)){ if(pick) alert("בחירה לא תקינה."); return; }
+  const chosen = opts[idx];
+  if(!confirm(`להקים/לעדכן חשבון עבור קוד ${code}?\n\nיעד: ${chosen.label}`)) return;
+
   const am = fbAuth._am;
-  const jobs = [];
-  // (א) חשבונות ההיסטוריים (מסגרת.תפקיד@ / role@) — עדיין בשימוש מסלול הטבלה עד המעבר המלא.
-  for(const s of SHEDS){
-    jobs.push([frameworkAuthEmail(s.id,"מפקד"), deriveAuthPassword(s.commanderCode), s.name+" · מפקד"]);
-    jobs.push([frameworkAuthEmail(s.id,"חייל"),  deriveAuthPassword(s.soldierCode),   s.name+" · חייל"]);
-  }
-  jobs.push([roleAuthEmail("owner"),  deriveAuthPassword(OWNER_CODE),          "מנהל מערכת"]);
-  jobs.push([roleAuthEmail("tech"),   deriveAuthPassword(TECH_OFFICER_CODE),   "קצין טכני"]);
-  jobs.push([roleAuthEmail("budget"), deriveAuthPassword(BUDGET_OFFICER_CODE), "אחראי תקציבים"]);
-
-  // (ב) חשבונות הכניסה מבוססת-שרת: לכל קוד חשבון u<code>@ + פרופיל ניתוב בשרת.
-  //     כך שבמצב "server" הדפדפן לא צריך שום מיפוי קודים במקור.
-  const codeMap = [];   // [code, profile, label]
-  for(const s of SHEDS){
-    if(s.commanderCode) codeMap.push([s.commanderCode, {kind:"framework", shedId:s.id, role:"מפקד"}, s.name+" · מפקד"]);
-    if(s.soldierCode)   codeMap.push([s.soldierCode,   {kind:"framework", shedId:s.id, role:"חייל"}, s.name+" · חייל"]);
-  }
-  codeMap.push([OWNER_CODE,          {kind:"owner"},  "מנהל מערכת"]);
-  codeMap.push([TECH_OFFICER_CODE,   {kind:"tech"},   "קצין טכני"]);
-  codeMap.push([BUDGET_OFFICER_CODE, {kind:"budget"}, "אחראי תקציבים"]);
-  // קודים ישנים שממשיכים לעבוד — מנותבים למסגרות החדשות (ככניסת מפקד):
-  codeMap.push([VEHICLE_OFFICER_CODE, {kind:"framework", shedId:"maint",    role:"מפקד"}, "מ״ע אחזקה (קוד ישן)"]);
-  codeMap.push([ADMIN_CODE,           {kind:"framework", shedId:"training", role:"מפקד"}, "הדרכה (קוד ישן)"]);
-  for(const [code,,label] of codeMap){
-    jobs.push([authEmailFromCode(code), deriveAuthPassword(code), label+" (כניסת-שרת)"]);
-  }
-
-  let created=0, existed=0, failed=0; const errs=[];
-  for(const [email,pw,label] of jobs){
-    try{
-      await am.createUserWithEmailAndPassword(fbAuth, email, pw);
-      created++;
-    }catch(e){
-      if(e && e.code === "auth/email-already-in-use"){ existed++; }
-      else { failed++; errs.push(label+": "+(e&&e.code||e)); }
-    }
-  }
-
-  // כתיבת פרופילי הניתוב (מזוהים בגיבוב הקוד; נקראים רק אחרי כניסה מוצלחת).
-  let profOk=0, profFail=0;
-  for(const [code, profile] of codeMap){
-    try{ await sSetRaw(await codeProfileKey(code), profile); profOk++; }
-    catch(e){ profFail++; errs.push("פרופיל "+(profile.shedId||profile.kind)+": "+(e&&e.code||e)); }
-  }
-
-  // חוזרים לזהות אנונימית ניטרלית.
+  let acct="", err="";
+  try{ await am.createUserWithEmailAndPassword(fbAuth, authEmailFromCode(code), deriveAuthPassword(code)); acct="נוצר"; }
+  catch(e){ if(e && e.code==="auth/email-already-in-use") acct="כבר היה קיים"; else err=""+(e&&e.code||e); }
+  let profOk=false;
+  try{ await sSetRaw(await codeProfileKey(code), chosen.profile); profOk=true; }
+  catch(e){ err = err || (""+(e&&e.code||e)); }
+  // חוזרים לזהות אנונימית ניטרלית (createUser מחבר אוטומטית כחשבון החדש).
   try{ await am.signInAnonymously(fbAuth); }catch(e){ console.error("re-anon after provision", e); }
 
-  await ownerLog(`הקמת חשבונות אימות: ${created} נוצרו, ${existed} קיימים, ${failed} נכשלו · פרופילים: ${profOk} נכתבו, ${profFail} נכשלו`);
-  if(failed || profFail){ console.error("provision failures", errs); alert(`הושלם עם שגיאות:\nחשבונות — נוצרו ${created}, קיימים ${existed}, נכשלו ${failed}\nפרופילים — נכתבו ${profOk}, נכשלו ${profFail}\n\n${errs.join("\n")}`); }
-  else { alert(`✅ הושלם: ${created} חשבונות נוצרו, ${existed} כבר היו קיימים, ${profOk} פרופילי ניתוב נכתבו.`); }
+  await ownerLog(`הקמת חשבון ידנית: קוד ${code} → ${chosen.label} · חשבון ${acct||"נכשל"} · פרופיל ${profOk?"נכתב":"נכשל"}`);
+  if(err && !profOk){ alert("❌ שגיאה: "+err); }
+  else { alert(`✅ הושלם:\nחשבון: ${acct||"נכשל"}\nפרופיל ניתוב: ${profOk?"נכתב":"נכשל"}\nקוד ${code} → ${chosen.label}`); }
 }
 
 async function techOfficerLogin(){
