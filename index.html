@@ -1112,7 +1112,7 @@ nav{
           <h2>מעקב רכבים 🚙</h2>
           <p>רכבי הסככה וטיפול תקופתי · התראה לפני מועד הטיפול.</p>
         </div>
-        <button class="add-btn hidden" id="vehicles-add-btn" onclick="openVehicleAdd()">+ רכב</button>
+        <button class="add-btn hidden" id="vehicles-add-btn" onclick="openShedVehicleFull(null)">+ רכב</button>
       </div>
       <div class="cmd-tabs" style="margin-bottom:16px">
         <button class="cmd-tab active" id="vptab-vehicles" onclick="vehiclesPageTab('vehicles')">🚙 רכבים</button>
@@ -1824,8 +1824,10 @@ nav{
       <h3 id="vo-vehicle-title">🚙 הוספת רכב למעקב</h3>
       <div class="m-sub">שיוך לסככה + כל פרטי המעקב.</div>
       <div class="team-add-form">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏷️ סככה משוייכת</label>
-        <select class="m-input" id="vo-vehicle-shed" style="margin-bottom:8px"></select>
+        <div id="vo-vehicle-shed-wrap">
+          <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏷️ סככה משוייכת</label>
+          <select class="m-input" id="vo-vehicle-shed" style="margin-bottom:8px"></select>
+        </div>
         <select class="m-input" id="vo-vehicle-bank-pick" style="margin-bottom:8px" onchange="pickVoVehicleFromBank()"></select>
         <input class="m-input" id="vo-vehicle-name" type="text" placeholder="שם/סוג הרכב" style="margin-bottom:8px">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מס' רכב אזרחי</label>
@@ -3622,7 +3624,7 @@ async function getNaatim(){ return (await sGet("naatim_list")) || []; }
 /* נע"ת חדר כלים / רכבים — מעניק הרשאות הוספה ועריכה למי ששובץ לתחום, בנוסף למפקד.
    ההתאמה היא לפי שם תחום מדויק ("חדר כלים" / "רכבים") ושם החייל המשובץ. */
 async function refreshAreaPermissions(){
-  if(currentShed && currentShed.isDept){ isToolsResp = false; isVehiclesResp = false; return; }
+  if(currentShed && currentShed.isDept){ isToolsResp = false; isVehiclesResp = (userRole==="מפקד"); return; }
   const list = await getNaatim();
   const has = area => list.some(n => n.area && n.area.trim()===area && n.person===user);
   isToolsResp = userRole==="מפקד" || has("חדר כלים");
@@ -7818,7 +7820,7 @@ async function renderVehiclesPage(){
   const cards = all.map(v=>{
     const actions = v._leasing
       ? `<span class="role-mini">🚗 ליסינג</span>`
-      : (isCmdr ? `<button class="cert-chip-edit" onclick="openVehicleEdit('${v.id}')">✏️</button><button class="cert-chip-del" onclick="removeVehicleById('${v.id}')">✕</button>` : '');
+      : (isCmdr ? `<button class="cert-chip-edit" onclick="openShedVehicleFull('${v.id}')">✏️</button><button class="cert-chip-del" onclick="removeVehicleById('${v.id}')">✕</button>` : '');
     return vehicleCardHtml(v, actions, v._checks);
   }).join("");
   box.innerHTML = banner + cards;
@@ -8114,8 +8116,32 @@ function readVoVehicleForm(){
   });
   return data;
 }
+/* מצב "מפקד מסגרת" — אותו טופס מלא של מ״ע אחזקה, אבל נעול למסגרת של המפקד
+   (בורר הסככה מוסתר), ובשמירה מרענן את מסך הרכבים של המסגרת. */
+let shedVehicleFullMode = false;
+function toggleVoShedSelector(show){
+  const w = document.getElementById("vo-vehicle-shed-wrap");
+  if(w) w.style.display = show ? "" : "none";
+}
+async function openShedVehicleFull(id){
+  shedVehicleFullMode = true;
+  toggleVoShedSelector(false);   // המפקד נעול למסגרת שלו
+  const shedSel = document.getElementById("vo-vehicle-shed");
+  shedSel.innerHTML = `<option value="${currentShed.id}">${escapeHTML(currentShed.name)}</option>`;
+  shedSel.value = currentShed.id;
+  document.getElementById("vo-vehicle-bank-pick").innerHTML = vehicleBankOptions();
+  let v = null;
+  if(id){ v = (await getVehicles()).find(x=>x.id===id); voVehicleCtx = {shedId: currentShed.id, id}; }
+  else { voVehicleCtx = null; }
+  fillVoVehicleForm(v);
+  document.getElementById("vo-vehicle-title").textContent = id ? "✏️ עריכת רכב" : "🚙 הוספת רכב למעקב";
+  document.querySelector("#vo-vehicle-modal .m-btn.primary").textContent = id ? "💾 שמור שינויים" : "➕ הוסף רכב";
+  document.getElementById("vo-vehicle-modal").classList.add("open");
+}
 function openVoVehicleAdd(){
   voVehicleCtx = null;
+  shedVehicleFullMode = false;
+  toggleVoShedSelector(true);
   document.getElementById("vo-vehicle-shed").innerHTML = voShedOptions();
   document.getElementById("vo-vehicle-bank-pick").innerHTML = vehicleBankOptions();
   fillVoVehicleForm(null);
@@ -8128,6 +8154,8 @@ async function openVoVehicleEdit(shedId, id){
   const v = vehicles.find(x=>x.id===id);
   if(!v) return;
   voVehicleCtx = {shedId, id};
+  shedVehicleFullMode = false;
+  toggleVoShedSelector(true);
   document.getElementById("vo-vehicle-shed").innerHTML = voShedOptions(shedId);
   document.getElementById("vo-vehicle-bank-pick").innerHTML = vehicleBankOptions();
   fillVoVehicleForm(v);
@@ -8161,7 +8189,9 @@ async function saveVoVehicle(){
   }
   voVehicleCtx = null;
   document.getElementById("vo-vehicle-modal").classList.remove("open");
-  renderVoVehicles();
+  // ריענון המסך המתאים: מפקד מסגרת → מסך הרכבים של המסגרת; מ״ע אחזקה → התצוגה הכלל-טייסתית
+  if(shedVehicleFullMode){ shedVehicleFullMode = false; toggleVoShedSelector(true); renderVehiclesPage(); updateAlertBell(); }
+  else renderVoVehicles();
 }
 async function removeVoVehicle(shedId, id){
   if(!confirm("להסיר את הרכב מהמעקב?")) return;
