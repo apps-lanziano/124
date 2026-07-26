@@ -2478,7 +2478,7 @@ let fbDB = null, fbReady = false, fbAuth = null;
    "firebase": מפעיל אימות אמיתי מול Firebase (ראה initFirebase ו-SECURITY.md).
    נשאר "legacy" עד שהחשבונות נוצרו, הכללים פורסמו ואכיפת App Check הודלקה —
    אז מחליפים כאן לשורה אחת ל-"firebase". כך המעבר הדרגתי ובטוח. */
-const AUTH_MODE = "firebase";
+const AUTH_MODE = "scoped";
 /* דומיין פנימי לחשבונות האימות. אינו שולח מייל — משמש רק כמזהה ל-Firebase Auth. */
 const AUTH_DOMAIN = "sq124.app";
 /* האם שכבת האימות פעילה בכלל (כל מצב שאינו legacy). */
