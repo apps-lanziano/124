@@ -2921,8 +2921,8 @@ function onLoginNameChange(){
     label.textContent = "🔒 הזן PIN אישי";
     pin.placeholder = "4 ספרות";
   } else {
-    label.textContent = "🔒 בחר PIN אישי (רשות) — או השאר ריק";
-    pin.placeholder = "4 ספרות — או השאר ריק";
+    label.textContent = "🔒 כניסה ראשונה — הגדר PIN אישי (חובה)";
+    pin.placeholder = "בחר 4 ספרות";
   }
 }
 
@@ -2944,8 +2944,9 @@ async function doLogin(){
       // יש PIN — חובה להזין נכון
       if(!entered){ toast("הזן PIN אישי 🔒"); pinEl.focus(); return; }
       if(!(await verifyPin(person, entered))){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
-    } else if(entered){
-      // אין PIN — בחירה עצמית (רשות). ריק = כניסה בלי PIN.
+    } else {
+      // אין PIN — הגדרה חובה בכניסה ראשונה (אי אפשר לדלג)
+      if(!entered){ toast("כניסה ראשונה — יש להגדיר PIN אישי 🔒"); pinEl.focus(); return; }
       if(!validPinFormat(entered)){ toast("PIN חייב להיות 4 ספרות ⛔"); pinEl.focus(); return; }
       if(isReservedCode(entered)){ toast("קוד זה שמור למסגרת — בחר קוד אחר ⛔"); pinEl.value=""; pinEl.focus(); return; }
       const salt = genSalt();
