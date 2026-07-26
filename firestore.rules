@@ -10,9 +10,10 @@ rules_version = '2';
   ── גרסה 1 (מה שמופעל כאן) ─────────────────────────────────────────
   שלוש שכבות שסוגרות את הפרצה הקריטית שהודגמה (המסד היה קריא ומחיק
   מהאינטרנט הפתוח, בלי שום התחברות):
-    1. חובת אימות — בלי התחברות אין גישה לשום נתון.
+    1. חובת אימות — בלי התחברות אין גישה לשום נתון (קריאה, כתיבה או מחיקה).
     2. בלי list   — אי אפשר לשאוב את כל המסד בבקשה אחת.
-    3. בלי delete — מחיקה מבחוץ חסומה; מחיקות דרך הקונסולה בלבד.
+    3. מחיקה דורשת אימות — האפליקציה מוחקת תמונות/קבצים, ולכן מחיקה מותרת
+       למחובר בלבד; מחיקה חיצונית נחסמת גם ע"י האימות וגם ע"י App Check.
 
   גרסה 1 עובדת עם כל מודל חשבונות (אפילו חשבון אפליקציה יחיד) ומשתלבת
   עם אכיפת App Check שיש להפעיל בנפרד בקונסולה. שילוב השניים חזק:
@@ -34,8 +35,8 @@ service cloud.firestore {
     match /sq124/{docId} {
       allow get:            if isAuthed();
       allow create, update: if isAuthed();
-      allow list:           if false;   // בלי שאיבה המונית של כל המסד
-      allow delete:         if false;   // מחיקה דרך הקונסולה בלבד
+      allow delete:         if isAuthed();  // האפליקציה מוחקת תמונות/קבצים — חייב אימות
+      allow list:           if false;       // בלי שאיבה המונית של כל המסד
     }
 
     // כל שאר האוספים — סגורים.
@@ -54,12 +55,11 @@ service cloud.firestore {
              request.auth.token.email.matches('^(owner|tech|budget|training)[.@].*');
     }
     match /sq124/{docId} {
-      allow get, create, update:
+      allow get, create, update, delete:
         if isSquadronWide()
         || (isAuthed() && ( docId.matches('^' + myPrefix() + '.*')
                             || docId.matches('^admin_.*') ));
       allow list:   if false;
-      allow delete: if false;
     }
     */
   }
