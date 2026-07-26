@@ -1454,6 +1454,15 @@ nav{
         </div>
       </div>
       <div id="users-stats" style="margin-bottom:12px"></div>
+      <details style="margin-bottom:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px">
+        <summary style="cursor:pointer;font-weight:800;font-size:13px">🔐 אבטחה — הקמת חשבונות אימות</summary>
+        <p style="font-size:12px;color:var(--ink-3);line-height:1.6;margin:8px 0">
+          פעולה חד-פעמית לקראת הפרדת המסגרות. יוצרת חשבון Firebase לכל מסגרת
+          ובעל תפקיד, לפי הקודים הקיימים. בטוח להרצה חוזרת. יש להפעיל קודם
+          ספק Email/Password בקונסולה (ראה SECURITY.md).
+        </p>
+        <button class="m-btn ghost" style="width:100%" onclick="provisionAuthAccounts()">🔐 הקם חשבונות אימות</button>
+      </details>
       <input class="m-input" id="users-search" type="text" placeholder="🔎 חיפוש משתמש לפי שם, מסגרת או תפקיד…" style="margin-bottom:12px" oninput="renderUsersAdmin()">
       <div id="users-list"></div>
     </section>
@@ -2455,6 +2464,34 @@ let fbDB = null, fbReady = false, fbAuth = null;
    נשאר "legacy" עד שהחשבונות נוצרו, הכללים פורסמו ואכיפת App Check הודלקה —
    אז מחליפים כאן לשורה אחת ל-"firebase". כך המעבר הדרגתי ובטוח. */
 const AUTH_MODE = "firebase";
+/* דומיין פנימי לחשבונות האימות. אינו שולח מייל — משמש רק כמזהה ל-Firebase Auth. */
+const AUTH_DOMAIN = "sq124.app";
+/* האם שכבת האימות פעילה בכלל (כל מצב שאינו legacy). */
+function authActive(){ return AUTH_MODE !== "legacy"; }
+/* קוד בן 4 ספרות אינו עומד במינימום של Firebase (6 תווים) — גוזרים ממנו
+   סיסמה דטרמיניסטית. המשתמש עדיין מקליד 4 ספרות; זו הסיסמה שמאחורי הקלעים. */
+function deriveAuthPassword(code){ return "sq124:" + code; }
+/* חשבון האימות של מסגרת+תפקיד: "shed3.cmd@sq124.app" / "shed3.sol@sq124.app".
+   הכללים (גרסה 2) גוזרים את המסגרת מהחלק שלפני הנקודה. */
+function frameworkAuthEmail(shedId, role){
+  return shedId + "." + (role === "מפקד" ? "cmd" : "sol") + "@" + AUTH_DOMAIN;
+}
+/* חשבונות-על כלל-טייסתיים. */
+function roleAuthEmail(slug){ return slug + "@" + AUTH_DOMAIN; }
+
+/* התחברות ל-Firebase בזהות מסוימת (מחליפה את הזהות האנונימית של האתחול).
+   מחזירה true בהצלחה. במצב scoped כישלון אמיתי חוסם כניסה — כי בלי הזהות
+   הנכונה הכללים ימנעו קריאה. מחוץ ל-scoped מדלגים ומחזירים true. */
+async function signInAs(email, password){
+  if(AUTH_MODE !== "scoped" || !fbAuth || !fbAuth._am) return true;
+  try{
+    await fbAuth._am.signInWithEmailAndPassword(fbAuth, email, password);
+    return true;
+  }catch(e){
+    console.error("signInAs", email, e && e.code);
+    return false;
+  }
+}
 const COLLECTION = "sq124";   // מסמכי הנתונים כולם תחת אוסף אחד
 
 /* App Check — מאמת שהבקשות ל-Firestore מגיעות מהאתר האמיתי ולא מסקריפט חיצוני.
@@ -2665,18 +2702,21 @@ async function checkCode(){
     if(code === ADMIN_CODE) code = "1809";
     // budget officer code?
     if(code === BUDGET_OFFICER_CODE){
+      if(!(await signInAs(roleAuthEmail("budget"), deriveAuthPassword(code)))){ toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return; }
       enteredRole = "אחראי תקציבים"; isBudgetOfficer = true; currentShed = null;
       await budgetOfficerLogin();
       return;
     }
     // system owner code?
     if(code === OWNER_CODE){
+      if(!(await signInAs(roleAuthEmail("owner"), deriveAuthPassword(code)))){ toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return; }
       enteredRole = "מנהל מערכת"; isOwner = true; currentShed = null;
       await ownerLogin();
       return;
     }
     // technical officer code?
     if(code === TECH_OFFICER_CODE){
+      if(!(await signInAs(roleAuthEmail("tech"), deriveAuthPassword(code)))){ toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return; }
       enteredRole = "קצין טכני"; isTechOfficer = true; currentShed = null;
       await techOfficerLogin();
       return;
@@ -2688,6 +2728,12 @@ async function checkCode(){
       if(code === s.soldierCode){ matched = {shed:s, role:"חייל"}; break; }
     }
     if(!matched){ toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return; }
+
+    // אימות מול חשבון המסגרת+תפקיד — מעביר מזהות אנונימית לזהות המסגרת,
+    // כדי שהכללים יאפשרו קריאה של נתוני המסגרת הזו בלבד (וייחסמו אחרות).
+    if(!(await signInAs(frameworkAuthEmail(matched.shed.id, matched.role), deriveAuthPassword(code)))){
+      toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return;
+    }
 
     currentShed = matched.shed;
     enteredRole = matched.role;
@@ -2887,6 +2933,11 @@ async function doLogin(){
 function logout(){
   user=null; userRole=null; isCmd=false; isAdmin=false; isVehicleOfficer=false; isBudgetOfficer=false; isTechOfficer=false; isToolsResp=false; isVehiclesResp=false;
   isOwner=false; impersonating=null;
+  // נטישת זהות המסגרת ב-Firebase וחזרה לזהות אנונימית ניטרלית, כדי שכניסה
+  // הבאה תתחיל נקייה ולא תישאר מחוברת כמסגרת הקודמת.
+  if(AUTH_MODE === "scoped" && fbAuth && fbAuth._am){
+    fbAuth._am.signInAnonymously(fbAuth).catch(e=>console.error("re-anon", e));
+  }
   document.getElementById("impersonate-bar").classList.add("hidden");
   document.body.style.paddingTop = "";
   // restore regular nav buttons
@@ -5418,6 +5469,41 @@ async function ownerLog(text){
     log.unshift({text, date:new Date().toLocaleString("he-IL")});
     await sSetRaw("owner_log", log.slice(0,300));
   }catch(e){ console.error("ownerLog", e); }
+}
+
+/* הקמת חשבונות האימות (חד-פעמי) — יוצרת ב-Firebase Auth חשבון לכל
+   מסגרת+תפקיד ולכל חשבון-על, כשהסיסמה נגזרת מהקוד הקיים. מריץ המנהל
+   פעם אחת אחרי הפעלת ספק Email/Password בקונסולה, ולפני מעבר ל-scoped.
+   בטוח להרצה חוזרת — חשבון שכבר קיים מדולג. */
+async function provisionAuthAccounts(){
+  if(!fbAuth || !fbAuth._am){ toast("Firebase לא מחובר ⛔"); return; }
+  if(!confirm("להקים את חשבונות האימות לכל המסגרות ובעלי התפקידים?\nפעולה חד-פעמית, בטוחה להרצה חוזרת.")) return;
+  const am = fbAuth._am;
+  const jobs = [];
+  for(const s of SHEDS){
+    jobs.push([frameworkAuthEmail(s.id,"מפקד"), deriveAuthPassword(s.commanderCode), s.name+" · מפקד"]);
+    jobs.push([frameworkAuthEmail(s.id,"חייל"),  deriveAuthPassword(s.soldierCode),   s.name+" · חייל"]);
+  }
+  jobs.push([roleAuthEmail("owner"),  deriveAuthPassword(OWNER_CODE),          "מנהל מערכת"]);
+  jobs.push([roleAuthEmail("tech"),   deriveAuthPassword(TECH_OFFICER_CODE),   "קצין טכני"]);
+  jobs.push([roleAuthEmail("budget"), deriveAuthPassword(BUDGET_OFFICER_CODE), "אחראי תקציבים"]);
+
+  let created=0, existed=0, failed=0; const errs=[];
+  for(const [email,pw,label] of jobs){
+    try{
+      await am.createUserWithEmailAndPassword(fbAuth, email, pw);
+      created++;
+    }catch(e){
+      if(e && e.code === "auth/email-already-in-use"){ existed++; }
+      else { failed++; errs.push(label+": "+(e&&e.code||e)); }
+    }
+  }
+  // יצירת חשבון מחברת אוטומטית כמשתמש שנוצר — חוזרים לזהות אנונימית ניטרלית.
+  try{ await am.signInAnonymously(fbAuth); }catch(e){ console.error("re-anon after provision", e); }
+
+  await ownerLog(`הקמת חשבונות אימות: ${created} נוצרו, ${existed} קיימים, ${failed} נכשלו`);
+  if(failed){ console.error("provision failures", errs); alert(`הושלם עם שגיאות:\nנוצרו ${created}, קיימים ${existed}, נכשלו ${failed}\n\n${errs.join("\n")}`); }
+  else { alert(`✅ הושלם: ${created} חשבונות נוצרו, ${existed} כבר היו קיימים.`); }
 }
 
 async function techOfficerLogin(){
