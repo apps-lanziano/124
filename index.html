@@ -3666,10 +3666,10 @@ async function renderTasks(){
     el.onclick = ()=>toggleTask(t.id);
     const doneBy = isDone
       ? `<p class="done-by">✓ בוצע ע"י ${escapeHTML(rec.by)} · ${rec.time}</p>`
-      : `<p>${t.desc}</p>`;
+      : `<p>${escapeHTML(t.desc)}</p>`;
     el.innerHTML = `
       <div class="task-num">${i+1}</div>
-      <div class="task-info"><h3>${t.title}</h3>${doneBy}</div>
+      <div class="task-info"><h3>${escapeHTML(t.title)}</h3>${doneBy}</div>
       <div class="task-check">✓</div>`;
     list.appendChild(el);
   });
@@ -3922,9 +3922,9 @@ async function renderDuties(){
     const opts = ['<option value="">—</option>']
       .concat(DUTY_TYPES.map(d=>`<option value="${d}" ${row.duty===d?"selected":""}>${d}</option>`)).join("");
     el.innerHTML = `
-      <div class="duty-name"><div class="avatar">${initials(p.name)}</div><b>${p.name}</b></div>
-      <select class="duty-select ${row.duty?"filled":""}" ${canEdit?"":"disabled"} onchange="saveDuty('${p.name.replace(/'/g,"\\'")}','duty',this.value);this.classList.toggle('filled',!!this.value)">${opts}</select>
-      <input type="date" class="duty-dateinp" value="${row.date||""}" ${canEdit?"":"disabled"} onchange="saveDuty('${p.name.replace(/'/g,"\\'")}','date',this.value)">`;
+      <div class="duty-name"><div class="avatar">${initials(p.name)}</div><b>${escapeHTML(p.name)}</b></div>
+      <select class="duty-select ${row.duty?"filled":""}" ${canEdit?"":"disabled"} onchange="saveDuty('${jsStr(p.name)}','duty',this.value);this.classList.toggle('filled',!!this.value)">${opts}</select>
+      <input type="date" class="duty-dateinp" value="${row.date||""}" ${canEdit?"":"disabled"} onchange="saveDuty('${jsStr(p.name)}','date',this.value)">`;
     list.appendChild(el);
   });
   document.getElementById("duty-lock-note").textContent =
@@ -4209,7 +4209,7 @@ async function renderBdays(){
     el.innerHTML = `
       <div class="bday-avatar">${initials(p.name)}</div>
       <div class="bday-body">
-        <h3>${p.name}${isVo?'<span class="role-mini">נהג מקצועי</span>':(p.role?`<span class="role-mini ${roleCls}">${p.role}</span>`:"")}</h3>
+        <h3>${escapeHTML(p.name)}${isVo?'<span class="role-mini">נהג מקצועי</span>':(p.role?`<span class="role-mini ${roleCls}">${escapeHTML(p.role)}</span>`:"")}</h3>
         <p>${isToday ? "🎉 חוגג/ת היום " + p.age + "!" : fmt(p.next) + " · יחגוג/תחגוג " + p.age}</p>
       </div>
       <div class="bday-count">
@@ -4491,7 +4491,7 @@ async function renderCommander(){
     return `<div class="mtask-row">
       <div class="mtask-ic ${isDone?"done":"open"}">${isDone?"✓":"○"}</div>
       <div class="mtask-info">
-        <h4>${t.title}</h4>
+        <h4>${escapeHTML(t.title)}</h4>
         <span class="${isDone?"done":""}">${isDone ? 'בוצע ע"י '+escapeHTML(rec.by)+' · '+rec.time : "טרם בוצע"}</span>
       </div>
       ${isDone?'<span class="pill g">בוצע ✓</span>':'<span class="pill r">פתוח</span>'}
@@ -4531,7 +4531,7 @@ async function showSigDetail(evId){
     else unsigned.push(p.name);
     rows.push(`<div class="sig-detail-row">
       <div class="avatar">${initials(p.name)}</div>
-      <div class="nm">${p.name}${s?`<div class="dt">נקרא · ${s.date}</div>`:""}</div>
+      <div class="nm">${escapeHTML(p.name)}${s?`<div class="dt">נקרא · ${s.date}</div>`:""}</div>
       ${s ? `<span class="ok">✓ אושר</span>` : `<span class="no">לא קרא</span>`}
     </div>`);
   }
@@ -4546,7 +4546,7 @@ function sendUnsignedReminder(){
   openWaPrompt("unsigned", sigDetailCurrent);
 }
 const initials = n => n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join("");
-const rowHTML = (name,pill)=>`<div class="cmd-row"><div class="avatar">${initials(name)}</div><div class="cmd-name">${name}</div>${pill}</div>`;
+const rowHTML = (name,pill)=>`<div class="cmd-row"><div class="avatar">${initials(name)}</div><div class="cmd-name">${escapeHTML(name)}</div>${pill}</div>`;
 
 /* ============ UTIL ============ */
 /* ===== WHATSAPP SHARE (feature) =====
@@ -4668,6 +4668,8 @@ function shareBinuiFaultWA(payload){
 }
 
 function escapeHTML(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+/* קידוד בטוח לארגומנט JS בתוך onclick="fn('...')" — כל תו לא-אלפאנומרי ל-\uXXXX */
+function jsStr(s){ return String(s).replace(/[^a-zA-Z0-9_]/g, c=>"\\u"+c.charCodeAt(0).toString(16).padStart(4,"0")); }
 
 /* ============ AUDIT LOG (feature 2) ============ */
 async function logAction(action, detail){
@@ -5627,7 +5629,7 @@ async function renderUsersAdmin(){
         </div>
         <div style="display:flex;gap:6px;margin-top:8px">
           <button class="m-btn ghost" style="flex:1;font-size:11.5px;padding:7px" onclick="openUserEdit('${g.shed.id}',${x.idx})">✏️ עריכה</button>
-          <button class="m-btn ghost" style="flex:1;font-size:11.5px;padding:7px" onclick="impersonateUser('${g.shed.id}','${escapeHTML(p.name)}')">👁️ כניסה בתור</button>
+          <button class="m-btn ghost" style="flex:1;font-size:11.5px;padding:7px" onclick="impersonateUser('${g.shed.id}','${jsStr(p.name)}')">👁️ כניסה בתור</button>
           ${p.pinHash ? `<button class="m-btn ghost" style="flex:0 0 auto;font-size:11.5px;padding:7px" title="איפוס PIN" onclick="resetUserPin('${g.shed.id}',${x.idx})">🔓 איפוס</button>` : ""}
           <button class="m-btn ghost" style="flex:0 0 auto;font-size:11.5px;padding:7px" onclick="deleteUserAsOwner('${g.shed.id}',${x.idx})">🗑️</button>
         </div>
