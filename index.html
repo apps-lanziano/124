@@ -2510,6 +2510,16 @@ let fbReadFailed = false;
    נשאר "legacy" עד שהחשבונות נוצרו, הכללים פורסמו ואכיפת App Check הודלקה —
    אז מחליפים כאן לשורה אחת ל-"firebase". כך המעבר הדרגתי ובטוח. */
 const AUTH_MODE = "scoped";
+/* מצב זיהוי-הקוד בכניסה:
+   "table"  — הקוד מושווה מול טבלת הקודים שבמקור (SHEDS) כדי לדעת מסגרת/תפקיד.
+              זו ההתנהגות ההיסטורית, אבל היא מחייבת שהקודים יהיו כתובים במקור →
+              נגישים לכל מי שפותח F12.
+   "server" — הדפדפן אינו יודע שום מיפוי קוד→מסגרת. הוא נכנס עם זהות שנגזרת
+              ישירות מהקוד, והשרת מחזיר "מי אתה" רק אחרי כניסה מוצלחת (מסמך
+              authprofile). כך אין שום קוד לקרוא במקור. נעילת-הכניסה + App Check
+              עוצרים ניחוש. מפעילים אחרי שהמנהל הריץ "הקמת חשבונות אימות".
+   מעבר בטוח: משאירים "table" עד שהחשבונות הוקמו, ואז מחליפים ל-"server". */
+const CODE_LOGIN = "table";
 /* דומיין פנימי לחשבונות האימות. אינו שולח מייל — משמש רק כמזהה ל-Firebase Auth. */
 const AUTH_DOMAIN = "sq124.app";
 /* האם שכבת האימות פעילה בכלל (כל מצב שאינו legacy). */
@@ -2524,6 +2534,20 @@ function frameworkAuthEmail(shedId, role){
 }
 /* חשבונות-על כלל-טייסתיים. */
 function roleAuthEmail(slug){ return slug + "@" + AUTH_DOMAIN; }
+
+/* ===== כניסה מבוססת-שרת (CODE_LOGIN="server") =====
+   הרעיון: הדפדפן לא מחזיק שום מיפוי קוד→מסגרת. הוא נכנס עם חשבון שנגזר
+   דטרמיניסטית מהקוד עצמו, וקורא מהשרת (מסמך authprofile) מי המשתמש רק אחרי
+   כניסה מוצלחת. כך אין שום קוד או מיפוי לקרוא בקוד המקור. */
+/* חשבון אימות שנגזר מהקוד בלבד — בלי לחשוף לאיזו מסגרת הוא שייך.
+   הקוד עצמו לעולם אינו כתוב במקור; המייל הזה נבנה בזמן ריצה מהקוד שהוקלד. */
+function authEmailFromCode(code){ return "u" + code + "@" + AUTH_DOMAIN; }
+/* מפתח מסמך הפרופיל — גיבוב של הקוד, כך שגם מזהי המסמכים אינם חושפים קודים.
+   כדי לקרוא פרופיל צריך לדעת את הקוד המדויק (אין רשימה/list בכללים). */
+async function codeProfileKey(code){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("sq124code|" + code));
+  return "authprofile_" + Array.from(new Uint8Array(buf), b=>b.toString(16).padStart(2,"0")).join("");
+}
 
 /* ===== PIN אישי (נעילה אישית מעל הפרדת המסגרות) =====
    ה-PIN לעולם לא נשמר כטקסט — נשמר רק גיבוב SHA-256 עם מלח אקראי לכל אדם.
@@ -2917,12 +2941,57 @@ function switchUser(){
   document.getElementById("login-step-code").style.display="block";
 }
 
+/* כניסת מסגרת אחרי אימות מוצלח (מצב server) — טוען נתונים ומציג את מסך בחירת השם.
+   מקביל למסלול הטבלה, אך מקבל את המסגרת/תפקיד מהפרופיל שהשרת החזיר (לא מטבלת קודים). */
+async function enterFrameworkAfterAuth(shed, role, code){
+  lastEnteredCode = code;
+  currentShed = shed;
+  enteredRole = role;
+  isAdmin = false;
+  if((await loadRuntimeLists()) === false){
+    toast("בעיית טעינת נתונים — נסה שוב 🔄");
+    document.getElementById("login-code").value="";
+    return;
+  }
+  document.getElementById("login-step-code").style.display = "none";
+  document.getElementById("login-step-name").style.display = "block";
+  document.getElementById("login-pin-wrap").style.display = "none";
+  const banner = document.getElementById("login-role-banner");
+  if(role === "מפקד"){ banner.textContent = "🎖️ " + shed.name + " · כניסת מפקדים"; banner.style.background = "#fff"; banner.style.color = "var(--red)"; }
+  else { banner.textContent = "👤 " + shed.name + " · כניסת חיילים"; banner.style.background = "rgba(255,255,255,.18)"; banner.style.color = "#fff"; }
+  populateLogin();
+}
+/* ניתוב לפי פרופיל שנקרא מהשרת (מצב server) */
+async function routeByAuthProfile(prof, code){
+  if(prof.kind === "owner"){  enteredRole="מנהל מערכת";   isOwner=true;         currentShed=null; await ownerLogin();          return; }
+  if(prof.kind === "tech"){   enteredRole="קצין טכני";     isTechOfficer=true;   currentShed=null; await techOfficerLogin();   return; }
+  if(prof.kind === "budget"){ enteredRole="אחראי תקציבים"; isBudgetOfficer=true; currentShed=null; await budgetOfficerLogin(); return; }
+  if(prof.kind === "framework"){
+    const shed = SHEDS.find(s=>s.id===prof.shedId);
+    if(!shed){ toast("תקלת פרופיל — פנה למנהל ⛔"); document.getElementById("login-code").value=""; return; }
+    await enterFrameworkAfterAuth(shed, prof.role, code);
+    return;
+  }
+  toast("תקלת פרופיל — פנה למנהל ⛔"); document.getElementById("login-code").value="";
+}
+
 async function checkCode(){
   let code = (document.getElementById("login-code").value || "").trim();
   const btn = document.getElementById("login-code-btn");
   if(loginLockedGuard()){ document.getElementById("login-code").value=""; return; }
   setBtnLoading(btn, true);
   try{
+    /* מצב "server" — הדפדפן לא יודע שום מיפוי קוד→מסגרת. נכנסים עם זהות שנגזרת
+       מהקוד, וקוראים מהשרת "מי אתה" רק אחרי כניסה מוצלחת. כך אין קודים במקור.
+       אם הכניסה נכשלת (קוד שגוי, או חשבון שעדיין לא הוקם) — נופלים בחזרה למסלול
+       הטבלה למטה, כדי שלא ננעל אף אחד בזמן המעבר. */
+    if(CODE_LOGIN === "server" && fbAuth && fbAuth._am){
+      if(await signInAs(authEmailFromCode(code), deriveAuthPassword(code))){
+        const prof = await sGetRaw(await codeProfileKey(code));
+        if(prof && prof.kind){ await routeByAuthProfile(prof, code); return; }
+        console.warn("server-login: נכנס אך אין פרופיל לקוד — נופל למסלול הטבלה");
+      }
+    }
     /* הקודים הישנים של מ״ע אחזקה ואחראי הדרכה ממשיכים לעבוד, אך מנותבים
        למסגרות החדשות (ככניסת מפקד) — כדי שלא ייווצרו שני מסלולי כניסה נפרדים
        ושאף אחד לא יינעל בחוץ בזמן המעבר. */
@@ -5847,6 +5916,7 @@ async function provisionAuthAccounts(){
   if(!confirm("להקים את חשבונות האימות לכל המסגרות ובעלי התפקידים?\nפעולה חד-פעמית, בטוחה להרצה חוזרת.")) return;
   const am = fbAuth._am;
   const jobs = [];
+  // (א) חשבונות ההיסטוריים (מסגרת.תפקיד@ / role@) — עדיין בשימוש מסלול הטבלה עד המעבר המלא.
   for(const s of SHEDS){
     jobs.push([frameworkAuthEmail(s.id,"מפקד"), deriveAuthPassword(s.commanderCode), s.name+" · מפקד"]);
     jobs.push([frameworkAuthEmail(s.id,"חייל"),  deriveAuthPassword(s.soldierCode),   s.name+" · חייל"]);
@@ -5854,6 +5924,23 @@ async function provisionAuthAccounts(){
   jobs.push([roleAuthEmail("owner"),  deriveAuthPassword(OWNER_CODE),          "מנהל מערכת"]);
   jobs.push([roleAuthEmail("tech"),   deriveAuthPassword(TECH_OFFICER_CODE),   "קצין טכני"]);
   jobs.push([roleAuthEmail("budget"), deriveAuthPassword(BUDGET_OFFICER_CODE), "אחראי תקציבים"]);
+
+  // (ב) חשבונות הכניסה מבוססת-שרת: לכל קוד חשבון u<code>@ + פרופיל ניתוב בשרת.
+  //     כך שבמצב "server" הדפדפן לא צריך שום מיפוי קודים במקור.
+  const codeMap = [];   // [code, profile, label]
+  for(const s of SHEDS){
+    if(s.commanderCode) codeMap.push([s.commanderCode, {kind:"framework", shedId:s.id, role:"מפקד"}, s.name+" · מפקד"]);
+    if(s.soldierCode)   codeMap.push([s.soldierCode,   {kind:"framework", shedId:s.id, role:"חייל"}, s.name+" · חייל"]);
+  }
+  codeMap.push([OWNER_CODE,          {kind:"owner"},  "מנהל מערכת"]);
+  codeMap.push([TECH_OFFICER_CODE,   {kind:"tech"},   "קצין טכני"]);
+  codeMap.push([BUDGET_OFFICER_CODE, {kind:"budget"}, "אחראי תקציבים"]);
+  // קודים ישנים שממשיכים לעבוד — מנותבים למסגרות החדשות (ככניסת מפקד):
+  codeMap.push([VEHICLE_OFFICER_CODE, {kind:"framework", shedId:"maint",    role:"מפקד"}, "מ״ע אחזקה (קוד ישן)"]);
+  codeMap.push([ADMIN_CODE,           {kind:"framework", shedId:"training", role:"מפקד"}, "הדרכה (קוד ישן)"]);
+  for(const [code,,label] of codeMap){
+    jobs.push([authEmailFromCode(code), deriveAuthPassword(code), label+" (כניסת-שרת)"]);
+  }
 
   let created=0, existed=0, failed=0; const errs=[];
   for(const [email,pw,label] of jobs){
@@ -5865,12 +5952,20 @@ async function provisionAuthAccounts(){
       else { failed++; errs.push(label+": "+(e&&e.code||e)); }
     }
   }
-  // יצירת חשבון מחברת אוטומטית כמשתמש שנוצר — חוזרים לזהות אנונימית ניטרלית.
+
+  // כתיבת פרופילי הניתוב (מזוהים בגיבוב הקוד; נקראים רק אחרי כניסה מוצלחת).
+  let profOk=0, profFail=0;
+  for(const [code, profile] of codeMap){
+    try{ await sSetRaw(await codeProfileKey(code), profile); profOk++; }
+    catch(e){ profFail++; errs.push("פרופיל "+(profile.shedId||profile.kind)+": "+(e&&e.code||e)); }
+  }
+
+  // חוזרים לזהות אנונימית ניטרלית.
   try{ await am.signInAnonymously(fbAuth); }catch(e){ console.error("re-anon after provision", e); }
 
-  await ownerLog(`הקמת חשבונות אימות: ${created} נוצרו, ${existed} קיימים, ${failed} נכשלו`);
-  if(failed){ console.error("provision failures", errs); alert(`הושלם עם שגיאות:\nנוצרו ${created}, קיימים ${existed}, נכשלו ${failed}\n\n${errs.join("\n")}`); }
-  else { alert(`✅ הושלם: ${created} חשבונות נוצרו, ${existed} כבר היו קיימים.`); }
+  await ownerLog(`הקמת חשבונות אימות: ${created} נוצרו, ${existed} קיימים, ${failed} נכשלו · פרופילים: ${profOk} נכתבו, ${profFail} נכשלו`);
+  if(failed || profFail){ console.error("provision failures", errs); alert(`הושלם עם שגיאות:\nחשבונות — נוצרו ${created}, קיימים ${existed}, נכשלו ${failed}\nפרופילים — נכתבו ${profOk}, נכשלו ${profFail}\n\n${errs.join("\n")}`); }
+  else { alert(`✅ הושלם: ${created} חשבונות נוצרו, ${existed} כבר היו קיימים, ${profOk} פרופילי ניתוב נכתבו.`); }
 }
 
 async function techOfficerLogin(){
