@@ -3517,6 +3517,7 @@ async function toggleTask(id){
   await sSet(key, done);
   await recordDailyHistory();
   renderTasks();
+  updateBadges();   // עדכון הבאדג' בניווט מיד אחרי הסימון, לא רק בכניסה
 }
 
 /* daily history snapshot for trends (feature 1) */
