@@ -2588,9 +2588,10 @@ async function initFirebase(){
        כשכללי ה-Firestore ידרשו אימות (ראה firestore.rules), חובה להיות
        מחוברים לפני כל קריאה. אימות אנונימי + אכיפת App Check סוגרים יחד
        את הפרצה: האימות מוכיח "מי" (משתמש תקף), App Check מוכיח "מאיפה"
-       (מהאתר האמיתי). מופעל רק כש-AUTH_MODE="firebase", כדי שהפריסה
-       תהיה הדרגתית ואף אחד לא יינעל בחוץ לפני שהחשבונות והכללים מוכנים. */
-    if(AUTH_MODE === "firebase"){
+       (מהאתר האמיתי). מופעל בכל מצב אימות (firebase או scoped) — בשניהם
+       חייבים זהות בסיסית לפני הקריאה הראשונה; במצב scoped הכניסה משדרגת
+       אותה לזהות המסגרת. רק legacy מדלג (כניסה כמו פעם, בלי אימות שרת). */
+    if(authActive()){
       try{
         const authMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
         fbAuth = authMod.getAuth(app);
