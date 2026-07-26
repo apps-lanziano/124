@@ -2550,9 +2550,9 @@ async function signInAs(email, password){
   if(AUTH_MODE !== "scoped" || !fbAuth || !fbAuth._am) return true;
   try{
     await fbAuth._am.signInWithEmailAndPassword(fbAuth, email, password);
-    // חשוב: מכריחים את הטוקן החדש להיות מוכן לפני הקריאה הראשונה, אחרת
-    // Firestore עלול להשתמש עדיין בטוקן האנונימי הישן והקריאה תיחסם (מרוץ תזמון).
-    try{ if(fbAuth.currentUser) await fbAuth.currentUser.getIdToken(true); }catch(_){}
+    // מרוץ הטוקן (הקריאה הראשונה עלולה עוד להשתמש בטוקן הישן) מטופל ע"י
+    // לוגיקת הניסיון-החוזר ב-loadRuntimeLists — בלי לכפות רענון טוקן דרך
+    // הרשת, שעלול להיתקע בחיבור חלש ולחסום את הכניסה.
     return true;
   }catch(e){
     console.error("signInAs", email, e && e.code);
