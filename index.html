@@ -1948,6 +1948,8 @@ nav{
           <option value="גף טיסה">גף טיסה</option>
           <option value="אחר">אחר</option>
         </select>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏢 סככה משויכת</label>
+        <select class="m-input" id="leasing-vehicle-shed" style="margin-bottom:8px"></select>
         <input class="m-input" id="leasing-vehicle-name" type="text" placeholder="שם/סוג הרכב" style="margin-bottom:8px">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מס' רכב</label>
         <input class="m-input" id="leasing-vehicle-number" type="text" placeholder="מס' רכב אזרחי" style="margin-bottom:8px">
@@ -7788,7 +7790,8 @@ async function getShedLeasingVehicles(shedId){
     sGetIn(shedId, "cfg_personnel")
   ]);
   const names = new Set((pers||[]).map(p=>p.name));
-  return (leasing||[]).filter(v=>names.has(v.holder));
+  // שיוך מפורש (shedId) גובר; בהיעדרו — לפי שם המחזיק ברשימת הצוות
+  return (leasing||[]).filter(v=> v.shedId ? v.shedId===shedId : names.has(v.holder));
 }
 async function renderVehiclesPage(){
   const box = document.getElementById("vehicles-page-list");
@@ -8128,10 +8131,12 @@ function toggleVoShedSelector(show){
    (בלי בורר סככה), נשמר במאגר הליסינג המרכזי. */
 async function openLeasingEditFull(id){
   shedVehicleFullMode = false; voVehicleCtx = null; leasingEditId = id;
-  toggleVoShedSelector(false);
-  document.getElementById("vo-vehicle-bank-pick").innerHTML = vehicleBankOptions();
   const v = ((await sGetRaw("admin_leasing_vehicles")) || []).find(x=>x.id===id);
   if(!v){ toast("הרכב לא נמצא"); leasingEditId=null; return; }
+  // בורר סככה מוצג — המפקד יכול לשייך את רכב הליסינג לסככה
+  toggleVoShedSelector(true);
+  document.getElementById("vo-vehicle-shed").innerHTML = leasingShedOptions(v.shedId||"");
+  document.getElementById("vo-vehicle-bank-pick").innerHTML = vehicleBankOptions();
   fillVoVehicleForm(v);
   document.getElementById("vo-vehicle-title").textContent = "✏️ עריכת רכב ליסינג — " + escapeHTML(v.holder||"");
   document.querySelector("#vo-vehicle-modal .m-btn.primary").textContent = "💾 שמור שינויים";
@@ -8188,7 +8193,7 @@ async function saveVoVehicle(){
   if(leasingEditId){
     const list = (await sGetRaw("admin_leasing_vehicles")) || [];
     const v = list.find(x=>x.id===leasingEditId);
-    if(v) Object.assign(v, data);
+    if(v){ Object.assign(v, data); const sh=document.getElementById("vo-vehicle-shed").value; v.shedId = sh || null; }
     await sSetRaw("admin_leasing_vehicles", list);
     leasingEditId = null;
     document.getElementById("vo-vehicle-modal").classList.remove("open");
@@ -8339,6 +8344,11 @@ async function renderMaintVehicles(){
 
 /* ===== רכבי ליסינג — רשימה גלובלית, משוייכת לפי שם המחזיק לסככה (אם קיים ברשימת הצוות שלה) ===== */
 async function getLeasingVehicles(){ return (await sGetRaw("admin_leasing_vehicles")) || []; }
+/* אפשרויות בורר הסככה לרכב ליסינג — כולל "אוטומטי לפי מחזיק" */
+function leasingShedOptions(sel){
+  return `<option value="">— אוטומטי לפי מחזיק —</option>` +
+    SHEDS.map(sh=>`<option value="${sh.id}"${sh.id===sel?" selected":""}>${escapeHTML(sh.name)}</option>`).join("");
+}
 let leasingVehicleEditId = null;
 const LEASING_VEHICLE_FIELDS = [
   ["holder","leasing-vehicle-holder","text"], ["group","leasing-vehicle-group","text"],
@@ -8358,6 +8368,7 @@ function fillLeasingVehicleForm(v){
     if(!v){ el.value = type==="text" && key==="group" ? "גף טכני" : ""; return; }
     el.value = type==="number" ? (v[key] ?? "") : (v[key] || "");
   });
+  document.getElementById("leasing-vehicle-shed").innerHTML = leasingShedOptions(v ? (v.shedId||"") : "");
 }
 function openLeasingVehicleAdd(){
   leasingVehicleEditId = null;
@@ -8383,6 +8394,8 @@ async function saveLeasingVehicle(){
   });
   if(data.name.length<2){ toast("נא למלא שם/סוג רכב"); return; }
   if(data.holder.length<2){ toast("נא למלא שם מחזיק"); return; }
+  const shedSel = document.getElementById("leasing-vehicle-shed").value;
+  if(shedSel) data.shedId = shedSel; else data.shedId = null;   // ריק = אוטומטי לפי מחזיק
   const vehicles = await getLeasingVehicles();
   if(leasingVehicleEditId){
     const v = vehicles.find(x=>x.id===leasingVehicleEditId);
@@ -8422,7 +8435,11 @@ async function renderLeasingVehicles(){
     return;
   }
   // שיוך כל רכב לסככה (אם המחזיק קיים ברשימת צוות כלשהי), במקביל
-  const withShed = await Promise.all(vehicles.map(async v=>({...v, shed: await matchLeasingHolderShed(v.holder)})));
+  const withShed = await Promise.all(vehicles.map(async v=>{
+    let shed = v.shedId ? (SHEDS.find(s=>s.id===v.shedId)||null) : null;
+    if(!shed) shed = await matchLeasingHolderShed(v.holder);
+    return {...v, shed};
+  }));
   const groups = {};
   withShed.forEach(v=>{
     const key = v.shed ? v.shed.name : "לא משוייך לסככה (לא נמצא ברשימות הצוות)";
