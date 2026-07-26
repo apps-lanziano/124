@@ -2454,7 +2454,7 @@ let fbDB = null, fbReady = false, fbAuth = null;
    "firebase": מפעיל אימות אמיתי מול Firebase (ראה initFirebase ו-SECURITY.md).
    נשאר "legacy" עד שהחשבונות נוצרו, הכללים פורסמו ואכיפת App Check הודלקה —
    אז מחליפים כאן לשורה אחת ל-"firebase". כך המעבר הדרגתי ובטוח. */
-const AUTH_MODE = "legacy";
+const AUTH_MODE = "firebase";
 const COLLECTION = "sq124";   // מסמכי הנתונים כולם תחת אוסף אחד
 
 /* App Check — מאמת שהבקשות ל-Firestore מגיעות מהאתר האמיתי ולא מסקריפט חיצוני.
