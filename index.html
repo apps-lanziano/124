@@ -2791,6 +2791,29 @@ function setBtnLoading(btn, loading){
   }
 }
 
+/* ===== נעילת כניסה מדורגת נגד ניחוש קוד/PIN ===== */
+const LOGIN_MAX_TRIES = 5;   // ניסיונות כושלים לפני נעילה
+function loginLockRemaining(){
+  const until = Number(localStorage.getItem("sq124_lockUntil")||0);
+  const left = Math.ceil((until - Date.now())/1000);
+  return left>0 ? left : 0;
+}
+function registerLoginFail(){
+  let n = Number(localStorage.getItem("sq124_failCount")||0) + 1;
+  localStorage.setItem("sq124_failCount", String(n));
+  if(n % LOGIN_MAX_TRIES === 0){
+    const rounds = Math.floor(n / LOGIN_MAX_TRIES);      // 1,2,3...
+    const secs = Math.min(30 * Math.pow(2, rounds-1), 600);  // 30,60,120,240,480,600
+    localStorage.setItem("sq124_lockUntil", String(Date.now()+secs*1000));
+  }
+}
+function clearLoginFails(){ localStorage.removeItem("sq124_failCount"); localStorage.removeItem("sq124_lockUntil"); }
+function loginLockedGuard(){
+  const w = loginLockRemaining();
+  if(w>0){ toast("יותר מדי ניסיונות — המתן "+w+" שניות ⏳"); return true; }
+  return false;
+}
+
 /* ===== זכירת מכשיר — כניסה עם PIN בלבד (מספר משתמשים) ===== */
 let lastEnteredCode = null;   // הקוד ששימש להתחברות המסגרת (נשמר לזכירת המכשיר)
 let quickSelected = null;     // המשתמש שנבחר במסך הכניסה המהירה
@@ -2874,6 +2897,7 @@ function forgetQuickUser(i){
 }
 /* כניסה מהירה — למשתמש שנבחר: PIN בלבד. מאמת מול חשבון המסגרת שמור ברקע. */
 async function quickLogin(){
+  if(loginLockedGuard()) return;
   const dev = quickSelected || getDeviceUsers()[0];
   if(!dev){ switchUser(); return; }
   const shed = SHEDS.find(s=>s.id===dev.shedId);
@@ -2892,7 +2916,7 @@ async function quickLogin(){
     const person = PERSONNEL.find(p=>p.name===dev.name);
     if(!person || person.role!==dev.role){ toast("המשתמש לא נמצא — התחבר עם קוד"); removeDeviceUser(dev.shedId, dev.name); switchUser(); return; }
     if(!person.pinHash){ toast("ה-PIN אופס — התחבר עם קוד מסגרת"); removeDeviceUser(dev.shedId, dev.name); switchUser(); return; }
-    if(!(await verifyPin(person, entered))){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
+    if(!(await verifyPin(person, entered))){ registerLoginFail(); toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
     // מאומת — מריצים את מסלול הכניסה הרגיל
     document.getElementById("login-step-quick").style.display="none";
     document.getElementById("login-step-name").style.display="block";
@@ -2919,6 +2943,7 @@ function switchUser(){
 async function checkCode(){
   let code = (document.getElementById("login-code").value || "").trim();
   const btn = document.getElementById("login-code-btn");
+  if(loginLockedGuard()){ document.getElementById("login-code").value=""; return; }
   setBtnLoading(btn, true);
   try{
     /* הקודים הישנים של מ״ע אחזקה ואחראי הדרכה ממשיכים לעבוד, אך מנותבים
@@ -2928,21 +2953,21 @@ async function checkCode(){
     if(code === ADMIN_CODE) code = "1809";
     // budget officer code?
     if(code === BUDGET_OFFICER_CODE){
-      if(!(await signInAs(roleAuthEmail("budget"), deriveAuthPassword(code)))){ toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return; }
+      if(!(await signInAs(roleAuthEmail("budget"), deriveAuthPassword(code)))){ registerLoginFail(); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return; }
       enteredRole = "אחראי תקציבים"; isBudgetOfficer = true; currentShed = null;
       await budgetOfficerLogin();
       return;
     }
     // system owner code?
     if(code === OWNER_CODE){
-      if(!(await signInAs(roleAuthEmail("owner"), deriveAuthPassword(code)))){ toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return; }
+      if(!(await signInAs(roleAuthEmail("owner"), deriveAuthPassword(code)))){ registerLoginFail(); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return; }
       enteredRole = "מנהל מערכת"; isOwner = true; currentShed = null;
       await ownerLogin();
       return;
     }
     // technical officer code?
     if(code === TECH_OFFICER_CODE){
-      if(!(await signInAs(roleAuthEmail("tech"), deriveAuthPassword(code)))){ toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return; }
+      if(!(await signInAs(roleAuthEmail("tech"), deriveAuthPassword(code)))){ registerLoginFail(); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return; }
       enteredRole = "קצין טכני"; isTechOfficer = true; currentShed = null;
       await techOfficerLogin();
       return;
@@ -2953,12 +2978,12 @@ async function checkCode(){
       if(code === s.commanderCode){ matched = {shed:s, role:"מפקד"}; break; }
       if(code === s.soldierCode){ matched = {shed:s, role:"חייל"}; break; }
     }
-    if(!matched){ toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return; }
+    if(!matched){ registerLoginFail(); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return; }
 
     // אימות מול חשבון המסגרת+תפקיד — מעביר מזהות אנונימית לזהות המסגרת,
     // כדי שהכללים יאפשרו קריאה של נתוני המסגרת הזו בלבד (וייחסמו אחרות).
     if(!(await signInAs(frameworkAuthEmail(matched.shed.id, matched.role), deriveAuthPassword(code)))){
-      toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return;
+      registerLoginFail(); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return;
     }
     lastEnteredCode = code;   // לזכירת המכשיר אחרי כניסה מוצלחת
 
@@ -3071,6 +3096,7 @@ function onLoginNameChange(){
 async function doLogin(){
   const name = document.getElementById("login-select").value;
   const btn = document.getElementById("login-go-btn");
+  if(loginLockedGuard()) return;
   if(!name){ toast("נא לבחור שם מהרשימה"); return; }
   const person = PERSONNEL.find(p=>p.name===name);
   if(!person){ toast("שם לא מורשה במערכת ⛔"); return; }
@@ -3085,7 +3111,7 @@ async function doLogin(){
     if(person.pinHash){
       // יש PIN — חובה להזין נכון
       if(!entered){ toast("הזן PIN אישי 🔒"); pinEl.focus(); return; }
-      if(!(await verifyPin(person, entered))){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
+      if(!(await verifyPin(person, entered))){ registerLoginFail(); toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
     } else {
       // אין PIN — הגדרה חובה בכניסה ראשונה (אי אפשר לדלג)
       if(!entered){ toast("כניסה ראשונה — יש להגדיר PIN אישי 🔒"); pinEl.focus(); return; }
@@ -3202,6 +3228,7 @@ async function doLogin(){
       go("scr-safety", document.querySelector('[data-scr="scr-safety"]'));
     }
     await refreshAll();
+    clearLoginFails();   // כניסה מוצלחת מאפסת את מונה הניסיונות
     // זכירת מכשיר — המשתמש מתווסף לרשימה (מספר משתמשים לכל מכשיר)
     if(currentShed && user && person.pinHash && lastEnteredCode){
       addDeviceUser({shedId: currentShed.id, role: enteredRole, code: lastEnteredCode, name: user});
