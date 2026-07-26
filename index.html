@@ -4153,7 +4153,7 @@ function onBoardFile(e){
       if(isAdmin && window._adminBoardPublish){
         window._adminBoardPublish = false;
         await publishBoardToAllSheds(id, label, thumb, data);
-        toast("הלוח הועלה לכל המסגרות 📅");
+        toast("הלוח החדש פורסם לכל המסגרות · הישן הוחלף 📅");
         renderAdminDashboard();
         openWaPrompt("board");
       } else {
@@ -6399,13 +6399,20 @@ async function deleteAdminEvent(id){
   renderAdminEvents();
   toast("הפריט נמחק מכל המסגרות 🗑️");
 }
-/* publish board to every shed */
+/* פרסום לוח צוות לכל המסגרות — לוח חדש מחליף את הישן.
+   אחראי התורניות מנהל לוח יחיד ומעודכן; העלאת לוח חדש מוחקת אוטומטית
+   את הלוח הקודם (כולל התמונה) מכל המסגרות, כדי שלא יצטברו לוחות ישנים. */
 async function publishBoardToAllSheds(id, label, thumb, fullImg){
+  const rec = {id, label, thumb, by:squadronPublisher(), date:new Date().toLocaleDateString("he-IL")};
   for(const shed of SHEDS){
+    // מחיקת תמונות הלוחות הקודמים במסגרת
+    const old = (await sGetIn(shed.id, "boards_list")) || [];
+    for(const b of old){
+      if(b.id !== id) await sDelRaw(shed.id + "_board_img_" + b.id);
+    }
+    // כתיבת הלוח החדש בלבד
     await sSetIn(shed.id, "board_img_"+id, fullImg);
-    const boards = (await sGetIn(shed.id, "boards_list")) || [];
-    boards.unshift({id, label, thumb, by:squadronPublisher(), date:new Date().toLocaleDateString("he-IL")});
-    await sSetIn(shed.id, "boards_list", boards);
+    await sSetIn(shed.id, "boards_list", [rec]);
   }
 }
 
