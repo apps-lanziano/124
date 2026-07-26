@@ -3079,6 +3079,7 @@ async function doLogin(){
       if(isReservedCode(entered)){ toast("קוד זה שמור למסגרת — בחר קוד אחר ⛔"); pinEl.value=""; pinEl.focus(); return; }
       const salt = genSalt();
       person.pinHash = await hashPin(entered, salt); person.pinSalt = salt;
+      person.pinSetBy = person.name + " (עצמי)"; person.pinSetAt = new Date().toLocaleDateString("he-IL");
       await sSet("cfg_personnel", PERSONNEL);
       toast("ה-PIN האישי שלך נקבע 🔒");
     }
@@ -5303,8 +5304,8 @@ async function saveTeamMember(){
   }
   const applyPin = m => {
     if(!pinFields) return;
-    if(pinFields.remove){ delete m.pinHash; delete m.pinSalt; }
-    else { m.pinHash = pinFields.pinHash; m.pinSalt = pinFields.pinSalt; }
+    if(pinFields.remove){ delete m.pinHash; delete m.pinSalt; delete m.pinSetBy; delete m.pinSetAt; }
+    else { m.pinHash = pinFields.pinHash; m.pinSalt = pinFields.pinSalt; m.pinSetBy = user || "מפקד"; m.pinSetAt = new Date().toLocaleDateString("he-IL"); }
   };
 
   if(editMemberIdx>=0){
@@ -5573,11 +5574,11 @@ async function renderUsersAdmin(){
   const q = (document.getElementById("users-search").value || "").trim();
 
   const total = all.reduce((n,g)=>n+g.people.length, 0);
-  const cmdrs = all.reduce((n,g)=>n+g.people.filter(x=>x.p.role==="מפקד").length, 0);
+  const withPin = all.reduce((n,g)=>n+g.people.filter(x=>x.p.pinHash).length, 0);
   statsBox.innerHTML = `<div style="display:flex;gap:8px">
     <div class="cert-sum-card" style="flex:1;cursor:default;text-align:center"><b style="font-size:20px">${total}</b><div style="font-size:11px;color:var(--ink-3)">משתמשים</div></div>
-    <div class="cert-sum-card" style="flex:1;cursor:default;text-align:center"><b style="font-size:20px">${cmdrs}</b><div style="font-size:11px;color:var(--ink-3)">מפקדים</div></div>
-    <div class="cert-sum-card" style="flex:1;cursor:default;text-align:center"><b style="font-size:20px">${SHEDS.length}</b><div style="font-size:11px;color:var(--ink-3)">מסגרות</div></div>
+    <div class="cert-sum-card" style="flex:1;cursor:default;text-align:center"><b style="font-size:20px;color:var(--green)">${withPin}</b><div style="font-size:11px;color:var(--ink-3)">הגדירו PIN</div></div>
+    <div class="cert-sum-card" style="flex:1;cursor:default;text-align:center"><b style="font-size:20px;color:${total-withPin>0?'var(--red)':'var(--ink-2)'}">${total-withPin}</b><div style="font-size:11px;color:var(--ink-3)">ללא PIN</div></div>
   </div>`;
 
   let html = "";
@@ -5602,7 +5603,8 @@ async function renderUsersAdmin(){
         dept ? `<span class="role-mini">${escapeHTML(dept)}</span>` : "",
         p.officerTag ? `<span class="role-mini">🎖️ ${escapeHTML(p.officerTag)}</span>` : "",
         p.profession ? `<span class="role-mini">${escapeHTML(p.profession)}</span>` : "",
-        p.release ? `<span class="role-mini">🗓️ ${escapeHTML(p.release)}</span>` : ""
+        p.release ? `<span class="role-mini">🗓️ ${escapeHTML(p.release)}</span>` : "",
+        p.pinHash ? `<span class="role-mini" style="background:var(--green-soft);color:var(--green)">🔒 PIN${p.pinSetBy?" · "+escapeHTML(p.pinSetBy):""}${p.pinSetAt?" · "+escapeHTML(p.pinSetAt):""}</span>` : `<span class="role-mini">🔓 ללא PIN</span>`
       ].filter(Boolean).join(" ");
       return `<div class="cert-sum-card" style="cursor:default">
         <div class="cert-sum-head">
@@ -5612,6 +5614,7 @@ async function renderUsersAdmin(){
         <div style="display:flex;gap:6px;margin-top:8px">
           <button class="m-btn ghost" style="flex:1;font-size:11.5px;padding:7px" onclick="openUserEdit('${g.shed.id}',${x.idx})">✏️ עריכה</button>
           <button class="m-btn ghost" style="flex:1;font-size:11.5px;padding:7px" onclick="impersonateUser('${g.shed.id}','${escapeHTML(p.name)}')">👁️ כניסה בתור</button>
+          ${p.pinHash ? `<button class="m-btn ghost" style="flex:0 0 auto;font-size:11.5px;padding:7px" title="איפוס PIN" onclick="resetUserPin('${g.shed.id}',${x.idx})">🔓 איפוס</button>` : ""}
           <button class="m-btn ghost" style="flex:0 0 auto;font-size:11.5px;padding:7px" onclick="deleteUserAsOwner('${g.shed.id}',${x.idx})">🗑️</button>
         </div>
       </div>`;
@@ -5708,8 +5711,8 @@ async function saveUserEdit(){
     }
     if(!m.joined) m.joined = todayKey();
     if(pinFields){
-      if(pinFields.remove){ delete m.pinHash; delete m.pinSalt; }
-      else { m.pinHash = pinFields.pinHash; m.pinSalt = pinFields.pinSalt; }
+      if(pinFields.remove){ delete m.pinHash; delete m.pinSalt; delete m.pinSetBy; delete m.pinSetAt; }
+      else { m.pinHash = pinFields.pinHash; m.pinSalt = pinFields.pinSalt; m.pinSetBy = user || "מנהל מערכת"; m.pinSetAt = new Date().toLocaleDateString("he-IL"); }
     }
     return m;
   };
@@ -5741,6 +5744,19 @@ async function saveUserEdit(){
     try{ await renamePersonEverywhere(oldName, name); } finally { currentShed = keepShed; }
   }
   document.getElementById("user-edit-modal").classList.remove("open");
+  renderUsersAdmin();
+}
+
+/* איפוס PIN של משתמש שכח — מנהל מערכת בלבד. המשתמש יגדיר PIN חדש בכניסה הבאה. */
+async function resetUserPin(shedId, idx){
+  const list = (await sGetIn(shedId,"cfg_personnel")) || [];
+  const p = list[idx];
+  if(!p || !p.pinHash) return;
+  if(!confirm(`לאפס את ה-PIN של "${p.name}"?\nהוא יתבקש להגדיר PIN חדש בכניסה הבאה.`)) return;
+  delete p.pinHash; delete p.pinSalt; delete p.pinSetBy; delete p.pinSetAt;
+  await sSetIn(shedId,"cfg_personnel", list);
+  await ownerLog(`איפס PIN של "${p.name}" (${SHEDS.find(s=>s.id===shedId).name})`);
+  toast("ה-PIN אופס — המשתמש יגדיר חדש בכניסה הבאה 🔓");
   renderUsersAdmin();
 }
 
