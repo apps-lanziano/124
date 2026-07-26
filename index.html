@@ -862,9 +862,14 @@ nav{
       </div>
 
       <div class="login-select-wrap">
-        <select id="login-select">
+        <select id="login-select" onchange="onLoginNameChange()">
           <option value="" disabled selected>בחר את שמך מהרשימה…</option>
         </select>
+      </div>
+      <div id="login-pin-wrap" style="display:none;margin-top:12px">
+        <input id="login-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
+          placeholder="🔒 הזן PIN אישי (4 ספרות)"
+          style="width:100%;padding:15px 18px;border-radius:14px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;font-family:'Heebo';font-size:16px;text-align:center;letter-spacing:6px;outline:none;backdrop-filter:blur(8px)">
       </div>
       <button class="login-go" id="login-go-btn" onclick="doLogin()" style="margin-top:14px">כניסה למערכת ←</button>
       <button onclick="backToCode()" style="margin-top:10px;width:100%;background:none;border:none;color:#ffd3d9;font-family:'Heebo';font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px">→ חזרה להזנת קוד</button>
@@ -1539,6 +1544,16 @@ nav{
       <select class="m-input" id="ue-profession" style="margin-bottom:8px"><option value="">— ללא מקצוע —</option></select>
       <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך שחרור (אופציונלי)</label>
       <input class="m-input" id="ue-release" type="date" style="margin-bottom:10px">
+      <div style="border-top:1px solid var(--line);padding-top:10px;margin-bottom:10px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:flex;justify-content:space-between;margin-bottom:3px">
+          <span>🔒 PIN אישי (4 ספרות)</span><span id="ue-pin-status" style="font-weight:800"></span>
+        </label>
+        <input class="m-input" id="ue-pin" type="text" inputmode="numeric" maxlength="4" autocomplete="off"
+          placeholder="השאר ריק — ללא שינוי" style="margin-bottom:6px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="ue-pin-remove" style="width:auto;margin:0"> הסר PIN קיים (כניסה ללא נעילה)
+        </label>
+      </div>
       <div style="display:flex;gap:8px">
         <button class="m-btn primary" style="flex:1" onclick="saveUserEdit()">💾 שמירה</button>
         <button class="m-btn ghost" style="flex:0 0 auto" onclick="document.getElementById('user-edit-modal').classList.remove('open')">ביטול</button>
@@ -2479,6 +2494,32 @@ function frameworkAuthEmail(shedId, role){
 /* חשבונות-על כלל-טייסתיים. */
 function roleAuthEmail(slug){ return slug + "@" + AUTH_DOMAIN; }
 
+/* ===== PIN אישי (נעילה אישית מעל הפרדת המסגרות) =====
+   ה-PIN לעולם לא נשמר כטקסט — נשמר רק גיבוב SHA-256 עם מלח אקראי לכל אדם.
+   כך גם מי שרואה את המסד אינו רואה את ה-PIN, והמנהל יכול לאפס בכל רגע. */
+function genSalt(){
+  const a = new Uint8Array(8); crypto.getRandomValues(a);
+  return Array.from(a, b=>b.toString(16).padStart(2,"0")).join("");
+}
+async function hashPin(pin, salt){
+  const data = new TextEncoder().encode("sq124|" + salt + "|" + pin);
+  const buf = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(buf), b=>b.toString(16).padStart(2,"0")).join("");
+}
+/* חוסם קודי PIN שכיחים מדי — בלעדיו חצי מהצוות יבחר 1234/0000 והנעילה חסרת ערך. */
+function isWeakPin(pin){
+  if(/^(\d)\1{3}$/.test(pin)) return true;                 // 0000,1111...
+  if(["1234","4321","1212","2580","0852"].includes(pin)) return true;
+  return false;
+}
+function validPinFormat(pin){ return /^\d{4}$/.test(pin); }
+/* מאמת PIN מול רשומת אדם. אם אין ל-אדם PIN — עובר (אין נעילה). */
+async function verifyPin(person, pin){
+  if(!person || !person.pinHash) return true;
+  try{ return (await hashPin(pin, person.pinSalt)) === person.pinHash; }
+  catch(e){ console.error("verifyPin", e); return false; }
+}
+
 /* התחברות ל-Firebase בזהות מסוימת (מחליפה את הזהות האנונימית של האתחול).
    מחזירה true בהצלחה. במצב scoped כישלון אמיתי חוסם כניסה — כי בלי הזהות
    הנכונה הכללים ימנעו קריאה. מחוץ ל-scoped מדלגים ומחזירים true. */
@@ -2744,6 +2785,7 @@ async function checkCode(){
 
     document.getElementById("login-step-code").style.display = "none";
     document.getElementById("login-step-name").style.display = "block";
+    document.getElementById("login-pin-wrap").style.display = "none";   // מוסתר עד שנבחר שם עם PIN
     const banner = document.getElementById("login-role-banner");
     if(enteredRole === "מפקד"){ banner.textContent = "🎖️ " + currentShed.name + " · כניסת מפקדים"; banner.style.background = "#fff"; banner.style.color = "var(--red)"; }
     else { banner.textContent = "👤 " + currentShed.name + " · כניסת חיילים"; banner.style.background = "rgba(255,255,255,.18)"; banner.style.color = "#fff"; }
@@ -2813,6 +2855,17 @@ async function selfRegister(){
   doLogin();
 }
 
+/* כשבוחרים שם — מגלים את שדה ה-PIN רק אם לאותו אדם מוגדר PIN. */
+function onLoginNameChange(){
+  const name = document.getElementById("login-select").value;
+  const person = PERSONNEL.find(p=>p.name===name);
+  const wrap = document.getElementById("login-pin-wrap");
+  const pin = document.getElementById("login-pin");
+  const show = !!(person && person.pinHash);
+  wrap.style.display = show ? "block" : "none";
+  pin.value = "";
+}
+
 async function doLogin(){
   const name = document.getElementById("login-select").value;
   const btn = document.getElementById("login-go-btn");
@@ -2821,6 +2874,15 @@ async function doLogin(){
   if(!person){ toast("שם לא מורשה במערכת ⛔"); return; }
   if(person.role !== enteredRole){ toast("אין התאמה בין הקוד לשם ⛔"); return; }
   if(person.release && person.release <= todayKey()){ toast("חייל זה שוחרר מהמסגרת ⛔"); return; }
+  // שער PIN אישי — רק למי שהוגדר לו. נעילה אישית מעל הפרדת המסגרות.
+  if(person.pinHash){
+    const wrap = document.getElementById("login-pin-wrap");
+    const pinEl = document.getElementById("login-pin");
+    if(wrap.style.display === "none"){ wrap.style.display="block"; pinEl.value=""; pinEl.focus(); return; }
+    const entered = (pinEl.value||"").trim();
+    if(!entered){ toast("הזן PIN אישי 🔒"); pinEl.focus(); return; }
+    if(!(await verifyPin(person, entered))){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
+  }
   setBtnLoading(btn, true);
   try{
     user = person.name; userRole = person.role;
@@ -5333,6 +5395,12 @@ async function openUserEdit(shedId, idx){
   const profSel = document.getElementById("ue-profession");
   profSel.innerHTML = '<option value="">— ללא מקצוע —</option>' + PROFESSIONS.map(x=>`<option value="${escapeHTML(x)}">${escapeHTML(x)}</option>`).join("");
   profSel.value = p ? (p.profession||"") : "";
+  // PIN — מציגים סטטוס בלבד; השדה ריק (הזנה = הגדרה/איפוס)
+  document.getElementById("ue-pin").value = "";
+  document.getElementById("ue-pin-remove").checked = false;
+  const st = document.getElementById("ue-pin-status");
+  st.textContent = (p && p.pinHash) ? "מוגדר ✓" : "אין";
+  st.style.color = (p && p.pinHash) ? "var(--green,#22c55e)" : "var(--ink-3)";
   ueSyncFields();
   shedSel.onchange = ueSyncFields;
   document.getElementById("tm-dept-list").innerHTML = [...new Set([...DEPT_NAMES])].map(d=>`<option value="${escapeHTML(d)}">`).join("");
@@ -5359,6 +5427,18 @@ async function saveUserEdit(){
   const officerTag = isDeptUnit ? document.getElementById("ue-officer").value : "";
   const profession = isDeptUnit ? "" : document.getElementById("ue-profession").value;
 
+  // PIN — ריק = ללא שינוי; מסומן "הסר" = מחיקה; 4 ספרות = הגדרה/איפוס
+  const pinInput = (document.getElementById("ue-pin").value||"").trim();
+  const pinRemove = document.getElementById("ue-pin-remove").checked;
+  let pinFields = null;   // null=ללא שינוי | {remove:true} | {pinHash,pinSalt}
+  if(pinRemove){ pinFields = {remove:true}; }
+  else if(pinInput){
+    if(!validPinFormat(pinInput)){ toast("PIN חייב להיות 4 ספרות ⛔"); return; }
+    if(isWeakPin(pinInput)){ toast("PIN שכיח מדי — בחר קוד אחר ⛔"); return; }
+    const salt = genSalt();
+    pinFields = {pinHash: await hashPin(pinInput, salt), pinSalt: salt};
+  }
+
   const srcList = (await sGetIn(ueShedId,"cfg_personnel")) || [];
   const oldName = ueIdx>=0 ? srcList[ueIdx]?.name : null;
   const movingShed = ueIdx>=0 && targetShedId !== ueShedId;
@@ -5380,6 +5460,10 @@ async function saveUserEdit(){
       delete m.dept; delete m.officerTag;
     }
     if(!m.joined) m.joined = todayKey();
+    if(pinFields){
+      if(pinFields.remove){ delete m.pinHash; delete m.pinSalt; }
+      else { m.pinHash = pinFields.pinHash; m.pinSalt = pinFields.pinSalt; }
+    }
     return m;
   };
 
