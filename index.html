@@ -868,8 +868,9 @@ nav{
         </select>
       </div>
       <div id="login-pin-wrap" style="display:none;margin-top:12px">
+        <div id="login-pin-label" style="font-size:12.5px;color:#fff;opacity:.9;margin-bottom:6px;font-weight:600"></div>
         <input id="login-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
-          placeholder="🔒 הזן PIN אישי (4 ספרות)"
+          placeholder="4 ספרות"
           style="width:100%;padding:15px 18px;border-radius:14px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;font-family:'Heebo';font-size:16px;text-align:center;letter-spacing:6px;outline:none;backdrop-filter:blur(8px)">
       </div>
       <button class="login-go" id="login-go-btn" onclick="doLogin()" style="margin-top:14px">כניסה למערכת ←</button>
@@ -2543,11 +2544,13 @@ async function hashPin(pin, salt){
   const buf = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(buf), b=>b.toString(16).padStart(2,"0")).join("");
 }
-/* חוסם קודי PIN שכיחים מדי — בלעדיו חצי מהצוות יבחר 1234/0000 והנעילה חסרת ערך. */
-function isWeakPin(pin){
-  if(/^(\d)\1{3}$/.test(pin)) return true;                 // 0000,1111...
-  if(["1234","4321","1212","2580","0852"].includes(pin)) return true;
-  return false;
+/* חוסם PIN שזהה לקוד כניסה תפוס של מסגרת/תפקיד — כדי שלא ייווצר בלבול עם
+   קודי הכניסה. קוד "חלש" (0000/1234) מותר לפי בקשה. */
+function isReservedCode(pin){
+  const codes = new Set();
+  SHEDS.forEach(s=>{ if(s.soldierCode) codes.add(s.soldierCode); if(s.commanderCode) codes.add(s.commanderCode); });
+  [OWNER_CODE, VEHICLE_OFFICER_CODE, BUDGET_OFFICER_CODE, TECH_OFFICER_CODE, ADMIN_CODE].forEach(c=>{ if(c) codes.add(c); });
+  return codes.has(pin);
 }
 function validPinFormat(pin){ return /^\d{4}$/.test(pin); }
 /* מאמת PIN מול רשומת אדם. אם אין ל-אדם PIN — עובר (אין נעילה). */
@@ -2903,14 +2906,24 @@ async function selfRegister(){
 }
 
 /* כשבוחרים שם — מגלים את שדה ה-PIN רק אם לאותו אדם מוגדר PIN. */
+/* כשבוחרים שם — מציגים את שדה ה-PIN. מי שכבר הגדיר PIN חייב להזין אותו;
+   מי שלא — מקבל אפשרות לבחור PIN אישי (רשות), או להיכנס בלי. */
 function onLoginNameChange(){
   const name = document.getElementById("login-select").value;
   const person = PERSONNEL.find(p=>p.name===name);
   const wrap = document.getElementById("login-pin-wrap");
   const pin = document.getElementById("login-pin");
-  const show = !!(person && person.pinHash);
-  wrap.style.display = show ? "block" : "none";
+  const label = document.getElementById("login-pin-label");
   pin.value = "";
+  if(!person){ wrap.style.display = "none"; return; }
+  wrap.style.display = "block";
+  if(person.pinHash){
+    label.textContent = "🔒 הזן PIN אישי";
+    pin.placeholder = "4 ספרות";
+  } else {
+    label.textContent = "🔒 בחר PIN אישי (רשות) — או השאר ריק";
+    pin.placeholder = "4 ספרות — או השאר ריק";
+  }
 }
 
 async function doLogin(){
@@ -2921,14 +2934,25 @@ async function doLogin(){
   if(!person){ toast("שם לא מורשה במערכת ⛔"); return; }
   if(person.role !== enteredRole){ toast("אין התאמה בין הקוד לשם ⛔"); return; }
   if(person.release && person.release <= todayKey()){ toast("חייל זה שוחרר מהמסגרת ⛔"); return; }
-  // שער PIN אישי — רק למי שהוגדר לו. נעילה אישית מעל הפרדת המסגרות.
-  if(person.pinHash){
+  // שער PIN אישי
+  {
     const wrap = document.getElementById("login-pin-wrap");
     const pinEl = document.getElementById("login-pin");
-    if(wrap.style.display === "none"){ wrap.style.display="block"; pinEl.value=""; pinEl.focus(); return; }
+    if(wrap.style.display === "none"){ onLoginNameChange(); pinEl.focus(); return; }
     const entered = (pinEl.value||"").trim();
-    if(!entered){ toast("הזן PIN אישי 🔒"); pinEl.focus(); return; }
-    if(!(await verifyPin(person, entered))){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
+    if(person.pinHash){
+      // יש PIN — חובה להזין נכון
+      if(!entered){ toast("הזן PIN אישי 🔒"); pinEl.focus(); return; }
+      if(!(await verifyPin(person, entered))){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
+    } else if(entered){
+      // אין PIN — בחירה עצמית (רשות). ריק = כניסה בלי PIN.
+      if(!validPinFormat(entered)){ toast("PIN חייב להיות 4 ספרות ⛔"); pinEl.focus(); return; }
+      if(isReservedCode(entered)){ toast("קוד זה שמור למסגרת — בחר קוד אחר ⛔"); pinEl.value=""; pinEl.focus(); return; }
+      const salt = genSalt();
+      person.pinHash = await hashPin(entered, salt); person.pinSalt = salt;
+      await sSet("cfg_personnel", PERSONNEL);
+      toast("ה-PIN האישי שלך נקבע 🔒");
+    }
   }
   setBtnLoading(btn, true);
   try{
@@ -5139,7 +5163,7 @@ async function saveTeamMember(){
   if(pinRemove){ pinFields = {remove:true}; }
   else if(pinInput){
     if(!validPinFormat(pinInput)){ toast("PIN חייב להיות 4 ספרות ⛔"); return; }
-    if(isWeakPin(pinInput)){ toast("PIN שכיח מדי — בחר קוד אחר ⛔"); return; }
+    if(isReservedCode(pinInput)){ toast("קוד זה שמור למסגרת — בחר קוד אחר ⛔"); return; }
     const salt = genSalt();
     pinFields = {pinHash: await hashPin(pinInput, salt), pinSalt: salt};
   }
@@ -5523,7 +5547,7 @@ async function saveUserEdit(){
   if(pinRemove){ pinFields = {remove:true}; }
   else if(pinInput){
     if(!validPinFormat(pinInput)){ toast("PIN חייב להיות 4 ספרות ⛔"); return; }
-    if(isWeakPin(pinInput)){ toast("PIN שכיח מדי — בחר קוד אחר ⛔"); return; }
+    if(isReservedCode(pinInput)){ toast("קוד זה שמור למסגרת — בחר קוד אחר ⛔"); return; }
     const salt = genSalt();
     pinFields = {pinHash: await hashPin(pinInput, salt), pinSalt: salt};
   }
