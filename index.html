@@ -2290,21 +2290,9 @@ nav{
 
 <script>
 /* ============ PERSONNEL (מתוך קובץ האקסל - סככה 2) ============ */
-const PERSONNEL_SEED = [
-  {name:"אלעד לנציאנו", role:"מפקד", bday:"1986-01-17"},
-  {name:"דניאל זאורוב", role:"מפקד", bday:"1994-12-11"},
-  {name:"טל מלכה",     role:"מפקד", bday:"1994-10-25"},
-  {name:"בר כהן",      role:"מפקד", bday:"2001-09-27"},
-  {name:"זוהר אלימלך", role:"חייל", bday:"2004-05-07"},
-  {name:"ירין כהן",    role:"חייל", bday:"2005-08-19"},
-  {name:"מוסא קורצייטוב",role:"חייל", bday:"2005-04-26"},
-  {name:"מעין בן ורון", role:"חייל", bday:"2006-12-21"},
-  {name:"עומר בן חיים", role:"חייל", bday:"2006-01-01"},
-  {name:"עומר שאול",   role:"חייל", bday:"2006-10-09"},
-  {name:"עמית קטן",    role:"חייל", bday:"2005-11-03"},
-  {name:"נעמי סנדלר",  role:"חייל", bday:"2006-11-21"},
-  {name:"רון ברק",     role:"חייל", bday:"2006-02-26"}
-];
+/* הנתונים האישיים (שמות, תאריכי לידה) הוסרו מקוד המקור מטעמי פרטיות —
+   הם כבר שמורים ב-Firestore ונטענים משם אחרי אימות. אין לזרוע PII מהלקוח. */
+const PERSONNEL_SEED = [];
 
 const MORNING_TASKS_SEED = [
   {id:"t1",title:"ניקוזי ליין",desc:"בדיקת שמישות ותקינות עמדות הדלק בליין. ביצוע ניקוז דלק יומי לעמדה."},
@@ -2365,10 +2353,7 @@ async function ensureConvertedFrameworksSeed(scope){
   if(doMaint){
     let team = (await sGetIn("maint","cfg_personnel")) || [];
     let changed = false;
-    if(!team.some(p=>p.name==="שחר שושן")){
-      team.unshift({name:"שחר שושן", role:"מפקד", bday:"2000-01-01"});
-      changed = true;
-    }
+    // מפקד מ״ע אחזקה כבר שמור ב-Firestore — לא זורעים שם מהקוד (פרטיות)
     if(!(await sGetRaw("maint_drivers_migrated_v1"))){
       const drivers = (await sGetRaw("vo_personnel")) || [];
       drivers.forEach(d=>{
@@ -2385,11 +2370,7 @@ async function ensureConvertedFrameworksSeed(scope){
   }
 
   if(doTraining){
-    const team = (await sGetIn("training","cfg_personnel")) || [];
-    if(!team.some(p=>p.name==="טומי ליפוביץ")){
-      team.unshift({name:"טומי ליפוביץ", role:"מפקד", bday:"2000-01-01"});
-      await sSetIn("training","cfg_personnel", team);
-    }
+    // מפקד הדרכה כבר שמור ב-Firestore — לא זורעים שם מהקוד (פרטיות)
   }
 }
 
@@ -2449,15 +2430,11 @@ async function seedShed2Certs(){
   const HIMUSH = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🟠"));
   const ELYON = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🔴"));
 
-  // מהצילומים המפורטים (סככה 2):
-  // סף — כל הצוות למעט ירין כהן ועמית קטן
-  const NO_SAF = ["ירין כהן","עמית קטן"];
-  // רף — רק בר כהן, ניקיטה, טל מלכה, דניאל, אלעד
-  const RAF_PEOPLE = ["בר כהן","ניקיטה מוגסלבסקי","טל מלכה","דניאל זאורוב","אלעד לנציאנו"];
-  // חימוש — זוהר, עומר בן חיים, בר כהן, ניקיטה, טל מלכה, דניאל, אלעד
-  const HIMUSH_PEOPLE = ["זוהר אלימלך","עומר בן חיים","בר כהן","ניקיטה מוגסלבסקי","טל מלכה","דניאל זאורוב","אלעד לנציאנו"];
-  // עליון — רק טל מלכה, דניאל, אלעד
-  const ELYON_PEOPLE = ["טל מלכה","דניאל זאורוב","אלעד לנציאנו"];
+  // שמות אנשים הוסרו מהמקור (פרטיות). הזריעה החד-פעמית הזו כבר בוצעה ושמורה ב-Firestore.
+  const NO_SAF = [];
+  const RAF_PEOPLE = [];
+  const HIMUSH_PEOPLE = [];
+  const ELYON_PEOPLE = [];
 
   const existing = (await sGetIn("shed2","certs_list")) || [];
   const certs = existing.slice();
@@ -5925,10 +5902,7 @@ async function techOfficerLogin(){
 async function migrateNameFixes(){
   const already = await sGetRaw("name_fixes_v1");
   if(already) return;
-  const FIXES = {
-    shed1: [["אור שמעון עדרא","אור שמעון עזרא"], ["סטס אוליניק","סטס אוליינקוב"]],
-    shed4: [["דניאל בליש","דניאל בלישה"]]
-  };
+  const FIXES = {}; // תיקוני שמות ספציפיים הוסרו מהמקור (פרטיות) — כבר בוצעו ושמורים ב-Firestore
   for(const shedId of Object.keys(FIXES)){
     for(const [oldName,newName] of FIXES[shedId]){
       // עדכון רשימת הצוות
@@ -5973,25 +5947,15 @@ async function migratePicoHoursService(){
 async function seedVehiclesFromSheet(){
   const flag = "vehicles_seed_v1";
   if(await sGetRaw(flag)) return;
-  const OPERATIONAL_BY_SHED = {
-    shed1: {name:"פיקו קלאב קאר", militaryNumber:"20211", company:"צבאי", hours:42.6, kmService:50, notes:"מ\"ע סככה 1 · טיפול כל 50 שעות מנוע"},
-    shed2: {name:"פיקו קלאב קאר", militaryNumber:"20088", company:"צבאי", hours:50, kmService:100, notes:"מ\"ע סככה 2 · טיפול כל 50 שעות מנוע"},
-    shed3: {name:"פיקו קלאב קאר", militaryNumber:"20265", company:"צבאי", hours:20, kmService:139, notes:"מ\"ע סככה 3 · טיפול כל 50 שעות מנוע"},
-    shed4: {name:"לפיד-מבטייל", militaryNumber:"898461", company:"צבאי", notes:"מ\"ע סככה 4"},
-    shed5: {name:"לפיד-מבטייל", militaryNumber:"898459", company:"צבאי", notes:"מ\"ע סככה 5"}
-  };
+  // נתוני רכבים (מספרים צבאיים) הוסרו מהמקור — כבר שמורים ב-Firestore מהזריעה החד-פעמית.
+  const OPERATIONAL_BY_SHED = {};
   await Promise.all(Object.keys(OPERATIONAL_BY_SHED).map(async shedId=>{
     const vehicles = (await sGetIn(shedId,"vehicles_list")) || [];
     vehicles.push({id:"veh"+Date.now()+Math.random().toString(36).slice(2,6), number:"", ...OPERATIONAL_BY_SHED[shedId]});
     await sSetIn(shedId,"vehicles_list", vehicles);
   }));
 
-  const MAINT_VEHICLES = [
-    {name:"סיטרואן ברלינגו-2015", number:"147-841", militaryNumber:"79-692-30", company:"צבאי", kmService:15000, notes:"רכב אחזקה תפעולי"},
-    {name:"רנו קנגו-2018", number:"265-920", militaryNumber:"200-15-001", company:"צבאי", kmService:30000, notes:"רכב אחזקה תפעולי"},
-    {name:"קיה פיקנטו-2024", number:"240-030", company:"צבאי", kmService:15000, notes:"רכב שחור"},
-    {name:"סוזוקי (שכור)", militaryNumber:"657-977-03", company:"שלמה", kmService:15000, notes:"רכב שכור"}
-  ];
+  const MAINT_VEHICLES = []; // הוסר מהמקור (פרטיות) — שמור ב-Firestore
   const maintList = (await sGetRaw("admin_maint_vehicles")) || [];
   MAINT_VEHICLES.forEach(v=>maintList.push({id:"mveh"+Date.now()+Math.random().toString(36).slice(2,6), ...v}));
   await sSetRaw("admin_maint_vehicles", maintList);
@@ -6004,22 +5968,7 @@ async function seedVehiclesFromSheet(){
 async function seedLeasingVehiclesFromSheet(){
   const flag = "leasing_vehicles_seed_v1";
   if(await sGetRaw(flag)) return;
-  const LEASING_SEED = [
-    {holder:"אלעד לנציאנו", group:"גף טכני", name:"קיה פיקנטו (שחור)", company:"שלמה", number:"857-07-802"},
-    {holder:"נאור ישראל", group:"גף טכני", name:"סקודה סקאלה", company:"אלדן", number:"452-81-004"},
-    {holder:"נתי פרבר", group:"גף טכני", name:"סקודה קאמיק", company:"אלדן", number:"286-69-304"},
-    {holder:"יורי אסינובסקי", group:"גף טכני", name:"קיה פיקנטו (תמריץ)", company:"פרי", number:"407-89-304"},
-    {holder:"לניאן", group:"גף טכני", name:"קיה פיקנטו (תמריץ)", company:"פרי", number:"405-92-104"},
-    {holder:"מתן וקנין", group:"גף טכני", name:"קיה ריו", company:"שלמה", number:"355-27-103"},
-    {holder:"יוסי שמש", group:"גף טכני", name:"קיה ריו", company:"אלדן", number:"646-01-103"},
-    {holder:"מאיר ישראל", group:"גף טכני", name:"סקודה ריו", company:"אלדן", number:"453-18-704"},
-    {holder:"אור דבח", group:"גף טכני", name:"קיה ריו", company:"אלדן", number:"442-60-503"},
-    {holder:"רימון חורש", group:"גף טיסה", name:"קיה ספורטאז'", company:"פרי", number:"686-08-103"},
-    {holder:"דיוויד מרציאנו", group:"גף טיסה", name:"סקודה קאמיק", company:"שלמה", number:"286-52-504"},
-    {holder:"מתן ליפץ", group:"גף טיסה", name:"סקודה איביזה", company:"שלמה", number:"458-23-502"},
-    {holder:"אבישי פריד", group:"גף טיסה", name:"סקודה איביזה", company:"שלמה", number:"602-47-502"},
-    {holder:"יואב בירם", group:"גף טיסה", name:"סקודה קאמיק", company:"שלמה", number:"476-56-704"}
-  ];
+  const LEASING_SEED = []; // הוסר מהמקור (פרטיות: שמות מחזיקים + לוחיות) — שמור ב-Firestore
   const list = (await sGetRaw("admin_leasing_vehicles")) || [];
   LEASING_SEED.forEach(v=>list.push({id:"lveh"+Date.now()+Math.random().toString(36).slice(2,6), ...v}));
   await sSetRaw("admin_leasing_vehicles", list);
@@ -6034,13 +5983,7 @@ async function updateVehiclesFromSheetV2(){
   const flag = "vehicles_seed_v2";
   if(await sGetRaw(flag)) return;
 
-  const MAINT_V2 = [
-    {number:"147-841", name:"סיטרואן ברלינגו-2015", company:"צבאי", km:194094, kmService:208800, monthlyService:"2027-08-09", annualService:"2027-03-15", testDate:"2027-06-12", vehicleCode:"2121", fuelCode:"3903", winterCheck:"2025-10-05", notes:"שמיש"},
-    {number:"265-920", name:"רנו קנגו-2018", company:"צבאי", km:159672, kmService:163866, monthlyService:"2026-07-28", annualService:"2026-08-11", testDate:"2026-08-04", vehicleCode:"2113", fuelCode:"3381", winterCheck:"2025-08-04", notes:"שמיש"},
-    {number:"240-030", name:"סילברדו-2024", company:"צבאי", km:44000, kmService:55328, monthlyService:"2026-10-13", annualService:"2026-07-19", testDate:"2027-05-10", vehicleCode:"8437", fuelCode:"5547", winterCheck:"2025-10-22", notes:"שמיש"},
-    {number:"657-977-03", name:"סוזוקי סוויפט (שכור)", company:"שלמה", km:84300, kmService:94300, monthlyService:"2026-09-22", annualService:"2027-01-04", testDate:"2027-03-12", vehicleCode:"2314", fuelCode:"1726", winterCheck:"2025-10-20", notes:"מוקד דלק *2255"},
-    {number:"147-805", name:"סיטרואן ברלינגו-2014", company:"צבאי", km:198500, kmService:212000, monthlyService:"2026-07-27", annualService:"2027-01-23", testDate:"2027-06-25", vehicleCode:"3234", fuelCode:"7678", winterCheck:"2025-09-30", notes:"שמיש"}
-  ];
+  const MAINT_V2 = []; // הוסר מהמקור (קודי דלק/רכב + לוחיות) — שמור ב-Firestore
   let maintList = (await sGetRaw("admin_maint_vehicles")) || [];
   MAINT_V2.forEach(v=>{
     const existing = maintList.find(m=>m.number===v.number || m.militaryNumber===v.number);
@@ -6049,26 +5992,7 @@ async function updateVehiclesFromSheetV2(){
   });
   await sSetRaw("admin_maint_vehicles", maintList);
 
-  const OPS_V2 = {
-    shed1: [
-      {militaryNumber:"20211", name:"מ\"ע פיקו קלאב קאר", company:"צבאי", hours:50, kmService:100, monthlyService:"2026-07-06", annualService:"2027-06-11", notes:"ש.מ-34 · טיפול כל 50 שעות מנוע"}
-    ],
-    shed2: [
-      {militaryNumber:"20088", name:"מ\"ע פיקו קלאב קאר", company:"צבאי", hours:50, kmService:100, monthlyService:"2026-07-06", annualService:"2027-05-21", notes:"ש.מ-35 · טיפול כל 50 שעות מנוע"},
-      {militaryNumber:"910-248", name:"טרקטור וולארד M60", company:"צבאי", kmService:50, monthlyService:"2026-07-27", annualService:"2027-04-22", notes:"טיפול כל 50 שעות מנוע"}
-    ],
-    shed3: [
-      {militaryNumber:"20265", name:"מ\"ע פיקו קלאב קאר", company:"צבאי", hours:20, kmService:139, monthlyService:"2026-08-03", annualService:"2027-07-14", notes:"טיפול כל 50 שעות מנוע"}
-    ],
-    shed4: [
-      {militaryNumber:"898461", name:"לפיד-מבטייל", company:"צבאי", kmService:50, monthlyService:"2026-10-13", annualService:"2027-10-23", notes:"טיפול כל 50 שעות מנוע"},
-      {militaryNumber:"20360", name:"מ\"ע פיקו קלאב קאר", company:"צבאי", kmService:50, monthlyService:"2026-10-01", annualService:"2027-07-28", notes:"טיפול כל 50 שעות מנוע"}
-    ],
-    shed5: [
-      {militaryNumber:"898459", name:"לפיד-מבטייל", company:"צבאי", kmService:50, monthlyService:"2026-08-12", annualService:"2027-10-19", notes:"טיפול כל 50 שעות מנוע"},
-      {militaryNumber:"910-240", name:"טרקטור וולארד M60", company:"צבאי", kmService:50, monthlyService:"2026-09-16", annualService:"2027-03-25", notes:"טיפול כל 50 שעות מנוע"}
-    ]
-  };
+  const OPS_V2 = {}; // הוסר מהמקור (מספרים צבאיים) — שמור ב-Firestore
   await Promise.all(Object.keys(OPS_V2).map(async shedId=>{
     let vehicles = (await sGetIn(shedId,"vehicles_list")) || [];
     OPS_V2[shedId].forEach(v=>{
@@ -6079,21 +6003,7 @@ async function updateVehiclesFromSheetV2(){
     await sSetIn(shedId,"vehicles_list", vehicles);
   }));
 
-  const LEASING_V2 = [
-    {number:"857-07-802", holder:"אלעד לנציאנו", group:"גף טכני", name:"קיה פיקנטו (שחור)", company:"שלמה", km:105300, kmService:120000, monthlyService:"2027-03-30", annualService:"2027-02-18", testDate:"2026-07-13", winterCheck:"2025-10-22", fuelCode:"2255", notes:"מוקד דלק *2255"},
-    {number:"452-81-004", holder:"אריאל אלמליח", group:"גף טכני", name:"סקודה סקאלה", company:"אלדן", km:15000, kmService:30000, monthlyService:"2027-01-11", annualService:"2027-01-10", winterCheck:"2025-08-17", fuelCode:"2608", vehicleCode:"2254"},
-    {number:"176-48-703", holder:"אור דבח", group:"גף טכני", name:"קיה ריו", company:"שלמה", km:160000, kmService:165000, monthlyService:"2026-08-18", annualService:"2027-01-20", winterCheck:"2025-08-18", notes:"מוקד דלק *2255"},
-    {number:"407-89-304", holder:"יורי אסינובסקי", group:"גף טכני", name:"קיה פיקנטו (תמריץ)", company:"פרי", km:18500, kmService:30000, monthlyService:"2026-09-24", annualService:"2027-04-01", winterCheck:"2025-10-27", fuelCode:"3110", vehicleCode:"1123"},
-    {number:"405-92-104", holder:"לנציאון", group:"גף טכני", name:"קיה פיקנטו (תמריץ)", company:"פרי", km:25000, kmService:28000, monthlyService:"2026-08-19", annualService:"2027-02-25", winterCheck:"2025-10-28", fuelCode:"7207", vehicleCode:"7744"},
-    {number:"646-01-103", holder:"יוסי שמש", group:"גף טכני", name:"קיה ריו", company:"אלדן", km:107000, kmService:120000, monthlyService:"2027-01-23", annualService:"2027-06-04", winterCheck:"2025-10-23", fuelCode:"1045", vehicleCode:"1413"},
-    {number:"453-18-704", holder:"נאור ישראל", group:"גף טכני", name:"סקודה סקאלה", company:"אלדן", km:10500, kmService:15000, annualService:"2027-02-02", winterCheck:"2025-10-01", fuelCode:"3873", vehicleCode:"1213"},
-    {number:"442-60-503", holder:"סמי אורסו", group:"גף טכני", name:"קיה ריו", company:"אלדן", km:96000, kmService:105000, monthlyService:"2027-06-21", annualService:"2027-03-28", winterCheck:"2025-10-29", fuelCode:"7573", vehicleCode:"4541"},
-    {number:"686-08-103", holder:"רימון חורש", group:"גף טיסה", name:"קיה ספורטאז'", company:"פרי", km:49200, kmService:60000, monthlyService:"2027-05-27", annualService:"2026-11-30", winterCheck:"2025-10-28", fuelCode:"9841", vehicleCode:"3111"},
-    {number:"286-52-504", holder:"דויד מרציאנו", group:"גף טיסה", name:"סקודה קאמיק", company:"שלמה", km:8016, kmService:15000, monthlyService:"2027-08-11", annualService:"2026-08-11", winterCheck:"2025-08-11", fuelCode:"5310", vehicleCode:"2453", notes:"מוקד דלק *6869"},
-    {number:"458-23-502", holder:"מתן ליפץ", group:"גף טיסה", name:"סקודה איביזה", company:"שלמה", km:150000, kmService:165000, monthlyService:"2027-02-12", annualService:"2027-02-12", winterCheck:"2025-09-30", fuelCode:"7013", vehicleCode:"5314"},
-    {number:"602-47-502", holder:"אבישי פריד", group:"גף טיסה", name:"סקודה איביזה", company:"שלמה", km:120000, kmService:135000, monthlyService:"2026-07-18", annualService:"2026-09-28", winterCheck:"2025-08-28", fuelCode:"3651", vehicleCode:"1324"},
-    {number:"476-56-704", holder:"יואב בירם", group:"גף טיסה", name:"סקודה קאמיק", company:"שלמה", km:15, kmService:15000, monthlyService:"2028-02-02", annualService:"2027-02-01", winterCheck:"2025-10-21", fuelCode:"4750", vehicleCode:"4235", notes:"מוקד דלק *6869"}
-  ];
+  const LEASING_V2 = []; // הוסר מהמקור (שמות + לוחיות + קודי דלק/רכב) — שמור ב-Firestore
   let leasingList = (await sGetRaw("admin_leasing_vehicles")) || [];
   const keepNumbers = new Set(LEASING_V2.map(v=>v.number));
   leasingList = leasingList.filter(v=>keepNumbers.has(v.number));
@@ -6115,13 +6025,9 @@ async function fixLeasingHoldersV3(){
   const flag = "leasing_holders_fix_v3";
   if(await sGetRaw(flag)) return;
   let leasingList = (await sGetRaw("admin_leasing_vehicles")) || [];
-  const HOLDER_FIXES = {
-    "857-07-802": "גף טיסה דרום",
-    "176-48-703": "אור דבח",
-    "405-92-104": "אלעד לנציאנו"
-  };
+  const HOLDER_FIXES = {}; // הוסר מהמקור (שמות + לוחיות) — התיקון החד-פעמי כבר שמור ב-Firestore
   leasingList.forEach(v=>{ if(HOLDER_FIXES[v.number]) v.holder = HOLDER_FIXES[v.number]; });
-  const REMOVE_HOLDERS = ["מתן וקנין","נתי פרבר"];
+  const REMOVE_HOLDERS = [];
   leasingList = leasingList.filter(v=> !REMOVE_HOLDERS.includes(v.holder));
   await sSetRaw("admin_leasing_vehicles", leasingList);
   await sSetRaw(flag, true);
@@ -6133,7 +6039,7 @@ async function fixOrDevachNameV4(){
   if(await sGetRaw(flag)) return;
   let leasingList = (await sGetRaw("admin_leasing_vehicles")) || [];
   let changed = false;
-  leasingList.forEach(v=>{ if(v.number==="176-48-703" && v.holder!=="אור דבח"){ v.holder="אור דבח"; changed=true; } });
+  // תיקון שם ספציפי הוסר מהמקור (פרטיות) — כבר בוצע ושמור ב-Firestore
   if(changed) await sSetRaw("admin_leasing_vehicles", leasingList);
   await sSetRaw(flag, true);
 }
@@ -6143,36 +6049,8 @@ async function fixOrDevachNameV4(){
 async function seedLicensesFromSheet(){
   const flag = "licenses_seed_v1";
   if(await sGetRaw(flag)) return;
-  const ROWS = [
-    {shedId:"dept", person:"דור בן סימון", types:["מלגזה"], military:"2026-05-09", civilian:"2035-11-04"},
-    {shedId:"dept", person:"שחר לרר", types:["מלגזה"], military:"2026-05-12", civilian:"2034-10-09"},
-    {shedId:"dept", person:"אבירם אלמליח", types:["חשמלית","מלגזה","טרקטור","רב הינע B"], military:"2033-09-19", civilian:"2032-01-22"},
-    {shedId:"dept", person:"תמיר למובקי", types:["מלגזה"], military:"2033-09-19", civilian:"2028-04-13"},
-    {shedId:"dept", person:"חוסי שמש", types:["חשמלית","מלגזה","טרקטור","רב הינע B"], military:"2032-01-22", civilian:"2029-01-02"},
-    {shedId:"dept", person:"שחר שושן", types:["פיקו","חשמלית","מלגזה","טרקטור","רב הינע B","בוקסטייל(84)"], military:"2035-04-20", civilian:"2023-10-22"},
-    {shedId:"dept", person:"אליא מרץ", types:["C1"], military:"2028-02-11", civilian:"2026-08-11"},
-
-    {shedId:"shed1", person:"נאור ישראל", types:["לטיסינו","ברלינגו","רנו קנגו","בוקסטייל(84)","רב הינע B","מלגזה","טרקטור","חשמלית","פיקו"], military:"2032-01-22", civilian:"2029-03-12"},
-    {shedId:"shed1", person:"סטס אוליינקוב", types:["פיקו"], military:"2032-01-22", civilian:"2067-06-26"},
-    {shedId:"shed1", person:"אור שמעון עזרא", types:["פיקו","חשמלית","טרקטור"], military:"2035-02-19", civilian:"2026-10-26"},
-
-    {shedId:"shed2", person:"אלעד לנציאנו", types:["פיקו","חשמלית","טרקטור","מלגזה"], military:"2021-02-29", civilian:"2032-01-22"},
-    {shedId:"shed2", person:"דניאל זאורוב", types:["פיקו","חשמלית","טרקטור","רב הינע B"], military:"2028-12-11", civilian:"2032-01-22"},
-    {shedId:"shed2", person:"טל מלכה", types:["פיקו","טרקטור"], military:"2067-10-25", civilian:"2032-01-22"},
-    {shedId:"shed2", person:"בר כהן", types:["פיקו","טרקטור"], military:"2071-09-27", civilian:"2034-05-26"},
-
-    {shedId:"shed3", person:"אריאל אלמליח", types:["פיקו","טרקטור"], military:"2056-12-04", civilian:"2032-01-22"},
-    {shedId:"shed3", person:"ג'וני גריגוביץ", types:["פיקו","טרקטור"], military:"2063-04-23", civilian:"2032-01-22"},
-    {shedId:"shed3", person:"ינון אמינוב", types:["טרקטור"], military:"2069-06-23", civilian:"2033-08-22"},
-    {shedId:"shed3", person:"נועם קדם", types:["טרקטור"], military:"2027-06-29", civilian:"2035-10-29"},
-
-    {shedId:"shed4", person:"סמי אורסו", types:["פולריס","חשמלית","מלגזה","טרקטור","פיקו","ברלינגו"], military:"2030-03-25", civilian:"2032-01-22"},
-    {shedId:"shed4", person:"יורי אסינובסקי", types:["פולריס","טרקטור"], military:"2028-12-13", civilian:"2032-01-22"},
-
-    {shedId:"shed5", person:"שיראל איפרגן", types:["פיקו"], military:"2027-08-06", civilian:"2032-01-22"},
-    {shedId:"shed5", person:"עידן שלום", types:[], military:"2019-05-08", civilian:"2032-01-22"},
-    {shedId:"shed5", person:"אור מינץ", types:[], military:"2025-12-16", civilian:""}
-  ];
+  // רישיונות/הסמכות (שמות + תוקף) הוסרו מהמקור (פרטיות) — הזריעה כבר בוצעה ושמורה ב-Firestore.
+  const ROWS = [];
   const licenses = (await sGetRaw("vo_licenses_list")) || [];
   ROWS.forEach(r=>{
     r.types.forEach(type=>{
@@ -6224,7 +6102,7 @@ async function backfillNewRafCerts(){
 }
 
 /* רשימת 15 האנשים המלאה של סככה 1 (השמות המתוקנים) — הופכת גם לרשימת הצוות הרשמית */
-const SHED1_ALL_NAMES = ["יובל גלילוב","הילאי ארבל","יואב יצחק","גבריאל אהרונין","ליעוז יצחק","ליאור כבודי","יואב אולשינקה","מיכל קוגן","אושר אביט","עדי אלמוג","רוני טרייסטר","עדי קטן","נאור ישראל","אור שמעון עזרא","סטס אוליינקוב"];
+const SHED1_ALL_NAMES = []; // שמות הוסרו מהמקור (פרטיות) — הצוות שמור ב-Firestore
 
 /* מוודא שכל מי שקיבל הסמכה מופיע גם ברשימת הצוות הרשמית של הסככה (בלי לדרוס תפקידים קיימים) */
 async function syncCertPeopleIntoRoster(shedId, names){
@@ -6248,9 +6126,7 @@ async function ensureDeptOfficers(){
   const flag = "dept_officers_seed_v1";
   const already = await sGetRaw(flag);
   if(already) return;
-  const OFFICERS = [
-    {name:"דור בן סימון", role:"מפקד", bday:"2000-01-01", dept:"אחזקה"}
-  ];
+  const OFFICERS = []; // שם קצין הוסר מהמקור (פרטיות) — כבר נזרע ושמור ב-Firestore
   let pers = (await sGetIn("dept","cfg_personnel")) || [];
   let changed = false;
   for(const o of OFFICERS){
@@ -6264,10 +6140,7 @@ async function ensureDeptOfficers(){
 async function removeDeptReassignedPeople(){
   const flag = "dept_reassigned_removed_v1";
   if(await sGetRaw(flag)) return;
-  const REMOVE = [
-    {dept:"אוה\"ד", nameIncludes:"טומי"},
-    {dept:"אחזקה", nameIncludes:"שחר"}
-  ];
+  const REMOVE = []; // שמות הוסרו מהמקור (פרטיות) — המעבר החד-פעמי כבר בוצע ושמור ב-Firestore
   let pers = (await sGetIn("dept","cfg_personnel")) || [];
   const toRemove = pers.filter(p=> REMOVE.some(r=> p.dept===r.dept && p.name.includes(r.nameIncludes)));
   if(toRemove.length){
@@ -6310,82 +6183,9 @@ async function ensureAllShedsSeed(scopeShedId){
   const HIMUSH = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🟠"));
   const ELYON = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🔴"));
 
-  const PLAN = {
-    shed1: {
-      personnel: null,  // הצוות כבר קיים באפליקציה
-      safFull: ["יובל גלילוב","הילאי ארבל","יואב יצחק","גבריאל אהרונין","ליעוז יצחק","ליאור כבודי","עדי קטן","נאור ישראל","אור שמעון עזרא","סטס אוליינקוב"],
-      raf: ["עדי קטן","נאור ישראל","אור שמעון עזרא","סטס אוליינקוב"],
-      himush: ["עדי קטן","נאור ישראל","אור שמעון עזרא","סטס אוליינקוב"],
-      elyon: ["נאור ישראל","אור שמעון עזרא","סטס אוליינקוב"]
-    },
-    shed3: {
-      personnel: [
-        {name:"אריאל אלמליח", role:"מפקד", bday:"2000-01-01"},
-        {name:"ג'וני גריגוביץ", role:"מפקד", bday:"2000-01-01"},
-        {name:"ינון אמינוב", role:"מפקד", bday:"2000-01-01"},
-        {name:"נועם קדם", role:"מפקד", bday:"2000-01-01"},
-        {name:"יהונתן פרץ", role:"חייל", bday:"2000-01-01"},
-        {name:"שלו רוזנר", role:"חייל", bday:"2000-01-01"},
-        {name:"אורי גנור", role:"חייל", bday:"2000-01-01"},
-        {name:"אפק אביבי", role:"חייל", bday:"2000-01-01"},
-        {name:"מוריאל שדמי", role:"חייל", bday:"2000-01-01"},
-        {name:"יניב ישעיה", role:"חייל", bday:"2000-01-01"},
-        {name:"רומי מורחי", role:"חייל", bday:"2000-01-01"},
-        {name:"איתי בינדר", role:"חייל", bday:"2000-01-01"},
-        {name:"ליאב תם", role:"חייל", bday:"2000-01-01"},
-        {name:"אופיר מישאלי", role:"חייל", bday:"2000-01-01"},
-        {name:"איתי רז", role:"חייל", bday:"2000-01-01"},
-        {name:"שירה קרמני", role:"חייל", bday:"2000-01-01"}
-      ],
-      safFull: ["יהונתן פרץ","אורי גנור","אפק אביבי","מוריאל שדמי","יניב ישעיה","רומי מורחי","נועם קדם","ינון אמינוב","ג'וני גריגוביץ","אריאל אלמליח"],
-      raf: ["נועם קדם","ינון אמינוב","ג'וני גריגוביץ","אריאל אלמליח"],
-      himush: ["ינון אמינוב","ג'וני גריגוביץ","אריאל אלמליח"],
-      elyon: ["ינון אמינוב","ג'וני גריגוביץ","אריאל אלמליח"]
-    },
-    shed4: {
-      personnel: [
-        {name:"סמי אורסו", role:"מפקד", bday:"2000-01-01"},
-        {name:"יורי אסינובסקי", role:"מפקד", bday:"2000-01-01"},
-        {name:"דניאל בלישה", role:"מפקד", bday:"2000-01-01"},
-        {name:"אורי טרבס", role:"חייל", bday:"2000-01-01"},
-        {name:"עילאי אדרי", role:"חייל", bday:"2000-01-01"},
-        {name:"אהליאב צור פלג", role:"חייל", bday:"2000-01-01"},
-        {name:"ירדן אדרעי", role:"חייל", bday:"2000-01-01"},
-        {name:"אורי הנשיא", role:"חייל", bday:"2000-01-01"},
-        {name:"יואל האוקיף", role:"חייל", bday:"2000-01-01"},
-        {name:"רואי הרוש", role:"חייל", bday:"2000-01-01"},
-        {name:"שי חג'אג'", role:"חייל", bday:"2000-01-01"}
-      ],
-      safFull: ["סמי אורסו","יורי אסינובסקי","דניאל בלישה","אורי טרבס","עילאי אדרי","אהליאב צור פלג","אורי הנשיא","שי חג'אג'"],
-      raf: ["סמי אורסו","יורי אסינובסקי","דניאל בלישה","אורי טרבס"],
-      himush: ["סמי אורסו","יורי אסינובסקי","דניאל בלישה"],
-      elyon: ["סמי אורסו","יורי אסינובסקי","דניאל בלישה"]
-    },
-    shed5: {
-      personnel: [
-        {name:"שיראל איפרגן", role:"מפקד", bday:"2000-01-01"},
-        {name:"עידן שלום", role:"מפקד", bday:"2000-01-01"},
-        {name:"סופיה פרחוביק", role:"מפקד", bday:"2000-01-01"},
-        {name:"קיריל קוקוטין", role:"מפקד", bday:"2000-01-01"},
-        {name:"גבריאל פלבר", role:"חייל", bday:"2000-01-01"},
-        {name:"אמרי צרפתי", role:"חייל", bday:"2000-01-01"},
-        {name:"דור רם", role:"חייל", bday:"2000-01-01"},
-        {name:"אליאס אלגורט", role:"חייל", bday:"2000-01-01"},
-        {name:"אסף בננו", role:"חייל", bday:"2000-01-01"},
-        {name:"הראל טודוסי", role:"חייל", bday:"2000-01-01"},
-        {name:"אור מינץ", role:"חייל", bday:"2000-01-01"},
-        {name:"סמנטה סקריפצק", role:"חייל", bday:"2000-01-01"},
-        {name:"אורי ביטון", role:"חייל", bday:"2000-01-01"},
-        {name:"אלה פרץ", role:"חייל", bday:"2000-01-01"},
-        {name:"זורי כהן נחמד", role:"חייל", bday:"2000-01-01"},
-        {name:"נתנאל", role:"חייל", bday:"2000-01-01"}
-      ],
-      safFull: ["שיראל איפרגן","עידן שלום","סופיה פרחוביק","קיריל קוקוטין","גבריאל פלבר","אמרי צרפתי","דור רם","אליאס אלגורט","אסף בננו","הראל טודוסי","אור מינץ","אורי ביטון"],
-      raf: ["שיראל איפרגן","עידן שלום","סופיה פרחוביק","קיריל קוקוטין"],
-      himush: ["שיראל איפרגן","עידן שלום","סופיה פרחוביק","קיריל קוקוטין"],
-      elyon: ["שיראל איפרגן","עידן שלום","סופיה פרחוביק"]
-    }
-  };
+  // תוכנית הזריעה ההיסטורית (שמות צוותים + הסמכות לכל הסככות) הוסרה מקוד המקור
+  // מטעמי פרטיות. הזריעה כבר בוצעה — הצוותים וההסמכות שמורים ב-Firestore ונטענים משם.
+  const PLAN = {};
 
   // ברירת מחדל: לסרוק את כל הסככות (למסך מנהל-על). כניסת חייל/מפקד רגילה
   // מעבירה את הסככה שלה בלבד — אין טעם לסרוק סככות אחרות בכל כניסה.
@@ -6441,7 +6241,7 @@ async function ensureAllShedsSeed(scopeShedId){
 /* מאחד 3 בדיקות בריאות-עצמית שרצות בכל טעינה (תיקון שמות שלבים ישנים, סנכרון צוות מהסמכות,
    מתן שלב 12/13 אוטומטי למפקדים) לסבב קריאה+כתיבה אחד לכל סככה במקום 3 סבבים נפרדים —
    כדי לחסוך זמן טעינה (self-healing, כל טעינה) */
-const COMMANDER_STAGE13_LEADS = ["נאור ישראל","אלעד לנציאנו","אריאל אלמליח","סמי אורסו","שיראל איפרגן"];
+const COMMANDER_STAGE13_LEADS = []; // שמות מפקדים בכירים הוסרו מהמקור (פרטיות) — שלב 13 מנוהל ידנית ב-Firestore
 async function selfHealShedCertsAndRoster(scopeShedId){
   const BARE = ["שלב 7","שלב 10 סף","שלב 10 רף"];
   const sheds = scopeShedId ? [scopeShedId] : ["shed1","shed2","shed3","shed4","shed5"];
@@ -6521,66 +6321,12 @@ async function ensureExtraCertsSeed(scopeShedId){
   }
 
   // 1. הסמכת נדחף — דרג עליון רוחבי (מתוך קובץ המקור, תאריכים שהופיעו = תפוגה)
-  const NADHAF = [
-    {shed:"shed5", person:"שיראל איפרגן",      expiry:"2019-04-01"},
-    {shed:"shed5", person:"עידן שלום",          expiry:""},
-    {shed:"shed1", person:"נאור ישראל",         expiry:"2019-04-01"},
-    {shed:"shed1", person:"סטס אוליינקוב",       expiry:""},
-    {shed:"shed1", person:"אור שמעון עזרא",      expiry:""},
-    {shed:"shed2", person:"אלעד לנציאנו",        expiry:""},
-    {shed:"shed2", person:"דניאל זאורוב",        expiry:""},
-    {shed:"shed2", person:"טל מלכה",            expiry:""},
-    {shed:"shed3", person:"אריאל אלמליח",        expiry:"2019-04-01"},
-    {shed:"shed3", person:"ג'וני גריגוביץ",      expiry:""},
-    {shed:"shed3", person:"ינון אמינוב",         expiry:""},
-    {shed:"shed4", person:"סמי אורסו",          expiry:""},
-    {shed:"shed4", person:"יורי אסינובסקי",      expiry:""},
-    {shed:"shed4", person:"דניאל בלישה",        expiry:""}
-  ];
+  const NADHAF = []; // שמות + תפוגה הוסרו מהמקור (פרטיות) — כבר נזרע ושמור ב-Firestore
   for(const e of NADHAF){ await addCert(e.shed, e.person, "הסמכת נדחף", e.expiry); }
 
   // 2. שלבי הכשרה לחיילים — שלב 7 / שלב 10 סף / שלב 10 רף
   //    (stage7: השלמת שלב 7 בלבד, ללא תאריך במקור | saf/raf: תאריך משותף מהקובץ)
-  const STAGES = [
-    {shed:"shed3", person:"שלו רוזנר",       saf:true, raf:true,  date:"2024-11-14"},
-    {shed:"shed3", person:"אורי גנור",       saf:true, raf:true,  date:"2025-02-02"},
-    {shed:"shed5", person:"גבריאל פלבר",     saf:true, raf:true,  date:"2025-02-02"},
-    {shed:"shed4", person:"אהליאב צור פלג",  saf:true, raf:true,  date:"2025-02-02"},
-    {shed:"shed1", person:"הילאי ארבל",      saf:true, raf:true,  date:"2025-04-06"},
-    {shed:"shed5", person:"אמרי צרפתי",      saf:true, raf:true,  date:"2025-04-06"},
-    {shed:"shed5", person:"אליאס אלגורט",    saf:true, raf:true,  date:"2025-04-06"},
-    {shed:"shed1", person:"יואב יצחק",       saf:true, raf:true,  date:"2025-07-13"},
-    {shed:"shed5", person:"אסף בננו",       saf:true, raf:true,  date:"2025-07-13"},
-    {shed:"shed3", person:"אפק אביבי",       saf:true, raf:true,  date:"2025-07-13"},
-    {shed:"shed5", person:"דור רם",          saf:true, raf:true,  date:"2025-07-13"},
-    {shed:"shed1", person:"גבריאל אהרונין",  saf:true, raf:true,  date:"2025-10-19"},
-    {shed:"shed2", person:"זוהר אלימלך",     saf:true, raf:true,  date:"2025-10-19"},
-    {shed:"shed3", person:"מוריאל שדמי",     saf:true, raf:true,  date:"2026-03-22"},
-    {shed:"shed4", person:"אורי טרבס",       saf:true, raf:true,  date:"2026-03-22"},
-    {shed:"shed1", person:"ליעוז יצחק",      saf:true, raf:true,  date:"2026-06-28"},
-    {shed:"shed3", person:"יניב ישעיה",      saf:true, raf:true,  date:"2026-03-22"},
-    {shed:"shed2", person:"עומר בן חיים",    saf:true, raf:true,  date:"2026-03-22"},
-    {shed:"shed4", person:"אורי הנשיא",      saf:true, raf:true,  date:"2026-03-22"},
-    {shed:"shed5", person:"אור מינץ",        saf:true, raf:true,  date:"2026-03-22"},
-    {shed:"shed1", person:"ליאור כבודי",     saf:true, raf:true,  date:"2026-06-28"},
-    {shed:"shed5", person:"הראל טודוסי",     saf:true, raf:true,  date:"2026-06-28"},
-    {shed:"shed4", person:"עילאי אדרי",      saf:true, raf:true,  date:"2026-06-28"},
-    {shed:"shed3", person:"רומי מורחי",      saf:true, raf:true,  date:"2026-06-28"},
-    {shed:"shed2", person:"עומר שאול",       saf:false,raf:true,  date:"2026-06-28", stage7:true},
-    {shed:"shed5", person:"אורי ביטון",      saf:false,raf:true,  date:"2026-06-28", stage7:true},
-    {shed:"shed5", person:"סמנטה סקריפצק",   saf:false,raf:true,  date:"2026-06-28", stage7:true},
-    {shed:"shed5", person:"זורי כהן נחמד",   stage7:true},
-    {shed:"shed4", person:"ירדן אדרעי",      stage7:true},
-    {shed:"shed2", person:"מוסא קורצייטוב",  stage7:true},
-    {shed:"shed5", person:"אלה פרץ",         stage7:true},
-    {shed:"shed2", person:"רון ברק",         stage7:true},
-    {shed:"shed3", person:"אופיר מישאלי",    stage7:true},
-    {shed:"shed1", person:"אושר אביט",       stage7:true},
-    {shed:"shed1", person:"מיכל קוגן",       stage7:true},
-    {shed:"shed2", person:"מעין בן ורון",    stage7:true},
-    {shed:"shed3", person:"איתי בינדר",      stage7:true},
-    {shed:"shed3", person:"ליאב תם",         stage7:true}
-  ];
+  const STAGES = []; // שמות + שלבי הכשרה הוסרו מהמקור (פרטיות) — כבר נזרע ושמור ב-Firestore
   for(const s of STAGES){
     if(s.saf)    await addCert(s.shed, s.person, "🟣 שלב 10 סף", "");
     if(s.raf)    await addCert(s.shed, s.person, "🟣 שלב 10 רף", "");
@@ -6607,10 +6353,10 @@ async function ensureShed2Seed(){
       const RAF = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🔵"));
       const HIMUSH = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🟠"));
       const ELYON = CERT_BANK_DEFAULT.filter(c=>c.startsWith("🔴"));
-      const NO_SAF = ["ירין כהן","עמית קטן"];
-      const RAF_PEOPLE = ["בר כהן","ניקיטה מוגסלבסקי","טל מלכה","דניאל זאורוב","אלעד לנציאנו"];
-      const HIMUSH_PEOPLE = ["זוהר אלימלך","עומר בן חיים","בר כהן","ניקיטה מוגסלבסקי","טל מלכה","דניאל זאורוב","אלעד לנציאנו"];
-      const ELYON_PEOPLE = ["טל מלכה","דניאל זאורוב","אלעד לנציאנו"];
+      const NO_SAF = [];        // שמות הוסרו מהמקור (פרטיות) — כבר נזרע ושמור ב-Firestore
+      const RAF_PEOPLE = [];
+      const HIMUSH_PEOPLE = [];
+      const ELYON_PEOPLE = [];
       const certs = [];
       const add=(person,name)=>{ if(!certs.some(x=>x.person===person&&x.name===name)) certs.push({id:"cert"+Date.now()+Math.random().toString(36).slice(2,6),person,name,expiry:""}); };
       for(const p of pers){
