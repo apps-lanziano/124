@@ -670,6 +670,10 @@ nav{
 .cd .cd-unit i{font-style:normal;font-size:10px;color:var(--ink-3);font-weight:600;letter-spacing:.08em;display:block;margin-top:3px}
 .cd .cd-live{font-family:var(--cd-mono);font-size:11px;color:var(--green);display:flex;align-items:center;gap:6px;letter-spacing:.04em;background:var(--green-soft);border:1px solid var(--cd-green-line);border-radius:99px;padding:5px 10px;white-space:nowrap}
 .cd .cd-live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+.cd .cd-live.warn{color:var(--gold);background:var(--gold-soft);border-color:var(--cd-gold-line)}
+.cd .cd-live.warn::before{background:var(--gold);box-shadow:0 0 8px var(--gold)}
+.cd .cd-live.off{color:var(--ink-3);background:var(--bg);border-color:var(--line)}
+.cd .cd-live.off::before{background:var(--ink-3);box-shadow:none}
 .cd .cd-console{display:flex;align-items:center;gap:15px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px 16px;box-shadow:var(--shadow)}
 .cd .cd-gauge{position:relative;width:82px;height:82px;flex-shrink:0}
 .cd .cd-gauge svg{transform:rotate(-90deg);display:block}
@@ -1038,8 +1042,6 @@ nav{
 
     <!-- GLOBAL MESSAGES BOARD (feature 11) — appears on every screen -->
     <div id="messages-area"></div>
-    <!-- DAILY BRIEF (feature 24) — appears on every screen -->
-    <div id="brief-area"></div>
 
     <!-- ===== SAFETY ===== -->
     <section class="screen active" id="scr-safety">
@@ -1282,7 +1284,6 @@ nav{
         <button class="cmd-tab active" id="tab-trends" onclick="cmdTab('trends')">📈 מגמות</button>
         <button class="cmd-tab" id="tab-safety" onclick="cmdTab('safety')">📄 חתימות</button>
         <button class="cmd-tab" id="tab-morning" onclick="cmdTab('morning')">🧰 מטלות</button>
-        <button class="cmd-tab" id="tab-report" onclick="cmdTab('report')">📊 דוח</button>
       </div>
 
       <!-- PANE: TRENDS (feature 1 - dashboard) -->
@@ -1316,18 +1317,10 @@ nav{
         <div class="cmd-table" id="cmd-morning"></div>
       </div>
 
-      <!-- PANE: REPORT (feature 5) -->
-      <div class="cmd-pane" id="pane-report">
-        <div id="report-content"></div>
-        <button class="report-export-btn" onclick="exportReport()">📸 ייצוא הדוח כתמונה</button>
-      </div>
-
       <!-- ADMIN quick actions -->
       <div class="cmd-section-title">⚙️ ניהול</div>
       <div class="admin-grid">
-        <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic">📋</span><b>דגשי בוקר / תדריך</b><span>תדריך יומי לצוות</span></button>
         <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
-        <button class="admin-card" onclick="cmdTab('report')"><span class="a-ic">📸</span><b>ייצוא דוח</b><span>תמונה לשיתוף</span></button>
       </div>
     </section>
 
@@ -2797,24 +2790,18 @@ function markStale(isStale){
   staleDataFlag = isStale;
   updateConnectionBadge();
 }
+/* אין יותר באדג' "משותף" צף נפרד — מחוון ה-LIVE שבדשבורד הוא האינדיקציה
+   היחידה: ירוק=מחובר ומשותף · כתום=בעיית רשת · אפור=לא מקוון. */
 function updateConnectionBadge(){
-  let el = document.getElementById("share-badge");
-  if(!el){
-    el = document.createElement("div"); el.id="share-badge";
-    el.style.cssText="position:absolute;bottom:78px;left:8px;z-index:45;font-size:9.5px;font-weight:700;padding:3px 9px;border-radius:99px;pointer-events:none;opacity:.9";
-    document.getElementById("app").appendChild(el);
-  }
-  if(staleDataFlag){
-    el.style.display="block";
-    el.textContent="⚠️ לא מעודכן — בעיית רשת";
-    el.style.background="rgba(185,137,0,.15)"; el.style.color="#b98900"; el.style.border="1px solid #f5d38a";
-  } else if(sharedModeFlag){
-    el.style.display="block";
-    el.textContent="🟢 משותף";
-    el.style.background="rgba(7,148,85,.15)"; el.style.color="#079455"; el.style.border="1px solid #a6f4c5";
-  } else {
-    el.style.display="none";
-  }
+  const old = document.getElementById("share-badge"); if(old) old.remove();
+  renderLiveBadge();
+}
+function renderLiveBadge(){
+  const el = document.getElementById("cd-live");
+  if(!el) return;
+  if(staleDataFlag){ el.className = "cd-live warn"; el.textContent = "בעיית רשת"; }
+  else if(sharedModeFlag){ el.className = "cd-live"; el.textContent = "LIVE"; }
+  else { el.className = "cd-live off"; el.textContent = "לא מקוון"; }
 }
 
 // Firestore-safe key (no slashes)
@@ -4586,11 +4573,11 @@ async function deleteBoard(id){
 let cmdEventsCache = [];
 
 function cmdTab(which){
-  ["trends","safety","morning","report"].forEach(w=>{
-    document.getElementById("tab-"+w).classList.toggle("active", which===w);
-    document.getElementById("pane-"+w).classList.toggle("active", which===w);
+  ["trends","safety","morning"].forEach(w=>{
+    const tab=document.getElementById("tab-"+w), pane=document.getElementById("pane-"+w);
+    if(tab) tab.classList.toggle("active", which===w);
+    if(pane) pane.classList.toggle("active", which===w);
   });
-  if(which==="report") renderReport();
   if(which==="trends") renderTrends();
 }
 
@@ -7547,7 +7534,7 @@ async function renderTrends(){
           <div class="cd-crest">🚁</div>
           <div><b>${escapeHTML(currentShed?currentShed.name:"")}</b><i>טייסת 124</i></div>
         </div>
-        <div class="cd-live">LIVE · ${nowT}</div>
+        <div class="cd-live" id="cd-live">LIVE</div>
       </div>
 
       <div class="cd-sec">
@@ -7564,6 +7551,7 @@ async function renderTrends(){
       <div class="cd-qbar" style="grid-template-columns:repeat(${qa.length},1fr)">${qaHtml}</div>
     </div>
   `;
+  renderLiveBadge();   // מחוון ה-LIVE משקף את מצב החיבור (משותף/בעיית רשת/לא מקוון)
 }
 
 /* ===== FEATURE 3: ALERTS CENTER ===== */
