@@ -462,7 +462,11 @@ nav{
 .sheet-bg{position:absolute;inset:0;z-index:56;background:rgba(26,17,20,.5);backdrop-filter:blur(4px);display:none;align-items:flex-end;justify-content:center}
 .sheet-bg.open{display:flex;animation:fadeIn .25s}
 .sheet{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:12px 16px calc(20px + env(safe-area-inset-bottom));animation:slideUp .35s cubic-bezier(.2,.9,.3,1)}
-.sheet-handle{width:40px;height:4px;border-radius:99px;background:#e3d5d8;margin:4px auto 14px}
+.sheet-handle{width:40px;height:4px;border-radius:99px;background:#e3d5d8;margin:4px auto 10px}
+.sheet-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 4px}
+.sheet-top b{font-size:16px;font-weight:800;color:var(--ink)}
+.sheet-x{width:34px;height:34px;border-radius:50%;border:none;background:var(--bg);color:var(--ink-2);font-size:15px;font-weight:800;cursor:pointer;display:grid;place-items:center;line-height:1}
+.sheet-x:active{background:var(--red-soft);color:var(--red)}
 .sheet-item{display:flex;align-items:center;gap:14px;padding:15px 12px;border-radius:14px;cursor:pointer;transition:background .2s}
 .sheet-item:active{background:var(--red-soft)}
 .sheet-item .s-ic{width:44px;height:44px;border-radius:12px;background:var(--red-soft);display:grid;place-items:center;font-size:21px;flex-shrink:0}
@@ -1745,6 +1749,7 @@ nav{
   <div class="sheet-bg" id="more-sheet" onclick="if(event.target===this)this.classList.remove('open')">
     <div class="sheet">
       <div class="sheet-handle"></div>
+      <div class="sheet-top"><b>עוד</b><button class="sheet-x" onclick="document.getElementById('more-sheet').classList.remove('open')" aria-label="סגור">✕</button></div>
       <div class="sheet-item" id="sheet-naatim" onclick="closeMoreAnd('scr-naatim')"><div class="s-ic">🗂️</div><div class="s-tx"><b>נע"תים</b><span>תחומי אחריות ובדיקה שבועית</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" onclick="closeMoreAnd('scr-duties')"><div class="s-ic">🔄</div><div class="s-tx"><b>תורנויות</b><span>שיבוץ שמי שבועי</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-closeday" onclick="closeMoreAnd('scr-closeday')"><div class="s-ic">🌙</div><div class="s-tx"><b>סגירת יום</b><span>צ'קליסט סוף משמרת</span></div><span class="s-chev">‹</span></div>
@@ -7402,7 +7407,6 @@ async function renderTrends(){
 
   const nowT = new Date().toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"});
   const dShort = new Date().toLocaleDateString("he-IL",{weekday:"short",day:"numeric",month:"numeric"});
-  const focusSum = priorityFeed.length ? `⚠ ${priorityFeed.length} פריטים דורשים טיפול` : "✅ אין פריטים שדורשים טיפול";
 
   // --- מדדים ---
   const kpis = [];
@@ -7414,21 +7418,21 @@ async function renderTrends(){
   if(showNaatim) kpis.push({led:(naatimOpen?"y":"g"), ic:"🗂️", n:naatim.length, l:"נע\"תים", go:"closeMoreAnd('scr-naatim')"});
   const kpiHtml = kpis.map(k=>`<button class="cd-kpi" onclick="${k.go}"><span class="cd-led ${k.led}"></span><div class="cd-kic">${k.ic}</div><div class="cd-kn">${k.n}</div><div class="cd-kl">${escapeHTML(k.l)}</div></button>`).join("");
 
-  // --- מיקוד יומי (ציר זמן מהנתונים החיים) ---
+  // --- מיקוד יומי — רשימה מאוחדת של כל מה שדורש טיפול היום (המספר = מספר הפריטים) ---
   const focus = [];
-  if(showMorning && MORNING_TASKS.length){
-    if(mDone>=MORNING_TASKS.length) focus.push({node:"done", time:"בוקר", title:"מטלות בוקר", sub:"כל המטלות בוצעו", pill:mDone+"/"+MORNING_TASKS.length+" ✓", p:"g", go:"go('scr-morning',document.getElementById('nav-morning'))"});
-    else { const late=hh>=11; focus.push({node:late?"crit":"now", time:late?"חלף 11:00":"עכשיו", title:"מטלות בוקר", sub:(MORNING_TASKS.length-mDone)+" מטלות עדיין פתוחות", pill:mDone+"/"+MORNING_TASKS.length, p:late?"r":"y", go:"go('scr-morning',document.getElementById('nav-morning'))"}); }
+  if(showMorning && MORNING_TASKS.length && mDone < MORNING_TASKS.length){
+    const late = hh>=11;
+    focus.push({node:late?"crit":"now", time:late?"חלף 11:00":"היום", title:"מטלות בוקר", sub:(MORNING_TASKS.length-mDone)+" מטלות עדיין פתוחות", pill:mDone+"/"+MORNING_TASKS.length, p:late?"r":"y", go:"go('scr-morning',document.getElementById('nav-morning'))"});
   }
-  if(maxSigs>0){
-    if(sigPct>=100) focus.push({node:"done", time:"היום", title:"חתימות קרא-וחתום", sub:"כל הצוות חתם", pill:"הושלם ✓", p:"g", go:"go('scr-safety',document.getElementById('nav-safety'))"});
-    else focus.push({node:"warn", time:"עד 11:00", title:"דדליין חתימות קרא-וחתום", sub:(maxSigs-totalSigs)+" חתימות חסרות", pill:sigPct+"%", p:"y", go:"go('scr-safety',document.getElementById('nav-safety'))"});
+  if(maxSigs>0 && sigPct<100){
+    focus.push({node:"warn", time:"היום", title:"חתימות קרא-וחתום", sub:(maxSigs-totalSigs)+" חתימות חסרות", pill:sigPct+"%", p:"y", go:"go('scr-safety',document.getElementById('nav-safety'))"});
   }
-  if(priorityFeed.length){
-    const f0 = priorityFeed[0];
-    focus.push({node:(f0.cls==="r"?"crit":"warn"), time:"לטיפול", title:f0.title, sub:f0.sub, pill:(f0.cls==="r"?"דחוף":"בקרוב"), p:(f0.cls==="r"?"r":"y"), go:f0.go});
-  }
-  const focusHtml = focus.length
+  priorityFeed.forEach(f=>{
+    focus.push({node:(f.cls==="r"?"crit":"warn"), time:"לטיפול", title:f.title, sub:f.sub, pill:f.tag, p:(f.cls==="r"?"r":"y"), go:f.go});
+  });
+  const focusCount = focus.length;
+  const focusSum = focusCount ? `⚠ ${focusCount} פריטים דורשים טיפול` : "✅ הכל תקין";
+  const focusHtml = focusCount
     ? `<div class="cd-tl">${focus.map(e=>`
         <div class="cd-ev cd-${e.node}">
           <div class="cd-ev-card" onclick="${e.go}">
@@ -7437,17 +7441,7 @@ async function renderTrends(){
             <span class="cd-ev-pill cd-p-${e.p}">${escapeHTML(e.pill)}</span>
           </div>
         </div>`).join("")}</div>`
-    : `<div class="cd-clear">✅ אין משימות פתוחות היום</div>`;
-
-  // --- התראות פעילות ---
-  const alertsHtml = priorityFeed.length
-    ? priorityFeed.slice(0,6).map(f=>`
-        <div class="cd-alert ${f.cls==="r"?"":"y"}" onclick="${f.go}">
-          <div class="cd-aic">${f.ic}</div>
-          <div class="cd-abd"><b>${escapeHTML(f.title)}</b><span>${escapeHTML(f.sub)}</span></div>
-          <span class="cd-aage">${escapeHTML(f.tag)}</span><span class="cd-achev">‹</span>
-        </div>`).join("")
-    : `<div class="cd-clear">✅ אין התראות פעילות — הכל בתוקף</div>`;
+    : `<div class="cd-clear">✅ אין פריטים שדורשים טיפול — הכל בתוקף</div>`;
 
   // --- פעולות מהירות ---
   const qa = [{ic:"📢",l:"הודעה",go:"openMsgMgmt()"}];
@@ -7468,18 +7462,13 @@ async function renderTrends(){
 
       <div class="cd-sec">
         <div class="cd-shead"><h3>מיקוד יומי</h3><span class="cd-badge">${escapeHTML(dShort)}</span></div>
-        <div class="cd-focus-sum ${priorityFeed.length?'has':''}">${escapeHTML(focusSum)}</div>
+        <div class="cd-focus-sum ${focusCount?'has':''}">${escapeHTML(focusSum)}</div>
         ${focusHtml}
       </div>
 
       <div class="cd-sec">
         <div class="cd-shead"><h3>מדדים במבט אחד</h3><span class="cd-badge">לחיצה = מסך מלא</span></div>
         <div class="cd-kgrid">${kpiHtml}</div>
-      </div>
-
-      <div class="cd-sec">
-        <div class="cd-shead"><h3>התראות פעילות</h3>${priorityFeed.length?`<span class="cd-badge cd-alertbadge">${priorityFeed.length}</span>`:""}</div>
-        ${alertsHtml}
       </div>
 
       <div class="cd-qbar" style="grid-template-columns:repeat(${qa.length},1fr)">${qaHtml}</div>
