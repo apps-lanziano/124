@@ -4930,14 +4930,18 @@ async function idbSetBadgeBase(n){ try{ const db=await idbBadge(); const tx=db.t
    מחווה של המשתמש (כניסה), ורק אם האפליקציה מותקנת ועדיין לא נשאל/הוחלט. */
 async function ensureBadgePermission(){
   try{
-    if(!("setAppBadge" in navigator) || typeof Notification==="undefined") return;
-    if(Notification.permission!=="default") return;
+    if(typeof Notification==="undefined") { updateAppBadge(); return; }
+    // כבר אושר (גם ממשתמש ותיק שאישר בעבר) — מפעילים push ישירות, בלי לשאול שוב
+    if(Notification.permission==="granted"){ updateAppBadge(); initPush(); return; }
+    // נדחה בעבר — לא שואלים שוב (הדפדפן חוסם); ה-badge בפתיחה עדיין עובד
+    if(Notification.permission!=="default"){ updateAppBadge(); return; }
+    // עדיין לא הוחלט — שואלים פעם אחת (רק באפליקציה מותקנת). דגל push נפרד
+    // מהדגל הישן, כדי שגם מי שכבר נכנס בעבר יקבל בקשה טרייה עכשיו כש-push חי.
     const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-    if(!standalone) return;   // רלוונטי רק לאפליקציה מותקנת
-    if(!localStorage.getItem("sq124_badge_asked")){
-      localStorage.setItem("sq124_badge_asked","1");
-      await Notification.requestPermission();
-    }
+    if(!standalone){ updateAppBadge(); return; }
+    if(localStorage.getItem("sq124_push_asked")){ updateAppBadge(); return; }
+    localStorage.setItem("sq124_push_asked","1");
+    await Notification.requestPermission();
     updateAppBadge();
     if(Notification.permission==="granted") initPush();
   }catch(e){}
