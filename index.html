@@ -483,7 +483,8 @@ nav{
 .msg-card .m-body{flex:1;min-width:0}
 .msg-card .m-body p{font-size:14px;font-weight:600;line-height:1.5;color:var(--ink)}
 .msg-card .m-body small{font-size:11.5px;color:var(--ink-3);font-weight:300;display:block;margin-top:3px}
-.msg-card .m-del{background:none;border:none;color:var(--ink-3);font-size:16px;cursor:pointer;flex-shrink:0;padding:2px}
+.msg-card .m-del{background:rgba(0,0,0,.06);border:none;color:var(--ink-2);font-size:16px;font-weight:700;cursor:pointer;flex-shrink:0;padding:6px 10px;line-height:1;border-radius:10px;min-width:34px;min-height:32px}
+.msg-card .m-del:active{background:var(--red-soft);color:var(--red)}
 .msg-type-btn{flex:1;padding:10px 4px;border:1.5px solid var(--line);background:#fff;border-radius:11px;font-family:'Heebo';font-weight:600;font-size:12.5px;cursor:pointer;transition:all .2s}
 .msg-type-btn.active{border-color:var(--red);background:var(--red-soft);color:var(--red)}
 .msg-existing-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:13px}
@@ -4860,6 +4861,7 @@ async function renderMsgExisting(){
     msgs.map(m=>`<div class="msg-existing-item"><span class="mx-txt">${(MSG_STYLE[m.type]||MSG_STYLE.info).emoji} ${escapeHTML(m.text)}</span><button onclick="deleteMessage('${m.id}',true)">מחק</button></div>`).join("") : "";
 }
 async function deleteMessage(id, fromModal){
+  if(!confirm("להסיר את ההודעה מהלוח?")) return;
   if(isAdmin){
     for(const shed of SHEDS){
       let list = (await sGetIn(shed.id, "messages_list")) || [];
@@ -7218,12 +7220,12 @@ async function renderTrends(){
 
     <div class="cmd-section-title">📅 היום</div>
     <div class="db-today-grid">
-      <div class="db-ring-card">
+      <div class="db-ring-card" style="cursor:pointer" onclick="go('scr-safety',document.querySelector('[data-scr=\\'scr-safety\\']'))">
         <div class="db-ring" style="background:conic-gradient(var(--green) ${sigPct}%, var(--green-soft) 0)"><b>${maxSigs?sigPct+'%':'—'}</b></div>
         <div class="db-ring-body"><b>חתימות</b><span>${totalSigs} מתוך ${maxSigs} חתמו</span></div>
       </div>
       ${isDeptUnit ? '' : `
-      <div class="db-ring-card">
+      <div class="db-ring-card" style="cursor:pointer" onclick="go('scr-morning',document.getElementById('nav-morning'))">
         <div class="db-ring" style="background:conic-gradient(var(--gold) ${MORNING_TASKS.length?Math.round(mDone/MORNING_TASKS.length*100):0}%, var(--gold-soft) 0)"><b>${mDone}/${MORNING_TASKS.length}</b></div>
         <div class="db-ring-body"><b>מטלות בוקר</b><span>${MORNING_TASKS.length-mDone} מטלות עדיין פתוחות</span></div>
       </div>`}
