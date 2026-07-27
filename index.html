@@ -2639,6 +2639,10 @@ const FIREBASE_CONFIG = {
   appId: "1:752623099673:web:e5362a81c7bca1e9e2ef88",
   measurementId: "G-JXKH429E9L"
 };
+/* מפתח Web-Push (VAPID) — נוצר בקונסולה: Cloud Messaging → Web configuration →
+   "Generate key pair". הדבק כאן את המחרוזת הארוכה. כל עוד ריק — Push כבוי,
+   וה-badge ממשיך לעבוד בפתיחה כרגיל. ראה PUSH_SETUP.md. */
+const FCM_VAPID_KEY = "";
 let fbDB = null, fbReady = false, fbAuth = null;
 /* מסומן ל-true כשקריאת Firestore נכשלה (שגיאה, לא "מסמך ריק"). מאפשר להבחין
    בין סככה ריקה באמת לבין כשל קריאה זמני (למשל מרוץ טוקן אחרי החלפת זהות),
@@ -4915,8 +4919,13 @@ async function updateAppBadge(){
     count += msgs.filter(m=>!(m.reads && m.reads[safeName(user)])).length;
     if(count>0) await navigator.setAppBadge(count);
     else await navigator.clearAppBadge();
+    idbSetBadgeBase(count);   // בסיס מסונכרן ל-Service Worker (שמגדיל בזמן push)
   }catch(e){ /* לא נתמך / נכשל — מתעלמים בשקט */ }
 }
+/* מונה ה-badge משותף עם ה-Service Worker דרך IndexedDB: החלון כותב את הספירה
+   המדויקת, וה-SW מגדיל ממנה כשמגיע push בזמן שהאפליקציה סגורה. */
+function idbBadge(){ return new Promise((res,rej)=>{ const r=indexedDB.open("sq124-badge",1); r.onupgradeneeded=()=>r.result.createObjectStore("kv"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function idbSetBadgeBase(n){ try{ const db=await idbBadge(); const tx=db.transaction("kv","readwrite"); tx.objectStore("kv").put(n,"count"); }catch(e){} }
 /* בקשת אישור התראות פעם אחת (נדרש באייפון כדי שה-badge יופיע). מופעל מתוך
    מחווה של המשתמש (כניסה), ורק אם האפליקציה מותקנת ועדיין לא נשאל/הוחלט. */
 async function ensureBadgePermission(){
@@ -4925,11 +4934,46 @@ async function ensureBadgePermission(){
     if(Notification.permission!=="default") return;
     const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
     if(!standalone) return;   // רלוונטי רק לאפליקציה מותקנת
-    if(localStorage.getItem("sq124_badge_asked")) return;
-    localStorage.setItem("sq124_badge_asked","1");
-    await Notification.requestPermission();
+    if(!localStorage.getItem("sq124_badge_asked")){
+      localStorage.setItem("sq124_badge_asked","1");
+      await Notification.requestPermission();
+    }
     updateAppBadge();
+    if(Notification.permission==="granted") initPush();
   }catch(e){}
+}
+/* Push אמיתי (FCM) — התראות שמגיעות גם כשהאפליקציה סגורה. פעיל רק אם הוגדר
+   FCM_VAPID_KEY, יש אישור התראות, והאפליקציה מחוברת ל-Firebase. רושם token
+   ל-Firestore; ה-Cloud Function שולחת אליו push כשמתפרסמת הודעה/קרא-וחתום. */
+let fcmToken = null;
+async function initPush(){
+  try{
+    if(!FCM_VAPID_KEY || !fbReady || !user || !currentShed) return;
+    if(typeof Notification==="undefined" || Notification.permission!=="granted") return;
+    if(!("serviceWorker" in navigator)) return;
+    const msgMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js");
+    if(!(await msgMod.isSupported().catch(()=>false))) return;   // לא נתמך (למשל אייפון לא-מותקן)
+    const messaging = msgMod.getMessaging();
+    // רישום ה-SW של ההתראות ב-scope ייעודי (יחסי לנתיב — עמיד לתת-נתיב של GitHub Pages),
+    // כדי לא להתנגש ב-service-worker.js של המטמון.
+    const swReg = await navigator.serviceWorker.register("firebase-messaging-sw.js", { scope: "firebase-cloud-messaging-push-scope" });
+    const token = await msgMod.getToken(messaging, { vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: swReg });
+    if(token && token!==fcmToken){ fcmToken = token; await savePushToken(token); }
+    msgMod.onMessage(messaging, (payload)=>{   // הגיע בזמן שהאפליקציה פתוחה
+      updateBadges();
+      const t = payload && payload.data && payload.data.title;
+      if(t) toast("🔔 " + t);
+    });
+  }catch(e){ console.error("initPush", e); }
+}
+/* שמירת ה-token של המכשיר תחת המסגרת, כדי שה-Function תדע לאן לשלוח */
+async function savePushToken(token){
+  try{
+    const key = "push_tokens_" + currentShed.id;
+    const map = (await sGetRaw(key)) || {};
+    map[token] = { name:user, role:enteredRole, ts:Date.now() };
+    await sSetRaw(key, map);
+  }catch(e){ console.error("savePushToken", e); }
 }
 // רענון ה-badge כשחוזרים לאפליקציה
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && user) updateBadges(); });
