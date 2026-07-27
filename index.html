@@ -3362,11 +3362,13 @@ async function doLogin(){
       addDeviceUser({shedId: currentShed.id, role: enteredRole, code: lastEnteredCode, name: user});
     }
     toast("ברוך הבא, " + user.split(" ")[0] + " 👋");
+    ensureBadgePermission();   // בקשת אישור התראות (חד-פעמי) כדי שה-badge על הסמל יעבוד
   } finally {
     setBtnLoading(btn, false);
   }
 }
 function logout(){
+  try{ if("clearAppBadge" in navigator) navigator.clearAppBadge(); }catch(e){}
   user=null; userRole=null; isCmd=false; isAdmin=false; isVehicleOfficer=false; isBudgetOfficer=false; isTechOfficer=false; isToolsResp=false; isVehiclesResp=false;
   isOwner=false; impersonating=null;
   // נטישת זהות המסגרת ב-Firebase וחזרה לזהות אנונימית ניטרלית, כדי שכניסה
@@ -4891,7 +4893,46 @@ async function updateBadges(){
     const openFaults = faults.filter(f=>f.status!=="closed").length;
     setBadge("badge-faults", openFaults);
   }
+  updateAppBadge();
 }
+/* Badge על סמל האפליקציה (כמו מונה ההודעות בוואטסאפ) — Badging API.
+   סופר את הפריטים שממתינים למשתמש: קרא-וחתום שטרם אושרו + הודעות שלא נקראו.
+   דורש שהאפליקציה מותקנת (הוספה למסך הבית); באייפון נדרש גם אישור התראות. */
+async function updateAppBadge(){
+  try{
+    if(!("setAppBadge" in navigator)) return;         // לא נתמך בדפדפן זה
+    if(!user || !currentShed){ navigator.clearAppBadge(); return; }
+    let count = 0;
+    // קרא-וחתום שטרם אושרו ע"י המשתמש
+    const events = await getEvents();
+    const reads = (await sGet("sigs_"+safeName(user))) || {};
+    count += events.filter(e=>!reads[e.id]).length;
+    // הודעות שהמשתמש עדיין לא צפה בהן
+    const isDeptUnit = !!(currentShed && currentShed.isDept);
+    const myDept = isDeptUnit ? personDept(PERSONNEL.find(p=>p.name===user)) : null;
+    let msgs = (await sGet("messages_list")) || [];
+    if(isDeptUnit && myDept) msgs = msgs.filter(m=>!m.dept || m.dept===myDept);
+    count += msgs.filter(m=>!(m.reads && m.reads[safeName(user)])).length;
+    if(count>0) await navigator.setAppBadge(count);
+    else await navigator.clearAppBadge();
+  }catch(e){ /* לא נתמך / נכשל — מתעלמים בשקט */ }
+}
+/* בקשת אישור התראות פעם אחת (נדרש באייפון כדי שה-badge יופיע). מופעל מתוך
+   מחווה של המשתמש (כניסה), ורק אם האפליקציה מותקנת ועדיין לא נשאל/הוחלט. */
+async function ensureBadgePermission(){
+  try{
+    if(!("setAppBadge" in navigator) || typeof Notification==="undefined") return;
+    if(Notification.permission!=="default") return;
+    const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    if(!standalone) return;   // רלוונטי רק לאפליקציה מותקנת
+    if(localStorage.getItem("sq124_badge_asked")) return;
+    localStorage.setItem("sq124_badge_asked","1");
+    await Notification.requestPermission();
+    updateAppBadge();
+  }catch(e){}
+}
+// רענון ה-badge כשחוזרים לאפליקציה
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && user) updateBadges(); });
 function setBadge(id, n){
   const el = document.getElementById(id);
   if(!el) return;
@@ -4926,6 +4967,7 @@ async function renderMessages(){
       const allMsgs = (await sGet("messages_list")) || [];
       msgs.forEach(m=>{ const orig = allMsgs.find(x=>x.id===m.id); if(orig) orig.reads = m.reads; });
       await sSet("messages_list", allMsgs);
+      updateAppBadge();   // צפייה בהודעות מורידה את המונה על סמל האפליקציה
     }
   }
 
