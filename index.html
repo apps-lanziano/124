@@ -2294,16 +2294,14 @@ nav{
   <div class="modal-bg" id="reserve-modal">
     <div class="modal">
       <h3 id="reserve-title">🎖️ הוספת איש מילואים</h3>
-      <div class="m-sub">תאריך רענון אחרון + תאריך הרענון הבא (פ.ת), נקבע ידנית.</div>
+      <div class="m-sub">איש מילואים בצוות — ללא מעקב הסמכות. נשמר רק תאריך הרענון האחרון.</div>
       <div class="team-add-form">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">👤 חייל</label>
-        <select class="m-input" id="reserve-person" style="margin-bottom:6px"></select>
-        <input class="m-input" id="reserve-person-free" type="text" placeholder="שם מלא" style="margin-bottom:6px;display:none">
-        <div style="text-align:left;margin-bottom:8px"><a href="javascript:void(0)" id="reserve-free-toggle" onclick="toggleReserveFreeEntry()" style="font-size:11.5px;color:var(--sky);text-decoration:underline">✏️ הזנת שם עצמאית (לא מרשימת הצוות)</a></div>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ רענון אחרון</label>
-        <input class="m-input" id="reserve-last" type="date" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ רענון הבא (פ.ת)</label>
-        <input class="m-input" id="reserve-next" type="date" style="margin-bottom:10px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏠 מסגרת</label>
+        <select class="m-input" id="reserve-shed" style="margin-bottom:8px"></select>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">👤 שם החייל</label>
+        <input class="m-input" id="reserve-person-free" type="text" placeholder="שם מלא" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ רענון אחרון <span style="font-weight:400">(ברירת מחדל: תאריך ההזנה)</span></label>
+        <input class="m-input" id="reserve-last" type="date" style="margin-bottom:10px">
         <button class="m-btn primary" onclick="saveReserve()" style="width:100%">➕ הוסף</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
@@ -7161,43 +7159,18 @@ async function publishTrainingToAllSheds(id, title, ftype, fileData, thumb){
   }
 }
 /* ===== מילואים — כלל-טייסתי, רענון ידני (תאריך אחרון + פ.ת הבא) ===== */
-const RESERVE_ALERT_DAYS = 30;
 async function getReserves(){ return (await sGetRaw("admin_reserves_list")) || []; }
-function reserveStatus(r){
-  if(!r.next) return {tag:"אין תאריך", cls:"g"};
-  const today = new Date(); today.setHours(0,0,0,0);
-  const d = Math.round((new Date(r.next+"T00:00:00")-today)/86400000);
-  if(d<0) return {tag:"פג תוקף! ("+Math.abs(d)+" ימים)", cls:"r"};
-  if(d<=RESERVE_ALERT_DAYS) return {tag:d+" ימים לרענון", cls:"y"};
-  return {tag:"בתוקף", cls:"g"};
-}
-async function populateReservePerson(selected){
-  const sel = document.getElementById("reserve-person");
-  const perShed = await Promise.all(SHEDS.map(async shed=>({shed, personnel: (await sGetIn(shed.id, "cfg_personnel")) || []})));
-  let html = '<option value="">— בחר חייל —</option>';
-  for(const {shed, personnel} of perShed){
-    if(personnel.length===0) continue;
-    html += `<optgroup label="${escapeHTML(shed.name)}">` +
-      personnel.map(p=>`<option value="${shed.id}::${escapeHTML(p.name)}" ${selected===(shed.id+"::"+p.name)?"selected":""}>${escapeHTML(p.name)}</option>`).join("") +
-      `</optgroup>`;
-  }
-  sel.innerHTML = html;
+const todayISO = () => new Date().toISOString().slice(0,10);
+function populateReserveShed(selected){
+  const sel = document.getElementById("reserve-shed");
+  sel.innerHTML = SHEDS.map(s=>`<option value="${s.id}" ${selected===s.id?"selected":""}>${escapeHTML(s.name)}</option>`).join("");
 }
 let reserveEditId = null;
-let reserveFreeEntry = false;
-function toggleReserveFreeEntry(forceOn){
-  reserveFreeEntry = (forceOn!==undefined) ? forceOn : !reserveFreeEntry;
-  document.getElementById("reserve-person").style.display = reserveFreeEntry ? "none" : "";
-  document.getElementById("reserve-person-free").style.display = reserveFreeEntry ? "" : "none";
-  document.getElementById("reserve-free-toggle").textContent = reserveFreeEntry ? "📋 בחירה מרשימת הצוות" : "✏️ הזנת שם עצמאית (לא מרשימת הצוות)";
-}
-async function openReserveAdd(){
+function openReserveAdd(){
   reserveEditId = null;
-  await populateReservePerson();
+  populateReserveShed();
   document.getElementById("reserve-person-free").value = "";
-  toggleReserveFreeEntry(false);
-  document.getElementById("reserve-last").value = "";
-  document.getElementById("reserve-next").value = "";
+  document.getElementById("reserve-last").value = todayISO();   // ברירת מחדל: תאריך ההזנה
   document.getElementById("reserve-title").textContent = "🎖️ הוספת איש מילואים";
   document.querySelector("#reserve-modal .m-btn.primary").textContent = "➕ הוסף";
   document.getElementById("reserve-modal").classList.add("open");
@@ -7207,42 +7180,26 @@ async function openReserveEdit(id){
   const r = list.find(x=>x.id===id);
   if(!r) return;
   reserveEditId = id;
-  const isKnownShed = SHEDS.some(s=>s.id===r.shedId);
-  await populateReservePerson(r.shedId+"::"+r.person);
-  if(isKnownShed){
-    toggleReserveFreeEntry(false);
-    document.getElementById("reserve-person-free").value = "";
-  } else {
-    toggleReserveFreeEntry(true);
-    document.getElementById("reserve-person-free").value = r.person;
-  }
-  document.getElementById("reserve-last").value = r.last || "";
-  document.getElementById("reserve-next").value = r.next || "";
+  populateReserveShed(r.shedId);
+  document.getElementById("reserve-person-free").value = r.person || "";
+  document.getElementById("reserve-last").value = r.last || todayISO();
   document.getElementById("reserve-title").textContent = "✏️ עריכת איש מילואים";
   document.querySelector("#reserve-modal .m-btn.primary").textContent = "💾 שמור שינויים";
   document.getElementById("reserve-modal").classList.add("open");
 }
 async function saveReserve(){
-  const last = document.getElementById("reserve-last").value;
-  const next = document.getElementById("reserve-next").value;
-  let shedId, person;
-  if(reserveFreeEntry){
-    person = document.getElementById("reserve-person-free").value.trim();
-    if(!person){ toast("נא להזין שם"); return; }
-    shedId = "";
-  } else {
-    const personVal = document.getElementById("reserve-person").value;
-    if(!personVal){ toast("נא לבחור חייל"); return; }
-    [shedId, person] = personVal.split("::");
-  }
+  const shedId = document.getElementById("reserve-shed").value;
+  const person = document.getElementById("reserve-person-free").value.trim();
+  const last = document.getElementById("reserve-last").value || todayISO();
+  if(!person){ toast("נא להזין שם"); return; }
   const list = await getReserves();
   if(reserveEditId){
     const r = list.find(x=>x.id===reserveEditId);
-    if(r){ r.shedId=shedId; r.person=person; r.last=last; r.next=next; }
+    if(r){ r.shedId=shedId; r.person=person; r.last=last; }
     reserveEditId = null;
     toast("העדכון נשמר ✓");
   } else {
-    list.push({id:"res"+Date.now(), shedId, person, last, next});
+    list.push({id:"res"+Date.now(), shedId, person, last});
     toast("איש המילואים נוסף ✓");
   }
   await sSetRaw("admin_reserves_list", list);
@@ -7265,16 +7222,14 @@ async function renderReserves(){
     box.innerHTML = `<div class="empty-state"><div class="ic">🎖️</div><h3>אין עדיין אנשי מילואים במעקב</h3><p>הוסף איש מילואים באמצעות "הוספת איש מילואים"</p></div>`;
     return;
   }
-  const shedName = id => id ? ((SHEDS.find(s=>s.id===id)||{}).name || id) : "מילואים (ללא סככה פעילה)";
-  const withStatus = list.map(r=>({...r, st: reserveStatus(r)}));
-  const order = {r:0, y:1, g:2};
-  withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
-  box.innerHTML = withStatus.map(r=>`
+  const shedName = id => id ? ((SHEDS.find(s=>s.id===id)||{}).name || id) : "—";
+  const sorted = list.slice().sort((a,b)=> (a.shedId||"").localeCompare(b.shedId||"") || (a.person||"").localeCompare(b.person||""));
+  box.innerHTML = sorted.map(r=>`
     <div class="cert-sum-card" style="cursor:default">
       <div class="cert-sum-head">
         <div class="avatar" style="width:40px;height:40px;font-size:18px">🎖️</div>
-        <div class="cert-sum-name"><b>${escapeHTML(r.person)}</b><span>${escapeHTML(shedName(r.shedId))}${r.last?(" · רענון אחרון: "+r.last):""}</span></div>
-        <span class="pill ${r.st.cls}" style="font-size:10px;white-space:nowrap">${r.st.tag}</span>
+        <div class="cert-sum-name"><b>${escapeHTML(r.person)}</b><span>${escapeHTML(shedName(r.shedId))}</span></div>
+        <span class="pill g" style="font-size:10px;white-space:nowrap">🗓️ רענון: ${escapeHTML(r.last||"—")}</span>
         <button class="cert-chip-edit" onclick="openReserveEdit('${r.id}')">✏️</button>
         <button class="cert-chip-del" onclick="removeReserve('${r.id}')">✕</button>
       </div>
