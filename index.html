@@ -1042,6 +1042,8 @@ nav{
 
     <!-- GLOBAL MESSAGES BOARD (feature 11) — appears on every screen -->
     <div id="messages-area"></div>
+    <!-- DAILY BRIEF (feature 24) — appears on every screen -->
+    <div id="brief-area"></div>
 
     <!-- ===== SAFETY ===== -->
     <section class="screen active" id="scr-safety">
@@ -1320,6 +1322,7 @@ nav{
       <!-- ADMIN quick actions -->
       <div class="cmd-section-title">⚙️ ניהול</div>
       <div class="admin-grid">
+        <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic">📋</span><b>דגשי בוקר / תדריך</b><span>תדריך יומי לצוות</span></button>
         <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
       </div>
     </section>
@@ -2801,8 +2804,9 @@ function updateConnectionBadge(){
 function renderLiveBadge(){
   const el = document.getElementById("cd-live");
   if(!el) return;
+  const t = new Date().toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"});
   if(staleDataFlag){ el.className = "cd-live warn"; el.textContent = "בעיית רשת"; }
-  else if(sharedModeFlag){ el.className = "cd-live"; el.textContent = "LIVE"; }
+  else if(sharedModeFlag){ el.className = "cd-live"; el.textContent = "LIVE · " + t; }
   else { el.className = "cd-live off"; el.textContent = "לא מקוון"; }
 }
 
