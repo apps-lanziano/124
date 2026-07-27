@@ -688,6 +688,8 @@ nav{
 .cd .cd-shead h3{font-size:12px;font-weight:800;letter-spacing:.08em;color:var(--ink-2);margin:0}
 .cd .cd-badge{font-family:var(--cd-mono);font-size:11px;font-weight:700;color:var(--ink-3)}
 .cd .cd-badge.cd-alertbadge{color:var(--red);background:var(--red-soft);border:1px solid var(--red-line);border-radius:99px;padding:1px 9px}
+.cd .cd-focus-sum{font-size:12.5px;font-weight:700;color:var(--ink-2);margin:-2px 0 11px;padding-inline-start:2px}
+.cd .cd-focus-sum.has{color:var(--red)}
 .cd .cd-tl{position:relative;padding-inline-start:22px}
 .cd .cd-tl::before{content:"";position:absolute;inset-inline-start:6px;top:8px;bottom:8px;width:2px;background:var(--line)}
 .cd .cd-ev{position:relative;padding-bottom:8px}
@@ -739,6 +741,29 @@ nav{
   cursor:pointer;box-shadow:0 8px 20px -5px rgba(179,15,38,.55)}
 #back-to-dash.show{display:inline-flex}
 #back-to-dash:active{transform:scale(.96)}
+/* דוח קרא-וחתום */
+.sr-box{background:var(--card);border-radius:14px;padding:16px}
+.sr-head h3{font-size:16px;font-weight:800;margin:0}
+.sr-head p{font-size:12px;color:var(--ink-3);margin:4px 0 0}
+.sr-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 4px}
+.sr-stat{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 4px;text-align:center}
+.sr-stat b{font-size:18px;font-weight:800;display:block;font-variant-numeric:tabular-nums}
+.sr-stat b.g{color:var(--green)}
+.sr-stat span{font-size:10px;color:var(--ink-3);font-weight:600}
+.sr-list{margin-top:12px}
+.sr-ev{border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin-bottom:8px;background:var(--card)}
+.sr-ev-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sr-ev-top b{font-size:13.5px;font-weight:700}
+.sr-count{font-size:12px;font-weight:800;padding:2px 9px;border-radius:99px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sr-count.g{color:var(--green);background:var(--green-soft)}
+.sr-count.y{color:var(--gold);background:var(--gold-soft)}
+.sr-count.r{color:var(--red);background:var(--red-soft)}
+.sr-ev-date{font-size:11px;color:var(--ink-3);margin-top:3px}
+.sr-line{font-size:12px;color:var(--ink-2);margin-top:7px;line-height:1.6}
+.sr-tag{font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:99px;margin-inline-end:6px;white-space:nowrap}
+.sr-tag.g{color:var(--green);background:var(--green-soft)}
+.sr-tag.r{color:var(--red);background:var(--red-soft)}
+.sr-empty{text-align:center;color:var(--ink-3);padding:22px;font-size:13px}
 /* message receipts */
 .msg-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .msg-receipt{font-size:10.5px;font-weight:700;color:var(--ink-3);background:rgba(0,0,0,.05);padding:2px 7px;border-radius:99px;white-space:nowrap}
@@ -1019,7 +1044,10 @@ nav{
           <h2>קרא וחתום</h2>
           <p>חובה לקרוא כל פריט, לחתום ולאשר שהמסר הועבר.</p>
         </div>
-        <button class="add-btn hidden" id="add-event-btn" onclick="openAddEvent()">+ פריט</button>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <button class="add-btn hidden" id="safety-report-btn" onclick="openSafetyReport()" style="background:var(--card);color:var(--red);border:1px solid var(--red-line)">📊 דוח</button>
+          <button class="add-btn hidden" id="add-event-btn" onclick="openAddEvent()">+ פריט</button>
+        </div>
       </div>
       <div class="search-box" id="safety-search-box" style="display:none">
         <span class="search-ic">🔍</span>
@@ -1845,6 +1873,19 @@ nav{
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('task-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAFETY (קרא וחתום) REPORT -->
+  <div class="modal-bg" id="safety-report-modal">
+    <div class="modal">
+      <h3>📄 דוח קרא וחתום</h3>
+      <div class="m-sub">ריכוז כל פריטי קרא-וחתום ומי אישר כל אחד.</div>
+      <div id="safety-report-content" style="max-height:60vh;overflow-y:auto;margin:10px 0"></div>
+      <div class="modal-actions" style="margin-top:12px;display:flex;gap:8px">
+        <button class="m-btn primary" onclick="exportSafetyReport()" style="flex:1">📸 ייצוא כתמונה</button>
+        <button class="m-btn ghost" onclick="document.getElementById('safety-report-modal').classList.remove('open')" style="flex:1">סגור</button>
       </div>
     </div>
   </div>
@@ -3216,14 +3257,17 @@ async function doLogin(){
 
     const navCmd = document.getElementById("nav-cmd");
     const addBtn = document.getElementById("add-event-btn");
+    const repBtn = document.getElementById("safety-report-btn");
     if(userRole === "מפקד"){
       isCmd = true;
       navCmd.classList.remove("hidden");
       addBtn.classList.remove("hidden");
+      if(repBtn) repBtn.classList.remove("hidden");
     } else {
       isCmd = false;
       navCmd.classList.add("hidden");
       addBtn.classList.add("hidden");
+      if(repBtn) repBtn.classList.add("hidden");
     }
     document.getElementById("safety-search").value = "";
     document.getElementById("nav-tools").classList.toggle("hidden", !isToolsResp);
@@ -3341,6 +3385,7 @@ function logout(){
   document.getElementById("nav-tools").classList.add("hidden");
   document.getElementById("nav-vehicles").classList.add("hidden");
   document.getElementById("add-event-btn").classList.add("hidden");
+  { const rb=document.getElementById("safety-report-btn"); if(rb) rb.classList.add("hidden"); }
   document.getElementById("more-team-item").classList.add("hidden");
   document.getElementById("more-tasks-item").classList.add("hidden");
   document.getElementById("more-faults-item").classList.add("hidden");
@@ -5611,6 +5656,70 @@ async function exportReport(){
   }catch(e){ toast("⚠️ ייצוא נכשל"); console.error(e); }
 }
 
+/* ===== דוח קרא-וחתום מפורט (למפקד) — מרכז כל פריט ומי אישר ===== */
+async function openSafetyReport(){
+  const modal = document.getElementById("safety-report-modal");
+  const box = document.getElementById("safety-report-content");
+  box.innerHTML = '<div class="sr-empty">מכין דוח…</div>';
+  modal.classList.add("open");
+
+  const events = await getEvents();
+  const people = PERSONNEL.slice();
+  const sigsArr = await Promise.all(people.map(p => sGet("sigs_"+safeName(p.name))));
+  const sigsBy = {}; people.forEach((p,i)=> sigsBy[p.name] = sigsArr[i] || {});
+  const total = people.length;
+  const now = new Date();
+
+  let totalConfirms = 0;
+  events.forEach(e => people.forEach(p => { if(sigsBy[p.name][e.id]) totalConfirms++; }));
+  const maxC = total * events.length;
+  const pct = maxC ? Math.round(totalConfirms/maxC*100) : 0;
+  const fullyDone = events.filter(e => total>0 && people.every(p => sigsBy[p.name][e.id])).length;
+
+  // מהחדש לישן
+  const evList = events.slice().reverse();
+  const evHtml = evList.length ? evList.map(e=>{
+    const confirmed = people.filter(p => sigsBy[p.name][e.id]);
+    const missing   = people.filter(p => !sigsBy[p.name][e.id]);
+    const c = confirmed.length;
+    const cls = (total>0 && c===total) ? "g" : (c===0 ? "r" : "y");
+    return `<div class="sr-ev">
+      <div class="sr-ev-top"><b>${escapeHTML(e.title)}</b><span class="sr-count ${cls}">${c}/${total}</span></div>
+      ${e.date?`<div class="sr-ev-date">📅 ${escapeHTML(e.date)}</div>`:""}
+      ${confirmed.length?`<div class="sr-line"><span class="sr-tag g">✓ אישרו</span>${confirmed.map(p=>escapeHTML(p.name)).join("، ")}</div>`:""}
+      ${missing.length?`<div class="sr-line"><span class="sr-tag r">✗ טרם</span>${missing.map(p=>escapeHTML(p.name)).join("، ")}</div>`:""}
+    </div>`;
+  }).join("") : `<div class="sr-empty">אין פריטי קרא-וחתום עדיין</div>`;
+
+  box.innerHTML = `<div id="safety-report-box" class="sr-box">
+    <div class="sr-head"><h3>📄 דוח קרא וחתום</h3><p>${escapeHTML(currentShed?currentShed.name:"")} · ${now.toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p></div>
+    <div class="sr-stats">
+      <div class="sr-stat"><b>${events.length}</b><span>פריטים</span></div>
+      <div class="sr-stat"><b>${total}</b><span>אנשי צוות</span></div>
+      <div class="sr-stat"><b class="${pct>=80?'g':''}">${pct}%</b><span>אישור כולל</span></div>
+      <div class="sr-stat"><b class="${events.length&&fullyDone===events.length?'g':''}">${fullyDone}/${events.length}</b><span>הושלמו</span></div>
+    </div>
+    <div class="sr-list">${evHtml}</div>
+  </div>`;
+}
+async function exportSafetyReport(){
+  const box = document.getElementById("safety-report-box");
+  if(!box){ toast("אין דוח להצגה"); return; }
+  toast("מכין תמונה…");
+  try{
+    if(!window.html2canvas){
+      await new Promise((res,rej)=>{ const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+    }
+    const canvas = await window.html2canvas(box, {scale:2, backgroundColor:"#ffffff"});
+    canvas.toBlob(blob=>{
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a"); a.href=url; a.download="דוח_קרא_וחתום_"+(currentShed?currentShed.id:"")+".png"; a.click();
+      URL.revokeObjectURL(url);
+      toast("הדוח יוצא כתמונה 📸");
+    });
+  }catch(e){ toast("⚠️ ייצוא נכשל"); console.error(e); }
+}
+
 /* ============================================================
    SUPER-ADMIN (מנהל-על)
    ============================================================ */
@@ -7293,20 +7402,7 @@ async function renderTrends(){
 
   const nowT = new Date().toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"});
   const dShort = new Date().toLocaleDateString("he-IL",{weekday:"short",day:"numeric",month:"numeric"});
-  const circ = 232.5, dashOff = (circ*(1-score/100)).toFixed(1);
-  const verdict = priorityFeed.length ? `${priorityFeed.length} פריטים דורשים טיפול` : "כל התחומים תקינים";
-
-  // --- פס-סגמנטים לפי תחום ---
-  const segs = [];
-  if(maxSigs>0) segs.push(sigPct>=100?"g":sigPct>=70?"y":"r");
-  if(showMorning && MORNING_TASKS.length) segs.push(mDone>=MORNING_TASKS.length?"g":(hh>=11?"r":"y"));
-  if(showCerts) segs.push(certExpired?"r":certSoon?"y":"g");
-  if(showVeh)   segs.push(vehExpired?"r":vehSoon?"y":"g");
-  if(showTools) segs.push(toolExpired?"r":toolSoon?"y":"g");
-  if(showNaatim) segs.push(naatimOpen?"y":"g");
-  if(showFaults) segs.push(openF?"y":"g");
-  while(segs.length<8) segs.push("o");
-  const segHtml = segs.map(s=>`<i class="cd-seg-${s}"></i>`).join("");
+  const focusSum = priorityFeed.length ? `⚠ ${priorityFeed.length} פריטים דורשים טיפול` : "✅ אין פריטים שדורשים טיפול";
 
   // --- מדדים ---
   const kpis = [];
@@ -7370,24 +7466,9 @@ async function renderTrends(){
         <div class="cd-live">LIVE · ${nowT}</div>
       </div>
 
-      <div class="cd-console">
-        <div class="cd-gauge">
-          <svg width="82" height="82" viewBox="0 0 86 86">
-            <circle class="cd-trk" cx="43" cy="43" r="37" fill="none" stroke-width="8"/>
-            <circle cx="43" cy="43" r="37" fill="none" stroke-width="8" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${dashOff}" style="stroke:${scoreColor}"/>
-          </svg>
-          <div class="cd-val"><b>${score}</b><span>מוכנות</span></div>
-        </div>
-        <div class="cd-cbody">
-          <div class="cd-l">סטטוס מסגרת</div>
-          <div class="cd-v">${priorityFeed.length?'<span class="cd-warn">⚠</span> ':'✅ '}${escapeHTML(verdict)}</div>
-          <div class="cd-seg">${segHtml}</div>
-          <div class="cd-legend"><span><i class="cd-seg-g"></i>תקין</span><span><i class="cd-seg-y"></i>אזהרה</span><span><i class="cd-seg-r"></i>דחוף</span></div>
-        </div>
-      </div>
-
       <div class="cd-sec">
         <div class="cd-shead"><h3>מיקוד יומי</h3><span class="cd-badge">${escapeHTML(dShort)}</span></div>
+        <div class="cd-focus-sum ${priorityFeed.length?'has':''}">${escapeHTML(focusSum)}</div>
         ${focusHtml}
       </div>
 
