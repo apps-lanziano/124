@@ -1483,7 +1483,12 @@ nav{
           נדירים בלבד: הוספת מסגרת חדשה או תיקון חשבון בודד — תזין את הקוד (רק אתה
           יודע אותו) ותבחר למי הוא שייך. בטוח להרצה חוזרת.
         </p>
-        <button class="m-btn ghost" style="width:100%" onclick="provisionAuthAccounts()">🔐 הקם חשבון אימות (ידני)</button>
+        <button class="m-btn ghost" style="width:100%;margin-bottom:8px" onclick="provisionAuthAccounts()">🔐 הקם חשבון אימות (ידני)</button>
+        <p style="font-size:12px;color:var(--ink-3);line-height:1.6;margin:8px 0">
+          סגירת קוד כניסה — מבטלת לצמיתות את הכניסה עם קוד מסוים (מוחקת את פרופיל
+          הניתוב ואת חשבון האימות שלו). למשל לסגירת קודים ישנים שכבר לא בשימוש.
+        </p>
+        <button class="m-btn ghost" style="width:100%" onclick="closeAuthCode()">🚫 סגור קוד כניסה</button>
       </details>
       <input class="m-input" id="users-search" type="text" placeholder="🔎 חיפוש משתמש לפי שם, מסגרת או תפקיד…" style="margin-bottom:12px" oninput="renderUsersAdmin()">
       <div id="users-list"></div>
@@ -5887,6 +5892,46 @@ async function provisionAuthAccounts(){
   await ownerLog(`הקמת חשבון ידנית: קוד ${code} → ${chosen.label} · חשבון ${acct||"נכשל"} · פרופיל ${profOk?"נכתב":"נכשל"}`);
   if(err && !profOk){ alert("❌ שגיאה: "+err); }
   else { alert(`✅ הושלם:\nחשבון: ${acct||"נכשל"}\nפרופיל ניתוב: ${profOk?"נכתב":"נכשל"}\nקוד ${code} → ${chosen.label}`); }
+}
+
+/* תיאור קריא של פרופיל ניתוב (למסכי אישור) */
+function describeAuthProfile(prof){
+  if(!prof || !prof.kind) return "לא ידוע";
+  if(prof.kind==="owner")  return "מנהל מערכת";
+  if(prof.kind==="tech")   return "קצין טכני";
+  if(prof.kind==="budget") return "אחראי תקציבים";
+  if(prof.kind==="framework"){ const s = SHEDS.find(x=>x.id===prof.shedId); return (s?s.name:prof.shedId)+" · "+prof.role; }
+  return "לא ידוע";
+}
+/* סגירת קוד כניסה — מבטלת את פרופיל הניתוב (בלי פרופיל הכניסה נדחית) וגם מוחקת
+   את חשבון ה-u<code>@ עצמו, כך שגם אימות גולמי איתו כבר לא אפשרי. הפיך ע"י
+   "הקמת חשבון אימות (ידני)". */
+async function closeAuthCode(){
+  if(!fbAuth || !fbAuth._am){ toast("Firebase לא מחובר ⛔"); return; }
+  const code = (prompt("סגירת קוד כניסה.\n\nהזן את הקוד (4 ספרות) שברצונך לסגור לצמיתות:")||"").trim();
+  if(!code) return;
+  if(!/^\d{4}$/.test(code)){ alert("קוד לא תקין — נדרשות בדיוק 4 ספרות."); return; }
+
+  const prof = await sGetRaw(await codeProfileKey(code));
+  if(!(prof && prof.kind)){ alert("לקוד הזה אין פרופיל פעיל — הוא כבר סגור או לא קיים."); return; }
+  const label = describeAuthProfile(prof);
+  if(!confirm(`הקוד ${code} משמש כרגע ל:\n${label}\n\nלסגור אותו לצמיתות? לא ניתן יהיה להיכנס איתו (ניתן להקים מחדש ידנית בעתיד).`)) return;
+
+  let profDel=false, acctMsg="";
+  try{ await sDelRaw(await codeProfileKey(code)); profDel=true; }
+  catch(e){ console.error("closeAuthCode profile", e); }
+
+  const am = fbAuth._am;
+  try{
+    if(await signInAs(authEmailFromCode(code), deriveAuthPassword(code)) && fbAuth.currentUser){
+      await am.deleteUser(fbAuth.currentUser); acctMsg="נמחק";
+    } else { acctMsg="לא נמצא/כבר נמחק"; }
+  }catch(e){ console.error("closeAuthCode account", e); acctMsg="שגיאה ("+(e&&e.code||e)+")"; }
+  // חוזרים לזהות אנונימית ניטרלית.
+  try{ await am.signInAnonymously(fbAuth); }catch(e){ console.error("re-anon after close", e); }
+
+  await ownerLog(`סגירת קוד ${code} (${label}): פרופיל ${profDel?"נמחק":"נכשל"} · חשבון ${acctMsg}`);
+  alert(`✅ קוד ${code} נסגר (${label}).\nפרופיל ניתוב: ${profDel?"נמחק":"נכשל"}\nחשבון אימות: ${acctMsg}`);
 }
 
 async function techOfficerLogin(){
