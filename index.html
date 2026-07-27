@@ -654,6 +654,84 @@ nav{
 .bar-fill.full{background:linear-gradient(180deg,#3ccb7f,var(--green))}
 .bar-label{font-size:11px;color:var(--ink-3);font-weight:700}
 .trend-note{font-size:11px;color:var(--ink-3);text-align:center;margin-top:10px;font-weight:300}
+
+/* ===== קונסולת מפקד (dashboard v2) ===== */
+.cd{--cd-mono:"SF Mono",ui-monospace,"Menlo","Consolas",monospace;--cd-seg-empty:#e7dadd;
+  --cd-gold-line:#f0dfa8;--cd-green-line:#bfe9cf;
+  display:flex;flex-direction:column;gap:15px}
+.cd .cd-topbar{display:flex;align-items:center;justify-content:space-between}
+.cd .cd-unit{display:flex;align-items:center;gap:11px;min-width:0}
+.cd .cd-crest{width:40px;height:40px;border-radius:11px;flex-shrink:0;display:grid;place-items:center;font-size:19px;background:var(--red-soft);border:1px solid var(--red-line)}
+.cd .cd-unit b{font-size:15.5px;font-weight:800;line-height:1.1;display:block}
+.cd .cd-unit i{font-style:normal;font-size:10px;color:var(--ink-3);font-weight:600;letter-spacing:.08em;display:block;margin-top:3px}
+.cd .cd-live{font-family:var(--cd-mono);font-size:11px;color:var(--green);display:flex;align-items:center;gap:6px;letter-spacing:.04em;background:var(--green-soft);border:1px solid var(--cd-green-line);border-radius:99px;padding:5px 10px;white-space:nowrap}
+.cd .cd-live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+.cd .cd-console{display:flex;align-items:center;gap:15px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px 16px;box-shadow:var(--shadow)}
+.cd .cd-gauge{position:relative;width:82px;height:82px;flex-shrink:0}
+.cd .cd-gauge svg{transform:rotate(-90deg);display:block}
+.cd .cd-trk{stroke:var(--line)}
+.cd .cd-val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.cd .cd-val b{font-family:var(--cd-mono);font-size:25px;font-weight:800;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
+.cd .cd-val span{font-size:9px;letter-spacing:.1em;color:var(--ink-3);font-weight:700;margin-top:2px}
+.cd .cd-cbody{flex:1;min-width:0}
+.cd .cd-cbody .cd-l{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+.cd .cd-cbody .cd-v{font-size:15px;font-weight:800;margin-top:4px;line-height:1.25}
+.cd .cd-cbody .cd-v .cd-warn{color:var(--gold)}
+.cd .cd-seg{display:flex;gap:3px;margin-top:11px}
+.cd .cd-seg i{height:7px;border-radius:3px;flex:1}
+.cd .cd-seg-g{background:var(--green)} .cd .cd-seg-y{background:var(--gold)} .cd .cd-seg-r{background:var(--red-2)} .cd .cd-seg-o{background:var(--cd-seg-empty)}
+.cd .cd-legend{display:flex;gap:12px;margin-top:9px;font-size:10px;color:var(--ink-3);font-weight:600}
+.cd .cd-legend span{display:flex;align-items:center;gap:4px}
+.cd .cd-legend i{width:7px;height:7px;border-radius:2px}
+.cd .cd-sec{display:flex;flex-direction:column}
+.cd .cd-shead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-inline-start:2px}
+.cd .cd-shead h3{font-size:12px;font-weight:800;letter-spacing:.08em;color:var(--ink-2);margin:0}
+.cd .cd-badge{font-family:var(--cd-mono);font-size:11px;font-weight:700;color:var(--ink-3)}
+.cd .cd-badge.cd-alertbadge{color:var(--red);background:var(--red-soft);border:1px solid var(--red-line);border-radius:99px;padding:1px 9px}
+.cd .cd-tl{position:relative;padding-inline-start:22px}
+.cd .cd-tl::before{content:"";position:absolute;inset-inline-start:6px;top:8px;bottom:8px;width:2px;background:var(--line)}
+.cd .cd-ev{position:relative;padding-bottom:8px}
+.cd .cd-ev:last-child{padding-bottom:0}
+.cd .cd-ev::before{content:"";position:absolute;inset-inline-start:-20px;top:15px;width:11px;height:11px;border-radius:50%;background:var(--card);border:2px solid var(--ink-3);z-index:1}
+.cd .cd-ev.cd-done::before{border-color:var(--green);background:var(--green)}
+.cd .cd-ev.cd-now::before{border-color:var(--red-2);background:var(--red-2);box-shadow:0 0 0 4px var(--red-soft)}
+.cd .cd-ev.cd-crit::before{border-color:var(--red-2);background:var(--red-2)}
+.cd .cd-ev.cd-warn::before{border-color:var(--gold)}
+.cd .cd-ev-card{display:flex;align-items:center;gap:11px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;box-shadow:var(--shadow)}
+.cd .cd-ev.cd-now .cd-ev-card{background:linear-gradient(120deg,var(--red-soft),var(--card));border-color:var(--red-line)}
+.cd .cd-ev-time{font-family:var(--cd-mono);font-size:10.5px;font-weight:700;color:var(--ink-3);width:54px;flex-shrink:0}
+.cd .cd-ev.cd-now .cd-ev-time,.cd .cd-ev.cd-crit .cd-ev-time{color:var(--red)}
+.cd .cd-ev-txt{flex:1;min-width:0}
+.cd .cd-ev-txt b{font-size:13px;font-weight:700;display:block;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cd .cd-ev-txt span{font-size:11px;color:var(--ink-3);display:block;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cd .cd-ev-pill{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px;white-space:nowrap;flex-shrink:0}
+.cd .cd-p-g{color:var(--green);background:var(--green-soft);border:1px solid var(--cd-green-line)}
+.cd .cd-p-y{color:var(--gold);background:var(--gold-soft);border:1px solid var(--cd-gold-line)}
+.cd .cd-p-r{color:#fff;background:var(--red-2)}
+.cd .cd-kgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cd .cd-kpi{position:relative;text-align:right;font-family:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px 11px;cursor:pointer;box-shadow:var(--shadow)}
+.cd .cd-led{position:absolute;top:11px;left:11px;width:8px;height:8px;border-radius:50%}
+.cd .cd-led.g{background:var(--green);box-shadow:0 0 0 3px var(--green-soft)}
+.cd .cd-led.y{background:var(--gold);box-shadow:0 0 0 3px var(--gold-soft)}
+.cd .cd-led.r{background:var(--red-2);box-shadow:0 0 0 3px var(--red-soft)}
+.cd .cd-kic{font-size:15px}
+.cd .cd-kn{font-family:var(--cd-mono);font-size:22px;font-weight:800;margin-top:6px;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+.cd .cd-kl{font-size:10.5px;color:var(--ink-3);margin-top:5px;font-weight:600}
+.cd .cd-alert{display:flex;align-items:center;gap:11px;background:var(--card);border:1px solid var(--line);border-inline-start:3px solid var(--red-2);border-radius:12px;padding:11px 12px;margin-bottom:7px;cursor:pointer;box-shadow:var(--shadow)}
+.cd .cd-alert.y{border-inline-start-color:var(--gold)}
+.cd .cd-aic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:17px;background:var(--red-soft);flex-shrink:0}
+.cd .cd-alert.y .cd-aic{background:var(--gold-soft)}
+.cd .cd-abd{flex:1;min-width:0}
+.cd .cd-abd b{font-size:13px;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cd .cd-abd span{font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.cd .cd-aage{font-family:var(--cd-mono);font-size:11px;font-weight:800;color:var(--red);white-space:nowrap}
+.cd .cd-alert.y .cd-aage{color:var(--gold)}
+.cd .cd-achev{color:var(--ink-3);font-size:18px}
+.cd .cd-clear{background:var(--green-soft);border:1px solid var(--cd-green-line);color:var(--green);font-size:13px;font-weight:700;border-radius:12px;padding:14px;text-align:center}
+.cd .cd-qbar{display:grid;gap:8px;padding-top:14px;border-top:1px solid var(--line)}
+.cd .cd-q{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;background:none;border:none;font-family:inherit;color:var(--ink-2)}
+.cd .cd-qi{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-size:18px;background:var(--card);border:1px solid var(--line);color:var(--red);box-shadow:var(--shadow)}
+.cd .cd-q span{font-size:10.5px;font-weight:700}
 /* message receipts */
 .msg-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .msg-receipt{font-size:10.5px;font-weight:700;color:var(--ink-3);background:rgba(0,0,0,.05);padding:2px 7px;border-radius:99px;white-space:nowrap}
@@ -1506,7 +1584,7 @@ nav{
   <!-- NAV -->
   <nav>
     <button class="nav-btn hidden" id="nav-cmd" data-scr="scr-cmd" onclick="go('scr-cmd',this)"><span class="ic">🎖️</span><span>מפקד</span></button>
-    <button class="nav-btn active" data-scr="scr-safety" onclick="go('scr-safety',this)"><span class="ic">📄</span><span>קרא וחתום</span><span class="nav-badge hidden" id="badge-safety">0</span></button>
+    <button class="nav-btn active" id="nav-safety" data-scr="scr-safety" onclick="go('scr-safety',this)"><span class="ic">📄</span><span>קרא וחתום</span><span class="nav-badge hidden" id="badge-safety">0</span></button>
     <button class="nav-btn" id="nav-morning" data-scr="scr-morning" onclick="go('scr-morning',this)"><span class="ic">✅</span><span>מטלות</span><span class="nav-badge hidden" id="badge-morning">0</span></button>
     <button class="nav-btn" data-scr="scr-board" onclick="go('scr-board',this)"><span class="ic">📅</span><span>לוח שבועי</span></button>
     <button class="nav-btn" id="nav-certs" data-scr="scr-certs" onclick="go('scr-certs',this)"><span class="ic">🎓</span><span>הסמכות</span></button>
@@ -7189,72 +7267,126 @@ async function renderTrends(){
   const greeting = hh<12 ? "בוקר טוב" : hh<18 ? "צהריים טובים" : "ערב טוב";
   const dateStr = new Date().toLocaleDateString("he-IL",{weekday:"long", day:"numeric", month:"long"});
 
-  const feedHtml = priorityFeed.length===0
-    ? `<div class="db-all-clear"><b>✅ הכל תקין</b><span>אין הסמכות, כלים או רכבים שדורשים תשומת לב כרגע</span></div>`
-    : `<div class="db-feed">${priorityFeed.map(f=>`
-        <div class="db-feed-item ${f.cls}" onclick="${f.go}">
-          <div class="db-feed-ic">${f.ic}</div>
-          <div class="db-feed-body"><b>${escapeHTML(f.title)}</b><span>${escapeHTML(f.sub)}</span></div>
-          <div class="db-feed-tag">${f.tag}</div>
-          <div class="db-feed-chev">‹</div>
-        </div>`).join("")}</div>`;
+  // ===== קונסולת מפקד v2 =====
+  const isTrimmed = !!(currentShed && (currentShed.isMaint || currentShed.isTraining));
+  const showMorning = !isDeptUnit && !isTrimmed;
+  const showTools   = !isDeptUnit && !isTrimmed;
+  const showVeh     = !isDeptUnit && !isTrimmed;
+  const showNaatim  = !isDeptUnit && !isTrimmed;
+  const showFaults  = !isDeptUnit && !isTrimmed;
+  const showCerts   = !isTrimmed;   // סככות + מחלקות (לא במסגרות המצומצמות)
+
+  const nowT = new Date().toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"});
+  const dShort = new Date().toLocaleDateString("he-IL",{weekday:"short",day:"numeric",month:"numeric"});
+  const circ = 232.5, dashOff = (circ*(1-score/100)).toFixed(1);
+  const verdict = priorityFeed.length ? `${priorityFeed.length} פריטים דורשים טיפול` : "כל התחומים תקינים";
+
+  // --- פס-סגמנטים לפי תחום ---
+  const segs = [];
+  if(maxSigs>0) segs.push(sigPct>=100?"g":sigPct>=70?"y":"r");
+  if(showMorning && MORNING_TASKS.length) segs.push(mDone>=MORNING_TASKS.length?"g":(hh>=11?"r":"y"));
+  if(showCerts) segs.push(certExpired?"r":certSoon?"y":"g");
+  if(showVeh)   segs.push(vehExpired?"r":vehSoon?"y":"g");
+  if(showTools) segs.push(toolExpired?"r":toolSoon?"y":"g");
+  if(showNaatim) segs.push(naatimOpen?"y":"g");
+  if(showFaults) segs.push(openF?"y":"g");
+  while(segs.length<8) segs.push("o");
+  const segHtml = segs.map(s=>`<i class="cd-seg-${s}"></i>`).join("");
+
+  // --- מדדים ---
+  const kpis = [];
+  kpis.push({led:(sigPct>=100?"g":sigPct>=70?"y":"r"), ic:"✍️", n:(maxSigs?sigPct+"%":"—"), l:"חתימות", go:"go('scr-safety',document.getElementById('nav-safety'))"});
+  if(showMorning) kpis.push({led:(mDone>=MORNING_TASKS.length?"g":(hh>=11?"r":"y")), ic:"🧰", n:mDone+"/"+MORNING_TASKS.length, l:"מטלות בוקר", go:"go('scr-morning',document.getElementById('nav-morning'))"});
+  if(showCerts) kpis.push({led:(certExpired?"r":certSoon?"y":"g"), ic:"🎓", n:certs.length, l:"הסמכות", go:"goCertsPage()"});
+  if(showVeh)   kpis.push({led:(vehExpired?"r":vehSoon?"y":"g"), ic:"🚙", n:vehicles.length, l:"רכבים", go:"go('scr-vehicles',document.getElementById('nav-vehicles'))"});
+  if(showTools) kpis.push({led:(toolExpired?"r":toolSoon?"y":"g"), ic:"🔧", n:tools.length, l:"כלים בחדר", go:"go('scr-tools',document.getElementById('nav-tools'))"});
+  if(showNaatim) kpis.push({led:(naatimOpen?"y":"g"), ic:"🗂️", n:naatim.length, l:"נע\"תים", go:"closeMoreAnd('scr-naatim')"});
+  const kpiHtml = kpis.map(k=>`<button class="cd-kpi" onclick="${k.go}"><span class="cd-led ${k.led}"></span><div class="cd-kic">${k.ic}</div><div class="cd-kn">${k.n}</div><div class="cd-kl">${escapeHTML(k.l)}</div></button>`).join("");
+
+  // --- מיקוד יומי (ציר זמן מהנתונים החיים) ---
+  const focus = [];
+  if(showMorning && MORNING_TASKS.length){
+    if(mDone>=MORNING_TASKS.length) focus.push({node:"done", time:"בוקר", title:"מסד בוקר", sub:"כל המטלות בוצעו", pill:mDone+"/"+MORNING_TASKS.length+" ✓", p:"g", go:"go('scr-morning',document.getElementById('nav-morning'))"});
+    else { const late=hh>=11; focus.push({node:late?"crit":"now", time:late?"חלף 11:00":"עכשיו", title:"מסד בוקר", sub:(MORNING_TASKS.length-mDone)+" מטלות עדיין פתוחות", pill:mDone+"/"+MORNING_TASKS.length, p:late?"r":"y", go:"go('scr-morning',document.getElementById('nav-morning'))"}); }
+  }
+  if(maxSigs>0){
+    if(sigPct>=100) focus.push({node:"done", time:"היום", title:"חתימות קרא-וחתום", sub:"כל הצוות חתם", pill:"הושלם ✓", p:"g", go:"go('scr-safety',document.getElementById('nav-safety'))"});
+    else focus.push({node:"warn", time:"עד 11:00", title:"דדליין חתימות קרא-וחתום", sub:(maxSigs-totalSigs)+" חתימות חסרות", pill:sigPct+"%", p:"y", go:"go('scr-safety',document.getElementById('nav-safety'))"});
+  }
+  if(priorityFeed.length){
+    const f0 = priorityFeed[0];
+    focus.push({node:(f0.cls==="r"?"crit":"warn"), time:"לטיפול", title:f0.title, sub:f0.sub, pill:(f0.cls==="r"?"דחוף":"בקרוב"), p:(f0.cls==="r"?"r":"y"), go:f0.go});
+  }
+  const focusHtml = focus.length
+    ? `<div class="cd-tl">${focus.map(e=>`
+        <div class="cd-ev cd-${e.node}">
+          <div class="cd-ev-card" onclick="${e.go}">
+            <div class="cd-ev-time">${escapeHTML(e.time)}</div>
+            <div class="cd-ev-txt"><b>${escapeHTML(e.title)}</b><span>${escapeHTML(e.sub)}</span></div>
+            <span class="cd-ev-pill cd-p-${e.p}">${escapeHTML(e.pill)}</span>
+          </div>
+        </div>`).join("")}</div>`
+    : `<div class="cd-clear">✅ אין משימות פתוחות היום</div>`;
+
+  // --- התראות פעילות ---
+  const alertsHtml = priorityFeed.length
+    ? priorityFeed.slice(0,6).map(f=>`
+        <div class="cd-alert ${f.cls==="r"?"":"y"}" onclick="${f.go}">
+          <div class="cd-aic">${f.ic}</div>
+          <div class="cd-abd"><b>${escapeHTML(f.title)}</b><span>${escapeHTML(f.sub)}</span></div>
+          <span class="cd-aage">${escapeHTML(f.tag)}</span><span class="cd-achev">‹</span>
+        </div>`).join("")
+    : `<div class="cd-clear">✅ אין התראות פעילות — הכל בתוקף</div>`;
+
+  // --- פעולות מהירות ---
+  const qa = [{ic:"📢",l:"הודעה",go:"openMsgMgmt()"}];
+  if(showMorning){ qa.push({ic:"🌅",l:"מסד בוקר",go:"go('scr-morning',document.getElementById('nav-morning'))"}); qa.push({ic:"🔒",l:"סגירת יום",go:"go('scr-closeday',null)"}); }
+  else { if(showCerts) qa.push({ic:"🎓",l:"הסמכות",go:"goCertsPage()"}); qa.push({ic:"📅",l:"לוח שבועי",go:"go('scr-board',null)"}); }
+  qa.push({ic:"👥",l:"צוות",go:"openTeamMgmt()"});
+  const qaHtml = qa.map(a=>`<button class="cd-q" onclick="${a.go}"><span class="cd-qi">${a.ic}</span><span>${escapeHTML(a.l)}</span></button>`).join("");
 
   box.innerHTML = `
-    <div class="db-hero">
-      <div class="db-hero-top">
-        <div>
-          <div class="db-eyebrow">${currentShed?currentShed.name:''} · דרג א׳</div>
-          <div class="db-title">${greeting}, ${escapeHTML((user||'').split(' ')[0]||'')} 👋</div>
-          <div class="db-date">${dateStr}</div>
+    <div class="cd">
+      <div class="cd-topbar">
+        <div class="cd-unit">
+          <div class="cd-crest">🚁</div>
+          <div><b>${escapeHTML(currentShed?currentShed.name:"")}</b><i>טייסת 124</i></div>
         </div>
-        <div class="db-score">
-          <div class="db-gauge" style="background:conic-gradient(#fff 0% ${score}%, rgba(255,255,255,.28) ${score}% 100%)"><b>${score}%</b></div>
-          <div class="db-gauge-label">מדד מוכנות</div>
+        <div class="cd-live">LIVE · ${nowT}</div>
+      </div>
+
+      <div class="cd-console">
+        <div class="cd-gauge">
+          <svg width="82" height="82" viewBox="0 0 86 86">
+            <circle class="cd-trk" cx="43" cy="43" r="37" fill="none" stroke-width="8"/>
+            <circle cx="43" cy="43" r="37" fill="none" stroke-width="8" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${dashOff}" style="stroke:${scoreColor}"/>
+          </svg>
+          <div class="cd-val"><b>${score}</b><span>מוכנות</span></div>
+        </div>
+        <div class="cd-cbody">
+          <div class="cd-l">סטטוס מסגרת</div>
+          <div class="cd-v">${priorityFeed.length?'<span class="cd-warn">⚠</span> ':'✅ '}${escapeHTML(verdict)}</div>
+          <div class="cd-seg">${segHtml}</div>
+          <div class="cd-legend"><span><i class="cd-seg-g"></i>תקין</span><span><i class="cd-seg-y"></i>אזהרה</span><span><i class="cd-seg-r"></i>דחוף</span></div>
         </div>
       </div>
-    </div>
 
-    ${(priorityFeed.length || !isDeptUnit) ? `<div class="cmd-section-title">${priorityFeed.length? '🔴 דורש טיפול עכשיו' : '✅ סטטוס כללי'}${priorityFeed.length?` <span style="background:var(--red-soft);color:var(--red);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${priorityFeed.length}</span>`:''}</div>` : ''}
-    ${priorityFeed.length? `<div class="cmd-section-sub">ממוין מהדחוף ביותר — מכל התחומים יחד</div>`:''}
-    ${feedHtml}
+      <div class="cd-sec">
+        <div class="cd-shead"><h3>מיקוד יומי</h3><span class="cd-badge">${escapeHTML(dShort)}</span></div>
+        ${focusHtml}
+      </div>
 
-    <div class="cmd-section-title">📅 היום</div>
-    <div class="db-today-grid">
-      <div class="db-ring-card" style="cursor:pointer" onclick="go('scr-safety',document.querySelector('[data-scr=\\'scr-safety\\']'))">
-        <div class="db-ring" style="background:conic-gradient(var(--green) ${sigPct}%, var(--green-soft) 0)"><b>${maxSigs?sigPct+'%':'—'}</b></div>
-        <div class="db-ring-body"><b>חתימות</b><span>${totalSigs} מתוך ${maxSigs} חתמו</span></div>
+      <div class="cd-sec">
+        <div class="cd-shead"><h3>מדדים במבט אחד</h3><span class="cd-badge">לחיצה = מסך מלא</span></div>
+        <div class="cd-kgrid">${kpiHtml}</div>
       </div>
-      ${isDeptUnit ? '' : `
-      <div class="db-ring-card" style="cursor:pointer" onclick="go('scr-morning',document.getElementById('nav-morning'))">
-        <div class="db-ring" style="background:conic-gradient(var(--gold) ${MORNING_TASKS.length?Math.round(mDone/MORNING_TASKS.length*100):0}%, var(--gold-soft) 0)"><b>${mDone}/${MORNING_TASKS.length}</b></div>
-        <div class="db-ring-body"><b>מטלות בוקר</b><span>${MORNING_TASKS.length-mDone} מטלות עדיין פתוחות</span></div>
-      </div>`}
-    </div>
 
-    <div class="cmd-section-title">📊 מוכנות לפי תחום</div>
-    <div class="cmd-section-sub">לחיצה פותחת את המסך המלא</div>
-    <div class="db-board">
-      <div class="db-board-card" onclick="goCertsPage()">
-        <div class="db-board-top"><div class="db-board-ic">🎓</div><div class="db-board-dot ${certExpired?'r':certSoon?'y':'g'}"></div></div>
-        <div class="db-board-num">${certs.length}</div>
-        <div class="db-board-label">הסמכות · ${certExpired+certSoon?  (certExpired+certSoon)+' דורשות טיפול' : 'הכל בתוקף'}</div>
+      <div class="cd-sec">
+        <div class="cd-shead"><h3>התראות פעילות</h3>${priorityFeed.length?`<span class="cd-badge cd-alertbadge">${priorityFeed.length}</span>`:""}</div>
+        ${alertsHtml}
       </div>
-      ${isDeptUnit ? '' : `
-      <div class="db-board-card" onclick="go('scr-tools',document.querySelector('[data-scr=\\'scr-tools\\']'))">
-        <div class="db-board-top"><div class="db-board-ic">🧰</div><div class="db-board-dot ${toolExpired?'r':toolSoon?'y':'g'}"></div></div>
-        <div class="db-board-num">${tools.length}</div>
-        <div class="db-board-label">כלים בחדר · ${toolExpired+toolSoon? (toolExpired+toolSoon)+' דורשים טיפול' : 'הכל בתוקף'}</div>
-      </div>
-      <div class="db-board-card" onclick="go('scr-vehicles',document.querySelector('[data-scr=\\'scr-vehicles\\']'))">
-        <div class="db-board-top"><div class="db-board-ic">🚙</div><div class="db-board-dot ${vehExpired?'r':vehSoon?'y':'g'}"></div></div>
-        <div class="db-board-num">${vehicles.length}</div>
-        <div class="db-board-label">רכבים במעקב · ${vehExpired+vehSoon? (vehExpired+vehSoon)+' לטיפול קרוב' : 'הכל בתוקף'}</div>
-      </div>`}
-      <div class="db-board-card" onclick="closeMoreAnd('scr-naatim')">
-        <div class="db-board-top"><div class="db-board-ic">🗂️</div><div class="db-board-dot ${naatimOpen?'y':'g'}"></div></div>
-        <div class="db-board-num">${naatim.length}</div>
-        <div class="db-board-label">נע"תים · ${naatimOpen? naatimOpen+' טרם נבדקו השבוע' : 'כולם נבדקו השבוע'}</div>
-      </div>
+
+      <div class="cd-qbar" style="grid-template-columns:repeat(${qa.length},1fr)">${qaHtml}</div>
     </div>
   `;
 }
