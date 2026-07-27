@@ -19,7 +19,14 @@ const SHED_NAMES = {
   dept: "מחלקות", maint: "מ״ע אחזקה", training: "הדרכה",
 };
 
-exports.notifyOnPublish = onDocumentWritten("sq124/{docId}", async (event) => {
+exports.notifyOnPublish = onDocumentWritten(
+  {
+    document: "sq124/{docId}",
+    maxInstances: 10, // תקרת-בטיחות: לעולם לא יותר מ-10 מופעים במקביל — חוסם "בריחת" עלויות
+    memory: "256MiB",
+    timeoutSeconds: 60,
+  },
+  async (event) => {
   const docId = event.params.docId;
   let kind = null;
   if (docId.endsWith("_messages_list")) kind = "message";
