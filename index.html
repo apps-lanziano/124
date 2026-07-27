@@ -1826,8 +1826,9 @@ nav{
       <h3>👥 ניהול צוות</h3>
       <div class="m-sub">הוספה, עריכה והסרה של אנשי צוות. ניתן להגדיר תאריך שחרור.</div>
       <input class="m-input hidden" id="tm-search" type="text" placeholder="🔎 חיפוש לפי שם…" style="margin-bottom:8px" oninput="renderTeamMgmt()">
-      <div id="team-mgmt-list" style="max-height:40vh;overflow-y:auto;margin-bottom:12px"></div>
-      <div class="team-add-form">
+      <div id="team-mgmt-list" style="max-height:52vh;overflow-y:auto;margin-bottom:12px"></div>
+      <button class="m-btn primary" id="tm-add-toggle" style="width:100%;margin-bottom:10px" onclick="tmOpenAddForm()">➕ הוסף איש צוות</button>
+      <div class="team-add-form" id="tm-add-form" style="display:none">
         <div id="tm-form-title" style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:8px">➕ הוספת איש צוות</div>
         <input class="m-input" id="tm-name" type="text" placeholder="שם מלא" style="margin-bottom:8px">
         <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -1856,7 +1857,7 @@ nav{
         </div>
         <div style="display:flex;gap:8px">
           <button class="m-btn primary" id="tm-save-btn" onclick="saveTeamMember()" style="flex:1">➕ הוסף איש צוות</button>
-          <button class="m-btn ghost" id="tm-cancel-btn" onclick="cancelEditMember()" style="flex:0 0 auto;display:none">ביטול עריכה</button>
+          <button class="m-btn ghost" id="tm-cancel-btn" onclick="tmCancelForm()" style="flex:0 0 auto">ביטול</button>
         </div>
       </div>
       <div class="modal-actions" style="margin-top:12px">
@@ -5440,6 +5441,7 @@ function openTeamMgmt(){
   profSel.style.display = isDeptUnit ? "none" : "";
   if(!isDeptUnit) profSel.innerHTML = '<option value="">— ללא מקצוע —</option>' + PROFESSIONS.map(p=>`<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`).join("");
   document.getElementById("team-modal").classList.add("open");
+  tmShowForm(false);   // ברירת מחדל: מציג את הצוות, הטופס מוסתר עד לחיצה על "הוסף"
   renderTeamMgmt();
 }
 let editMemberIdx = -1;   // -1 = add mode; otherwise editing index
@@ -5503,7 +5505,7 @@ function startEditMember(i){
   onReserveToggle();
   document.getElementById("tm-form-title").textContent = "✏️ עריכת " + p.name;
   document.getElementById("tm-save-btn").textContent = "💾 שמור שינויים";
-  document.getElementById("tm-cancel-btn").style.display = "block";
+  tmShowForm(true);   // פותח את טופס העריכה
   document.getElementById("tm-name").focus();
 }
 function cancelEditMember(){
@@ -5521,8 +5523,16 @@ function cancelEditMember(){
   { const rs=document.getElementById("tm-role"); if(rs) rs.disabled=false; }
   document.getElementById("tm-form-title").textContent = "➕ הוספת איש צוות";
   document.getElementById("tm-save-btn").textContent = "➕ הוסף איש צוות";
-  document.getElementById("tm-cancel-btn").style.display = "none";
 }
+/* טופס ההוספה/עריכה מוצג רק בעת הצורך — רוב הזמן רואים את רשימת הצוות.
+   פתיחה בלחיצה על "הוסף איש צוות"; סגירה/מזעור מחזירה לרשימה. */
+function tmShowForm(show){
+  const f=document.getElementById("tm-add-form"), t=document.getElementById("tm-add-toggle");
+  if(f) f.style.display = show ? "" : "none";
+  if(t) t.style.display = show ? "none" : "";
+}
+function tmOpenAddForm(){ cancelEditMember(); tmShowForm(true); document.getElementById("tm-name").focus(); }
+function tmCancelForm(){ cancelEditMember(); tmShowForm(false); }
 /* איש מילואים = חייל ללא מעקב הסמכות. סימון הצ'קבוקס נועל את התפקיד ל"חייל". */
 function onReserveToggle(){
   const on = document.getElementById("tm-reserve").checked;
@@ -5615,6 +5625,7 @@ async function saveTeamMember(){
   }
   await sSet("cfg_personnel", PERSONNEL);
   cancelEditMember();
+  tmShowForm(false);   // אחרי שמירה — חוזרים לרשימת הצוות
   renderTeamMgmt(); populateLogin(); renderBdays();
 }
 
