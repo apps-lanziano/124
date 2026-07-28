@@ -939,6 +939,8 @@ nav{
 .morning-alert-box .ma-ic{font-size:24px;flex-shrink:0}
 .morning-alert-box .ma-tx b{font-size:14.5px;font-weight:800;display:block}
 .morning-alert-box .ma-tx span{font-size:12px;opacity:.9;font-weight:300}
+.ma-wa-btn{width:100%;margin:-4px 0 14px;background:linear-gradient(135deg,#166534,#22c55e);color:#fff;border:none;border-radius:var(--radius);padding:13px;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 8px 20px -6px rgba(34,197,94,.5)}
+.ma-wa-btn:active{transform:scale(.98)}
 
 /* ===== SEARCH BOX ===== */
 
@@ -2482,6 +2484,8 @@ const MORNING_TASKS_SEED = [
 
 const DUTY_TYPES = ["שמירה","רס\"ר","מטבח","אבט\"ש"];
 
+let morningOpenTasks = [];   // כותרות מטלות הבוקר שטרם בוצעו — לתזכורת הוואטסאפ
+
 /* runtime (editable, shared) lists — seeded from constants on first run */
 let PERSONNEL = PERSONNEL_SEED.slice();
 let MORNING_TASKS = MORNING_TASKS_SEED.slice();
@@ -3892,11 +3896,16 @@ async function renderTasks(){
   const now = new Date();
   const past11 = now.getHours() >= 11;
   const openCount = MORNING_TASKS.length - count;
+  morningOpenTasks = MORNING_TASKS.filter(t=>!done[t.id]).map(t=>t.title);   // לשימוש תזכורת הוואטסאפ
   if(past11 && openCount>0){
+    // כפתור תזכורת בוואטסאפ — למפקד בלבד, כשחלף 11:00 והמטלות טרם נסגרו
+    const waBtn = (userRole==="מפקד")
+      ? `<button class="ma-wa-btn" onclick="event.stopPropagation();openWaPrompt('morning')">📲 שלח תזכורת בוואטסאפ</button>`
+      : "";
     alertBox.innerHTML = `<div class="morning-alert-box">
       <span class="ma-ic">⏰</span>
       <div class="ma-tx"><b>שים לב — חלף 11:00</b><span>${openCount} מטלות בוקר עדיין לא בוצעו. יש להשלים בהקדם.</span></div>
-    </div>`;
+    </div>${waBtn}`;
   } else { alertBox.innerHTML=""; }
 }
 async function toggleTask(id){
@@ -4789,6 +4798,7 @@ function openWaPrompt(kind, payload){
   else if(kind==="rollcall"){ title.textContent="הנכס הופעל ✅"; sub.textContent="שלח לצוות בוואטסאפ שיסמנו תקינות וזמינות"; }
   else if(kind==="rollcall-complete"){ title.textContent="כל הכבוד! 🎉"; sub.textContent="דווח בוואטסאפ שהנכס הושלם וכולם תקינים"; }
   else if(kind==="binui"){ title.textContent="התקלה דווחה ✅"; sub.textContent="שלח עדכון לשחר שושן (מ״ע אחזקה) שנפתחה תקלת בינוי"; }
+  else if(kind==="morning"){ title.textContent="תזכורת מטלות בוקר ⏰"; sub.textContent="שלח לקבוצת הוואטסאפ תזכורת שמטלות הבוקר טרם נסגרו"; }
   // rebind the button fresh each time
   go.onclick = ()=>{
     if(kind==="event") shareEventWA(payload);
@@ -4799,6 +4809,7 @@ function openWaPrompt(kind, payload){
     else if(kind==="rollcall") shareRollcallWA();
     else if(kind==="rollcall-complete") shareRollcallCompleteWA();
     else if(kind==="binui") shareBinuiFaultWA(payload);
+    else if(kind==="morning") shareMorningReminderWA();
     modal.classList.remove("open");
   };
   modal.classList.add("open");
@@ -4829,6 +4840,17 @@ function shareMsgWA(text, type){
     "━━━━━━━━━━━━━━\n" +
     label + ":\n" +
     "\"" + text + "\"\n\n" +
+    "🔗 " + SITE_URL;
+  waShare(msg);
+}
+function shareMorningReminderWA(){
+  const open = morningOpenTasks || [];
+  const msg =
+    "⏰ *תזכורת מטלות בוקר — " + waShedName() + "*\n" +
+    "━━━━━━━━━━━━━━\n" +
+    "השעה חלפה 11:00 ומטלות הבוקר טרם נסגרו.\n\n" +
+    (open.length ? ("*מטלות שעדיין פתוחות:*\n" + open.map(t=>"• "+t).join("\n") + "\n\n") : "") +
+    "🙏 נא להשלים את המטלות ולסמן ביצוע באפליקציה.\n" +
     "🔗 " + SITE_URL;
   waShare(msg);
 }
