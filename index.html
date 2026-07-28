@@ -751,8 +751,8 @@ nav{
 .cd .cd-q span{font-size:10.5px;font-weight:700}
 /* כפתור חזרה לדשבורד המפקד — צף מעל תוכן המסכים */
 #back-to-dash{position:absolute;bottom:80px;inset-inline-start:14px;z-index:60;display:none;
-  align-items:center;gap:6px;background:linear-gradient(135deg,var(--red-deep),var(--red));color:#fff;
-  border:none;border-radius:99px;padding:11px 17px;font-family:inherit;font-weight:800;font-size:13px;
+  align-items:center;justify-content:center;background:linear-gradient(135deg,var(--red-deep),var(--red));color:#fff;
+  border:none;border-radius:50%;width:44px;height:44px;padding:0;font-family:inherit;font-weight:800;font-size:22px;line-height:1;
   cursor:pointer;box-shadow:0 8px 20px -5px rgba(179,15,38,.55)}
 #back-to-dash.show{display:inline-flex}
 #back-to-dash:active{transform:scale(.96)}
@@ -1047,10 +1047,10 @@ nav{
   <!-- MAIN -->
   <main id="main">
 
+    <!-- DAILY BRIEF (feature 24) — התדריך הוא הבאנר הגדול בראש כל מסך (מעל ההודעות) -->
+    <div id="brief-area"></div>
     <!-- GLOBAL MESSAGES BOARD (feature 11) — appears on every screen -->
     <div id="messages-area"></div>
-    <!-- DAILY BRIEF (feature 24) — appears on every screen -->
-    <div id="brief-area"></div>
 
     <!-- ===== SAFETY ===== -->
     <section class="screen active" id="scr-safety">
@@ -1241,7 +1241,7 @@ nav{
     <section class="screen" id="scr-medchecks">
       <div class="sec-head">
         <div>
-          <h2 id="medchecks-h2">כשירות חיילים 🩺</h2>
+          <h2 id="medchecks-h2">כשירות חיילים</h2>
           <p id="medchecks-sub">🟢 בתוקף · 🔴 נדרש חידוש · ⚪ טרם הוזן.</p>
         </div>
       </div>
@@ -1640,7 +1640,7 @@ nav{
   </div>
 
   <!-- NAV -->
-  <button id="back-to-dash" onclick="go('scr-cmd',document.getElementById('nav-cmd'))">🎖️ לדשבורד</button>
+  <button id="back-to-dash" onclick="go('scr-cmd',document.getElementById('nav-cmd'))" aria-label="חזרה לדשבורד" title="חזרה לדשבורד">→</button>
   <nav>
     <button class="nav-btn hidden" id="nav-cmd" data-scr="scr-cmd" onclick="go('scr-cmd',this)"><span class="ic">🎖️</span><span>מפקד</span></button>
     <button class="nav-btn active" id="nav-safety" data-scr="scr-safety" onclick="go('scr-safety',this)"><span class="ic">📄</span><span>קרא וחתום</span><span class="nav-badge hidden" id="badge-safety">0</span></button>
@@ -2641,6 +2641,8 @@ let currentDoc = null;
 let isCmd = false;
 let isToolsResp = false;   // נע"ת חדר כלים — הרשאות הוספה/עריכה
 let isVehiclesResp = false; // נע"ת רכבים — הרשאות הוספה/עריכה
+let isHearingResp = false; // נע"ת בדיקות שמיעה — הרשאת הזנת תאריכים בכשירות חיילים
+let isRangeResp = false;   // נע"ת מטווחים — הרשאת הזנת תאריכים בכשירות חיילים
 let evImgData = null;      // data URL of selected file
 let evFileMeta = null;     // {type:'image'|'pdf'|'word'|'ppt', name, mime}
 
@@ -3409,6 +3411,7 @@ async function doLogin(){
 function logout(){
   try{ if("clearAppBadge" in navigator) navigator.clearAppBadge(); }catch(e){}
   user=null; userRole=null; isCmd=false; isAdmin=false; isVehicleOfficer=false; isBudgetOfficer=false; isTechOfficer=false; isToolsResp=false; isVehiclesResp=false;
+  isHearingResp=false; isRangeResp=false;
   isOwner=false; impersonating=null;
   // נטישת זהות המסגרת ב-Firebase וחזרה לזהות אנונימית ניטרלית, כדי שכניסה
   // הבאה תתחיל נקייה ולא תישאר מחוברת כמסגרת הקודמת.
@@ -4014,9 +4017,12 @@ async function getNaatim(){ return (await sGet("naatim_list")) || []; }
 /* נע"ת חדר כלים / רכבים — מעניק הרשאות הוספה ועריכה למי ששובץ לתחום, בנוסף למפקד.
    ההתאמה היא לפי שם תחום מדויק ("חדר כלים" / "רכבים") ושם החייל המשובץ. */
 async function refreshAreaPermissions(){
-  if(currentShed && currentShed.isDept){ isToolsResp = false; isVehiclesResp = (userRole==="מפקד"); return; }
   const list = await getNaatim();
   const has = area => list.some(n => n.area && n.area.trim()===area && n.person===user);
+  // נע"ת מטווחים / בדיקות שמיעה — הרשאת הזנת תאריכים בכשירות חיילים, בכל מסגרת
+  isHearingResp = userRole==="מפקד" || has("בדיקות שמיעה");
+  isRangeResp   = userRole==="מפקד" || has("מטווחים");
+  if(currentShed && currentShed.isDept){ isToolsResp = false; isVehiclesResp = (userRole==="מפקד"); return; }
   isToolsResp = userRole==="מפקד" || has("חדר כלים");
   isVehiclesResp = userRole==="מפקד" || has("רכבים");
 }
@@ -7785,6 +7791,8 @@ let medTab = "hearing";
 let medFilter = "all";
 async function getMedChecks(){ return (await sGet("medchecks")) || {}; }
 function medPeople(){ return PERSONNEL.filter(p=>p.role==="חייל" && !p.reserve); }   // חיילים בלבד, ללא מילואים
+/* הרשאת הזנת תאריכים: שמיעה — נע"ת בדיקות שמיעה (או מפקד); מטווח — נע"ת מטווחים (או מפקד) */
+function medCanEdit(tab){ return tab==="hearing" ? isHearingResp : isRangeResp; }
 /* מחזיר סטטוס בדיקה. אם אין תאריך פ.ת → "טרם הוזן" (ניטרלי, לא פג-תוקף). */
 function medStatus(rec){
   if(!rec || !rec.expiry) return {cls:"n", tag:"טרם הוזן", days:null, set:false};
@@ -7809,7 +7817,7 @@ async function renderMedChecks(){
   const t = MED_TYPES[medTab];
   const subEl = document.getElementById("medchecks-sub");
   if(subEl) subEl.textContent = `${t.label} · ${t.validTxt}. 🟢 בתוקף · 🔴 נדרש חידוש · ⚪ טרם הוזן.`;
-  const isCmdr = userRole==="מפקד";
+  const canEdit = medCanEdit(medTab);
   const data = await getMedChecks();
   const people = medPeople();
   const statOf = p => medStatus((data[safeName(p.name)]||{})[medTab]);
@@ -7835,7 +7843,7 @@ async function renderMedChecks(){
     const rec = (data[safeName(p.name)]||{})[medTab];
     const st = medStatus(rec);
     const dateTxt = (rec && rec.expiry) ? ("בתוקף עד " + medFmtDate(rec.expiry)) : "טרם הוזן תאריך";
-    return `<div class="med-card" ${isCmdr?`onclick="openMedEdit('${jsStr(p.name)}')" style="cursor:pointer"`:""}>
+    return `<div class="med-card" ${canEdit?`onclick="openMedEdit('${jsStr(p.name)}')" style="cursor:pointer"`:""}>
       <div class="avatar" style="width:38px;height:38px;font-size:13px">${initials(p.name)}</div>
       <div class="med-name"><b>${escapeHTML(p.name)}</b><span>${escapeHTML(dateTxt)}</span></div>
       <span class="pill ${st.cls}">${st.tag}</span>
@@ -7852,7 +7860,7 @@ function medClearDates(){
   document.getElementById("med-exp").value = "";
 }
 async function openMedEdit(name){
-  if(userRole!=="מפקד") return;
+  if(!medCanEdit(medTab)) return;
   medEditName = name;
   const t = MED_TYPES[medTab];
   const data = await getMedChecks();
@@ -7864,7 +7872,7 @@ async function openMedEdit(name){
   document.getElementById("med-modal").classList.add("open");
 }
 async function saveMedCheck(){
-  if(!medEditName){ document.getElementById("med-modal").classList.remove("open"); return; }
+  if(!medEditName || !medCanEdit(medTab)){ document.getElementById("med-modal").classList.remove("open"); return; }
   const done = document.getElementById("med-done").value;
   const exp  = document.getElementById("med-exp").value;
   const data = await getMedChecks();
