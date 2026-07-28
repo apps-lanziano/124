@@ -6453,15 +6453,20 @@ async function updateVehiclesFromSheetV2(){
   }));
 
   const LEASING_V2 = []; // הוסר מהמקור (שמות + לוחיות + קודי דלק/רכב) — שמור ב-Firestore
-  let leasingList = (await sGetRaw("admin_leasing_vehicles")) || [];
-  const keepNumbers = new Set(LEASING_V2.map(v=>v.number));
-  leasingList = leasingList.filter(v=>keepNumbers.has(v.number));
-  LEASING_V2.forEach(v=>{
-    const existing = leasingList.find(x=>x.number===v.number);
-    if(existing) Object.assign(existing, v);
-    else leasingList.push({id:"lveh"+Date.now()+Math.random().toString(36).slice(2,6), ...v});
-  });
-  await sSetRaw("admin_leasing_vehicles", leasingList);
+  /* חשוב: הסינון למטה משאיר רק רכבים שמופיעים ברשימת הזריעה. מאחר שהרשימה
+     רוקנה מקוד המקור (פרטיות), חובה לדלג לגמרי כשהיא ריקה — אחרת הסינון
+     מוחק את כל רכבי הליסינג ששמורים ב-Firestore. */
+  if(LEASING_V2.length){
+    let leasingList = (await sGetRaw("admin_leasing_vehicles")) || [];
+    const keepNumbers = new Set(LEASING_V2.map(v=>v.number));
+    leasingList = leasingList.filter(v=>keepNumbers.has(v.number));
+    LEASING_V2.forEach(v=>{
+      const existing = leasingList.find(x=>x.number===v.number);
+      if(existing) Object.assign(existing, v);
+      else leasingList.push({id:"lveh"+Date.now()+Math.random().toString(36).slice(2,6), ...v});
+    });
+    await sSetRaw("admin_leasing_vehicles", leasingList);
+  }
 
   await sSetRaw(flag, true);
   console.log("✅ מצבת הרכבים עודכנה לפי הגיליון החדש (23/07/2026)");
