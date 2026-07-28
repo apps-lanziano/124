@@ -325,12 +325,12 @@ main{flex:1;overflow-y:auto;padding:18px 16px 96px;scroll-behavior:smooth}
 .cmd-name{flex:1;font-size:14px;font-weight:600}
 .pill{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px}
 .pill.g{background:var(--green-soft);color:var(--green)} .pill.r{background:var(--red-soft);color:var(--red)} .pill.y{background:var(--gold-soft);color:var(--gold)}
-.med-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-.med-head{display:flex;align-items:center;gap:11px;margin-bottom:10px}
+.pill.n{background:var(--line);color:var(--ink-3)}
+.med-tabs{display:flex;gap:8px;margin-bottom:12px}
+.med-tab{flex:1;padding:10px 8px;border-radius:11px;border:1px solid var(--line);background:var(--card);color:var(--ink-2);font-weight:700;font-size:13px;cursor:pointer;transition:.15s}
+.med-tab.active{background:var(--red);color:#fff;border-color:var(--red)}
+.med-card{display:flex;align-items:center;gap:11px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin-bottom:9px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .med-name{flex:1;line-height:1.35}.med-name b{font-size:14px;display:block}.med-name span{font-size:11px;color:var(--ink-3)}
-.med-line{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line)}
-.med-line-lbl{font-size:12.5px;font-weight:700;color:var(--ink-2);flex:0 0 auto;min-width:104px}
-.med-line-date{font-size:11.5px;color:var(--ink-3);flex:1;text-align:start}
 .cmd-section-title{font-size:14px;font-weight:800;color:var(--ink-2);margin:18px 0 10px;display:flex;align-items:center;gap:8px}
 
 
@@ -1236,13 +1236,17 @@ nav{
       <div id="certs-page-list"></div>
     </section>
 
-    <!-- ===== PERIODIC CHECKS (בדיקות תקופתיות: שמיעה + מטווח) ===== -->
+    <!-- ===== PERIODIC CHECKS (בדיקות תקופתיות: שמיעה + מטווח בסיסי — לשוניות נפרדות) ===== -->
     <section class="screen" id="scr-medchecks">
       <div class="sec-head">
         <div>
-          <h2>בדיקות תקופתיות 🩺</h2>
-          <p>בדיקת שמיעה (תוקף שנה) · מטווח (תוקף חצי שנה). 🟢 בתוקף · 🔴 נדרש חידוש.</p>
+          <h2 id="medchecks-h2">בדיקות תקופתיות 🩺</h2>
+          <p id="medchecks-sub">🟢 בתוקף · 🔴 נדרש חידוש · ⚪ טרם הוזן.</p>
         </div>
+      </div>
+      <div class="med-tabs">
+        <button class="med-tab active" id="med-tab-hearing" onclick="setMedTab('hearing')">👂 בדיקת שמיעה</button>
+        <button class="med-tab" id="med-tab-range" onclick="setMedTab('range')">🎯 מטווח בסיסי</button>
       </div>
       <div class="faults-filter" id="medchecks-filter"></div>
       <div id="medchecks-list"></div>
@@ -1902,26 +1906,17 @@ nav{
     </div>
   </div>
 
-  <!-- PERIODIC CHECK EDIT MODAL (בדיקות תקופתיות) -->
+  <!-- PERIODIC CHECK EDIT MODAL (בדיקה בודדת — לפי הלשונית הפעילה) -->
   <div class="modal-bg" id="med-modal">
     <div class="modal">
-      <h3 id="med-modal-title">בדיקות תקופתיות</h3>
-      <div class="m-sub">הזן תאריך ביצוע — תאריך התוקף מחושב אוטומטית וניתן לעריכה ידנית.</div>
-      <div style="border:1px solid var(--line);border-radius:12px;padding:11px;margin-bottom:10px">
-        <div style="font-weight:800;font-size:13px;margin-bottom:8px">👂 בדיקת שמיעה <span style="color:var(--ink-3);font-weight:400;font-size:11px">— תוקף שנה</span></div>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">תאריך ביצוע</label>
-        <input class="m-input" id="med-hear-done" type="date" style="margin-bottom:8px" onchange="medAutoExpiry('hear')">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">בתוקף עד (פ.ת)</label>
-        <input class="m-input" id="med-hear-exp" type="date" style="margin-bottom:0">
-      </div>
-      <div style="border:1px solid var(--line);border-radius:12px;padding:11px;margin-bottom:10px">
-        <div style="font-weight:800;font-size:13px;margin-bottom:8px">🎯 מטווח <span style="color:var(--ink-3);font-weight:400;font-size:11px">— תוקף חצי שנה</span></div>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">תאריך ביצוע</label>
-        <input class="m-input" id="med-range-done" type="date" style="margin-bottom:8px" onchange="medAutoExpiry('range')">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">בתוקף עד (פ.ת)</label>
-        <input class="m-input" id="med-range-exp" type="date" style="margin-bottom:0">
-      </div>
-      <div class="modal-actions" style="margin-top:4px">
+      <h3 id="med-modal-title">בדיקה</h3>
+      <div class="m-sub" id="med-modal-sub">הזן תאריך ביצוע — תאריך התוקף מחושב אוטומטית וניתן לעריכה ידנית.</div>
+      <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">תאריך ביצוע</label>
+      <input class="m-input" id="med-done" type="date" style="margin-bottom:10px" onchange="medAutoExpiry()">
+      <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">בתוקף עד (פ.ת)</label>
+      <input class="m-input" id="med-exp" type="date" style="margin-bottom:6px">
+      <button class="m-btn ghost" onclick="medClearDates()" style="width:100%;margin-bottom:4px;font-size:12px">🗑️ נקה תאריכים</button>
+      <div class="modal-actions" style="margin-top:8px">
         <button class="m-btn ghost" onclick="document.getElementById('med-modal').classList.remove('open')" style="flex:1">ביטול</button>
         <button class="m-btn primary" onclick="saveMedCheck()" style="flex:1.4">💾 שמירה</button>
       </div>
@@ -7498,14 +7493,17 @@ async function renderTrends(){
   });
   const pfMissing = pfList.length;
 
-  // בדיקות תקופתיות (שמיעה + מטווח) — התראה על פ.ת/קרוב לפ.ת, בכל מסגרת
+  // בדיקות תקופתיות (שמיעה + מטווח בסיסי) — התראה רק על פ.ת/קרוב לפ.ת.
+  // חייל ללא תאריך פ.ת אינו נחשב "פג תוקף" ואינו מוצג כאן.
   const medData = await getMedChecks();
   let medExpired=0, medSoon=0;
   medPeople().forEach(p=>{
     const r = medData[safeName(p.name)] || {};
-    [["hearing","👂","בדיקת שמיעה"],["range","🎯","מטווח"]].forEach(([k,ic,lbl])=>{
+    Object.keys(MED_TYPES).forEach(k=>{
       const st = medStatus(r[k]);
-      if(st.cls==="r"){ medExpired++; priorityFeed.push({cls:"r", ic, title:`${p.name} — ${lbl}`, sub:(r[k]&&r[k].expiry)?`פג תוקף לפני ${Math.abs(st.days)} ימים`:"טרם בוצע", tag:st.tag, days:st.days<-9000?-9999:st.days, go:"closeMoreAnd('scr-medchecks')"}); }
+      if(!st.set) return;   // אין תאריך פ.ת — לא מציגים בדשבורד
+      const lbl = MED_TYPES[k].label, ic = MED_TYPES[k].ic;
+      if(st.cls==="r"){ medExpired++; priorityFeed.push({cls:"r", ic, title:`${p.name} — ${lbl}`, sub:`פג תוקף לפני ${Math.abs(st.days)} ימים`, tag:st.tag, days:st.days, go:"closeMoreAnd('scr-medchecks')"}); }
       else if(st.cls==="y"){ medSoon++; priorityFeed.push({cls:"y", ic, title:`${p.name} — ${lbl}`, sub:`פג בעוד ${st.days} ימים`, tag:st.tag, days:st.days, go:"closeMoreAnd('scr-medchecks')"}); }
     });
   });
@@ -7771,37 +7769,56 @@ async function getCerts(){ return (await sGet("certs_list")) || []; }
 
 function goCertsPage(){ go("scr-certs", null); }
 
-/* ===== בדיקות תקופתיות: שמיעה (תוקף שנה) + מטווח (תוקף חצי שנה) =====
-   נשמר per-מסגרת במפתח "medchecks": { <safeName>: {name, hearing:{done,expiry}, range:{done,expiry}} }
-   ירוק=בתוקף · צהוב=פג בקרוב (עד 30 יום) · אדום=פג/לא בוצע. עריכה למפקד בלבד. */
+/* ===== בדיקות תקופתיות: שמיעה (תוקף שנה) + מטווח בסיסי (תוקף חצי שנה) =====
+   לשוניות נפרדות — כל בדיקה לגמרי בנפרד. נשמר per-מסגרת במפתח "medchecks":
+   { <safeName>: {name, hearing:{done,expiry}, range:{done,expiry}} }
+   ירוק=בתוקף · צהוב=פג בקרוב (עד 30 יום) · אדום=פג תוקף · אפור=טרם הוזן.
+   חשוב: היעדר תאריך פ.ת אינו "פג תוקף" — לא נספר כדורש-חידוש ולא מוצג בדשבורד.
+   עריכה למפקד בלבד. */
+const MED_TYPES = {
+  hearing: {label:"בדיקת שמיעה", ic:"👂", months:12, validTxt:"תוקף שנה"},
+  range:   {label:"מטווח בסיסי", ic:"🎯", months:6,  validTxt:"תוקף חצי שנה"},
+};
 let medEditName = null;
+let medTab = "hearing";
 let medFilter = "all";
 async function getMedChecks(){ return (await sGet("medchecks")) || {}; }
 function medPeople(){ return PERSONNEL.filter(p=>p.role==="חייל" && !p.reserve); }   // חיילים בלבד, ללא מילואים
+/* מחזיר סטטוס בדיקה. אם אין תאריך פ.ת → "טרם הוזן" (ניטרלי, לא פג-תוקף). */
 function medStatus(rec){
-  if(!rec || !rec.expiry) return {cls:"r", tag:"לא בוצע", days:-999999};
+  if(!rec || !rec.expiry) return {cls:"n", tag:"טרם הוזן", days:null, set:false};
   const today = new Date(); today.setHours(0,0,0,0);
   const d = Math.round((new Date(rec.expiry+"T00:00:00")-today)/86400000);
-  if(d<0) return {cls:"r", tag:"פג תוקף", days:d};
-  if(d<=30) return {cls:"y", tag:d+" ימים", days:d};
-  return {cls:"g", tag:"בתוקף", days:d};
+  if(d<0) return {cls:"r", tag:"פג תוקף", days:d, set:true};
+  if(d<=30) return {cls:"y", tag:d+" ימים", days:d, set:true};
+  return {cls:"g", tag:"בתוקף", days:d, set:true};
 }
 function medFmtDate(iso){ if(!iso) return ""; return new Date(iso+"T00:00:00").toLocaleDateString("he-IL",{day:"2-digit",month:"2-digit",year:"numeric"}); }
 function medAddMonths(iso, months){ const d=new Date(iso+"T00:00:00"); d.setMonth(d.getMonth()+months); return d.toISOString().slice(0,10); }
+function setMedTab(t){
+  medTab = t; medFilter = "all";
+  document.getElementById("med-tab-hearing").classList.toggle("active", t==="hearing");
+  document.getElementById("med-tab-range").classList.toggle("active", t==="range");
+  renderMedChecks();
+}
 function setMedFilter(f){ medFilter = f; renderMedChecks(); }
 async function renderMedChecks(){
   const box = document.getElementById("medchecks-list");
   if(!box) return;
+  const t = MED_TYPES[medTab];
+  const subEl = document.getElementById("medchecks-sub");
+  if(subEl) subEl.textContent = `${t.label} · ${t.validTxt}. 🟢 בתוקף · 🔴 נדרש חידוש · ⚪ טרם הוזן.`;
   const isCmdr = userRole==="מפקד";
   const data = await getMedChecks();
   const people = medPeople();
-  const rowStat = p => { const r = data[safeName(p.name)] || {}; return {hear: medStatus(r.hearing), range: medStatus(r.range)}; };
-  const needsAttn = p => { const s = rowStat(p); return s.hear.cls!=="g" || s.range.cls!=="g"; };
+  const statOf = p => medStatus((data[safeName(p.name)]||{})[medTab]);
+  // "דורש חידוש" = פג תוקף או פג בקרוב בלבד (לא כולל "טרם הוזן")
+  const needsAttn = p => { const c = statOf(p).cls; return c==="r" || c==="y"; };
   const attnCount = people.filter(needsAttn).length;
   const filterBox = document.getElementById("medchecks-filter");
   if(people.length===0){
     filterBox.innerHTML = "";
-    box.innerHTML = `<div class="empty-state"><div class="ic">🩺</div><h3>אין חיילים למעקב</h3><p>הוסף אנשי צוות כדי לעקוב אחר בדיקות שמיעה ומטווח</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">🩺</div><h3>אין חיילים למעקב</h3><p>הוסף אנשי צוות כדי לעקוב אחר ${escapeHTML(t.label)}</p></div>`;
     return;
   }
   filterBox.innerHTML = `
@@ -7810,60 +7827,55 @@ async function renderMedChecks(){
   let shown = people;
   if(medFilter==="attention") shown = shown.filter(needsAttn);
   if(shown.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">✅</div><h3>הכל בתוקף</h3><p>אין חיילים שדורשים חידוש בדיקה</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">✅</div><h3>אין למה לשים לב</h3><p>אין חיילים שדורשים חידוש ${escapeHTML(t.label)}</p></div>`;
     return;
   }
-  const line = (r, st, ic, lbl) => {
-    const dateTxt = (r && r.expiry) ? ("בתוקף עד " + medFmtDate(r.expiry)) : "טרם הוזן";
-    return `<div class="med-line"><span class="med-line-lbl">${ic} ${lbl}</span><span class="med-line-date">${dateTxt}</span><span class="pill ${st.cls}">${st.tag}</span></div>`;
-  };
   box.innerHTML = shown.map(p=>{
-    const r = data[safeName(p.name)] || {};
-    const sh = medStatus(r.hearing), sr = medStatus(r.range);
+    const rec = (data[safeName(p.name)]||{})[medTab];
+    const st = medStatus(rec);
+    const dateTxt = (rec && rec.expiry) ? ("בתוקף עד " + medFmtDate(rec.expiry)) : "טרם הוזן תאריך";
     return `<div class="med-card" ${isCmdr?`onclick="openMedEdit('${jsStr(p.name)}')" style="cursor:pointer"`:""}>
-      <div class="med-head">
-        <div class="avatar" style="width:38px;height:38px;font-size:13px">${initials(p.name)}</div>
-        <div class="med-name"><b>${escapeHTML(p.name)}</b>${isCmdr?'<span>לחיצה לעדכון תאריכים</span>':''}</div>
-      </div>
-      ${line(r.hearing, sh, "👂", "בדיקת שמיעה")}
-      ${line(r.range, sr, "🎯", "מטווח")}
+      <div class="avatar" style="width:38px;height:38px;font-size:13px">${initials(p.name)}</div>
+      <div class="med-name"><b>${escapeHTML(p.name)}</b><span>${escapeHTML(dateTxt)}</span></div>
+      <span class="pill ${st.cls}">${st.tag}</span>
     </div>`;
   }).join("");
 }
-function medAutoExpiry(which){
-  const doneEl = document.getElementById(which==="hear"?"med-hear-done":"med-range-done");
-  const expEl  = document.getElementById(which==="hear"?"med-hear-exp":"med-range-exp");
-  if(doneEl.value) expEl.value = medAddMonths(doneEl.value, which==="hear"?12:6);
+function medAutoExpiry(){
+  const doneEl = document.getElementById("med-done");
+  const expEl  = document.getElementById("med-exp");
+  if(doneEl.value) expEl.value = medAddMonths(doneEl.value, MED_TYPES[medTab].months);
+}
+function medClearDates(){
+  document.getElementById("med-done").value = "";
+  document.getElementById("med-exp").value = "";
 }
 async function openMedEdit(name){
   if(userRole!=="מפקד") return;
   medEditName = name;
+  const t = MED_TYPES[medTab];
   const data = await getMedChecks();
-  const r = data[safeName(name)] || {};
-  document.getElementById("med-modal-title").textContent = "בדיקות תקופתיות — " + name;
-  document.getElementById("med-hear-done").value = (r.hearing && r.hearing.done) || "";
-  document.getElementById("med-hear-exp").value  = (r.hearing && r.hearing.expiry) || "";
-  document.getElementById("med-range-done").value = (r.range && r.range.done) || "";
-  document.getElementById("med-range-exp").value  = (r.range && r.range.expiry) || "";
+  const rec = (data[safeName(name)]||{})[medTab] || {};
+  document.getElementById("med-modal-title").textContent = `${t.ic} ${t.label} — ${name}`;
+  document.getElementById("med-modal-sub").textContent = `הזן תאריך ביצוע — התוקף (${t.validTxt}) מחושב אוטומטית וניתן לעריכה ידנית.`;
+  document.getElementById("med-done").value = rec.done || "";
+  document.getElementById("med-exp").value  = rec.expiry || "";
   document.getElementById("med-modal").classList.add("open");
 }
 async function saveMedCheck(){
   if(!medEditName){ document.getElementById("med-modal").classList.remove("open"); return; }
-  const hd = document.getElementById("med-hear-done").value;
-  const he = document.getElementById("med-hear-exp").value;
-  const rd = document.getElementById("med-range-done").value;
-  const re = document.getElementById("med-range-exp").value;
+  const done = document.getElementById("med-done").value;
+  const exp  = document.getElementById("med-exp").value;
   const data = await getMedChecks();
   const key = safeName(medEditName);
   const rec = data[key] || {};
   rec.name = medEditName;
-  if(hd || he) rec.hearing = {done:hd||"", expiry:he||""}; else delete rec.hearing;
-  if(rd || re) rec.range   = {done:rd||"", expiry:re||""}; else delete rec.range;
-  data[key] = rec;
+  if(done || exp) rec[medTab] = {done:done||"", expiry:exp||""}; else delete rec[medTab];
+  if(!rec.hearing && !rec.range) delete data[key]; else data[key] = rec;
   await sSet("medchecks", data);
-  await logAction("עדכון בדיקות תקופתיות", medEditName);
+  await logAction("עדכון "+MED_TYPES[medTab].label, medEditName);
   document.getElementById("med-modal").classList.remove("open");
-  toast("הבדיקות עודכנו ✓");
+  toast(MED_TYPES[medTab].label+" עודכן ✓");
   renderMedChecks();
 }
 
