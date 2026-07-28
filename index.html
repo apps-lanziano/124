@@ -78,7 +78,10 @@ header::before{
 .switch-user{background:none;border:none;color:#ffd3d9;font-size:12px;cursor:pointer;font-family:'Heebo';text-decoration:underline;text-underline-offset:3px}
 
 /* ---------- MAIN ---------- */
-main{flex:1;overflow-y:auto;padding:18px 16px 96px;scroll-behavior:smooth}
+/* הריפוד התחתון חייב להיות גדול מגובה סרגל הניווט (שגדל עם safe-area ועם
+   הגדלת פונט המערכת) — אחרת השורות האחרונות מוסתרות מאחוריו. ערך הגיבוי כאן
+   מחושב, ו-syncNavHeight() מדייק אותו לפי הגובה בפועל. */
+main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(safe-area-inset-bottom, 0px) + 28px);scroll-behavior:smooth}
 .screen{display:none;animation:rise .45s cubic-bezier(.2,.8,.3,1)}
 .screen.active{display:block}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
@@ -764,7 +767,7 @@ nav{
 .cd .cd-qi{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-size:18px;background:var(--card);border:1px solid var(--line);color:var(--red);box-shadow:var(--shadow)}
 .cd .cd-q span{font-size:10.5px;font-weight:700}
 /* כפתור חזרה לדשבורד המפקד — צף מעל תוכן המסכים */
-#back-to-dash{position:absolute;bottom:80px;inset-inline-start:14px;z-index:60;display:none;
+#back-to-dash{position:absolute;bottom:calc(var(--nav-h, 80px) + 12px);inset-inline-start:14px;z-index:60;display:none;
   align-items:center;justify-content:center;background:linear-gradient(135deg,var(--red-deep),var(--red));color:#fff;
   border:none;border-radius:50%;width:44px;height:44px;padding:0;font-family:inherit;font-weight:800;font-size:22px;line-height:1;
   cursor:pointer;box-shadow:0 8px 20px -5px rgba(179,15,38,.55)}
@@ -3545,6 +3548,26 @@ function go(id, btn){
 }
 
 /* ===== MORE SHEET ===== */
+/* מתאים את הריפוד התחתון של התוכן לגובה סרגל הניווט בפועל. באנדרואיד הסרגל
+   גבוה יותר (סרגל מחוות + הגדלת פונט מערכת), ובלי זה השורות האחרונות ברשימות
+   נחתכות מאחוריו. רץ בטעינה, בשינוי גודל/סיבוב, וכשגובה הסרגל עצמו משתנה. */
+function syncNavHeight(){
+  const nav = document.querySelector("nav");
+  const main = document.getElementById("main");
+  if(!nav || !main) return;
+  const h = nav.getBoundingClientRect().height;
+  if(!h) return;
+  document.documentElement.style.setProperty("--nav-h", h + "px");
+  main.style.paddingBottom = (h + 28) + "px";
+}
+window.addEventListener("resize", syncNavHeight);
+window.addEventListener("orientationchange", ()=>setTimeout(syncNavHeight, 250));
+document.addEventListener("DOMContentLoaded", ()=>{
+  syncNavHeight();
+  const nav = document.querySelector("nav");
+  if(nav && window.ResizeObserver) new ResizeObserver(syncNavHeight).observe(nav);
+});
+
 function openMoreSheet(){ document.getElementById("more-sheet").classList.add("open"); }
 function closeMoreAnd(scr){
   document.getElementById("more-sheet").classList.remove("open");
