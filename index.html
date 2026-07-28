@@ -2456,7 +2456,18 @@ nav{
       <div class="m-sub">תחום אחריות + חייל אחראי. הבדיקה מתאפסת כל שבוע.</div>
       <div id="naatim-mgmt-list" style="max-height:36vh;overflow-y:auto;margin-bottom:12px"></div>
       <div class="team-add-form">
-        <input class="m-input" id="naatim-area" type="text" placeholder="תחום אחריות (לדוגמה: מחסן ציוד קרקע)" style="margin-bottom:8px">
+        <input class="m-input" id="naatim-area" type="text" list="naatim-area-list" placeholder="תחום אחריות (לדוגמה: מחסן ציוד קרקע)" style="margin-bottom:8px">
+        <datalist id="naatim-area-list">
+          <option value="כשירות חיילים">מעניק הרשאה: שמיעה + מטווח</option>
+          <option value="בדיקות שמיעה">מעניק הרשאה: בדיקות שמיעה</option>
+          <option value="מטווחים">מעניק הרשאה: מטווחים</option>
+          <option value="חדר כלים">מעניק הרשאה: חדר כלים</option>
+          <option value="רכבים">מעניק הרשאה: רכבים</option>
+        </datalist>
+        <div style="background:var(--gold-soft);border:1px solid #f0dfa8;border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:var(--ink-2);line-height:1.6">
+          🔑 <b>תחומים שמעניקים הרשאת עריכה:</b> "כשירות חיילים" (שמיעה + מטווח), "בדיקות שמיעה", "מטווחים", "חדר כלים", "רכבים".
+          יש לבחור מהרשימה — שם שונה במקצת לא ייתן הרשאה.
+        </div>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">👤 חייל אחראי</label>
         <select class="m-input" id="naatim-person" style="margin-bottom:10px"></select>
         <button class="m-btn primary" onclick="addNaatim()" style="width:100%">➕ הוסף נע"ת</button>
@@ -4076,9 +4087,11 @@ async function getNaatim(){ return (await sGet("naatim_list")) || []; }
 async function refreshAreaPermissions(){
   const list = await getNaatim();
   const has = area => list.some(n => n.area && n.area.trim()===area && n.person===user);
-  // נע"ת מטווחים / בדיקות שמיעה — הרשאת הזנת תאריכים בכשירות חיילים, בכל מסגרת
-  isHearingResp = userRole==="מפקד" || has("בדיקות שמיעה");
-  isRangeResp   = userRole==="מפקד" || has("מטווחים");
+  /* נע"ת כשירות חיילים — הרשאת הזנת תאריכים, בכל מסגרת. "כשירות חיילים"
+     מעניק את שתי הלשוניות; אפשר גם לשבץ בנפרד לשמיעה או למטווחים בלבד. */
+  const medAll  = has("כשירות חיילים");
+  isHearingResp = userRole==="מפקד" || medAll || has("בדיקות שמיעה");
+  isRangeResp   = userRole==="מפקד" || medAll || has("מטווחים");
   if(currentShed && currentShed.isDept){ isToolsResp = false; isVehiclesResp = (userRole==="מפקד"); return; }
   isToolsResp = userRole==="מפקד" || has("חדר כלים");
   isVehiclesResp = userRole==="מפקד" || has("רכבים");
