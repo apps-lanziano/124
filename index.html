@@ -205,9 +205,19 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
   background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:20px 18px calc(20px + env(safe-area-inset-bottom));
   max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
   animation:slideUp .35s cubic-bezier(.2,.9,.3,1);
+  position:relative;
 }
 @keyframes slideUp{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
-.modal h3{font-size:17px;font-weight:800;margin-bottom:4px}
+.modal h3{font-size:17px;font-weight:800;margin-bottom:4px;padding-inline-end:34px}
+/* כפתור X קטן לסגירה — מוזרק אוטומטית לכל חלון (ensureModalCloseButtons), כדי
+   שלכל תפריט/טופס שנפתח תהיה דרך סגירה מהירה בפינה, בנוסף לכפתור "ביטול/סגור" */
+.modal-x{
+  position:absolute;top:16px;inset-inline-end:16px;z-index:3;
+  width:30px;height:30px;border-radius:50%;border:none;
+  background:var(--bg);color:var(--ink-2);font-size:14px;font-weight:800;line-height:1;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.modal-x:active{background:var(--red-soft);color:var(--red)}
 .modal .m-sub{font-size:12.5px;color:var(--ink-2);font-weight:300;margin-bottom:14px}
 #sig-canvas{
   width:100%;height:170px;border:2px dashed #e3ccd1;border-radius:14px;background:#fdfbfb;
@@ -3520,6 +3530,7 @@ function go(id, btn){
   document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
   if(btn) btn.classList.add("active");
   document.getElementById("main").scrollTop = 0;
+  if(typeof syncNavHeight==="function") syncNavHeight();   // מוודא ריפוד עדכני גם אם הסרגל השתנה מאז הטעינה
   if(id==="scr-cmd") renderCommander();
   if(id==="scr-faults") renderFaults();
   if(id==="scr-binui-faults") renderBinuiFaults();
@@ -3562,10 +3573,28 @@ function syncNavHeight(){
 }
 window.addEventListener("resize", syncNavHeight);
 window.addEventListener("orientationchange", ()=>setTimeout(syncNavHeight, 250));
+
+/* מוסיף כפתור ✕ קטן לסגירה בפינת כל חלון (.modal-bg > .modal) שקיים בדף —
+   כל החלונות כבר נסגרים ע"י הסרת המחלקה "open" מה-modal-bg שלהם (ללא ניקוי
+   מצב נוסף), ולכן כפתור גנרי אחד תקף לכולם ולא דורש נגיעה בכל חלון בנפרד. */
+function ensureModalCloseButtons(){
+  document.querySelectorAll(".modal-bg > .modal").forEach(modal=>{
+    if(modal.querySelector(":scope > .modal-x")) return;
+    const bg = modal.parentElement;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "modal-x";
+    btn.setAttribute("aria-label","סגור");
+    btn.textContent = "✕";
+    btn.addEventListener("click", ()=> bg.classList.remove("open"));
+    modal.insertBefore(btn, modal.firstChild);
+  });
+}
 document.addEventListener("DOMContentLoaded", ()=>{
   syncNavHeight();
   const nav = document.querySelector("nav");
   if(nav && window.ResizeObserver) new ResizeObserver(syncNavHeight).observe(nav);
+  ensureModalCloseButtons();
 });
 
 function openMoreSheet(){ document.getElementById("more-sheet").classList.add("open"); }
@@ -5590,7 +5619,12 @@ async function openBinuiFaultDetail(id){
   const f = faults.find(x=>x.id===id); if(!f) return;
   let imgHtml="";
   if(f.img){ const d=await sGetRaw("binui_fault_img_"+id); if(d) imgHtml=`<img class="fault-detail-img" src="${d}" alt="">`; }
-  const canManage = isVehicleOfficer;
+  // ניהול סטטוס: מ״ע אחזקה (שחר שושן) וגם קצין טכני — שניהם רואים את מסך הריכוז הזה
+  const canManage = isVehicleOfficer || isTechOfficer;
+  // מחיקה: בנוסף לניהול הטייסתי, גם מפקד המסגרת שדיווחה על התקלה יכול למחוק אותה בעצמו
+  const origin = myBinuiOrigin();
+  const isOwnShedCommander = userRole==="מפקד" && origin && f.shedId===origin.shedId && (origin.dept ? f.dept===origin.dept : true);
+  const canDelete = canManage || isOwnShedCommander;
   document.getElementById("binuifaultdetail-body").innerHTML = `
     <h3>${escapeHTML(f.title)}</h3>
     <div class="m-sub">דווח ע"י ${escapeHTML(f.by)}${f.shedName?(' · '+escapeHTML(f.shedName)):''} · ${f.date} · <b style="color:${BINUI_COLOR_MAP[binuiStatusCls(f.status)]}">${escapeHTML(f.status)}</b></div>
@@ -5602,7 +5636,7 @@ async function openBinuiFaultDetail(id){
     <div class="modal-actions" style="margin-top:14px">
       <button class="m-btn ghost" onclick="document.getElementById('binuifaultdetail-modal').classList.remove('open')" style="flex:1">סגור חלון</button>
     </div>
-    ${canManage?`<button class="m-btn" onclick="deleteBinuiFault('${id}')" style="width:100%;margin-top:8px;background:var(--red-soft);color:var(--red);border:1px solid var(--red-line)">🗑️ מחק תקלה לצמיתות</button>`:""}`;
+    ${canDelete?`<button class="m-btn" onclick="deleteBinuiFault('${id}')" style="width:100%;margin-top:8px;background:var(--red-soft);color:var(--red);border:1px solid var(--red-line)">🗑️ מחק תקלה לצמיתות</button>`:""}`;
   document.getElementById("binuifaultdetail-modal").classList.add("open");
 }
 async function setBinuiFaultStatus(id, status){
@@ -5623,7 +5657,8 @@ async function deleteBinuiFault(id){
   if(f && f.img) await sDelRaw("binui_fault_img_"+id);
   document.getElementById("binuifaultdetail-modal").classList.remove("open");
   toast("התקלה נמחקה 🗑️");
-  renderBinuiFaultsAdmin();
+  renderBinuiFaultsAdmin();   // מסך הריכוז (שחר/קצין טכני) — מוגן ב-if(!box)return אם לא קיים במסך הנוכחי
+  renderBinuiFaults();        // מסך המסגרת (מפקד סככה/מחלקה) — אותה הגנה
 }
 /* מונה תקלות בינוי פתוחות — מוצג כבאדג' על סמל הניווט התחתון של מ״ע אחזקה/קצין טכני */
 async function updateBinuiAdminBadge(){
@@ -8005,6 +8040,11 @@ function setMedFilter(f){ medFilter = f; renderMedChecks(); }
 async function renderMedChecks(){
   const box = document.getElementById("medchecks-list");
   if(!box) return;
+  /* מרענן את הרשאות הנע"ת בכל פתיחה של המסך — כך שיבוץ נע"ת חדש חל מיד
+     ולא רק בכניסה הבאה של החייל (refreshAreaPermissions רץ גם בהתחברות,
+     אבל אם השיבוץ נעשה אחרי שהחייל כבר מחובר, בלי זה הוא נשאר עם ההרשאה
+     הישנה עד שיתנתק ויתחבר מחדש). */
+  await refreshAreaPermissions();
   const t = MED_TYPES[medTab];
   const subEl = document.getElementById("medchecks-sub");
   if(subEl) subEl.textContent = `${t.label} · ${t.validTxt}. 🟢 בתוקף · 🔴 נדרש חידוש · ⚪ טרם הוזן.`;
@@ -8789,63 +8829,74 @@ function vehicleStatusDetailed(v, checks){
   // רכב מבוסס-שעות (פיקו): סטטוס לפי שעות מנוע בלבד — מתעלמים מתאריכי טיפול/טסט
   if(isHoursVehicle(v)){
     const h = vehicleHoursCheck(v);
-    return h || {tag:"אין נתוני מעקב", cls:"g"};
+    return h ? {tag:h.tag, cls:h.cls, all:[h], issues: h.cls==="g"?[]:[h]} : {tag:"אין נתוני מעקב", cls:"g", all:[], issues:[]};
   }
-  const parts = [];
+  const all = [];
   let worst = "g";
-  const add = check => { if(check){ parts.push(check.tag); if(order[check.cls]<order[worst]) worst = check.cls; } };
+  const add = check => { if(check){ all.push(check); if(order[check.cls]<order[worst]) worst = check.cls; } };
   if(checks.includes("nextService")) add(vehicleDateCheck(v.nextService, VEHICLES_ALERT_DAYS, "טיפול"));
   if(checks.includes("monthlyService")) add(vehicleDateCheck(v.monthlyService, VEHICLES_ALERT_DAYS, "טיפול חודשי/תלת-חודשי"));
   if(checks.includes("annualService")) add(vehicleDateCheck(v.annualService, VEHICLES_ALERT_DAYS, "טיפול שנתי"));
   if(checks.includes("testDate")) add(vehicleDateCheck(v.testDate, VEHICLES_TEST_ALERT_DAYS, "טסט"));
   if(checks.includes("kmService")) add(vehicleKmCheck(v));
-  if(parts.length===0) return {tag:"אין נתוני מעקב", cls:"g"};
-  return {tag: parts.join(" · "), cls: worst};
+  const issues = all.filter(c=>c.cls!=="g");
+  if(all.length===0) return {tag:"אין נתוני מעקב", cls:"g", all, issues};
+  return {tag: all.map(c=>c.tag).join(" · "), cls: worst, all, issues};
 }
-/* כרטיס רכב עשיר משותף — משמש גם למ"ע לפי סככה, גם לרכבי אחזקה, גם לליסינג
-   תצוגה ראשונית: מס' רכב + טיפול חודשי/תלת-חודשי + ק"מ/שעו"מ נוכחי + קוד רכב/דלק.
-   בלחיצה נפתחת שאר התמונה: טסט + טיפול לפי ק"מ/שעו"מ + טיפול שנתי/קרוב + חברה/ביקורת חורף/הערות */
+/* תווית קצרה ומרוכזת לכותרת הכרטיס המכווצת — במקום שרשור כל הבדיקות (עמוס),
+   מציגה רק תמצית: "בתוקף", בדיקה בודדת חריגה (בקיצור), או מונה כשיש כמה. */
+function vehicleShortLabel(status){
+  const issues = status.issues || [];
+  if(issues.length===0) return {cls:"g", txt:"בתוקף"};
+  if(issues.length===1){
+    // מסירים את האימוג'י ואת הסוגריים המפורטים — התמצית נשארת בשורה אחת קצרה בכותרת
+    const short = issues[0].tag.replace(/^[🔴🟡🟢]\s*/u,"").replace(/\s*\([^)]*\)\s*$/,"");
+    return {cls:issues[0].cls, txt:short};
+  }
+  const redCount = issues.filter(c=>c.cls==="r").length;
+  if(redCount>0) return {cls:"r", txt:redCount+" דורשים טיפול"+(issues.length>redCount?` (+${issues.length-redCount})`:"")};
+  return {cls:"y", txt:issues.length+" לתשומת לב"};
+}
+/* כרטיס רכב עשיר משותף — משמש גם למ"ע לפי סככה, גם לרכבי אחזקה, גם לליסינג.
+   תצוגה מכווצת (ברירת מחדל): שם + מס' רכב + תווית סטטוס קצרה אחת בלבד —
+   כדי לא להציג שורת מידע עמוסה לכל רכב ברשימה. בלחיצה נפתחת התמונה המלאה:
+   כל בדיקה בשורה נפרדת + ק"מ/שעו"מ נוכחי + קוד רכב/דלק + חברה/ביקורת חורף/הערות. */
 function vehicleCardHtml(v, actionsHtml, checks){
   checks = checks || ["nextService","monthlyService","annualService","testDate","kmService"];
-  const order = {r:0,y:1,g:2};
-
-  const summaryParts = [];
-  summaryParts.push(v.number ? ("מס' "+escapeHTML(v.number)) : (v.militaryNumber ? ("צבאי "+escapeHTML(v.militaryNumber)) : "ללא מספר"));
-  if(isHoursVehicle(v)){
-    // רכב מבוסס-שעות (פיקו) — מציגים שעו"מ נוכחי ויעד, בלי תאריכי טיפול לא רלוונטיים
-    if(v.hours!=null && v.hours!=="") summaryParts.push(Number(v.hours).toLocaleString()+' שעו"מ');
-    const hc = vehicleHoursCheck(v); if(hc) summaryParts.push(hc.tag);
-  } else {
-    if(checks.includes("monthlyService")){
-      const mc = vehicleDateCheck(v.monthlyService, VEHICLES_ALERT_DAYS, "טיפול חודשי/תלת-חודשי");
-      summaryParts.push(mc ? mc.tag : "אין תאריך טיפול חודשי/תלת-חודשי");
-    }
-    if(v.km!=null && v.km!=="") summaryParts.push(Number(v.km).toLocaleString()+' ק"מ');
-    else if(v.hours!=null && v.hours!=="") summaryParts.push(Number(v.hours).toLocaleString()+' שעו"מ');
-  }
-  if(v.vehicleCode) summaryParts.push("קוד רכב "+escapeHTML(v.vehicleCode));
-  if(v.fuelCode) summaryParts.push("קוד דלק "+escapeHTML(v.fuelCode));
-
-  const restChecks = checks.filter(c=>c!=="monthlyService");
-  const restStatus = restChecks.length ? vehicleStatusDetailed(v, restChecks) : null;
-  const extraLines = [];
-  if(v.company) extraLines.push("🏢 חברה: "+escapeHTML(v.company));
-  if(v.winterCheck) extraLines.push("❄️ ביקורת חורף: "+new Date(v.winterCheck+"T00:00:00").toLocaleDateString('he-IL'));
-  if(v.notes) extraLines.push("📝 "+escapeHTML(v.notes));
-
   const overall = vehicleStatusDetailed(v, checks);
+  const short = vehicleShortLabel(overall);
+
+  const numberLine = v.number ? ("מס' "+escapeHTML(v.number)) : (v.militaryNumber ? ("צבאי "+escapeHTML(v.militaryNumber)) : "ללא מספר");
+
+  // כל בדיקה מוצגת כשורה נפרדת בתצוגה המורחבת (במקום שרשור לשורה אחת)
+  const checkRows = (overall.all||[]).map(c=>
+    `<div class="cert-chip-row" style="margin-bottom:6px"><span class="cert-chip-name">${c.tag}</span></div>`).join("");
+
+  const metaParts = [];
+  if(isHoursVehicle(v)){
+    if(v.hours!=null && v.hours!=="") metaParts.push('שעו"מ נוכחי: '+Number(v.hours).toLocaleString());
+  } else if(v.km!=null && v.km!==""){
+    metaParts.push('ק"מ נוכחי: '+Number(v.km).toLocaleString());
+  }
+  if(v.vehicleCode) metaParts.push("קוד רכב: "+escapeHTML(v.vehicleCode));
+  if(v.fuelCode) metaParts.push("קוד דלק: "+escapeHTML(v.fuelCode));
+  if(v.company) metaParts.push("🏢 חברה: "+escapeHTML(v.company));
+  if(v.winterCheck) metaParts.push("❄️ ביקורת חורף: "+new Date(v.winterCheck+"T00:00:00").toLocaleDateString('he-IL'));
+  const metaRows = metaParts.map(m=>`<div class="cert-chip-row" style="margin-bottom:6px"><span class="cert-chip-name">${m}</span></div>`).join("");
 
   return `<div class="cert-sum-card" onclick="this.classList.toggle('open')">
     <div class="cert-sum-head">
       <div class="avatar" style="width:40px;height:40px;font-size:18px">🚙</div>
-      <div class="cert-sum-name"><b>${escapeHTML(v.name)}</b></div>
+      <div class="cert-sum-name"><b>${escapeHTML(v.name)}</b><span>${numberLine}</span></div>
+      <span class="pill ${short.cls}" style="flex-shrink:0;white-space:nowrap">${escapeHTML(short.txt)}</span>
       <div onclick="event.stopPropagation()" style="display:flex;gap:6px">${actionsHtml}</div>
       <span class="cert-sum-chev">‹</span>
     </div>
-    <div class="veh-status-line pill ${overall.cls}">${summaryParts.join(" · ")}</div>
     <div class="cert-sum-detail"><div class="cert-sum-detail-inner">
-      ${restStatus ? `<div class="veh-status-line pill ${restStatus.cls}" style="margin:0 0 8px">${restStatus.tag}</div>` : ""}
-      ${extraLines.length ? `<div style="font-size:11.5px;color:var(--ink-3);line-height:1.9">${extraLines.join("<br>")}</div>` : ""}
+      ${checkRows}
+      ${metaRows}
+      ${v.notes ? `<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-top:2px">📝 ${escapeHTML(v.notes)}</div>` : ""}
+      ${!checkRows && !metaRows && !v.notes ? `<div style="font-size:11.5px;color:var(--ink-3)">אין נתוני מעקב נוספים</div>` : ""}
     </div></div>
   </div>`;
 }
