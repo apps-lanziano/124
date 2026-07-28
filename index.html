@@ -467,9 +467,10 @@ nav{
 /* MORE SHEET */
 .sheet-bg{position:absolute;inset:0;z-index:56;background:rgba(26,17,20,.5);backdrop-filter:blur(4px);display:none;align-items:flex-end;justify-content:center}
 .sheet-bg.open{display:flex;animation:fadeIn .25s}
-.sheet{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:12px 16px calc(20px + env(safe-area-inset-bottom));animation:slideUp .35s cubic-bezier(.2,.9,.3,1)}
+.sheet{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:12px 16px calc(20px + env(safe-area-inset-bottom));animation:slideUp .35s cubic-bezier(.2,.9,.3,1);max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .sheet-handle{width:40px;height:4px;border-radius:99px;background:#e3d5d8;margin:4px auto 10px}
-.sheet-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 4px}
+/* הכותרת (כולל כפתור הסגירה ✕) נשארת מוצמדת למעלה גם כשגוללים את הרשימה */
+.sheet-top{position:sticky;top:-2px;z-index:3;background:#fff;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:6px 4px 8px;box-shadow:0 6px 8px -6px rgba(26,17,20,.12)}
 .sheet-top b{font-size:16px;font-weight:800;color:var(--ink)}
 .sheet-x{width:34px;height:34px;border-radius:50%;border:none;background:var(--bg);color:var(--ink-2);font-size:15px;font-weight:800;cursor:pointer;display:grid;place-items:center;line-height:1}
 .sheet-x:active{background:var(--red-soft);color:var(--red)}
