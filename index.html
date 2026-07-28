@@ -359,8 +359,22 @@ main{flex:1;overflow-y:auto;padding:18px 16px 96px;scroll-behavior:smooth}
 /* board viewer overlay */
 #board-viewer{position:absolute;inset:0;z-index:40;background:var(--bg);display:none;flex-direction:column}
 #board-viewer.open{display:flex;animation:slideIn .35s cubic-bezier(.2,.8,.3,1)}
-#board-viewer .reader-body{padding:16px}
-#board-viewer .board-full{width:100%;border-radius:var(--radius);border:1px solid var(--line);box-shadow:var(--shadow-lg);display:block}
+#board-viewer .reader-body{padding:0;position:relative;flex:1;overflow:hidden}
+/* אזור הזום: גלילה טבעית להזזה, רוחב התמונה משתנה לפי מפלס הזום */
+/* direction:ltr — במכל RTL הערך של scrollLeft הפוך/שלילי וחישוב מוקד הזום נשבר */
+#board-zoom-wrap{position:absolute;inset:0;overflow:auto;-webkit-overflow-scrolling:touch;background:#0c0a0b;direction:ltr}
+#board-viewer .board-full{display:block;width:100%;max-width:none;border:0;border-radius:0;box-shadow:none;
+  user-select:none;-webkit-user-select:none;-webkit-user-drag:none;-webkit-touch-callout:none}
+#board-zoom-ctrl{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:7px;z-index:3;background:rgba(20,14,16,.72);backdrop-filter:blur(6px);
+  border-radius:99px;padding:6px 8px;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+#board-zoom-ctrl button{width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.94);
+  color:#1a1114;font-size:19px;font-weight:800;line-height:1;cursor:pointer;display:grid;place-items:center;font-family:inherit}
+#board-zoom-ctrl button:active{transform:scale(.94)}
+#board-zoom-lbl{color:#fff;font-size:12px;font-weight:800;min-width:46px;text-align:center;letter-spacing:.3px}
+#board-zoom-hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:3;color:#fff;
+  background:rgba(20,14,16,.72);backdrop-filter:blur(6px);border-radius:99px;padding:7px 14px;font-size:11.5px;font-weight:600;
+  pointer-events:none;transition:opacity .4s}
 
 /* ---------- MORNING STATUS (commander) ---------- */
 .mstat-banner{border-radius:var(--radius);padding:18px;text-align:center;margin-bottom:16px;color:#fff;animation:pop .5s cubic-bezier(.2,1.4,.4,1)}
@@ -1684,7 +1698,16 @@ nav{
       <h3 id="board-viewer-title">לוח צוות</h3>
     </div>
     <div class="reader-body">
-      <img class="board-full" id="board-viewer-img" src="" alt="לוח צוות שבועי">
+      <div id="board-zoom-wrap">
+        <img class="board-full" id="board-viewer-img" src="" alt="לוח צוות שבועי">
+      </div>
+      <div id="board-zoom-hint">🔍 צביטה להגדלה · הקשה כפולה לזום מהיר</div>
+      <div id="board-zoom-ctrl">
+        <button onclick="boardZoomBy(-0.5)" aria-label="הקטן">−</button>
+        <span id="board-zoom-lbl">100%</span>
+        <button onclick="boardZoomBy(0.5)" aria-label="הגדל">+</button>
+        <button onclick="boardZoomReset()" aria-label="איפוס" style="font-size:16px">⟲</button>
+      </div>
     </div>
   </div>
 
@@ -4637,14 +4660,94 @@ function onBoardFile(e){
   e.target.value = "";
 }
 
+/* ===== זום ללוח הצוות =====
+   ההגדלה נעשית ע"י שינוי רוחב התמונה, וההזזה היא גלילה טבעית של המכל —
+   כך מקבלים תנועה חלקה עם אינרציה בנייד, בלי חישובי גרירה ידניים. */
+let boardZoom = 1;
+const BOARD_ZOOM_MIN = 1, BOARD_ZOOM_MAX = 6;
+function boardApplyZoom(z, cx, cy){
+  const wrap = document.getElementById("board-zoom-wrap");
+  const img = document.getElementById("board-viewer-img");
+  if(!wrap || !img) return;
+  z = Math.max(BOARD_ZOOM_MIN, Math.min(BOARD_ZOOM_MAX, z));
+  const old = boardZoom;
+  if(Math.abs(z-old) < 0.001) return;
+  // שומרים על הנקודה שתחת האצבע/הסמן במקומה
+  const r = wrap.getBoundingClientRect();
+  const px = (cx==null ? r.width/2  : cx - r.left);
+  const py = (cy==null ? r.height/2 : cy - r.top);
+  const ratio = z/old;
+  const sl = (wrap.scrollLeft + px)*ratio - px;
+  const st = (wrap.scrollTop  + py)*ratio - py;
+  boardZoom = z;
+  img.style.width = (z*100) + "%";
+  void wrap.scrollWidth;   // מאלץ פריסה מחדש — אחרת הגלילה נחתכת לפי הרוחב הישן
+  wrap.scrollLeft = sl;
+  wrap.scrollTop  = st;
+  const lbl = document.getElementById("board-zoom-lbl");
+  if(lbl) lbl.textContent = Math.round(z*100) + "%";
+}
+function boardZoomBy(d){ boardApplyZoom(boardZoom + d); }
+function boardZoomReset(){
+  boardApplyZoom(1);
+  const wrap = document.getElementById("board-zoom-wrap");
+  if(wrap){ wrap.scrollLeft = 0; wrap.scrollTop = 0; }
+}
+function initBoardZoomGestures(){
+  const wrap = document.getElementById("board-zoom-wrap");
+  if(!wrap || wrap._zoomReady) return;
+  wrap._zoomReady = true;
+  let pinchStart = 0, zoomStart = 1, lastTap = 0;
+  const dist = t => Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
+  wrap.addEventListener("touchstart", e=>{
+    if(e.touches.length===2){ pinchStart = dist(e.touches); zoomStart = boardZoom; }
+    else if(e.touches.length===1){
+      const now = Date.now();
+      if(now - lastTap < 300){   // הקשה כפולה — זום מהיר לנקודה
+        const t = e.touches[0];
+        boardApplyZoom(boardZoom > 1.2 ? 1 : 2.5, t.clientX, t.clientY);
+        lastTap = 0;
+      } else lastTap = now;
+    }
+  }, {passive:true});
+  wrap.addEventListener("touchmove", e=>{
+    if(e.touches.length===2 && pinchStart){
+      e.preventDefault();   // צביטה = זום שלנו, לא זום של הדפדפן
+      const t = e.touches;
+      const mx = (t[0].clientX+t[1].clientX)/2, my = (t[0].clientY+t[1].clientY)/2;
+      boardApplyZoom(zoomStart * (dist(t)/pinchStart), mx, my);
+    }
+  }, {passive:false});
+  wrap.addEventListener("touchend", e=>{ if(e.touches.length<2) pinchStart = 0; }, {passive:true});
+  wrap.addEventListener("dblclick", e=>{ boardApplyZoom(boardZoom > 1.2 ? 1 : 2.5, e.clientX, e.clientY); });
+  wrap.addEventListener("wheel", e=>{
+    if(!e.ctrlKey) return;   // גלילה רגילה נשארת הזזה
+    e.preventDefault();
+    boardApplyZoom(boardZoom * (e.deltaY<0 ? 1.12 : 1/1.12), e.clientX, e.clientY);
+  }, {passive:false});
+}
 async function openBoardViewer(id){
   const boards = await getBoards();
   const b = boards.find(x=>x.id===id);
   if(!b) return;
   const full = await sGet("board_img_"+id);
   document.getElementById("board-viewer-title").textContent = b.label;
-  document.getElementById("board-viewer-img").src = full || b.thumb;
+  const img = document.getElementById("board-viewer-img");
+  img.src = full || b.thumb;
+  boardZoom = 1; img.style.width = "100%";
+  const lbl = document.getElementById("board-zoom-lbl");
+  if(lbl) lbl.textContent = "100%";
+  const wrap = document.getElementById("board-zoom-wrap");
+  if(wrap){ wrap.scrollLeft = 0; wrap.scrollTop = 0; }
   document.getElementById("board-viewer").classList.add("open");
+  initBoardZoomGestures();
+  // הרמז נעלם מעצמו אחרי כמה שניות
+  const hint = document.getElementById("board-zoom-hint");
+  if(hint){
+    hint.style.opacity = "1";
+    clearTimeout(hint._t);
+    hint._t = setTimeout(()=>{ hint.style.opacity = "0"; }, 2800);
+  }
 }
 function closeBoardViewer(){ document.getElementById("board-viewer").classList.remove("open"); }
 
