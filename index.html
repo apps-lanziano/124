@@ -1773,7 +1773,7 @@ nav{
       <div class="sheet-item" onclick="closeMoreAnd('scr-duties')"><div class="s-ic">🔄</div><div class="s-tx"><b>תורנויות</b><span>שיבוץ שמי שבועי</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-closeday" onclick="closeMoreAnd('scr-closeday')"><div class="s-ic">🌙</div><div class="s-tx"><b>סגירת יום</b><span>צ'קליסט סוף משמרת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" onclick="closeMoreAnd('scr-training')"><div class="s-ic">📚</div><div class="s-tx"><b>חומרי הדרכה</b><span>מהמנהל הטייסתי</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item" id="sheet-medchecks" onclick="closeMoreAnd('scr-medchecks')"><div class="s-ic">🩺</div><div class="s-tx"><b>כשירות חיילים</b><span>שמיעה ומטווח — תוקף וחידוש</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="sheet-medchecks" onclick="closeMoreAnd('scr-medchecks')"><div class="s-ic">🪖</div><div class="s-tx"><b>כשירות חיילים</b><span>שמיעה ומטווח — תוקף וחידוש</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-team-item" onclick="closeMoreAndFn(openTeamMgmt)"><div class="s-ic">👥</div><div class="s-tx"><b>ניהול צוות</b><span>הוספה, עריכה, ימי הולדת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-tasks-item" onclick="closeMoreAndFn(openTaskMgmt)"><div class="s-ic">🧰</div><div class="s-tx"><b>עריכת מטלות בוקר</b><span>הוספה ושינוי מטלות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-faults-item" onclick="closeMoreAnd('scr-faults')"><div class="s-ic">🛠️</div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות</span></div><span class="s-chev">‹</span></div>
@@ -7575,7 +7575,7 @@ async function renderTrends(){
   if(showVeh)   kpis.push({led:(vehExpired?"r":vehSoon?"y":"g"), ic:"🚙", n:vehicles.length, l:"רכבים", go:"go('scr-vehicles',document.getElementById('nav-vehicles'))"});
   if(showTools) kpis.push({led:(toolExpired?"r":toolSoon?"y":"g"), ic:"🔧", n:tools.length, l:"כלים בחדר", go:"go('scr-tools',document.getElementById('nav-tools'))"});
   if(showNaatim) kpis.push({led:(naatimOpen?"y":"g"), ic:"🗂️", n:naatim.length, l:"נע\"תים", go:"closeMoreAnd('scr-naatim')"});
-  if(medPeople().length) kpis.push({led:(medExpired?"r":medSoon?"y":"g"), ic:"🩺", n:medPeople().length, l:"כשירות חיילים", go:"closeMoreAnd('scr-medchecks')"});
+  if(medPeople().length) kpis.push({led:(medExpired?"r":medSoon?"y":"g"), ic:"🪖", n:medPeople().length, l:"כשירות חיילים", go:"closeMoreAnd('scr-medchecks')"});
   const kpiHtml = kpis.map(k=>`<button class="cd-kpi" onclick="${k.go}"><span class="cd-led ${k.led}"></span><div class="cd-kic">${k.ic}</div><div class="cd-kn">${k.n}</div><div class="cd-kl">${escapeHTML(k.l)}</div></button>`).join("");
 
   // --- מיקוד יומי — רשימה מאוחדת של כל מה שדורש טיפול היום (המספר = מספר הפריטים) ---
@@ -7827,7 +7827,7 @@ async function renderMedChecks(){
   const filterBox = document.getElementById("medchecks-filter");
   if(people.length===0){
     filterBox.innerHTML = "";
-    box.innerHTML = `<div class="empty-state"><div class="ic">🩺</div><h3>אין חיילים למעקב</h3><p>הוסף אנשי צוות כדי לעקוב אחר ${escapeHTML(t.label)}</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">🪖</div><h3>אין חיילים למעקב</h3><p>הוסף אנשי צוות כדי לעקוב אחר ${escapeHTML(t.label)}</p></div>`;
     return;
   }
   filterBox.innerHTML = `
