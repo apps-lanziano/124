@@ -1493,6 +1493,7 @@ nav{
       <div class="admin-pane" id="vopane-leasing">
         <div class="admin-actions-row">
           <button class="admin-card" style="grid-column:1/-1" onclick="openLeasingVehicleAdd()"><span class="a-ic">➕</span><b>הוספת רכב ליסינג</b><span>לפי שם המחזיק</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openLeasingImport()"><span class="a-ic">📥</span><b>ייבוא מרוכז מגיליון</b><span>הדבקת שורות מהאקסל — עדכון והוספה בבת אחת</span></button>
         </div>
         <div id="vo-leasing-list"></div>
       </div>
@@ -2195,6 +2196,30 @@ nav{
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('leasing-vehicle-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEASING BULK IMPORT MODAL — הדבקת שורות מגיליון המעקב -->
+  <div class="modal-bg" id="leasing-import-modal">
+    <div class="modal">
+      <h3>📥 ייבוא מרוכז — רכבי ליסינג</h3>
+      <div class="m-sub">סמן את השורות באקסל, העתק (Ctrl+C) והדבק כאן. רכב שכבר קיים (לפי מס' רכב) יתעדכן — רכב חדש יתווסף. שום רכב לא נמחק.</div>
+      <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏷️ הגף שאליו שייכות השורות שהודבקו</label>
+      <select class="m-input" id="leasing-import-group" style="margin-bottom:8px">
+        <option value="גף טכני">גף טכני</option>
+        <option value="גף טיסה">גף טיסה</option>
+        <option value="אחר">אחר</option>
+      </select>
+      <div style="background:var(--bg);border-radius:10px;padding:9px 11px;margin-bottom:8px;font-size:11px;color:var(--ink-3);line-height:1.7">
+        <b style="color:var(--ink-2)">סדר העמודות (כמו בגיליון):</b><br>
+        מחזיק · סוג רכב · מס׳ צבאי · מס׳ אזרחי · ביקורת חורף · ק״מ נוכחי · טיפול קרוב · טיפול חודשי · טיפול שנתי · טסט · קוד רכב · קוד דלק · חברה · הערות
+      </div>
+      <textarea class="m-input" id="leasing-import-text" rows="8" placeholder="הדבק כאן את השורות מהאקסל…" style="resize:none;font-size:12px;line-height:1.6" oninput="previewLeasingImport()"></textarea>
+      <div id="leasing-import-preview" style="font-size:12px;margin-bottom:10px"></div>
+      <div class="modal-actions">
+        <button class="m-btn ghost" onclick="document.getElementById('leasing-import-modal').classList.remove('open')" style="flex:1">ביטול</button>
+        <button class="m-btn primary" id="leasing-import-go" onclick="runLeasingImport()" style="flex:1.4" disabled>📥 ייבא</button>
       </div>
     </div>
   </div>
@@ -9054,6 +9079,93 @@ async function matchLeasingHolderShed(holderName){
   }));
   return results.find(Boolean) || null;
 }
+/* ===== ייבוא מרוכז של רכבי ליסינג מגיליון המעקב =====
+   מדביקים שורות מהאקסל (עמודות מופרדות בטאב). ההתאמה לפי מס' הרכב:
+   רכב קיים מתעדכן, רכב חדש נוסף. לעולם לא מוחק שום רכב. */
+function leasingCellText(s){
+  s = String(s==null?"":s).trim();
+  return (s==="/" || s==="-") ? "" : s;
+}
+function leasingCellDate(s){
+  s = leasingCellText(s);
+  const m = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/);
+  if(!m) return "";
+  let y = m[3]; if(y.length===2) y = "20"+y;
+  return y + "-" + m[2].padStart(2,"0") + "-" + m[1].padStart(2,"0");
+}
+function leasingCellNum(s){
+  s = leasingCellText(s).replace(/[,\s]/g,"");
+  if(!s) return "";
+  const n = Number(s);
+  return isFinite(n) ? n : "";
+}
+function parseLeasingRows(raw){
+  const group = document.getElementById("leasing-import-group").value;
+  const rows = [];
+  String(raw||"").split(/\r?\n/).forEach(line=>{
+    if(!line.trim()) return;
+    if(/אחריות|סוג רכב|מס רכב/.test(line)) return;          // שורת כותרת מהגיליון
+    const c = line.split("\t");
+    if(c.length < 4) return;                                  // שורה חלקית — מדלגים
+    const holder = leasingCellText(c[0]);
+    const number = leasingCellText(c[3]);
+    if(!holder || !number) return;                            // בלי מחזיק/מספר אין רכב
+    rows.push({
+      holder, group,
+      name:           leasingCellText(c[1]),
+      number,
+      winterCheck:    leasingCellDate(c[4]),
+      km:             leasingCellNum(c[5]),
+      kmService:      leasingCellNum(c[6]),
+      monthlyService: leasingCellDate(c[7]),
+      annualService:  leasingCellDate(c[8]),
+      testDate:       leasingCellDate(c[9]),
+      vehicleCode:    leasingCellText(c[10]),
+      fuelCode:       leasingCellText(c[11]),
+      company:        leasingCellText(c[12]),
+      notes:          leasingCellText(c[13]),
+    });
+  });
+  return rows;
+}
+function openLeasingImport(){
+  document.getElementById("leasing-import-text").value = "";
+  document.getElementById("leasing-import-preview").innerHTML = "";
+  document.getElementById("leasing-import-go").disabled = true;
+  document.getElementById("leasing-import-modal").classList.add("open");
+}
+function previewLeasingImport(){
+  const rows = parseLeasingRows(document.getElementById("leasing-import-text").value);
+  const box = document.getElementById("leasing-import-preview");
+  const btn = document.getElementById("leasing-import-go");
+  if(!rows.length){
+    box.innerHTML = `<span style="color:var(--ink-3)">טרם זוהו שורות תקינות</span>`;
+    btn.disabled = true; return;
+  }
+  btn.disabled = false;
+  box.innerHTML =
+    `<div style="background:var(--green-soft);color:var(--green);border-radius:10px;padding:9px 11px;font-weight:800">✓ זוהו ${rows.length} רכבים</div>` +
+    `<div style="max-height:130px;overflow-y:auto;margin-top:6px;color:var(--ink-3);font-size:11.5px;line-height:1.8">` +
+    rows.map(r=>`• ${escapeHTML(r.holder)} — ${escapeHTML(r.name)} (${escapeHTML(r.number)})`).join("<br>") + `</div>`;
+}
+async function runLeasingImport(){
+  const rows = parseLeasingRows(document.getElementById("leasing-import-text").value);
+  if(!rows.length){ toast("אין שורות לייבוא"); return; }
+  const norm = s => String(s||"").replace(/[\s-]/g,"");
+  const list = (await sGetRaw("admin_leasing_vehicles")) || [];
+  let added=0, updated=0;
+  rows.forEach(r=>{
+    const ex = list.find(v=> norm(v.number)===norm(r.number));
+    if(ex){ Object.assign(ex, r); updated++; }
+    else { list.push({id:"lveh"+Date.now()+Math.random().toString(36).slice(2,6), ...r}); added++; }
+  });
+  await sSetRaw("admin_leasing_vehicles", list);
+  await logAction("ייבוא רכבי ליסינג", added+" נוספו, "+updated+" עודכנו");
+  document.getElementById("leasing-import-modal").classList.remove("open");
+  toast("יובאו ✓ " + added + " נוספו · " + updated + " עודכנו");
+  renderLeasingVehicles();
+}
+
 async function renderLeasingVehicles(){
   const box = document.getElementById("vo-leasing-list");
   if(!box) return;
