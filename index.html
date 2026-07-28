@@ -9105,7 +9105,8 @@ function parseLeasingRows(raw){
   String(raw||"").split(/\r?\n/).forEach(line=>{
     if(!line.trim()) return;
     if(/אחריות|סוג רכב|מס רכב/.test(line)) return;          // שורת כותרת מהגיליון
-    const c = line.split("\t");
+    // הפרדה בטאב (הדבקה ישירה מאקסל) או בקו אנכי (טקסט שהועתק מהודעה)
+    const c = line.includes("\t") ? line.split("\t") : line.split("|").map(x=>x.trim());
     if(c.length < 4) return;                                  // שורה חלקית — מדלגים
     const holder = leasingCellText(c[0]);
     const number = leasingCellText(c[3]);
