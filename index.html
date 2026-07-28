@@ -1042,6 +1042,8 @@ nav{
 
     <!-- GLOBAL MESSAGES BOARD (feature 11) — appears on every screen -->
     <div id="messages-area"></div>
+    <!-- DAILY BRIEF (feature 24) — appears on every screen -->
+    <div id="brief-area"></div>
 
     <!-- ===== SAFETY ===== -->
     <section class="screen active" id="scr-safety">
@@ -1320,6 +1322,7 @@ nav{
       <!-- ADMIN quick actions -->
       <div class="cmd-section-title">⚙️ ניהול</div>
       <div class="admin-grid">
+        <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic">📋</span><b>דגשי בוקר / תדריך</b><span>תדריך יומי לצוות</span></button>
         <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
       </div>
     </section>
@@ -2315,6 +2318,18 @@ nav{
     </div>
   </div>
 
+  <!-- BRIEF MODAL (feature 24) -->
+  <div class="modal-bg" id="brief-modal">
+    <div class="modal">
+      <h3>📋 דגשי בוקר / תדריך יומי</h3>
+      <div class="m-sub">הדגשים יופיעו לצוות בראש כל מסך. החיילים יאשרו קריאה.</div>
+      <textarea class="m-input" id="brief-input" rows="5" placeholder="לדוגמה:&#10;• מז״א: רוח מזרחית 15 קשר&#10;• 2 גיחות בוקר צפויות&#10;• דגש בטיחות: ספירת כלים בסיום עבודה" style="resize:none;line-height:1.7"></textarea>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn ghost" onclick="document.getElementById('brief-modal').classList.remove('open')" style="flex:1">ביטול</button>
+        <button class="m-btn primary" onclick="saveBrief()" style="flex:1.4">📋 פרסום דגשים</button>
+      </div>
+    </div>
+  </div>
 
   <!-- AUDIT LOG MODAL (feature 2) -->
   <div class="modal-bg" id="audit-modal">
@@ -3411,7 +3426,7 @@ function go(id, btn){
   if(id==="scr-budget-officer") renderBoOverview();
   if(id==="scr-rollcall") renderRollcallPage();
   if(id==="scr-users") renderUsersAdmin();
-  if(id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-binui-admin" && id!=="scr-budget-officer" && id!=="scr-users"){ renderMessages(); }   // הודעות מופיעות בכל המסכים חוץ ממסכי מ״ע אחזקה/תקלות בינוי/אחראי תקציבים (אין להם סככה)
+  if(id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-binui-admin" && id!=="scr-budget-officer" && id!=="scr-users"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי מ״ע אחזקה/תקלות בינוי/אחראי תקציבים (אין להם סככה)
   // כפתור "לדשבורד" — מוצג בכל מסך שאינו הדשבורד, רק למי שיש לו דשבורד מפקד (nav-cmd גלוי)
   const backBtn = document.getElementById("back-to-dash");
   if(backBtn){
@@ -9611,7 +9626,7 @@ async function refreshAll(){
   renderBdays();
   await Promise.all([renderDocs(), renderTasks(), renderDuties(), renderBoard(),
     renderMessages(), renderFaults(), updateBadges(),
-    renderProfileBanner(), updateAlertBell()]);
+    renderBrief(), renderProfileBanner(), updateAlertBell()]);
 }
 
 document.getElementById("hdr-date").textContent = new Date().toLocaleDateString("he-IL",{weekday:"long", day:"numeric", month:"long"});
