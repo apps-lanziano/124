@@ -325,6 +325,12 @@ main{flex:1;overflow-y:auto;padding:18px 16px 96px;scroll-behavior:smooth}
 .cmd-name{flex:1;font-size:14px;font-weight:600}
 .pill{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px}
 .pill.g{background:var(--green-soft);color:var(--green)} .pill.r{background:var(--red-soft);color:var(--red)} .pill.y{background:var(--gold-soft);color:var(--gold)}
+.med-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.med-head{display:flex;align-items:center;gap:11px;margin-bottom:10px}
+.med-name{flex:1;line-height:1.35}.med-name b{font-size:14px;display:block}.med-name span{font-size:11px;color:var(--ink-3)}
+.med-line{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line)}
+.med-line-lbl{font-size:12.5px;font-weight:700;color:var(--ink-2);flex:0 0 auto;min-width:104px}
+.med-line-date{font-size:11.5px;color:var(--ink-3);flex:1;text-align:start}
 .cmd-section-title{font-size:14px;font-weight:800;color:var(--ink-2);margin:18px 0 10px;display:flex;align-items:center;gap:8px}
 
 
@@ -1230,6 +1236,18 @@ nav{
       <div id="certs-page-list"></div>
     </section>
 
+    <!-- ===== PERIODIC CHECKS (בדיקות תקופתיות: שמיעה + מטווח) ===== -->
+    <section class="screen" id="scr-medchecks">
+      <div class="sec-head">
+        <div>
+          <h2>בדיקות תקופתיות 🩺</h2>
+          <p>בדיקת שמיעה (תוקף שנה) · מטווח (תוקף חצי שנה). 🟢 בתוקף · 🔴 נדרש חידוש.</p>
+        </div>
+      </div>
+      <div class="faults-filter" id="medchecks-filter"></div>
+      <div id="medchecks-list"></div>
+    </section>
+
     <!-- ===== TOOL ROOM (חדר כלים) ===== -->
     <section class="screen" id="scr-tools">
       <div class="sec-head">
@@ -1322,7 +1340,7 @@ nav{
       <!-- ADMIN quick actions -->
       <div class="cmd-section-title">⚙️ ניהול</div>
       <div class="admin-grid">
-        <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic">📋</span><b>דגשי בוקר / תדריך</b><span>תדריך יומי לצוות</span></button>
+        <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic">📋</span><b>תדריך בוקר</b><span>תדריך יומי לצוות</span></button>
         <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
       </div>
     </section>
@@ -1750,6 +1768,7 @@ nav{
       <div class="sheet-item" onclick="closeMoreAnd('scr-duties')"><div class="s-ic">🔄</div><div class="s-tx"><b>תורנויות</b><span>שיבוץ שמי שבועי</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-closeday" onclick="closeMoreAnd('scr-closeday')"><div class="s-ic">🌙</div><div class="s-tx"><b>סגירת יום</b><span>צ'קליסט סוף משמרת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" onclick="closeMoreAnd('scr-training')"><div class="s-ic">📚</div><div class="s-tx"><b>חומרי הדרכה</b><span>מהמנהל הטייסתי</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="sheet-medchecks" onclick="closeMoreAnd('scr-medchecks')"><div class="s-ic">🩺</div><div class="s-tx"><b>בדיקות תקופתיות</b><span>שמיעה ומטווח — תוקף וחידוש</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-team-item" onclick="closeMoreAndFn(openTeamMgmt)"><div class="s-ic">👥</div><div class="s-tx"><b>ניהול צוות</b><span>הוספה, עריכה, ימי הולדת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-tasks-item" onclick="closeMoreAndFn(openTaskMgmt)"><div class="s-ic">🧰</div><div class="s-tx"><b>עריכת מטלות בוקר</b><span>הוספה ושינוי מטלות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-faults-item" onclick="closeMoreAnd('scr-faults')"><div class="s-ic">🛠️</div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות</span></div><span class="s-chev">‹</span></div>
@@ -1879,6 +1898,32 @@ nav{
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('task-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PERIODIC CHECK EDIT MODAL (בדיקות תקופתיות) -->
+  <div class="modal-bg" id="med-modal">
+    <div class="modal">
+      <h3 id="med-modal-title">בדיקות תקופתיות</h3>
+      <div class="m-sub">הזן תאריך ביצוע — תאריך התוקף מחושב אוטומטית וניתן לעריכה ידנית.</div>
+      <div style="border:1px solid var(--line);border-radius:12px;padding:11px;margin-bottom:10px">
+        <div style="font-weight:800;font-size:13px;margin-bottom:8px">👂 בדיקת שמיעה <span style="color:var(--ink-3);font-weight:400;font-size:11px">— תוקף שנה</span></div>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">תאריך ביצוע</label>
+        <input class="m-input" id="med-hear-done" type="date" style="margin-bottom:8px" onchange="medAutoExpiry('hear')">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">בתוקף עד (פ.ת)</label>
+        <input class="m-input" id="med-hear-exp" type="date" style="margin-bottom:0">
+      </div>
+      <div style="border:1px solid var(--line);border-radius:12px;padding:11px;margin-bottom:10px">
+        <div style="font-weight:800;font-size:13px;margin-bottom:8px">🎯 מטווח <span style="color:var(--ink-3);font-weight:400;font-size:11px">— תוקף חצי שנה</span></div>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">תאריך ביצוע</label>
+        <input class="m-input" id="med-range-done" type="date" style="margin-bottom:8px" onchange="medAutoExpiry('range')">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">בתוקף עד (פ.ת)</label>
+        <input class="m-input" id="med-range-exp" type="date" style="margin-bottom:0">
+      </div>
+      <div class="modal-actions" style="margin-top:4px">
+        <button class="m-btn ghost" onclick="document.getElementById('med-modal').classList.remove('open')" style="flex:1">ביטול</button>
+        <button class="m-btn primary" onclick="saveMedCheck()" style="flex:1.4">💾 שמירה</button>
       </div>
     </div>
   </div>
@@ -2321,12 +2366,12 @@ nav{
   <!-- BRIEF MODAL (feature 24) -->
   <div class="modal-bg" id="brief-modal">
     <div class="modal">
-      <h3>📋 דגשי בוקר / תדריך יומי</h3>
-      <div class="m-sub">הדגשים יופיעו לצוות בראש כל מסך. החיילים יאשרו קריאה.</div>
+      <h3>📋 תדריך בוקר</h3>
+      <div class="m-sub">התדריך יופיע לצוות בראש כל מסך. החיילים יאשרו קריאה.</div>
       <textarea class="m-input" id="brief-input" rows="5" placeholder="לדוגמה:&#10;• מז״א: רוח מזרחית 15 קשר&#10;• 2 גיחות בוקר צפויות&#10;• דגש בטיחות: ספירת כלים בסיום עבודה" style="resize:none;line-height:1.7"></textarea>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('brief-modal').classList.remove('open')" style="flex:1">ביטול</button>
-        <button class="m-btn primary" onclick="saveBrief()" style="flex:1.4">📋 פרסום דגשים</button>
+        <button class="m-btn primary" onclick="saveBrief()" style="flex:1.4">📋 פרסום תדריך</button>
       </div>
     </div>
   </div>
@@ -3417,6 +3462,7 @@ function go(id, btn){
   if(id==="scr-closeday") renderCloseDay();
   if(id==="scr-naatim") renderNaatim();
   if(id==="scr-certs") renderCertsPage();
+  if(id==="scr-medchecks") renderMedChecks();
   if(id==="scr-tools") renderToolsPage();
   if(id==="scr-vehicles") vehiclesPageTab("vehicles");
   if(id==="scr-training") renderTrainingView();
@@ -4736,7 +4782,7 @@ function openWaPrompt(kind, payload){
   if(kind==="event"){ title.textContent="הפריט פורסם ✅"; sub.textContent="שלח התראה לצוות לקרוא ולחתום"; }
   else if(kind==="board"){ title.textContent="הלוח עודכן ✅"; sub.textContent="עדכן את הצוות שיש לוח תורנויות חדש"; }
   else if(kind==="msg"){ title.textContent="ההודעה פורסמה ✅"; sub.textContent="שלח את ההודעה גם לקבוצת הוואטסאפ"; }
-  else if(kind==="brief"){ title.textContent="דגשי הבוקר פורסמו ✅"; sub.textContent="שלח את הדגשים גם לקבוצת הוואטסאפ"; }
+  else if(kind==="brief"){ title.textContent="תדריך הבוקר פורסם ✅"; sub.textContent="שלח את התדריך גם לקבוצת הוואטסאפ"; }
   else if(kind==="unsigned"){ title.textContent="הרשימה מוכנה ✅"; sub.textContent="שלח תזכורת לחיילים שטרם אישרו"; }
   else if(kind==="rollcall"){ title.textContent="הנכס הופעל ✅"; sub.textContent="שלח לצוות בוואטסאפ שיסמנו תקינות וזמינות"; }
   else if(kind==="rollcall-complete"){ title.textContent="כל הכבוד! 🎉"; sub.textContent="דווח בוואטסאפ שהנכס הושלם וכולם תקינים"; }
@@ -4786,7 +4832,7 @@ function shareMsgWA(text, type){
 }
 function shareBriefWA(text){
   const msg =
-    "📋 *דגשי בוקר — " + waShedName() + "*\n" +
+    "📋 *תדריך בוקר — " + waShedName() + "*\n" +
     "━━━━━━━━━━━━━━\n" +
     text + "\n\n" +
     "🔗 " + SITE_URL;
@@ -7452,6 +7498,18 @@ async function renderTrends(){
   });
   const pfMissing = pfList.length;
 
+  // בדיקות תקופתיות (שמיעה + מטווח) — התראה על פ.ת/קרוב לפ.ת, בכל מסגרת
+  const medData = await getMedChecks();
+  let medExpired=0, medSoon=0;
+  medPeople().forEach(p=>{
+    const r = medData[safeName(p.name)] || {};
+    [["hearing","👂","בדיקת שמיעה"],["range","🎯","מטווח"]].forEach(([k,ic,lbl])=>{
+      const st = medStatus(r[k]);
+      if(st.cls==="r"){ medExpired++; priorityFeed.push({cls:"r", ic, title:`${p.name} — ${lbl}`, sub:(r[k]&&r[k].expiry)?`פג תוקף לפני ${Math.abs(st.days)} ימים`:"טרם בוצע", tag:st.tag, days:st.days<-9000?-9999:st.days, go:"closeMoreAnd('scr-medchecks')"}); }
+      else if(st.cls==="y"){ medSoon++; priorityFeed.push({cls:"y", ic, title:`${p.name} — ${lbl}`, sub:`פג בעוד ${st.days} ימים`, tag:st.tag, days:st.days, go:"closeMoreAnd('scr-medchecks')"}); }
+    });
+  });
+
   // tools (חדר כלים) — לא רלוונטי ליוזר מחלקות
   const tools = isDeptUnit ? [] : await getTools();
   let toolExpired=0, toolSoon=0;
@@ -7512,6 +7570,7 @@ async function renderTrends(){
   if(showVeh)   kpis.push({led:(vehExpired?"r":vehSoon?"y":"g"), ic:"🚙", n:vehicles.length, l:"רכבים", go:"go('scr-vehicles',document.getElementById('nav-vehicles'))"});
   if(showTools) kpis.push({led:(toolExpired?"r":toolSoon?"y":"g"), ic:"🔧", n:tools.length, l:"כלים בחדר", go:"go('scr-tools',document.getElementById('nav-tools'))"});
   if(showNaatim) kpis.push({led:(naatimOpen?"y":"g"), ic:"🗂️", n:naatim.length, l:"נע\"תים", go:"closeMoreAnd('scr-naatim')"});
+  if(medPeople().length) kpis.push({led:(medExpired?"r":medSoon?"y":"g"), ic:"🩺", n:medPeople().length, l:"בדיקות תקופתיות", go:"closeMoreAnd('scr-medchecks')"});
   const kpiHtml = kpis.map(k=>`<button class="cd-kpi" onclick="${k.go}"><span class="cd-led ${k.led}"></span><div class="cd-kic">${k.ic}</div><div class="cd-kn">${k.n}</div><div class="cd-kl">${escapeHTML(k.l)}</div></button>`).join("");
 
   // --- מיקוד יומי — רשימה מאוחדת של כל מה שדורש טיפול היום (המספר = מספר הפריטים) ---
@@ -7711,6 +7770,102 @@ async function openTrainingItem(id){
 async function getCerts(){ return (await sGet("certs_list")) || []; }
 
 function goCertsPage(){ go("scr-certs", null); }
+
+/* ===== בדיקות תקופתיות: שמיעה (תוקף שנה) + מטווח (תוקף חצי שנה) =====
+   נשמר per-מסגרת במפתח "medchecks": { <safeName>: {name, hearing:{done,expiry}, range:{done,expiry}} }
+   ירוק=בתוקף · צהוב=פג בקרוב (עד 30 יום) · אדום=פג/לא בוצע. עריכה למפקד בלבד. */
+let medEditName = null;
+let medFilter = "all";
+async function getMedChecks(){ return (await sGet("medchecks")) || {}; }
+function medPeople(){ return PERSONNEL.filter(p=>p.role==="חייל" && !p.reserve); }   // חיילים בלבד, ללא מילואים
+function medStatus(rec){
+  if(!rec || !rec.expiry) return {cls:"r", tag:"לא בוצע", days:-999999};
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = Math.round((new Date(rec.expiry+"T00:00:00")-today)/86400000);
+  if(d<0) return {cls:"r", tag:"פג תוקף", days:d};
+  if(d<=30) return {cls:"y", tag:d+" ימים", days:d};
+  return {cls:"g", tag:"בתוקף", days:d};
+}
+function medFmtDate(iso){ if(!iso) return ""; return new Date(iso+"T00:00:00").toLocaleDateString("he-IL",{day:"2-digit",month:"2-digit",year:"numeric"}); }
+function medAddMonths(iso, months){ const d=new Date(iso+"T00:00:00"); d.setMonth(d.getMonth()+months); return d.toISOString().slice(0,10); }
+function setMedFilter(f){ medFilter = f; renderMedChecks(); }
+async function renderMedChecks(){
+  const box = document.getElementById("medchecks-list");
+  if(!box) return;
+  const isCmdr = userRole==="מפקד";
+  const data = await getMedChecks();
+  const people = medPeople();
+  const rowStat = p => { const r = data[safeName(p.name)] || {}; return {hear: medStatus(r.hearing), range: medStatus(r.range)}; };
+  const needsAttn = p => { const s = rowStat(p); return s.hear.cls!=="g" || s.range.cls!=="g"; };
+  const attnCount = people.filter(needsAttn).length;
+  const filterBox = document.getElementById("medchecks-filter");
+  if(people.length===0){
+    filterBox.innerHTML = "";
+    box.innerHTML = `<div class="empty-state"><div class="ic">🩺</div><h3>אין חיילים למעקב</h3><p>הוסף אנשי צוות כדי לעקוב אחר בדיקות שמיעה ומטווח</p></div>`;
+    return;
+  }
+  filterBox.innerHTML = `
+    <button class="fault-fbtn ${medFilter==='all'?'active':''}" onclick="setMedFilter('all')">הכל (${people.length})</button>
+    <button class="fault-fbtn ${medFilter==='attention'?'active':''}" onclick="setMedFilter('attention')">⚠️ דורש חידוש (${attnCount})</button>`;
+  let shown = people;
+  if(medFilter==="attention") shown = shown.filter(needsAttn);
+  if(shown.length===0){
+    box.innerHTML = `<div class="empty-state"><div class="ic">✅</div><h3>הכל בתוקף</h3><p>אין חיילים שדורשים חידוש בדיקה</p></div>`;
+    return;
+  }
+  const line = (r, st, ic, lbl) => {
+    const dateTxt = (r && r.expiry) ? ("בתוקף עד " + medFmtDate(r.expiry)) : "טרם הוזן";
+    return `<div class="med-line"><span class="med-line-lbl">${ic} ${lbl}</span><span class="med-line-date">${dateTxt}</span><span class="pill ${st.cls}">${st.tag}</span></div>`;
+  };
+  box.innerHTML = shown.map(p=>{
+    const r = data[safeName(p.name)] || {};
+    const sh = medStatus(r.hearing), sr = medStatus(r.range);
+    return `<div class="med-card" ${isCmdr?`onclick="openMedEdit('${jsStr(p.name)}')" style="cursor:pointer"`:""}>
+      <div class="med-head">
+        <div class="avatar" style="width:38px;height:38px;font-size:13px">${initials(p.name)}</div>
+        <div class="med-name"><b>${escapeHTML(p.name)}</b>${isCmdr?'<span>לחיצה לעדכון תאריכים</span>':''}</div>
+      </div>
+      ${line(r.hearing, sh, "👂", "בדיקת שמיעה")}
+      ${line(r.range, sr, "🎯", "מטווח")}
+    </div>`;
+  }).join("");
+}
+function medAutoExpiry(which){
+  const doneEl = document.getElementById(which==="hear"?"med-hear-done":"med-range-done");
+  const expEl  = document.getElementById(which==="hear"?"med-hear-exp":"med-range-exp");
+  if(doneEl.value) expEl.value = medAddMonths(doneEl.value, which==="hear"?12:6);
+}
+async function openMedEdit(name){
+  if(userRole!=="מפקד") return;
+  medEditName = name;
+  const data = await getMedChecks();
+  const r = data[safeName(name)] || {};
+  document.getElementById("med-modal-title").textContent = "בדיקות תקופתיות — " + name;
+  document.getElementById("med-hear-done").value = (r.hearing && r.hearing.done) || "";
+  document.getElementById("med-hear-exp").value  = (r.hearing && r.hearing.expiry) || "";
+  document.getElementById("med-range-done").value = (r.range && r.range.done) || "";
+  document.getElementById("med-range-exp").value  = (r.range && r.range.expiry) || "";
+  document.getElementById("med-modal").classList.add("open");
+}
+async function saveMedCheck(){
+  if(!medEditName){ document.getElementById("med-modal").classList.remove("open"); return; }
+  const hd = document.getElementById("med-hear-done").value;
+  const he = document.getElementById("med-hear-exp").value;
+  const rd = document.getElementById("med-range-done").value;
+  const re = document.getElementById("med-range-exp").value;
+  const data = await getMedChecks();
+  const key = safeName(medEditName);
+  const rec = data[key] || {};
+  rec.name = medEditName;
+  if(hd || he) rec.hearing = {done:hd||"", expiry:he||""}; else delete rec.hearing;
+  if(rd || re) rec.range   = {done:rd||"", expiry:re||""}; else delete rec.range;
+  data[key] = rec;
+  await sSet("medchecks", data);
+  await logAction("עדכון בדיקות תקופתיות", medEditName);
+  document.getElementById("med-modal").classList.remove("open");
+  toast("הבדיקות עודכנו ✓");
+  renderMedChecks();
+}
 
 function certStatus(c){
   if(!c.expiry) return {tag:"ללא תפוגה", cls:"g"};
@@ -9542,7 +9697,7 @@ async function renderBrief(){
   const iRead = !!reads[safeName(user||"")];
   const readCount = Object.keys(reads).length;
   area.innerHTML = `<div class="brief-card">
-    <div class="brief-head"><span>📋 דגשי בוקר · ${brief.date_display}</span>${userRole==="מפקד"?`<span style="display:flex;align-items:center;gap:8px"><span class="brief-reads">👁️ ${readCount}/${PERSONNEL.length}</span><button class="brief-del" onclick="deleteBrief()">🗑️</button></span>`:""}</div>
+    <div class="brief-head"><span>📋 תדריך בוקר · ${brief.date_display}</span>${userRole==="מפקד"?`<span style="display:flex;align-items:center;gap:8px"><span class="brief-reads">👁️ ${readCount}/${PERSONNEL.length}</span><button class="brief-del" onclick="deleteBrief()">🗑️</button></span>`:""}</div>
     <div class="brief-text">${escapeHTML(brief.text).replace(/\n/g,"<br>")}</div>
     ${userRole!=="מפקד" ? (iRead?'<div class="brief-ack done">✓ אישרת קריאה</div>':'<button class="brief-ack" onclick="ackBrief()">קראתי — אישור</button>') : ""}
   </div>`;
@@ -9557,9 +9712,9 @@ async function ackBrief(){
   renderBrief();
 }
 async function deleteBrief(){
-  if(!confirm("למחוק את דגשי הבוקר?")) return;
+  if(!confirm("למחוק את תדריך הבוקר?")) return;
   await sDel("daily_brief");
-  toast("דגשי הבוקר נמחקו 🗑️");
+  toast("תדריך הבוקר נמחק 🗑️");
   renderBrief();
 }
 function openBriefMgmt(){
@@ -9573,9 +9728,9 @@ async function saveBrief(){
   if(text.length<2){ toast("נא להזין תוכן"); return; }
   const now = new Date();
   await sSet("daily_brief", {text, date:todayKey(), date_display:now.toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long"}), by:user, reads:{}});
-  await logAction("פרסום דגשי בוקר", text.slice(0,40));
+  await logAction("פרסום תדריך בוקר", text.slice(0,40));
   document.getElementById("brief-modal").classList.remove("open");
-  toast("דגשי הבוקר פורסמו 📋");
+  toast("תדריך הבוקר פורסם 📋");
   renderBrief();
   openWaPrompt("brief", text);
 }
