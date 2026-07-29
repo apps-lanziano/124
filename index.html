@@ -1992,18 +1992,6 @@ nav{
     </div>
   </div>
 
-  <!-- SCOPE CHOICE — למפקדי "הדרכה"/"מ״ע אחזקה" בלבד: היכן לפרסם (מקומי/כלל-טייסתי) -->
-  <div class="modal-bg" id="scope-choice-modal">
-    <div class="modal">
-      <h3 id="scope-choice-title">היכן לפרסם?</h3>
-      <div class="m-sub" id="scope-choice-sub"></div>
-      <div class="modal-actions" style="flex-direction:column;gap:10px">
-        <button class="m-btn primary" id="scope-choice-all" style="width:100%">📢 פרסום לכל הטייסת</button>
-        <button class="m-btn ghost" id="scope-choice-local" style="width:100%">👤 פרסום מקומי (לצוות שלי בלבד)</button>
-      </div>
-    </div>
-  </div>
-
   <!-- WHATSAPP SHARE PROMPT -->
   <div class="modal-bg" id="wa-modal">
     <div class="modal" style="text-align:center">
@@ -3883,36 +3871,14 @@ async function confirmRead(){
   renderDocs();
 }
 
-/* ===== בחירת היקף פרסום — למפקדי "הדרכה"/"מ״ע אחזקה" בלבד =====
-   שתי המסגרות האלה תפקידיות, לא מבצעיות: יש להן גם רשימה מקומית משלהן
-   (לצוות התפקידי עצמו) וגם כפתור ייעודי לפרסום כלל-טייסתי בדשבורד שלהן.
-   קרה בפועל פעמיים שפרסום התכוון להגיע לכולם אבל פורסם מקומי בלבד בטעות —
-   ולכן לא די באזהרה פסיבית: הלחיצה עוצרת ודורשת בחירה מפורשת. שאר המפקדים
-   (סככות/מחלקות) לא מושפעים כלל — אצלם "onLocal" רץ מיד כרגיל. */
-function needsScopeChoice(){
-  return !!(currentShed && (currentShed.isMaint || currentShed.isTraining) && userRole==="מפקד");
-}
-/* canChoose מגיע מהקורא כי היקף ההרשאה שונה בין תכונות: קרא-וחתום/הודעות/
-   הדרכה מוגבלים למפקדי הדרכה/אחזקה (needsScopeChoice), בעוד לוח צוות פתוח
-   גם למי ששובץ נע"ת "לוח צוות שבועי" בלי מעמד מפקד מלא (isBoardPublisher). */
-function chooseScopeThen(canChoose, subText, onAll, onLocal){
-  if(!canChoose){ onLocal(); return; }
-  document.getElementById("scope-choice-sub").textContent = subText;
-  const allBtn = document.getElementById("scope-choice-all");
-  const localBtn = document.getElementById("scope-choice-local");
-  allBtn.onclick = ()=>{ document.getElementById("scope-choice-modal").classList.remove("open"); onAll(); };
-  localBtn.onclick = ()=>{ document.getElementById("scope-choice-modal").classList.remove("open"); onLocal(); };
-  document.getElementById("scope-choice-modal").classList.add("open");
-}
-
 /* ============ ADD EVENT (commander) ============ */
+/* אחראי הדרכה (isAdmin) מפרסם קרא-וחתום תמיד לכל המסגרות — אין באמת
+   "מקומי" רלוונטי עבורו, אז אין טעם לשאול כל פעם; מפקד מסגרת רגיל ממשיך
+   ישר לפרסום המקומי שלו כרגיל, בלי שום שינוי. */
 function openAddEvent(){
   if(userRole !== "מפקד" && !isAdmin){ toast("העלאת פריט — מפקדים בלבד ⛔"); return; }
-  chooseScopeThen(needsScopeChoice(),
-    "פרסום קרא-וחתום — לכל המסגרות (כל הטייסת רואה ומקבלת התראה), או רק לצוות שלך במסגרת הזו?",
-    ()=>openAdminEvent(),
-    ()=>{ window._adminPublish = false; openAddEventRaw(); }
-  );
+  if(isAdmin) openAdminEvent();
+  else { window._adminPublish = false; openAddEventRaw(); }
 }
 function openAddEventRaw(){
   evImgData = null; evFileMeta = null;
@@ -4290,8 +4256,10 @@ function openNaatimAdd(){
 }
 function populateNaatimPerson(){
   const sel = document.getElementById("naatim-person");
+  // כולל גם מפקדים — נדרש למשל כדי לשבץ מפקד ממסגרת אחרת ל"לוח צוות שבועי"
+  // (הרשאת פרסום כלל-טייסתית, לא קשורה לתפקיד המקומי שלו כמפקד)
   sel.innerHTML = '<option value="">— ללא שיבוץ —</option>' +
-    PERSONNEL.filter(p=>p.role==="חייל").map(p=>`<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)}</option>`).join("");
+    PERSONNEL.map(p=>`<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)}${p.role==="מפקד"?" (מפקד)":""}</option>`).join("");
 }
 async function renderNaatimMgmt(){
   const items = await getNaatim();
@@ -4759,17 +4727,13 @@ async function renderBoard(){
   area.innerHTML = html;
 }
 
-/* כפתור "העלאת לוח צוות חדש" במסך הלוח השבועי — עוצר לבחירת היקף (ראו
-   chooseScopeThen) למפקדי "הדרכה"/"מ״ע אחזקה", וגם למי ששובץ נע"ת "לוח
-   צוות שבועי" (isBoardPublisher) גם בלי מעמד מפקד מלא — למשל אחראי
-   תורנויות שמפרסם ללא היות מפקד מסגרת. לכל שאר המשתמשים ממשיך מיד
-   לבחירת קובץ מקומית כרגיל. */
+/* כפתור "העלאת לוח צוות חדש" — מי שיש לו הרשאת פרסום כלל-טייסתי
+   (isAdmin, או isBoardPublisher דרך נע"ת "לוח צוות שבועי" — כולל מפקדים
+   ששובצו נע"ת במסגרת אחרת) מפרסם ישר לכל המסגרות, בלי לשאול בכל פעם.
+   כל שאר המשתמשים ממשיכים ישר לבחירת קובץ מקומית כרגיל, ללא שינוי. */
 function triggerBoardUpload(){
-  chooseScopeThen(needsScopeChoice() || isBoardPublisher,
-    "העלאת לוח צוות — לכל המסגרות (כל הטייסת רואה), או רק ללוח המקומי של הצוות שלך?",
-    ()=>openAdminBoard(),
-    ()=>document.getElementById("board-input").click()
-  );
+  if(isAdmin || isBoardPublisher) openAdminBoard();
+  else document.getElementById("board-input").click();
 }
 function onBoardFile(e){
   const file = e.target.files[0];
