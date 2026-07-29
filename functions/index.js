@@ -1,8 +1,9 @@
 /* Cloud Function — התראות Push לטייסת 124
    ------------------------------------------------
    מופעלת אוטומטית כשמסמך באוסף sq124 משתנה. אם זה מסמך של הודעות
-   (…_messages_list) או קרא-וחתום (…_safety_events) ונוסף פריט חדש — שולחת
-   התראת FCM לכל המכשירים הרשומים במסגרת הזו. שאר השינויים מסוננים מיד (return).
+   (…_messages_list), קרא-וחתום (…_safety_events), לוח צוות (…_boards_list)
+   או חומר הדרכה (…_training_list) ונוסף פריט חדש — שולחת התראת FCM לכל
+   המכשירים הרשומים במסגרת הזו. שאר השינויים מסוננים מיד (return).
 
    הסיסמאות/מפתחות של השליחה נשמרים בשרת (Admin SDK) — לא בקוד הלקוח. */
 
@@ -31,9 +32,11 @@ exports.notifyOnPublish = onDocumentWritten(
   let kind = null;
   if (docId.endsWith("_messages_list")) kind = "message";
   else if (docId.endsWith("_safety_events")) kind = "safety";
+  else if (docId.endsWith("_boards_list")) kind = "board";
+  else if (docId.endsWith("_training_list")) kind = "training";
   else return; // כל שאר המסמכים (צוות, הסמכות, טוקנים…) — לא רלוונטי
 
-  const shedId = docId.replace(/_(messages_list|safety_events)$/, "");
+  const shedId = docId.replace(/_(messages_list|safety_events|boards_list|training_list)$/, "");
   const before = event.data.before.exists ? (event.data.before.data().v || []) : [];
   const after = event.data.after.exists ? (event.data.after.data().v || []) : [];
   if (!Array.isArray(after)) return;
@@ -51,8 +54,16 @@ exports.notifyOnPublish = onDocumentWritten(
 
   const item = newItems[0];
   const shedName = SHED_NAMES[shedId] || shedId;
-  const title = kind === "message" ? ("הודעה חדשה · " + shedName) : ("קרא וחתום חדש · " + shedName);
-  const body = kind === "message" ? String(item.text || "").slice(0, 140) : String(item.title || "");
+  const KIND_TITLES = {
+    message: "הודעה חדשה · " + shedName,
+    safety: "קרא וחתום חדש · " + shedName,
+    board: "לוח צוות חדש · " + shedName,
+    training: "חומר הדרכה חדש · " + shedName,
+  };
+  const title = KIND_TITLES[kind];
+  const body = kind === "message" ? String(item.text || "").slice(0, 140)
+    : kind === "board" ? String(item.label || "")
+    : String(item.title || item.fname || "");
 
   // data-only: ה-Service Worker מציג את ההתראה ומעדכן את ה-badge (נדרש לאייפון)
   const resp = await getMessaging().sendEachForMulticast({

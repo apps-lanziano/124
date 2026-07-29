@@ -2492,9 +2492,10 @@ nav{
           <option value="מטווחים">מעניק הרשאה: מטווחים</option>
           <option value="חדר כלים">מעניק הרשאה: חדר כלים</option>
           <option value="רכבים">מעניק הרשאה: רכבים</option>
+          <option value="לוח צוות שבועי">מעניק הרשאה: פרסום לוח צוות לכל המסגרות</option>
         </datalist>
         <div style="background:var(--gold-soft);border:1px solid #f0dfa8;border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:var(--ink-2);line-height:1.6">
-          🔑 <b>תחומים שמעניקים הרשאת עריכה:</b> "כשירות חיילים" (שמיעה + מטווח), "בדיקות שמיעה", "מטווחים", "חדר כלים", "רכבים".
+          🔑 <b>תחומים שמעניקים הרשאת עריכה:</b> "כשירות חיילים" (שמיעה + מטווח), "בדיקות שמיעה", "מטווחים", "חדר כלים", "רכבים", "לוח צוות שבועי" (פרסום לכל המסגרות).
           יש לבחור מהרשימה — שם שונה במקצת לא ייתן הרשאה.
         </div>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">👤 חייל אחראי</label>
@@ -2735,6 +2736,7 @@ let isToolsResp = false;   // נע"ת חדר כלים — הרשאות הוספ�
 let isVehiclesResp = false; // נע"ת רכבים — הרשאות הוספה/עריכה
 let isHearingResp = false; // נע"ת בדיקות שמיעה — הרשאת הזנת תאריכים בכשירות חיילים
 let isRangeResp = false;   // נע"ת מטווחים — הרשאת הזנת תאריכים בכשירות חיילים
+let isBoardPublisher = false; // נע"ת לוח צוות שבועי — הרשאת פרסום הלוח לכל המסגרות (בלי צורך במעמד אחראי הדרכה/אחזקה מלא)
 let evImgData = null;      // data URL of selected file
 let evFileMeta = null;     // {type:'image'|'pdf'|'word'|'ppt', name, mime}
 
@@ -3506,7 +3508,7 @@ async function doLogin(){
 function logout(){
   try{ if("clearAppBadge" in navigator) navigator.clearAppBadge(); }catch(e){}
   user=null; userRole=null; isCmd=false; isAdmin=false; isVehicleOfficer=false; isBudgetOfficer=false; isTechOfficer=false; isToolsResp=false; isVehiclesResp=false;
-  isHearingResp=false; isRangeResp=false;
+  isHearingResp=false; isRangeResp=false; isBoardPublisher=false;
   isOwner=false; impersonating=null;
   // נטישת זהות המסגרת ב-Firebase וחזרה לזהות אנונימית ניטרלית, כדי שכניסה
   // הבאה תתחיל נקייה ולא תישאר מחוברת כמסגרת הקודמת.
@@ -3865,8 +3867,11 @@ async function confirmRead(){
 function needsScopeChoice(){
   return !!(currentShed && (currentShed.isMaint || currentShed.isTraining) && userRole==="מפקד");
 }
-function chooseScopeThen(subText, onAll, onLocal){
-  if(!needsScopeChoice()){ onLocal(); return; }
+/* canChoose מגיע מהקורא כי היקף ההרשאה שונה בין תכונות: קרא-וחתום/הודעות/
+   הדרכה מוגבלים למפקדי הדרכה/אחזקה (needsScopeChoice), בעוד לוח צוות פתוח
+   גם למי ששובץ נע"ת "לוח צוות שבועי" בלי מעמד מפקד מלא (isBoardPublisher). */
+function chooseScopeThen(canChoose, subText, onAll, onLocal){
+  if(!canChoose){ onLocal(); return; }
   document.getElementById("scope-choice-sub").textContent = subText;
   const allBtn = document.getElementById("scope-choice-all");
   const localBtn = document.getElementById("scope-choice-local");
@@ -3878,7 +3883,7 @@ function chooseScopeThen(subText, onAll, onLocal){
 /* ============ ADD EVENT (commander) ============ */
 function openAddEvent(){
   if(userRole !== "מפקד" && !isAdmin){ toast("העלאת פריט — מפקדים בלבד ⛔"); return; }
-  chooseScopeThen(
+  chooseScopeThen(needsScopeChoice(),
     "פרסום קרא-וחתום — לכל המסגרות (כל הטייסת רואה ומקבלת התראה), או רק לצוות שלך במסגרת הזו?",
     ()=>openAdminEvent(),
     ()=>{ window._adminPublish = false; openAddEventRaw(); }
@@ -4192,6 +4197,9 @@ async function refreshAreaPermissions(){
   const medAll  = has("כשירות חיילים");
   isHearingResp = userRole==="מפקד" || medAll || has("בדיקות שמיעה");
   isRangeResp   = userRole==="מפקד" || medAll || has("מטווחים");
+  /* נע"ת לוח צוות שבועי — מעניק הרשאת פרסום הלוח לכל המסגרות בלי צורך
+     במעמד אחראי הדרכה/אחזקה מלא (isAdmin) */
+  isBoardPublisher = isAdmin || has("לוח צוות שבועי");
   if(currentShed && currentShed.isDept){ isToolsResp = false; isVehiclesResp = (userRole==="מפקד"); return; }
   isToolsResp = userRole==="מפקד" || has("חדר כלים");
   isVehiclesResp = userRole==="מפקד" || has("רכבים");
@@ -4693,7 +4701,9 @@ async function getBoards(){ return (await sGet("boards_list")) || []; }
 async function renderBoard(){
   const boards = await getBoards();
   const area = document.getElementById("board-area");
-  const canManage = userRole === "מפקד";
+  // מפקד המסגרת, או מי ששובץ נע"ת "לוח צוות שבועי" (isBoardPublisher) —
+  // כדי שאחראי תורנויות יוכל לנהל את הלוח בלי להיות מפקד המסגרת
+  const canManage = userRole === "מפקד" || isBoardPublisher;
   let html = "";
   if(canManage){
     html += `<div class="board-add-btn" onclick="triggerBoardUpload()">
@@ -4724,11 +4734,13 @@ async function renderBoard(){
   area.innerHTML = html;
 }
 
-/* כפתור "העלאת לוח צוות חדש" במסך הלוח השבועי — למפקדי "הדרכה"/"מ״ע אחזקה"
-   בלבד עוצר לבחירת היקף (ראו chooseScopeThen); לכל שאר המפקדים ממשיך מיד
+/* כפתור "העלאת לוח צוות חדש" במסך הלוח השבועי — עוצר לבחירת היקף (ראו
+   chooseScopeThen) למפקדי "הדרכה"/"מ״ע אחזקה", וגם למי ששובץ נע"ת "לוח
+   צוות שבועי" (isBoardPublisher) גם בלי מעמד מפקד מלא — למשל אחראי
+   תורנויות שמפרסם ללא היות מפקד מסגרת. לכל שאר המשתמשים ממשיך מיד
    לבחירת קובץ מקומית כרגיל. */
 function triggerBoardUpload(){
-  chooseScopeThen(
+  chooseScopeThen(needsScopeChoice() || isBoardPublisher,
     "העלאת לוח צוות — לכל המסגרות (כל הטייסת רואה), או רק ללוח המקומי של הצוות שלך?",
     ()=>openAdminBoard(),
     ()=>document.getElementById("board-input").click()
@@ -4761,13 +4773,14 @@ function onBoardFile(e){
       const id = "board_" + Date.now();
       const now = new Date();
       const label = "לוח שבועי · " + now.toLocaleDateString("he-IL",{day:"numeric",month:"long"});
-      if(isAdmin && window._adminBoardPublish){
+      if((isAdmin || isBoardPublisher) && window._adminBoardPublish){
         window._adminBoardPublish = false;
         const ok = await publishBoardToAllSheds(id, label, thumb, data);
         if(!ok){ toast("⚠️ העלאת הלוח נכשלה בחלק מהמסגרות — נסה שוב"); return; }
         await logAdminAction("פרסום לוח צוות לכל המסגרות", label);
         toast("הלוח החדש פורסם לכל המסגרות · הישן הוחלף 📅");
-        renderAdminDashboard();
+        if(isAdmin) renderAdminDashboard();   // מסך הדשבורד קיים רק אצל אחראי הדרכה/אחזקה/מנהל-על — לא אצל מי שקיבל הרשאה דרך נע"ת בלבד
+        else renderBoard();
         openWaPrompt("board");
       } else {
         const okImg = await sSetSafe("board_img_"+id, data);
