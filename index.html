@@ -3832,7 +3832,8 @@ async function saveSignature(){
   const key = "sigs_"+safeName(user);
   const reads = (await sGet(key)) || {};
   reads[currentDoc.id] = {date:new Date().toLocaleDateString("he-IL"), sig:sigData};
-  await sSet(key, reads);
+  const ok = await sSet(key, reads);
+  if(!ok){ toast("⚠️ החתימה לא נקלטה — בדוק חיבור רשת ונסה שוב"); return; }
   closeSignature();
   await logAction("חתימה על פריט", currentDoc.title);
   toast("החתימה נקלטה — המסר אושר ✍️");
@@ -3847,7 +3848,8 @@ async function confirmRead(){
   const key = "sigs_"+safeName(user);
   const reads = (await sGet(key)) || {};
   reads[currentDoc.id] = {date:new Date().toLocaleDateString("he-IL"), read:true};
-  await sSet(key, reads);
+  const ok = await sSet(key, reads);
+  if(!ok){ toast("⚠️ האישור לא נקלט — בדוק חיבור רשת ונסה שוב"); return; }
   await logAction("אישור קריאה", currentDoc.title);
   toast("אישור הקריאה נקלט ✓");
   await openReader(currentDoc.id);
@@ -5377,19 +5379,22 @@ async function saveMessage(){
   const msgObj = {id:"msg_"+Date.now(), text, type:msgType, by:user, date:new Date().toLocaleDateString("he-IL"), dept: myDept};
   if(isAdmin){
     // מנהל — פרסום לכל המסגרות + עותק ברשימת המנהל
+    let allOk = true;
     for(const shed of SHEDS){
       const list = (await sGetIn(shed.id, "messages_list")) || [];
       list.unshift({...msgObj, by:squadronPublisher()});
-      await sSetIn(shed.id, "messages_list", list);
+      if(!(await sSetIn(shed.id, "messages_list", list))) allOk = false;
     }
     const adminList = (await sGetRaw("admin_messages")) || [];
     adminList.unshift({...msgObj, by:squadronPublisher()});
-    await sSetRaw("admin_messages", adminList);
+    if(!(await sSetRaw("admin_messages", adminList))) allOk = false;
+    if(!allOk){ toast("⚠️ הפרסום נכשל בחלק מהמסגרות — נסה שוב"); return; }
     toast("ההודעה פורסמה לכל המסגרות 📢");
   } else {
     const msgs = (await sGet("messages_list")) || [];
     msgs.unshift(msgObj);
-    await sSet("messages_list", msgs);
+    const ok = await sSet("messages_list", msgs);
+    if(!ok){ toast("⚠️ פרסום ההודעה נכשל — בדוק חיבור רשת ונסה שוב"); return; }
     await logAction("פרסום הודעה", text.slice(0,40));
     toast("ההודעה פורסמה 📢");
   }
@@ -5410,15 +5415,16 @@ async function renderMsgExisting(){
 }
 async function deleteMessage(id, fromModal){
   if(!confirm("להסיר את ההודעה מהלוח?")) return;
+  let ok = true;
   if(isAdmin){
     for(const shed of SHEDS){
       let list = (await sGetIn(shed.id, "messages_list")) || [];
       list = list.filter(m=>m.id!==id);
-      await sSetIn(shed.id, "messages_list", list);
+      if(!(await sSetIn(shed.id, "messages_list", list))) ok = false;
     }
     let adminList = (await sGetRaw("admin_messages")) || [];
     adminList = adminList.filter(m=>m.id!==id);
-    await sSetRaw("admin_messages", adminList);
+    if(!(await sSetRaw("admin_messages", adminList))) ok = false;
   } else {
     let msgs = (await sGet("messages_list")) || [];
     const isDeptUnit = !!(currentShed && currentShed.isDept);
@@ -5428,8 +5434,9 @@ async function deleteMessage(id, fromModal){
       if(target && target.dept && target.dept!==myDept){ toast("אין הרשאה למחוק הודעה של מחלקה אחרת ⛔"); return; }
     }
     msgs = msgs.filter(m=>m.id!==id);
-    await sSet("messages_list", msgs);
+    ok = await sSet("messages_list", msgs);
   }
+  if(!ok){ toast("⚠️ המחיקה נכשלה בחלק מהמסגרות — נסה שוב"); return; }
   renderMessages();
   if(fromModal) renderMsgExisting();
   toast("ההודעה הוסרה");
@@ -5513,10 +5520,13 @@ async function saveFault(){
   const id="fault_"+Date.now();
   const btn=document.getElementById("fault-save"); btn.disabled=true; btn.textContent="שולח…";
   try{
-    if(faultImgData){ await sSetSafe("fault_img_"+id, faultImgData); }
+    let imgOk = true;
+    if(faultImgData){ imgOk = await sSetSafe("fault_img_"+id, faultImgData); }
+    if(!imgOk){ toast("⚠️ העלאת התמונה נכשלה — נסה שוב"); return; }
     const faults=await getFaults();
     faults.unshift({id,title,desc,by:user,date:new Date().toLocaleDateString("he-IL"),status:"open",img:!!faultImgData});
-    await sSet("faults_list", faults);
+    const ok = await sSet("faults_list", faults);
+    if(!ok){ toast("⚠️ הדיווח נכשל — בדוק חיבור רשת ונסה שוב"); return; }
     await logAction("דיווח תקלה", title);
     closeAddFault();
     toast("התקלה דווחה 🛠️");
@@ -5640,10 +5650,13 @@ async function saveBinuiFault(){
   const id="binui_"+Date.now();
   const btn=document.getElementById("binui-fault-save"); btn.disabled=true; btn.textContent="שולח…";
   try{
-    if(binuiFaultImgData){ await sSetRaw("binui_fault_img_"+id, binuiFaultImgData); }
+    let imgOk = true;
+    if(binuiFaultImgData){ imgOk = await sSetRaw("binui_fault_img_"+id, binuiFaultImgData); }
+    if(!imgOk){ toast("⚠️ העלאת התמונה נכשלה — נסה שוב"); return; }
     const faults=await getBinuiFaults();
     faults.unshift({id, title, desc, by:user, shedId: origin?origin.shedId:null, shedName: origin?origin.shedName:"—", dept: origin?origin.dept:null, date:new Date().toLocaleDateString("he-IL"), status:"פתוח", img:!!binuiFaultImgData});
-    await sSetRaw("binui_faults_list", faults);
+    const ok = await sSetRaw("binui_faults_list", faults);
+    if(!ok){ toast("⚠️ הדיווח נכשל — בדוק חיבור רשת ונסה שוב"); return; }
     closeAddBinuiFault();
     toast("תקלת הבינוי דווחה 🚧");
     renderBinuiFaults();
@@ -7220,13 +7233,14 @@ async function deleteAdminEvent(id){
   if(!confirm("למחוק את הפריט מכל המסגרות? הפעולה אינה הפיכה.")) return;
   let list = await getAdminEventsList();
   list = list.filter(e=>e.id!==id);
-  await sSetRaw("admin_events", list);
+  let ok = await sSetRaw("admin_events", list);
   for(const shed of SHEDS){
     let events = (await sGetIn(shed.id, "safety_events")) || [];
     events = events.filter(e=>e.id!==id);
-    await sSetIn(shed.id, "safety_events", events);
+    if(!(await sSetIn(shed.id, "safety_events", events))) ok = false;
     await sDelRaw(shed.id+"_safety_ev_"+id);
   }
+  if(!ok){ toast("⚠️ המחיקה נכשלה בחלק מהמסגרות — נסה שוב"); return; }
   renderAdminEvents();
   toast("הפריט נמחק מכל המסגרות 🗑️");
 }
@@ -7557,7 +7571,8 @@ function onTrainingFile(e){
         cx.drawImage(img,0,0,c.width,c.height);
         data=c.toDataURL("image/jpeg",q);
         while(data.length>700_000 && tries<6){ q-=.1; data=c.toDataURL("image/jpeg",Math.max(.3,q)); tries++; }
-        await publishTrainingToAllSheds(id, file.name, ftype, data, data);
+        const ok = await publishTrainingToAllSheds(id, file.name, ftype, data, data);
+        if(!ok){ toast("⚠️ העלאת חומר ההדרכה נכשלה — נסה שוב"); return; }
         toast("חומר ההדרכה פורסם לכל המסגרות 📚");
         renderAdminTraining();
       };
@@ -7569,25 +7584,30 @@ function onTrainingFile(e){
     reader.onload = async ev=>{
       const data = ev.target.result;
       if(data.length > 900_000){ toast("⚠️ הקובץ גדול מדי (מקס' ~650KB)"); return; }
-      await publishTrainingToAllSheds(id, file.name, ftype, data, null);
+      const ok = await publishTrainingToAllSheds(id, file.name, ftype, data, null);
+      if(!ok){ toast("⚠️ העלאת חומר ההדרכה נכשלה — נסה שוב"); return; }
       toast("חומר ההדרכה פורסם לכל המסגרות 📚");
       renderAdminTraining();
     };
     reader.readAsDataURL(file);
   }
 }
+/* מחזירה true רק אם החומר נכתב בהצלחה בכל המסגרות — ראו הערה מקבילה
+   ב-publishBoardToAllSheds/publishEventToAllSheds. */
 async function publishTrainingToAllSheds(id, title, ftype, fileData, thumb){
   const meta = FTYPE[ftype] || FTYPE.other;
   const adminList = await getTrainingList();
   adminList.unshift({id, title, ftype, fname:title, date:new Date().toLocaleDateString("he-IL")});
-  await sSetRaw("admin_training", adminList);
-  await sSetRaw("admin_training_file_"+id, fileData);
+  let allOk = await sSetRaw("admin_training", adminList);
+  if(!(await sSetRaw("admin_training_file_"+id, fileData))) allOk = false;
   for(const shed of SHEDS){
     const list = (await sGetIn(shed.id, "training_list")) || [];
     list.unshift({id, title, ftype, fname:title, thumb, by:"אחראי הדרכה", date:new Date().toLocaleDateString("he-IL")});
-    await sSetIn(shed.id, "training_list", list);
-    await sSetIn(shed.id, "training_file_"+id, fileData);
+    const okList = await sSetIn(shed.id, "training_list", list);
+    const okFile = await sSetIn(shed.id, "training_file_"+id, fileData);
+    if(!okList || !okFile) allOk = false;
   }
+  return allOk;
 }
 /* ===== מילואים — כלל-טייסתי, רענון ידני (תאריך אחרון + פ.ת הבא) ===== */
 const todayISO = () => new Date().toISOString().slice(0,10);
@@ -7714,14 +7734,15 @@ async function deleteTraining(id){
   if(!confirm("למחוק את חומר ההדרכה מכל המסגרות?")) return;
   let list = await getTrainingList();
   list = list.filter(t=>t.id!==id);
-  await sSetRaw("admin_training", list);
+  let ok = await sSetRaw("admin_training", list);
   await sDelRaw("admin_training_file_"+id);
   for(const shed of SHEDS){
     let sl = (await sGetIn(shed.id, "training_list")) || [];
     sl = sl.filter(t=>t.id!==id);
-    await sSetIn(shed.id, "training_list", sl);
+    if(!(await sSetIn(shed.id, "training_list", sl))) ok = false;
     await sDelRaw(shed.id+"_training_file_"+id);
   }
+  if(!ok){ toast("⚠️ המחיקה נכשלה בחלק מהמסגרות — נסה שוב"); return; }
   renderAdminTraining();
   toast("חומר ההדרכה נמחק");
 }
