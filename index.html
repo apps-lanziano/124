@@ -1408,11 +1408,11 @@ nav{
           <button class="admin-card" onclick="openAdminBoard()"><span class="a-ic">📅</span><b>העלאת לוח צוות</b><span>לכל המסגרות</span></button>
           <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>פרסום הודעה</b><span>לכל המסגרות</span></button>
           <button class="admin-card" onclick="openAdminAlerts()"><span class="a-ic">🔔</span><b>מרכז התראות</b><span>כל המסגרות</span></button>
-          <button class="admin-card" style="grid-column:1/-1" onclick="openAdminSafetyReport()"><span class="a-ic">📊</span><b>דוח חתימות · כלל הטייסת</b><span>מי חתם ומי טרם — בכל המסגרות, לצורך סקירה</span></button>
         </div>
         <div class="cmd-section-title">📄 קרא וחתום שפורסמו — כלל הטייסת</div>
         <div id="admin-events-list"></div>
-        <div class="cmd-section-title">📊 סטטוס לפי מסגרת · לחץ לצלילה</div>
+        <div class="cmd-section-title">📊 מצבת מסגרות · לחץ לצלילה</div>
+        <div class="matrix-hint">לפירוט מי חתם ומי טרם — לשונית ✍️ חתימות</div>
         <div id="admin-sheds-grid"></div>
       </div>
 
@@ -6197,62 +6197,6 @@ async function exportSafetyReport(){
     });
   }catch(e){ toast("⚠️ ייצוא נכשל"); console.error(e); }
 }
-/* ===== דוח חתימות כלל-טייסתי — לאחראי הדרכה, לצורך סקירה/ביקורת =====
-   סוקר את פריטי הקרא-וחתום של כל מסגרת (סככות + מחלקות) בנפרד — לא רק
-   את הפריטים שפורסמו דרך "לכל המסגרות", אלא כל פריט שקיים בכל מסגרת,
-   כדי שהדוח ישקף באמת האם אנשי הטייסת חתמו על כל מה שהיה עליהם לחתום. */
-async function openAdminSafetyReport(){
-  const modal = document.getElementById("safety-report-modal");
-  const box = document.getElementById("safety-report-content");
-  box.innerHTML = '<div class="sr-empty">מכין דוח…</div>';
-  modal.classList.add("open");
-  const now = new Date();
-
-  let totalConfirms=0, maxC=0, totalItems=0, fullyDone=0;
-  const shedRows = [];
-  for(const shed of SHEDS){
-    const [personnel, events] = await Promise.all([
-      sGetIn(shed.id, "cfg_personnel").then(v=>v||[]),
-      sGetIn(shed.id, "safety_events").then(v=>v||[])
-    ]);
-    if(events.length===0) continue;
-    const sigsArr = await Promise.all(personnel.map(p => sGetIn(shed.id, "sigs_"+safeName(p.name))));
-    const sigsBy = {}; personnel.forEach((p,i)=> sigsBy[p.name] = sigsArr[i] || {});
-    const total = personnel.length;
-    const evRows = events.map(e=>{
-      const missing = personnel.filter(p=>!sigsBy[p.name][e.id]);
-      const c = total - missing.length;
-      totalConfirms += c; maxC += total; totalItems++;
-      if(total>0 && c===total) fullyDone++;
-      const cls = (total>0 && c===total) ? "g" : (c===0 ? "r" : "y");
-      return {e, c, total, cls, missing};
-    });
-    shedRows.push({shed, evRows});
-  }
-  const pct = maxC ? Math.round(totalConfirms/maxC*100) : 0;
-
-  const bodyHtml = shedRows.length ? shedRows.map(({shed, evRows})=>`
-    <div class="cmd-section-title">${escapeHTML(shed.name)}</div>
-    ${evRows.slice().reverse().map(({e,c,total,cls,missing})=>`
-      <div class="sr-ev">
-        <div class="sr-ev-top"><b>${escapeHTML(e.title)}</b><span class="sr-count ${cls}">${c}/${total}</span></div>
-        ${e.date?`<div class="sr-ev-date">📅 ${escapeHTML(e.date)}</div>`:""}
-        ${missing.length?`<div class="sr-line"><span class="sr-tag r">✗ טרם</span>${missing.map(p=>escapeHTML(p.name)).join("، ")}</div>`:'<div class="sr-line"><span class="sr-tag g">✓ כולם חתמו</span></div>'}
-      </div>`).join("")}
-  `).join("") : `<div class="sr-empty">אין עדיין פריטי קרא-וחתום באף מסגרת</div>`;
-
-  box.innerHTML = `<div id="safety-report-box" class="sr-box" data-scope="כלל_הטייסת">
-    <div class="sr-head"><h3>📄 דוח קרא וחתום · כלל הטייסת</h3><p>${now.toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p></div>
-    <div class="sr-stats">
-      <div class="sr-stat"><b>${totalItems}</b><span>פריטים (כל המסגרות)</span></div>
-      <div class="sr-stat"><b>${maxC}</b><span>חתימות נדרשות</span></div>
-      <div class="sr-stat"><b class="${pct>=80?'g':''}">${pct}%</b><span>אישור כולל</span></div>
-      <div class="sr-stat"><b class="${totalItems&&fullyDone===totalItems?'g':''}">${fullyDone}/${totalItems}</b><span>הושלמו</span></div>
-    </div>
-    <div class="sr-list">${bodyHtml}</div>
-  </div>`;
-}
-
 /* ===== לשונית "✍️ חתימות" בדשבורד אחראי הדרכה =====
    מציגה מסך קבוע (לא מודל חד-פעמי): מיקרו-נתונים לכל מסגרת — מי חתם
    ומי טרם, כפתור תזכורת למפקדים לכל פריט לא-שלם, והיסטוריית חתימות
@@ -7279,13 +7223,6 @@ async function renderAdminDashboard(){
       sGetIn(shed.id, "cfg_personnel").then(v=>v||[]),
       sGetIn(shed.id, "safety_events").then(v=>v||[])
     ]);
-
-    // signatures — כל אנשי הצוות במקביל, לא סדרתי
-    const sigsList = await Promise.all(personnel.map(p => sGetIn(shed.id, "sigs_" + safeName(p.name))));
-    let totalSigs = 0;
-    sigsList.forEach(sigs=>{ const s = sigs || {}; totalSigs += events.filter(e=>s[e.id]).length; });
-    const maxSigs = personnel.length * events.length;
-    const sigPct = maxSigs ? Math.round(totalSigs/maxSigs*100) : 0;
     const num = shed.id.replace("shed","");
 
     return `<div class="shed-card clickable" onclick="drillShed('${shed.id}')">
@@ -7297,7 +7234,6 @@ async function renderAdminDashboard(){
       <div class="shed-stats">
         <div class="shed-stat info"><b>${personnel.length}</b><span>אנשי צוות</span></div>
         <div class="shed-stat info"><b>${events.length}</b><span>קרא וחתום</span></div>
-        <div class="shed-stat ${sigPct>=80?'ok':sigPct>=40?'warn':'bad'}"><b>${maxSigs?sigPct+'%':'—'}</b><span>חתימות</span></div>
       </div>
     </div>`;
   }));
