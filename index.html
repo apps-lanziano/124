@@ -1992,6 +1992,25 @@ nav{
     </div>
   </div>
 
+  <!-- BOARD UPLOAD SCOPE CHOICE — כל מפקד בוחר לאן להעלות -->
+  <div class="modal-bg" id="board-scope-modal">
+    <div class="modal">
+      <h3>📅 העלאת לוח צוות</h3>
+      <div class="m-sub">לאן להעלות את הלוח?</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+        <button class="admin-card" onclick="closeBoardScopeChoice();document.getElementById('board-input').click()">
+          <span class="a-ic">📍</span><b>למסגרת שלי בלבד</b><span>יופיע רק אצל הצוות שלי</span>
+        </button>
+        <button class="admin-card" onclick="closeBoardScopeChoice();openAdminBoard()">
+          <span class="a-ic">🌐</span><b>לכלל המסגרות</b><span>יופיע אצל כל הטייסת + פוש והתראה</span>
+        </button>
+      </div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn ghost" onclick="closeBoardScopeChoice()" style="flex:1">ביטול</button>
+      </div>
+    </div>
+  </div>
+
   <!-- WHATSAPP SHARE PROMPT -->
   <div class="modal-bg" id="wa-modal">
     <div class="modal" style="text-align:center">
@@ -4727,13 +4746,24 @@ async function renderBoard(){
   area.innerHTML = html;
 }
 
-/* כפתור "העלאת לוח צוות חדש" — מי שיש לו הרשאת פרסום כלל-טייסתי
-   (isAdmin, או isBoardPublisher דרך נע"ת "לוח צוות שבועי" — כולל מפקדים
-   ששובצו נע"ת במסגרת אחרת) מפרסם ישר לכל המסגרות, בלי לשאול בכל פעם.
-   כל שאר המשתמשים ממשיכים ישר לבחירת קובץ מקומית כרגיל, ללא שינוי. */
+/* כפתור "העלאת לוח צוות חדש":
+   - אחראי הדרכה (isAdmin) — ישר לכל המסגרות, בלי לשאול (כמו תמיד).
+   - כל מפקד מסגרת — בוחר בעצמו לאן, ע"י שני באנרים ברורים (למסגרת שלי /
+     לכלל המסגרות). כך אין תלות במנגנון נע"ת כדי לתת למפקד לפרסם טייסתית.
+   - מי ששובץ נע"ת "לוח צוות שבועי" בלי להיות מפקד (למשל אחראי תורנויות
+     מהחיילים) — ממשיך ישר לפרסום כלל-טייסתי, ללא שינוי.
+   - כל שאר המשתמשים — ישר לבחירת קובץ מקומית, ללא שינוי. */
 function triggerBoardUpload(){
-  if(isAdmin || isBoardPublisher) openAdminBoard();
+  if(isAdmin) openAdminBoard();
+  else if(userRole === "מפקד") openBoardScopeChoice();
+  else if(isBoardPublisher) openAdminBoard();
   else document.getElementById("board-input").click();
+}
+function openBoardScopeChoice(){
+  document.getElementById("board-scope-modal").classList.add("open");
+}
+function closeBoardScopeChoice(){
+  document.getElementById("board-scope-modal").classList.remove("open");
 }
 function onBoardFile(e){
   const file = e.target.files[0];
@@ -4762,7 +4792,7 @@ function onBoardFile(e){
       const id = "board_" + Date.now();
       const now = new Date();
       const label = "לוח שבועי · " + now.toLocaleDateString("he-IL",{day:"numeric",month:"long"});
-      if((isAdmin || isBoardPublisher) && window._adminBoardPublish){
+      if(window._adminBoardPublish){
         window._adminBoardPublish = false;
         const ok = await publishBoardToAllSheds(id, label, thumb, data);
         if(!ok){ toast("⚠️ העלאת הלוח נכשלה בחלק מהמסגרות — נסה שוב"); return; }
