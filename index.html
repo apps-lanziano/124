@@ -6228,9 +6228,15 @@ async function exportSafetyReport(){
   }catch(e){ toast("⚠️ ייצוא נכשל"); console.error(e); }
 }
 /* ===== לשונית "✍️ חתימות" בדשבורד אחראי הדרכה =====
-   מציגה מסך קבוע (לא מודל חד-פעמי): מיקרו-נתונים לכל מסגרת — מי חתם
-   ומי טרם, כפתור תזכורת למפקדים לכל פריט לא-שלם, והיסטוריית חתימות
-   כרונולוגית (sig_history) שנשארת גם אם הפריט עצמו נמחק/משתנה בהמשך. */
+   מציגה מסך קבוע (לא מודל חד-פעמי), לפי הפריטים שפורסמו בפועל לכל
+   המסגרות (admin_events — מקור האמת היחיד), ולא לפי safety_events הגולמי
+   של כל מסגרת. ההבדל קריטי: ל-safety_events של כל מסגרת יכולים להיות גם
+   פריטים מקומיים שהמפקד יצר בעצמו — ערבוב הפריטים המקומיים עם הפריטים
+   הכלל-טייסתיים הוא בדיוק מה שגרם לתמונה "כל מסגרת עם קרא-וחתום אחר,
+   ויש מסגרות בלי כלום": אין זהות ברורה למה שאחראי ההדרכה בעצם פרסם.
+   כאן כל פריט מוצג פעם אחת, עם סטטוס לכל מסגרת בנפרד: קיים+חתימות,
+   קיים+חסרות חתימות, או "לא נקלט במסגרת זו" (⚠️) אם הפרסום לא הגיע
+   לשם בפועל — כך שרואים גם כשלי הפצה, לא רק כשלי חתימה. */
 async function renderAdminSignatures(){
   const statsBox = document.getElementById("admin-sig-stats");
   const itemsBox = document.getElementById("admin-sig-items");
@@ -6238,49 +6244,63 @@ async function renderAdminSignatures(){
   if(!statsBox || !itemsBox || !histBox) return;
   statsBox.innerHTML = itemsBox.innerHTML = histBox.innerHTML = '<div style="text-align:center;padding:14px;color:var(--ink-3)">⏳ טוען…</div>';
 
-  let totalConfirms=0, maxC=0, totalItems=0, fullyDone=0;
-  const shedRows = [];
+  const adminItems = await getAdminEventsList();
   const historyAll = [];
-  for(const shed of SHEDS){
+  const perShedData = await Promise.all(SHEDS.map(async shed=>{
     const [personnel, events, hist] = await Promise.all([
       sGetIn(shed.id, "cfg_personnel").then(v=>v||[]),
       sGetIn(shed.id, "safety_events").then(v=>v||[]),
       sGetIn(shed.id, "sig_history").then(v=>v||[]),
     ]);
     hist.forEach(h=>historyAll.push({...h, shedName:shed.name}));
-    if(events.length===0) continue;
+    const eventIds = new Set(events.map(e=>e.id));
     const sigsArr = await Promise.all(personnel.map(p => sGetIn(shed.id, "sigs_"+safeName(p.name))));
     const sigsBy = {}; personnel.forEach((p,i)=> sigsBy[p.name] = sigsArr[i] || {});
-    const total = personnel.length;
-    const evRows = events.map(e=>{
-      const missing = personnel.filter(p=>!sigsBy[p.name][e.id]);
-      const c = total - missing.length;
-      totalConfirms += c; maxC += total; totalItems++;
-      if(total>0 && c===total) fullyDone++;
-      const cls = (total>0 && c===total) ? "g" : (c===0 ? "r" : "y");
-      return {e, c, total, cls, missing};
+    return {shed, personnel, eventIds, sigsBy};
+  }));
+
+  let totalConfirms=0, maxC=0, fullyDone=0, syncGaps=0;
+  const itemRows = adminItems.map(item=>{
+    const shedStatus = perShedData.map(({shed,personnel,eventIds,sigsBy})=>{
+      if(!eventIds.has(item.id)) return {shed, present:false, total:personnel.length};
+      const missing = personnel.filter(p=>!sigsBy[p.name][item.id]);
+      return {shed, present:true, c:personnel.length-missing.length, total:personnel.length, missing};
     });
-    shedRows.push({shed, evRows});
-  }
+    shedStatus.forEach(s=>{
+      if(!s.present){ syncGaps++; return; }
+      totalConfirms += s.c; maxC += s.total;
+    });
+    const relevantSheds = shedStatus.filter(s=>s.present && s.total>0);
+    const fullySigned = relevantSheds.length>0 && relevantSheds.every(s=>s.c===s.total);
+    const allDelivered = shedStatus.every(s=>s.present);
+    if(fullySigned && allDelivered) fullyDone++;
+    return {item, shedStatus, allDelivered};
+  });
   const pct = maxC ? Math.round(totalConfirms/maxC*100) : 0;
 
   statsBox.innerHTML = `<div class="sr-stats">
-    <div class="sr-stat"><b>${totalItems}</b><span>פריטים (כל המסגרות)</span></div>
+    <div class="sr-stat"><b>${adminItems.length}</b><span>פריטים שפורסמו</span></div>
     <div class="sr-stat"><b>${maxC}</b><span>חתימות נדרשות</span></div>
     <div class="sr-stat"><b class="${pct>=80?'g':''}">${pct}%</b><span>אישור כולל</span></div>
-    <div class="sr-stat"><b class="${totalItems&&fullyDone===totalItems?'g':''}">${fullyDone}/${totalItems}</b><span>הושלמו</span></div>
-  </div>`;
+    <div class="sr-stat"><b class="${adminItems.length&&fullyDone===adminItems.length?'g':''}">${fullyDone}/${adminItems.length}</b><span>הושלמו במלואם</span></div>
+  </div>
+  ${syncGaps?`<div class="sr-line" style="margin-top:8px"><span class="sr-tag r">⚠️ ${syncGaps} מקרים של פריט שלא נקלט במסגרת מסוימת</span></div>`:""}`;
 
-  itemsBox.innerHTML = shedRows.length ? shedRows.map(({shed,evRows})=>`
-    <div class="cmd-section-title" style="margin-top:14px">${escapeHTML(shed.name)}</div>
-    ${evRows.slice().reverse().map(({e,c,total,cls,missing})=>`
-      <div class="sr-ev">
-        <div class="sr-ev-top"><b>${escapeHTML(e.title)}</b><span class="sr-count ${cls}">${c}/${total}</span></div>
-        ${e.date?`<div class="sr-ev-date">📅 ${escapeHTML(e.date)}</div>`:""}
-        ${missing.length?`<div class="sr-line"><span class="sr-tag r">✗ טרם</span>${missing.map(p=>escapeHTML(p.name)).join("، ")}</div>`:'<div class="sr-line"><span class="sr-tag g">✓ כולם חתמו</span></div>'}
-        ${missing.length?`<button class="m-btn ghost" style="width:100%;margin-top:6px;font-size:12px" onclick="remindNonSigners('${e.id}','${jsStr(e.title)}')">📢 שלח תזכורת למפקדים — מי טרם ביצע</button>`:""}
-      </div>`).join("")}
-  `).join("") : `<div class="empty-state" style="padding:20px"><div class="ic">✍️</div><h3>אין עדיין פריטי קרא-וחתום</h3><p>יופיעו כאן ברגע שיתפרסמו, בכל מסגרת</p></div>`;
+  itemsBox.innerHTML = itemRows.length ? itemRows.slice().reverse().map(({item,shedStatus,allDelivered})=>{
+    const needsReminder = shedStatus.some(s=>s.present && s.missing && s.missing.length);
+    return `
+    <div class="sr-ev">
+      <div class="sr-ev-top"><b>${escapeHTML(item.title)}</b>${!allDelivered?'<span class="sr-count r">⚠️ לא בכל המסגרות</span>':""}</div>
+      ${item.date?`<div class="sr-ev-date">📅 ${escapeHTML(item.date)}</div>`:""}
+      ${shedStatus.map(s=>{
+        if(!s.present) return `<div class="sr-line"><span class="sr-tag r">${escapeHTML(s.shed.name)}</span>⚠️ לא נקלט במסגרת זו</div>`;
+        if(s.total===0) return `<div class="sr-line"><span class="sr-tag" style="background:#eee;color:var(--ink-3)">${escapeHTML(s.shed.name)}</span>אין צוות רשום</div>`;
+        const cls = s.c===s.total ? "g" : (s.c===0 ? "r" : "y");
+        return `<div class="sr-line"><span class="sr-tag ${cls}">${escapeHTML(s.shed.name)}: ${s.c}/${s.total}</span>${s.missing.length?s.missing.map(p=>escapeHTML(p.name)).join("، "):"כולם חתמו"}</div>`;
+      }).join("")}
+      ${needsReminder?`<button class="m-btn ghost" style="width:100%;margin-top:6px;font-size:12px" onclick="remindNonSigners('${item.id}','${jsStr(item.title)}')">📢 שלח תזכורת למפקדים — מי טרם ביצע</button>`:""}
+    </div>`;
+  }).join("") : `<div class="empty-state" style="padding:20px"><div class="ic">✍️</div><h3>אין עדיין פריטי קרא-וחתום שפורסמו לכל המסגרות</h3><p>יופיעו כאן ברגע שתפרסם פריט</p></div>`;
 
   historyAll.sort((a,b)=>b.ts-a.ts);
   const recent = historyAll.slice(0,40);
@@ -6297,8 +6317,12 @@ async function renderAdminSignatures(){
 async function remindNonSigners(eventId, eventTitle){
   const perShed = [];
   for(const shed of SHEDS){
-    const personnel = (await sGetIn(shed.id, "cfg_personnel")) || [];
+    const [personnel, events] = await Promise.all([
+      sGetIn(shed.id, "cfg_personnel").then(v=>v||[]),
+      sGetIn(shed.id, "safety_events").then(v=>v||[]),
+    ]);
     if(!personnel.length) continue;
+    if(!events.some(e=>e.id===eventId)) continue;   // הפריט לא הגיע לסככה זו — אין למי לתזכר, זה כשל הפצה ולא כשל חתימה
     const sigsArr = await Promise.all(personnel.map(p => sGetIn(shed.id, "sigs_"+safeName(p.name))));
     const missing = personnel.filter((p,i)=> !((sigsArr[i]||{})[eventId]));
     if(missing.length) perShed.push({shed, missing});
