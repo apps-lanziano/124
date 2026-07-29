@@ -1394,6 +1394,7 @@ nav{
       <!-- admin tabs -->
       <div class="cmd-tabs" style="margin-bottom:16px">
         <button class="cmd-tab active" id="atab-overview" onclick="adminTab('overview')">📊 סקירה</button>
+        <button class="cmd-tab" id="atab-signatures" onclick="adminTab('signatures')">✍️ חתימות</button>
         <button class="cmd-tab" id="atab-certs" onclick="adminTab('certs')">🎓 הסמכות</button>
         <button class="cmd-tab" id="atab-training" onclick="adminTab('training')">📚 הדרכה</button>
         <button class="cmd-tab" id="atab-reserves" onclick="adminTab('reserves')">🎖️ מילואים</button>
@@ -1413,6 +1414,17 @@ nav{
         <div id="admin-events-list"></div>
         <div class="cmd-section-title">📊 סטטוס לפי מסגרת · לחץ לצלילה</div>
         <div id="admin-sheds-grid"></div>
+      </div>
+
+      <!-- PANE: SIGNATURES — מיקרו-נתונים לכל מסגרת, תזכורת למפקדים, היסטוריה -->
+      <div class="admin-pane" id="apane-signatures">
+        <div class="cmd-section-title">📊 סטטוס חתימות · כלל הטייסת</div>
+        <div id="admin-sig-stats"></div>
+        <div class="cmd-section-title">📄 מעקב לפי מסגרת — מי חתם ומי טרם</div>
+        <div class="matrix-hint">כל פריט שלא הושלם כולל כפתור תזכורת למפקדי המסגרת</div>
+        <div id="admin-sig-items"></div>
+        <div class="cmd-section-title">🕐 היסטוריית חתימות אחרונות</div>
+        <div id="admin-sig-history"></div>
       </div>
 
       <!-- PANE: CERTS -->
@@ -3820,6 +3832,17 @@ function clearSig(){
   sigHasInk=false;
   document.getElementById("sig-save").disabled=true;
 }
+/* היסטוריית חתימות — יומן append-only נפרד מ-sigs_<name> (שהוא מצב חי,
+   נדרס בכל עדכון). גם אם הפריט עצמו נמחק/משתנה מאוחר יותר, ההיסטוריה
+   נשארת: מי חתם/אישר קריאה על מה, ומתי — לצורך מעקב וביקורת. */
+async function logSigHistory(eventId, eventTitle, type){
+  try{
+    const hist = (await sGet("sig_history")) || [];
+    hist.unshift({eventId, eventTitle, person:user, type, ts:Date.now(), date:new Date().toLocaleDateString("he-IL")});
+    if(hist.length > 500) hist.length = 500;
+    await sSet("sig_history", hist);
+  }catch(e){ console.error("sig history", e); }
+}
 async function saveSignature(){
   if(!sigHasInk || !currentDoc) return;
   const c = document.getElementById("sig-canvas");
@@ -3838,6 +3861,7 @@ async function saveSignature(){
   if(!ok){ toast("⚠️ החתימה לא נקלטה — בדוק חיבור רשת ונסה שוב"); return; }
   closeSignature();
   await logAction("חתימה על פריט", currentDoc.title);
+  await logSigHistory(currentDoc.id, currentDoc.title, "sig");
   toast("החתימה נקלטה — המסר אושר ✍️");
   await openReader(currentDoc.id);
   renderDocs();
@@ -3853,6 +3877,7 @@ async function confirmRead(){
   const ok = await sSet(key, reads);
   if(!ok){ toast("⚠️ האישור לא נקלט — בדוק חיבור רשת ונסה שוב"); return; }
   await logAction("אישור קריאה", currentDoc.title);
+  await logSigHistory(currentDoc.id, currentDoc.title, "read");
   toast("אישור הקריאה נקלט ✓");
   await openReader(currentDoc.id);
   renderDocs();
@@ -5067,6 +5092,7 @@ function openWaPrompt(kind, payload){
   else if(kind==="rollcall-complete"){ title.textContent="כל הכבוד! 🎉"; sub.textContent="דווח בוואטסאפ שהנכס הושלם וכולם תקינים"; }
   else if(kind==="binui"){ title.textContent="התקלה דווחה ✅"; sub.textContent="שלח עדכון לשחר שושן (מ״ע אחזקה) שנפתחה תקלת בינוי"; }
   else if(kind==="morning"){ title.textContent="תזכורת מטלות בוקר ⏰"; sub.textContent="שלח לקבוצת הוואטסאפ תזכורת שמטלות הבוקר טרם נסגרו"; }
+  else if(kind==="remind"){ title.textContent="התזכורת נשלחה למפקדים ✅"; sub.textContent="שלח את פירוט מי טרם חתם גם לקבוצת הוואטסאפ"; }
   // rebind the button fresh each time
   go.onclick = ()=>{
     if(kind==="event") shareEventWA(payload);
@@ -5078,6 +5104,7 @@ function openWaPrompt(kind, payload){
     else if(kind==="rollcall-complete") shareRollcallCompleteWA();
     else if(kind==="binui") shareBinuiFaultWA(payload);
     else if(kind==="morning") shareMorningReminderWA();
+    else if(kind==="remind") waShare(payload);
     modal.classList.remove("open");
   };
   modal.classList.add("open");
@@ -6262,6 +6289,101 @@ async function openAdminSafetyReport(){
   </div>`;
 }
 
+/* ===== לשונית "✍️ חתימות" בדשבורד אחראי הדרכה =====
+   מציגה מסך קבוע (לא מודל חד-פעמי): מיקרו-נתונים לכל מסגרת — מי חתם
+   ומי טרם, כפתור תזכורת למפקדים לכל פריט לא-שלם, והיסטוריית חתימות
+   כרונולוגית (sig_history) שנשארת גם אם הפריט עצמו נמחק/משתנה בהמשך. */
+async function renderAdminSignatures(){
+  const statsBox = document.getElementById("admin-sig-stats");
+  const itemsBox = document.getElementById("admin-sig-items");
+  const histBox = document.getElementById("admin-sig-history");
+  if(!statsBox || !itemsBox || !histBox) return;
+  statsBox.innerHTML = itemsBox.innerHTML = histBox.innerHTML = '<div style="text-align:center;padding:14px;color:var(--ink-3)">⏳ טוען…</div>';
+
+  let totalConfirms=0, maxC=0, totalItems=0, fullyDone=0;
+  const shedRows = [];
+  const historyAll = [];
+  for(const shed of SHEDS){
+    const [personnel, events, hist] = await Promise.all([
+      sGetIn(shed.id, "cfg_personnel").then(v=>v||[]),
+      sGetIn(shed.id, "safety_events").then(v=>v||[]),
+      sGetIn(shed.id, "sig_history").then(v=>v||[]),
+    ]);
+    hist.forEach(h=>historyAll.push({...h, shedName:shed.name}));
+    if(events.length===0) continue;
+    const sigsArr = await Promise.all(personnel.map(p => sGetIn(shed.id, "sigs_"+safeName(p.name))));
+    const sigsBy = {}; personnel.forEach((p,i)=> sigsBy[p.name] = sigsArr[i] || {});
+    const total = personnel.length;
+    const evRows = events.map(e=>{
+      const missing = personnel.filter(p=>!sigsBy[p.name][e.id]);
+      const c = total - missing.length;
+      totalConfirms += c; maxC += total; totalItems++;
+      if(total>0 && c===total) fullyDone++;
+      const cls = (total>0 && c===total) ? "g" : (c===0 ? "r" : "y");
+      return {e, c, total, cls, missing};
+    });
+    shedRows.push({shed, evRows});
+  }
+  const pct = maxC ? Math.round(totalConfirms/maxC*100) : 0;
+
+  statsBox.innerHTML = `<div class="sr-stats">
+    <div class="sr-stat"><b>${totalItems}</b><span>פריטים (כל המסגרות)</span></div>
+    <div class="sr-stat"><b>${maxC}</b><span>חתימות נדרשות</span></div>
+    <div class="sr-stat"><b class="${pct>=80?'g':''}">${pct}%</b><span>אישור כולל</span></div>
+    <div class="sr-stat"><b class="${totalItems&&fullyDone===totalItems?'g':''}">${fullyDone}/${totalItems}</b><span>הושלמו</span></div>
+  </div>`;
+
+  itemsBox.innerHTML = shedRows.length ? shedRows.map(({shed,evRows})=>`
+    <div class="cmd-section-title" style="margin-top:14px">${escapeHTML(shed.name)}</div>
+    ${evRows.slice().reverse().map(({e,c,total,cls,missing})=>`
+      <div class="sr-ev">
+        <div class="sr-ev-top"><b>${escapeHTML(e.title)}</b><span class="sr-count ${cls}">${c}/${total}</span></div>
+        ${e.date?`<div class="sr-ev-date">📅 ${escapeHTML(e.date)}</div>`:""}
+        ${missing.length?`<div class="sr-line"><span class="sr-tag r">✗ טרם</span>${missing.map(p=>escapeHTML(p.name)).join("، ")}</div>`:'<div class="sr-line"><span class="sr-tag g">✓ כולם חתמו</span></div>'}
+        ${missing.length?`<button class="m-btn ghost" style="width:100%;margin-top:6px;font-size:12px" onclick="remindNonSigners('${e.id}','${jsStr(e.title)}')">📢 שלח תזכורת למפקדים — מי טרם ביצע</button>`:""}
+      </div>`).join("")}
+  `).join("") : `<div class="empty-state" style="padding:20px"><div class="ic">✍️</div><h3>אין עדיין פריטי קרא-וחתום</h3><p>יופיעו כאן ברגע שיתפרסמו, בכל מסגרת</p></div>`;
+
+  historyAll.sort((a,b)=>b.ts-a.ts);
+  const recent = historyAll.slice(0,40);
+  histBox.innerHTML = recent.length ? recent.map(h=>`
+    <div class="audit-row">
+      <div class="audit-main"><b>${h.type==="sig"?"✍️ חתם/ה":"✓ אישר/ה קריאה"}</b> · <span>${escapeHTML(h.eventTitle||"")}</span></div>
+      <div class="audit-meta">${escapeHTML(h.shedName)} · ${escapeHTML(h.person||"")} · ${fmtLogTime(h.ts)}</div>
+    </div>`).join("") : `<div class="empty-state" style="padding:14px"><div class="ic">🕐</div><p>אין עדיין היסטוריית חתימות</p></div>`;
+}
+
+/* שולח תזכורת "מי טרם ביצע" למפקדי כל מסגרת שיש בה מי שטרם חתם על הפריט —
+   כהודעה דחופה בלוח ההודעות המסגרתי (נראית לכולם, כמו כל הודעה אחרת),
+   ובנוסף מציע לשתף את הפירוט המרוכז גם בוואטסאפ. */
+async function remindNonSigners(eventId, eventTitle){
+  const perShed = [];
+  for(const shed of SHEDS){
+    const personnel = (await sGetIn(shed.id, "cfg_personnel")) || [];
+    if(!personnel.length) continue;
+    const sigsArr = await Promise.all(personnel.map(p => sGetIn(shed.id, "sigs_"+safeName(p.name))));
+    const missing = personnel.filter((p,i)=> !((sigsArr[i]||{})[eventId]));
+    if(missing.length) perShed.push({shed, missing});
+  }
+  if(!perShed.length){ toast("כולם חתמו — אין למי לשלוח תזכורת ✅"); return; }
+
+  let allOk = true;
+  for(const {shed, missing} of perShed){
+    const text = `⚠️ תזכורת קרא-וחתום: "${eventTitle}" — ${missing.length} טרם חתמו: ${missing.map(p=>p.name).join("، ")}`;
+    const list = (await sGetIn(shed.id, "messages_list")) || [];
+    list.unshift({id:"msg_"+Date.now()+Math.random().toString(36).slice(2,6), text, type:"urgent", by:squadronPublisher(), date:new Date().toLocaleDateString("he-IL")});
+    if(!(await sSetIn(shed.id, "messages_list", list))) allOk = false;
+  }
+  if(!allOk){ toast("⚠️ השליחה נכשלה בחלק מהמסגרות — נסה שוב"); return; }
+  await logAdminAction("תזכורת קרא-וחתום למפקדים", eventTitle);
+  toast("תזכורת נשלחה למפקדי המסגרות הרלוונטיות 📢");
+
+  const waText = "⚠️ *תזכורת קרא-וחתום — " + eventTitle + "*\n━━━━━━━━━━━━━━\n" +
+    perShed.map(({shed,missing})=>`*${shed.name}:* ${missing.map(p=>p.name).join("، ")}`).join("\n") +
+    "\n\n🔗 " + SITE_URL;
+  openWaPrompt("remind", waText);
+}
+
 /* ============================================================
    SUPER-ADMIN (מנהל-על)
    ============================================================ */
@@ -7304,10 +7426,11 @@ async function publishBoardToAllSheds(id, label, thumb, fullImg){
    ADMIN v20: certs matrix, expiries, cert bank, training, log, drill
    ============================================================ */
 function adminTab(which){
-  ["overview","certs","training","reserves","log"].forEach(w=>{
+  ["overview","signatures","certs","training","reserves","log"].forEach(w=>{
     document.getElementById("atab-"+w).classList.toggle("active", which===w);
     document.getElementById("apane-"+w).classList.toggle("active", which===w);
   });
+  if(which==="signatures") renderAdminSignatures();
   if(which==="certs") renderAdminCerts();
   if(which==="training") renderAdminTraining();
   if(which==="reserves") renderReserves();
