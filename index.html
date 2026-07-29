@@ -3986,6 +3986,7 @@ async function saveEvent(){
       // מנהל — פרסום לכל המסגרות
       const ok = await publishEventToAllSheds(id, title, evFileMeta, evImgData, thumb);
       if(!ok){ toast("⚠️ הפרסום נכשל בחלק מהמסגרות — נסה שוב"); return; }
+      await logAdminAction("פרסום קרא-וחתום לכל המסגרות", title);
       closeAddEvent();
       toast("הפריט פורסם לכל המסגרות 📢");
       renderAdminDashboard();
@@ -4764,6 +4765,7 @@ function onBoardFile(e){
         window._adminBoardPublish = false;
         const ok = await publishBoardToAllSheds(id, label, thumb, data);
         if(!ok){ toast("⚠️ העלאת הלוח נכשלה בחלק מהמסגרות — נסה שוב"); return; }
+        await logAdminAction("פרסום לוח צוות לכל המסגרות", label);
         toast("הלוח החדש פורסם לכל המסגרות · הישן הוחלף 📅");
         renderAdminDashboard();
         openWaPrompt("board");
@@ -5158,6 +5160,18 @@ function escapeHTML(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<
 function jsStr(s){ return String(s).replace(/[^a-zA-Z0-9_]/g, c=>"\\u"+c.charCodeAt(0).toString(16).padStart(4,"0")); }
 
 /* ============ AUDIT LOG (feature 2) ============ */
+/* יומן פעולות כלל-טייסתיות — נפרד מ-logAction (ששייך לסככה ספציפית).
+   בלי זה, לפעולות פרסום/מחיקה של מפקד "הדרכה"/"מ״ע אחזקה"/מנהל-על
+   (isAdmin=true) לא היה שום תיעוד מי ומתי — מה שהפך שאלות כמו "מי מחק
+   את הפריט הזה" לבלתי ניתנות לבירור. */
+async function logAdminAction(action, detail){
+  try{
+    const log = (await sGetRaw("admin_audit_log")) || [];
+    log.unshift({ts:Date.now(), by:user||squadronPublisher(), role:userRole||"מנהל-על", action, detail:detail||""});
+    if(log.length > 200) log.length = 200;
+    await sSetRaw("admin_audit_log", log);
+  }catch(e){ console.error("admin audit", e); }
+}
 async function logAction(action, detail){
   if(!currentShed || isAdmin) return;   // נרשם ברמת הסככה
   try{
@@ -5389,6 +5403,7 @@ async function saveMessage(){
     adminList.unshift({...msgObj, by:squadronPublisher()});
     if(!(await sSetRaw("admin_messages", adminList))) allOk = false;
     if(!allOk){ toast("⚠️ הפרסום נכשל בחלק מהמסגרות — נסה שוב"); return; }
+    await logAdminAction("פרסום הודעה לכל המסגרות", text.slice(0,40));
     toast("ההודעה פורסמה לכל המסגרות 📢");
   } else {
     const msgs = (await sGet("messages_list")) || [];
@@ -5416,6 +5431,7 @@ async function renderMsgExisting(){
 async function deleteMessage(id, fromModal){
   if(!confirm("להסיר את ההודעה מהלוח?")) return;
   let ok = true;
+  let removedText = id;
   if(isAdmin){
     for(const shed of SHEDS){
       let list = (await sGetIn(shed.id, "messages_list")) || [];
@@ -5423,6 +5439,8 @@ async function deleteMessage(id, fromModal){
       if(!(await sSetIn(shed.id, "messages_list", list))) ok = false;
     }
     let adminList = (await sGetRaw("admin_messages")) || [];
+    const removed = adminList.find(m=>m.id===id);
+    if(removed) removedText = removed.text.slice(0,40);
     adminList = adminList.filter(m=>m.id!==id);
     if(!(await sSetRaw("admin_messages", adminList))) ok = false;
   } else {
@@ -5437,6 +5455,7 @@ async function deleteMessage(id, fromModal){
     ok = await sSet("messages_list", msgs);
   }
   if(!ok){ toast("⚠️ המחיקה נכשלה בחלק מהמסגרות — נסה שוב"); return; }
+  if(isAdmin) await logAdminAction("מחיקת הודעה מכל המסגרות", removedText);
   renderMessages();
   if(fromModal) renderMsgExisting();
   toast("ההודעה הוסרה");
@@ -7232,6 +7251,7 @@ async function renderAdminEvents(){
 async function deleteAdminEvent(id){
   if(!confirm("למחוק את הפריט מכל המסגרות? הפעולה אינה הפיכה.")) return;
   let list = await getAdminEventsList();
+  const removed = list.find(e=>e.id===id);
   list = list.filter(e=>e.id!==id);
   let ok = await sSetRaw("admin_events", list);
   for(const shed of SHEDS){
@@ -7241,6 +7261,7 @@ async function deleteAdminEvent(id){
     await sDelRaw(shed.id+"_safety_ev_"+id);
   }
   if(!ok){ toast("⚠️ המחיקה נכשלה בחלק מהמסגרות — נסה שוב"); return; }
+  await logAdminAction("מחיקת קרא-וחתום מכל המסגרות", removed?removed.title:id);
   renderAdminEvents();
   toast("הפריט נמחק מכל המסגרות 🗑️");
 }
@@ -7573,6 +7594,7 @@ function onTrainingFile(e){
         while(data.length>700_000 && tries<6){ q-=.1; data=c.toDataURL("image/jpeg",Math.max(.3,q)); tries++; }
         const ok = await publishTrainingToAllSheds(id, file.name, ftype, data, data);
         if(!ok){ toast("⚠️ העלאת חומר ההדרכה נכשלה — נסה שוב"); return; }
+        await logAdminAction("פרסום חומר הדרכה לכל המסגרות", file.name);
         toast("חומר ההדרכה פורסם לכל המסגרות 📚");
         renderAdminTraining();
       };
@@ -7586,6 +7608,7 @@ function onTrainingFile(e){
       if(data.length > 900_000){ toast("⚠️ הקובץ גדול מדי (מקס' ~650KB)"); return; }
       const ok = await publishTrainingToAllSheds(id, file.name, ftype, data, null);
       if(!ok){ toast("⚠️ העלאת חומר ההדרכה נכשלה — נסה שוב"); return; }
+      await logAdminAction("פרסום חומר הדרכה לכל המסגרות", file.name);
       toast("חומר ההדרכה פורסם לכל המסגרות 📚");
       renderAdminTraining();
     };
@@ -7733,6 +7756,7 @@ async function renderAdminTraining(){
 async function deleteTraining(id){
   if(!confirm("למחוק את חומר ההדרכה מכל המסגרות?")) return;
   let list = await getTrainingList();
+  const removed = list.find(t=>t.id===id);
   list = list.filter(t=>t.id!==id);
   let ok = await sSetRaw("admin_training", list);
   await sDelRaw("admin_training_file_"+id);
@@ -7743,6 +7767,7 @@ async function deleteTraining(id){
     await sDelRaw(shed.id+"_training_file_"+id);
   }
   if(!ok){ toast("⚠️ המחיקה נכשלה בחלק מהמסגרות — נסה שוב"); return; }
+  await logAdminAction("מחיקת חומר הדרכה מכל המסגרות", removed?removed.title:id);
   renderAdminTraining();
   toast("חומר ההדרכה נמחק");
 }
@@ -7756,6 +7781,9 @@ async function renderAdminLog(){
     const log = (await sGetIn(shed.id, "audit_log")) || [];
     log.forEach(l=>all.push({...l, shed:shed.name}));
   }));
+  // פעולות כלל-טייסתיות (פרסום/מחיקה של מפקדי הדרכה/אחזקה/מנהל-על) — ראו logAdminAction
+  const adminLog = (await sGetRaw("admin_audit_log")) || [];
+  adminLog.forEach(l=>all.push({...l, shed:"🏛️ כלל הטייסת"}));
   all.sort((a,b)=>b.ts-a.ts);
   all = all.slice(0,150);
   if(all.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">📜</div><h3>אין עדיין פעולות</h3><p>פעולות מכל המסגרות יופיעו כאן</p></div>'; return; }
