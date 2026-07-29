@@ -1096,6 +1096,12 @@ nav{
           <button class="add-btn hidden" id="add-event-btn" onclick="openAddEvent()">+ פריט</button>
         </div>
       </div>
+      <!-- מוצג רק למפקדי "הדרכה"/"מ״ע אחזקה" — מזהיר שהכפתור "+ פריט" כאן מפרסם
+           לצוות המקומי שלהם בלבד, לא לכל הטייסת (יש להם כפתור ייעודי לזה בדשבורד) -->
+      <div id="safety-scope-note" class="hidden" style="background:var(--gold-soft);border:1px solid #f0dfa8;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--ink-2);line-height:1.6">
+        ⚠️ כפתור "+ פריט" כאן מפרסם <b>רק לצוות שלך</b> — לא לכל הטייסת.
+        לפרסום קרא-וחתום לכל המסגרות, השתמש בכפתור "📄 פרסום קרא וחתום · לכל המסגרות" בדשבורד שלך.
+      </div>
       <div class="search-box" id="safety-search-box" style="display:none">
         <span class="search-ic">🔍</span>
         <input type="text" id="safety-search" placeholder="חיפוש לפי כותרת או תאריך…" oninput="renderDocs()">
@@ -3433,6 +3439,12 @@ async function doLogin(){
        קיימים להן ברמה הטייסתית (רכבים ותקלות בינוי במסכי מ״ע אחזקה,
        הסמכות והדרכה בדשבורד אחראי ההדרכה — שם רואים את כל הטייסת).
        נשארים: קרא וחתום, הודעות, נכס, ימי הולדת וניהול צוות. */
+    // מפקדי "הדרכה"/"מ״ע אחזקה" רואים גם את "+ פריט" המקומי וגם כפתור פרסום-לכל-הטייסת
+    // בדשבורד שלהם — הבהרה כדי שלא יפרסמו קרא-וחתום מיועד לכולם רק מקומית בטעות
+    const isRoleFrameworkCmdr = !!(currentShed && (currentShed.isMaint || currentShed.isTraining) && userRole==="מפקד");
+    document.getElementById("safety-scope-note").classList.toggle("hidden", !isRoleFrameworkCmdr);
+    if(addBtn) addBtn.textContent = isRoleFrameworkCmdr ? "+ פריט (לצוות שלי)" : "+ פריט";
+
     if(currentShed && (currentShed.isMaint || currentShed.isTraining)){
       [ "nav-tools",        // חדר כלים
         "tools-add-btn",
