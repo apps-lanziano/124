@@ -3531,6 +3531,16 @@ async function doLogin(){
       document.getElementById("tab-morning").classList.remove("hidden");
     }
 
+    /* אחראי הדרכה — דשבורד המפקד ("תמונת מצב — מפקד") מוסר לגמרי.
+       הוא הציג מגמות וחתימות של מסגרת "הדרכה" בלבד — מסגרת תפקידית עם
+       צוות זעיר — לצד "מרכז שליטה" הכלל-טייסתי. שני דשבורדים עם אותן
+       כותרות ונתונים שונים בתכלית הם בדיוק מקור הבלבול. נשאר דשבורד אחד:
+       מרכז השליטה, שמציג את כל הטייסת. (כפתור "לדשבורד" נסמך על נראות
+       nav-cmd ולכן נעלם מעצמו.) */
+    if(userRole === "מפקד" && currentShed.isTraining){
+      document.getElementById("nav-cmd").classList.add("hidden");
+    }
+
     // מסגרות שהומרו מיוזר פרטי — המפקד שלהן מקבל בנוסף את ההרשאות הטייסתיות שלו
     if(userRole === "מפקד" && currentShed.isTraining) await applyTrainingCommanderPowers();
     if(userRole === "מפקד" && currentShed.isMaint)    await applyMaintCommanderPowers();
