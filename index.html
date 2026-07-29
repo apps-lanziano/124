@@ -3024,6 +3024,28 @@ async function sDel(key, shared=true){ return sDelRaw(shedKey(key), shared); }
 async function sGetIn(shedId, key){ return sGetRaw(shedId + "_" + key); }
 async function sSetIn(shedId, key, val){ return sSetRaw(shedId + "_" + key, val); }
 
+/* ===== כתיבה בטוחה לרשימת הצוות — מניעת "דריסת עדכון" (lost update) =====
+   כל מכשיר מחזיק בזיכרון עותק שלם של PERSONNEL, ורשימת הצוות נשמרת
+   כמסמך אחד. כתיבה של העותק שבזיכרון במלואו דורסת כל שינוי שמכשיר אחר
+   ביצע מאז שהעותק שלנו נטען. זה מה שמחק PIN-ים של חיילים: חייל הגדיר
+   PIN בטלפון שלו, ואז מפקד ששמר שינוי כלשהו בניהול הצוות (עם עותק
+   שנטען עוד לפני כן) החזיר את הרשימה כולה למצב שבו ה-PIN לא היה קיים.
+
+   הפתרון: קוראים את הרשימה העדכנית רגע לפני הכתיבה, מחילים עליה רק את
+   השינוי שלנו, וכותבים אותה. אם הקריאה נכשלה (רשת) — לא כותבים כלל,
+   כדי לא לדרוס בעיוורון. המוטטור משנה את המערך במקום (in-place), ויכול
+   להחזיר false כדי לבטל את הפעולה (למשל: האדם כבר לא קיים ברשימה). */
+async function mutatePersonnel(mutate){
+  fbReadFailed = false;
+  const fresh = await sGet("cfg_personnel");
+  if(fbReadFailed) return false;                      // כשל קריאה — עדיף לא לשמור מאשר לדרוס
+  const list = (Array.isArray(fresh) && fresh.length) ? fresh : PERSONNEL.slice();
+  if(mutate(list) === false) return false;            // המוטטור ביטל
+  if(!(await sSet("cfg_personnel", list))) return false;
+  PERSONNEL = list;
+  return true;
+}
+
 /* ============ LOGIN ============ */
 /* ===== SHEDS =====
    רשימת המסגרות. שים לב: קודי הכניסה כבר אינם כאן (ולא בשום מקום במקור) —
@@ -3346,8 +3368,11 @@ function populateLogin(){
 async function selfRegister(){
   const name = (document.getElementById("selfreg-name").value || "").trim();
   if(name.length < 2){ toast("נא להזין שם מלא"); return; }
-  PERSONNEL.push({name, role:"מפקד", bday:"2000-01-01"});
-  await sSet("cfg_personnel", PERSONNEL);
+  const saved = await mutatePersonnel(list=>{
+    if(list.some(x=>x.name===name)) return false;
+    list.push({name, role:"מפקד", bday:"2000-01-01"});
+  });
+  if(!saved){ toast("⚠️ הרישום לא נשמר — בדוק חיבור ונסה שוב"); return; }
   toast("נרשמת כמפקד " + currentShed.name + " ✓");
   populateLogin();
   document.getElementById("login-select").value = name;
@@ -3400,9 +3425,18 @@ async function doLogin(){
       if(!validPinFormat(entered)){ toast("PIN חייב להיות 4 ספרות ⛔"); pinEl.focus(); return; }
       if(isReservedCode(entered)){ toast("קוד זה שמור למסגרת — בחר קוד אחר ⛔"); pinEl.value=""; pinEl.focus(); return; }
       const salt = genSalt();
-      person.pinHash = await hashPin(entered, salt); person.pinSalt = salt;
-      person.pinSetBy = person.name + " (עצמי)"; person.pinSetAt = new Date().toLocaleDateString("he-IL");
-      await sSet("cfg_personnel", PERSONNEL);
+      const newHash = await hashPin(entered, salt);
+      const setAt = new Date().toLocaleDateString("he-IL");
+      // כתיבה ממוזגת — כדי שהגדרת PIN של חייל אחד לא תדרוס PIN שחייל אחר
+      // הגדיר באותן דקות (ראו ההערה ב-mutatePersonnel)
+      const pinSaved = await mutatePersonnel(list=>{
+        const m = list.find(x=>x.name===person.name);
+        if(!m) return false;
+        m.pinHash = newHash; m.pinSalt = salt;
+        m.pinSetBy = person.name + " (עצמי)"; m.pinSetAt = setAt;
+      });
+      if(!pinSaved){ toast("⚠️ הגדרת ה-PIN לא נשמרה — בדוק חיבור ונסה שוב"); pinEl.focus(); return; }
+      person.pinHash = newHash; person.pinSalt = salt;   // סנכרון העותק המקומי להמשך ההתחברות
       toast("ה-PIN האישי שלך נקבע 🔒");
     }
   }
@@ -5988,15 +6022,20 @@ async function saveTeamMember(){
   };
 
   if(editMemberIdx>=0){
-    // edit existing
-    const p = PERSONNEL[editMemberIdx];
-    const oldName = p.name;
-    p.name=name; p.role=role; p.bday=bday||"2000-01-01";
-    if(release) p.release=release; else delete p.release;
-    if(isDeptUnit){ if(dept) p.dept=dept; else delete p.dept; if(officerTag) p.officerTag=officerTag; else delete p.officerTag; }
-    else if(profession) p.profession=profession; else delete p.profession;
-    if(reserve){ p.reserve=true; if(!p.refresh) p.refresh=todayISO(); } else { delete p.reserve; delete p.refresh; }
-    applyPin(p);
+    // edit existing — הזיהוי בעותק הטרי נעשה לפי השם הישן, וכל שאר אנשי
+    // הצוות נשארים כפי שהם בשרת (כולל PIN שמישהו הגדיר בינתיים)
+    const oldName = PERSONNEL[editMemberIdx] ? PERSONNEL[editMemberIdx].name : name;
+    const saved = await mutatePersonnel(list=>{
+      const p = list.find(x=>x.name===oldName);
+      if(!p) return false;
+      p.name=name; p.role=role; p.bday=bday||"2000-01-01";
+      if(release) p.release=release; else delete p.release;
+      if(isDeptUnit){ if(dept) p.dept=dept; else delete p.dept; if(officerTag) p.officerTag=officerTag; else delete p.officerTag; }
+      else if(profession) p.profession=profession; else delete p.profession;
+      if(reserve){ p.reserve=true; if(!p.refresh) p.refresh=todayISO(); } else { delete p.reserve; delete p.refresh; }
+      applyPin(p);
+    });
+    if(!saved){ toast("⚠️ העדכון לא נשמר — רענן את המסך ונסה שוב"); return; }
     if(oldName!==name) await renamePersonEverywhere(oldName, name);
     toast("הפרטים עודכנו ✓");
   } else {
@@ -6006,7 +6045,11 @@ async function saveTeamMember(){
     if(isDeptUnit){ if(dept) member.dept=dept; if(officerTag) member.officerTag=officerTag; }
     else if(profession) member.profession=profession;
     applyPin(member);
-    PERSONNEL.push(member);
+    const saved = await mutatePersonnel(list=>{
+      if(list.some(x=>x.name===name)) return false;   // נוסף בינתיים ממכשיר אחר
+      list.push(member);
+    });
+    if(!saved){ toast("⚠️ ההוספה לא נשמרה — ייתכן שהשם כבר קיים; רענן ונסה שוב"); return; }
     // חייל חדש בסככה (לא במחלקות) מקבל אוטומטית שלב 7 — הספירה לשלב 10 מתחילה מהיום
     // פקיד כלים ואיש מילואים לא עוברים מסלול הסמכות (לא שלבים ולא PF)
     if(role==="חייל" && !isDeptUnit && profession!=="פקיד כלים" && !reserve){
@@ -6016,7 +6059,6 @@ async function saveTeamMember(){
     }
     toast("איש הצוות נוסף ✓");
   }
-  await sSet("cfg_personnel", PERSONNEL);
   cancelEditMember();
   tmShowForm(false);   // אחרי שמירה — חוזרים לרשימת הצוות
   renderTeamMgmt(); populateLogin(); renderBdays();
@@ -6032,8 +6074,12 @@ async function removePersonCerts(name){
 async function removeTeamMember(i){
   if(!confirm(`להסיר את ${PERSONNEL[i].name} מהצוות?`)) return;
   const name = PERSONNEL[i].name;
-  PERSONNEL.splice(i,1);
-  await sSet("cfg_personnel", PERSONNEL);
+  const saved = await mutatePersonnel(list=>{
+    const idx = list.findIndex(x=>x.name===name);
+    if(idx<0) return false;
+    list.splice(idx,1);
+  });
+  if(!saved){ toast("⚠️ ההסרה לא נשמרה — רענן את המסך ונסה שוב"); return; }
   await removePersonCerts(name);
   if(editMemberIdx===i) cancelEditMember();
   renderTeamMgmt(); populateLogin(); renderBdays();
@@ -6044,14 +6090,15 @@ async function removeTeamMember(i){
 async function processReleases(){
   if(!currentShed) return;
   const today = todayKey();
-  const before = PERSONNEL.length;
   const released = PERSONNEL.filter(p=> p.release && p.release <= today);
-  const stayed = PERSONNEL.filter(p=> !(p.release && p.release <= today));
-  if(stayed.length !== before){
-    PERSONNEL = stayed;
-    await sSet("cfg_personnel", PERSONNEL);
-    for(const p of released){ await removePersonCerts(p.name); }
-  }
+  if(!released.length) return;
+  const saved = await mutatePersonnel(list=>{
+    const stayed = list.filter(p=> !(p.release && p.release <= today));
+    if(stayed.length === list.length) return false;
+    list.length = 0; list.push(...stayed);
+  });
+  if(!saved) return;   // שקט בכוונה — פעולה אוטומטית ברקע, תרוץ שוב בכניסה הבאה
+  for(const p of released){ await removePersonCerts(p.name); }
 }
 
 /* שלב 7 ניתן אוטומטית עם הצטרפות חייל; שנה בדיוק אחרי — הופך אוטומטית לשלב 10 סף */
