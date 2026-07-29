@@ -1096,12 +1096,6 @@ nav{
           <button class="add-btn hidden" id="add-event-btn" onclick="openAddEvent()">+ פריט</button>
         </div>
       </div>
-      <!-- מוצג רק למפקדי "הדרכה"/"מ״ע אחזקה" — מזהיר שהכפתור "+ פריט" כאן מפרסם
-           לצוות המקומי שלהם בלבד, לא לכל הטייסת (יש להם כפתור ייעודי לזה בדשבורד) -->
-      <div id="safety-scope-note" class="hidden" style="background:var(--gold-soft);border:1px solid #f0dfa8;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--ink-2);line-height:1.6">
-        ⚠️ כפתור "+ פריט" כאן מפרסם <b>רק לצוות שלך</b> — לא לכל הטייסת.
-        לפרסום קרא-וחתום לכל המסגרות, השתמש בכפתור "📄 פרסום קרא וחתום · לכל המסגרות" בדשבורד שלך.
-      </div>
       <div class="search-box" id="safety-search-box" style="display:none">
         <span class="search-ic">🔍</span>
         <input type="text" id="safety-search" placeholder="חיפוש לפי כותרת או תאריך…" oninput="renderDocs()">
@@ -1982,6 +1976,18 @@ nav{
       <div class="modal-actions" style="margin-top:12px;display:flex;gap:8px">
         <button class="m-btn primary" onclick="exportSafetyReport()" style="flex:1">📸 ייצוא כתמונה</button>
         <button class="m-btn ghost" onclick="document.getElementById('safety-report-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCOPE CHOICE — למפקדי "הדרכה"/"מ״ע אחזקה" בלבד: היכן לפרסם (מקומי/כלל-טייסתי) -->
+  <div class="modal-bg" id="scope-choice-modal">
+    <div class="modal">
+      <h3 id="scope-choice-title">היכן לפרסם?</h3>
+      <div class="m-sub" id="scope-choice-sub"></div>
+      <div class="modal-actions" style="flex-direction:column;gap:10px">
+        <button class="m-btn primary" id="scope-choice-all" style="width:100%">📢 פרסום לכל הטייסת</button>
+        <button class="m-btn ghost" id="scope-choice-local" style="width:100%">👤 פרסום מקומי (לצוות שלי בלבד)</button>
       </div>
     </div>
   </div>
@@ -3443,12 +3449,6 @@ async function doLogin(){
        קיימים להן ברמה הטייסתית (רכבים ותקלות בינוי במסכי מ״ע אחזקה,
        הסמכות והדרכה בדשבורד אחראי ההדרכה — שם רואים את כל הטייסת).
        נשארים: קרא וחתום, הודעות, נכס, ימי הולדת וניהול צוות. */
-    // מפקדי "הדרכה"/"מ״ע אחזקה" רואים גם את "+ פריט" המקומי וגם כפתור פרסום-לכל-הטייסת
-    // בדשבורד שלהם — הבהרה כדי שלא יפרסמו קרא-וחתום מיועד לכולם רק מקומית בטעות
-    const isRoleFrameworkCmdr = !!(currentShed && (currentShed.isMaint || currentShed.isTraining) && userRole==="מפקד");
-    document.getElementById("safety-scope-note").classList.toggle("hidden", !isRoleFrameworkCmdr);
-    if(addBtn) addBtn.textContent = isRoleFrameworkCmdr ? "+ פריט (לצוות שלי)" : "+ פריט";
-
     if(currentShed && (currentShed.isMaint || currentShed.isTraining)){
       [ "nav-tools",        // חדר כלים
         "tools-add-btn",
@@ -3854,11 +3854,33 @@ async function confirmRead(){
   renderDocs();
 }
 
+/* ===== בחירת היקף פרסום — למפקדי "הדרכה"/"מ״ע אחזקה" בלבד =====
+   שתי המסגרות האלה תפקידיות, לא מבצעיות: יש להן גם רשימה מקומית משלהן
+   (לצוות התפקידי עצמו) וגם כפתור ייעודי לפרסום כלל-טייסתי בדשבורד שלהן.
+   קרה בפועל פעמיים שפרסום התכוון להגיע לכולם אבל פורסם מקומי בלבד בטעות —
+   ולכן לא די באזהרה פסיבית: הלחיצה עוצרת ודורשת בחירה מפורשת. שאר המפקדים
+   (סככות/מחלקות) לא מושפעים כלל — אצלם "onLocal" רץ מיד כרגיל. */
+function needsScopeChoice(){
+  return !!(currentShed && (currentShed.isMaint || currentShed.isTraining) && userRole==="מפקד");
+}
+function chooseScopeThen(subText, onAll, onLocal){
+  if(!needsScopeChoice()){ onLocal(); return; }
+  document.getElementById("scope-choice-sub").textContent = subText;
+  const allBtn = document.getElementById("scope-choice-all");
+  const localBtn = document.getElementById("scope-choice-local");
+  allBtn.onclick = ()=>{ document.getElementById("scope-choice-modal").classList.remove("open"); onAll(); };
+  localBtn.onclick = ()=>{ document.getElementById("scope-choice-modal").classList.remove("open"); onLocal(); };
+  document.getElementById("scope-choice-modal").classList.add("open");
+}
+
 /* ============ ADD EVENT (commander) ============ */
 function openAddEvent(){
   if(userRole !== "מפקד" && !isAdmin){ toast("העלאת פריט — מפקדים בלבד ⛔"); return; }
-  window._adminPublish = false;
-  openAddEventRaw();
+  chooseScopeThen(
+    "פרסום קרא-וחתום — לכל המסגרות (כל הטייסת רואה ומקבלת התראה), או רק לצוות שלך במסגרת הזו?",
+    ()=>openAdminEvent(),
+    ()=>{ window._adminPublish = false; openAddEventRaw(); }
+  );
 }
 function openAddEventRaw(){
   evImgData = null; evFileMeta = null;
@@ -4671,7 +4693,7 @@ async function renderBoard(){
   const canManage = userRole === "מפקד";
   let html = "";
   if(canManage){
-    html += `<div class="board-add-btn" onclick="document.getElementById('board-input').click()">
+    html += `<div class="board-add-btn" onclick="triggerBoardUpload()">
       <div class="up-ic">📤</div>
       <h3>העלאת לוח צוות חדש</h3>
       <p>לחץ להעלאת צילום מסך של לוח שבועי</p>
@@ -4699,6 +4721,16 @@ async function renderBoard(){
   area.innerHTML = html;
 }
 
+/* כפתור "העלאת לוח צוות חדש" במסך הלוח השבועי — למפקדי "הדרכה"/"מ״ע אחזקה"
+   בלבד עוצר לבחירת היקף (ראו chooseScopeThen); לכל שאר המפקדים ממשיך מיד
+   לבחירת קובץ מקומית כרגיל. */
+function triggerBoardUpload(){
+  chooseScopeThen(
+    "העלאת לוח צוות — לכל המסגרות (כל הטייסת רואה), או רק ללוח המקומי של הצוות שלך?",
+    ()=>openAdminBoard(),
+    ()=>document.getElementById("board-input").click()
+  );
+}
 function onBoardFile(e){
   const file = e.target.files[0];
   if(!file) return;
