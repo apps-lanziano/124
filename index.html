@@ -5318,7 +5318,7 @@ function selMsgType(t, btn){
 }
 function checkMsgReady(){ document.getElementById("msg-save").disabled = document.getElementById("msg-text").value.trim().length<2; }
 /* חתימת המפרסם לתוכן כלל-טייסתי (הודעות, קרא וחתום, לוחות).
-   הייתה מקובעת ל"טומי ליפוביץ", ולכן כל פרסום של קצין טכני או מנהל
+   הייתה מקובעת ל"טומי לופוביץ", ולכן כל פרסום של קצין טכני או מנהל
    מערכת הופיע על שמו. נגזרת עכשיו מהמשתמש שמפרסם בפועל. */
 function squadronPublisher(){
   if(isOwner) return (user || "מנהל מערכת") + " 👑";
@@ -6804,7 +6804,7 @@ async function ensureDeptOfficers(){
   await sSetRaw(flag, true);
 }
 
-/* טומי (אוה"ד) ושחר (אחזקה) יצאו מיוזר מחלקות — טומי הפך לאחראי הדרכה, שחר למ״ע אחזקה (חד-פעמי) */
+/* טומי לופוביץ (אוה"ד) ושחר (אחזקה) יצאו מיוזר מחלקות — טומי הפך לאחראי הדרכה, שחר למ״ע אחזקה (חד-פעמי) */
 async function removeDeptReassignedPeople(){
   const flag = "dept_reassigned_removed_v1";
   if(await sGetRaw(flag)) return;
