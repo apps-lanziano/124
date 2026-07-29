@@ -2964,6 +2964,9 @@ async function sGetRaw(key, shared=true){
   try{ const r = await window.storage.get(key, shared); return r ? JSON.parse(r.value) : null; }
   catch(e){ return mem[key] ?? null; }
 }
+/* מחזירה true/false לפי הצלחה בפועל — חיוני לקריאות עם קבצים גדולים
+   (תמונות לוח/קרא-וחתום) שבהן כשל רשת שקט לא יכול פשוט "להיבלע":
+   בלי זה, המסך מציג "נשמר בהצלחה" גם כשהכתיבה לא הגיעה בפועל. */
 async function sSetRaw(key, val, shared=true){
   mem[key]=val;
   if(fbReady){
@@ -2971,10 +2974,10 @@ async function sSetRaw(key, val, shared=true){
       const {doc,setDoc} = fbDB._fs;
       await withTimeout(setDoc(doc(fbDB, COLLECTION, fsKey(key)), {v:val, updated:Date.now()}));
       markStale(false);
-      return;
+      return true;
     }catch(e){ console.error("fbSet",key,e); markStale(true); }
   }
-  try{ await window.storage.set(key, JSON.stringify(val), shared); }catch(e){}
+  try{ await window.storage.set(key, JSON.stringify(val), shared); return true; }catch(e){ return false; }
 }
 async function sDelRaw(key, shared=true){
   delete mem[key];
@@ -3957,7 +3960,8 @@ async function saveEvent(){
     }
     if(isAdmin && window._adminPublish){
       // מנהל — פרסום לכל המסגרות
-      await publishEventToAllSheds(id, title, evFileMeta, evImgData, thumb);
+      const ok = await publishEventToAllSheds(id, title, evFileMeta, evImgData, thumb);
+      if(!ok){ toast("⚠️ הפרסום נכשל בחלק מהמסגרות — נסה שוב"); return; }
       closeAddEvent();
       toast("הפריט פורסם לכל המסגרות 📢");
       renderAdminDashboard();
@@ -3984,9 +3988,12 @@ async function saveEvent(){
   }
 }
 function loadImg(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
+/* היה מחזיר true תמיד גם כשהכתיבה נכשלה בפועל (הבאג המקורי) — עכשיו
+   מחזירה את תוצאת ההצלחה האמיתית מ-sSetRaw, כדי שקוד קורא (למשל שמירת
+   קבצים גדולים) יוכל להתריע במקום להציג "נשמר" כשזה לא נכון. */
 async function sSetSafe(key, val){
-  try{ await sSet(key, val, true); return true; }
-  catch(e){ console.error("sSet failed for",key,e); return true; }
+  try{ return await sSet(key, val, true); }
+  catch(e){ console.error("sSet failed for",key,e); return false; }
 }
 
 /* ============ MORNING (מטלות צוות משותפות) ============ */
@@ -4721,15 +4728,18 @@ function onBoardFile(e){
       const label = "לוח שבועי · " + now.toLocaleDateString("he-IL",{day:"numeric",month:"long"});
       if(isAdmin && window._adminBoardPublish){
         window._adminBoardPublish = false;
-        await publishBoardToAllSheds(id, label, thumb, data);
+        const ok = await publishBoardToAllSheds(id, label, thumb, data);
+        if(!ok){ toast("⚠️ העלאת הלוח נכשלה בחלק מהמסגרות — נסה שוב"); return; }
         toast("הלוח החדש פורסם לכל המסגרות · הישן הוחלף 📅");
         renderAdminDashboard();
         openWaPrompt("board");
       } else {
-        await sSet("board_img_"+id, data);
+        const okImg = await sSetSafe("board_img_"+id, data);
+        if(!okImg){ toast("⚠️ העלאת הלוח נכשלה — בדוק חיבור רשת ונסה שוב"); return; }
         const boards = await getBoards();
         boards.unshift({id, label, thumb, by:user, date:now.toLocaleDateString("he-IL")});
-        await sSet("boards_list", boards);
+        const okList = await sSetSafe("boards_list", boards);
+        if(!okList){ toast("⚠️ העלאת הלוח נכשלה — בדוק חיבור רשת ונסה שוב"); return; }
         renderBoard();
         toast("הלוח נשמר בארכיון 📅");
         openWaPrompt("board");
@@ -7143,17 +7153,21 @@ function openAdminBoard(){
 }
 
 /* publish event object to every shed */
+/* מחזירה true רק אם הפריט נכתב בהצלחה בכל המסגרות — ראו הערה מקבילה
+   ב-publishBoardToAllSheds. */
 async function publishEventToAllSheds(id, title, meta, fileData, thumb){
   const adminList = await getAdminEventsList();
   adminList.unshift({id, title, ftype:meta.type, fname:meta.name, mime:meta.mime, thumb, date:new Date().toLocaleDateString("he-IL")});
-  await sSetRaw("admin_events", adminList);
+  let allOk = await sSetRaw("admin_events", adminList);
   for(const shed of SHEDS){
-    await sSetIn(shed.id, "safety_ev_"+id, fileData);
+    const okFile = await sSetIn(shed.id, "safety_ev_"+id, fileData);
     const events = (await sGetIn(shed.id, "safety_events")) || [];
     events.unshift({id, title, by:squadronPublisher(), date:new Date().toLocaleDateString("he-IL"),
                     ftype:meta.type, fname:meta.name, mime:meta.mime, thumb});
-    await sSetIn(shed.id, "safety_events", events);
+    const okList = await sSetIn(shed.id, "safety_events", events);
+    if(!okFile || !okList) allOk = false;
   }
+  return allOk;
 }
 async function getAdminEventsList(){ return (await sGetRaw("admin_events")) || []; }
 async function renderAdminEvents(){
@@ -7187,8 +7201,11 @@ async function deleteAdminEvent(id){
 /* פרסום לוח צוות לכל המסגרות — לוח חדש מחליף את הישן.
    אחראי התורניות מנהל לוח יחיד ומעודכן; העלאת לוח חדש מוחקת אוטומטית
    את הלוח הקודם (כולל התמונה) מכל המסגרות, כדי שלא יצטברו לוחות ישנים. */
+/* מחזירה true רק אם הלוח נכתב בהצלחה בכל המסגרות — כדי שכשל שקט
+   (למשל בעיית רשת באמצע הלולאה) לא יוצג כ"פורסם לכולם" בטעות. */
 async function publishBoardToAllSheds(id, label, thumb, fullImg){
   const rec = {id, label, thumb, by:squadronPublisher(), date:new Date().toLocaleDateString("he-IL")};
+  let allOk = true;
   for(const shed of SHEDS){
     // מחיקת תמונות הלוחות הקודמים במסגרת
     const old = (await sGetIn(shed.id, "boards_list")) || [];
@@ -7196,9 +7213,11 @@ async function publishBoardToAllSheds(id, label, thumb, fullImg){
       if(b.id !== id) await sDelRaw(shed.id + "_board_img_" + b.id);
     }
     // כתיבת הלוח החדש בלבד
-    await sSetIn(shed.id, "board_img_"+id, fullImg);
-    await sSetIn(shed.id, "boards_list", [rec]);
+    const okImg = await sSetIn(shed.id, "board_img_"+id, fullImg);
+    const okList = await sSetIn(shed.id, "boards_list", [rec]);
+    if(!okImg || !okList) allOk = false;
   }
+  return allOk;
 }
 
 /* ============================================================
