@@ -28,6 +28,10 @@ jobs:
 
       - name: הרצת הסוכנים
         id: scan
+        env:
+          # מפתח קריאה בלבד ל-Firebase. אם ה-Secret לא הוגדר — בדיקת
+          # הנתונים החיים מדלגת בשקט והשאר רץ כרגיל.
+          FIREBASE_SA_KEY: ${{ secrets.FIREBASE_SA_KEY }}
         run: |
           set +e
           node qa/run_daily.mjs > /tmp/report_stdout.txt 2>/tmp/report_stderr.txt
@@ -57,7 +61,15 @@ jobs:
         run: |
           git config user.name  "QA Bot"
           git config user.email "actions@github.com"
+          # ⚠️ המאגר ציבורי. הדוח האישי מכיל נתונים על הטייסת ולעולם
+          # לא נשמר כאן — מוחקים אותו לפני git add, כהגנה כפולה על
+          # ה-.gitignore (טעות אחת בקובץ ההחרגה = פרסום נתונים).
+          rm -f qa/reports/latest_personal.md qa/reports/latest_push.txt
           git add qa/reports/ || true
+          if git diff --cached --name-only | grep -q "latest_personal\|latest_push"; then
+            echo "::error::נמנעה שמירה של דוח אישי במאגר הציבורי"
+            exit 1
+          fi
           if git diff --cached --quiet; then
             echo "אין שינוי בדוח — לא נוצר commit"
           else
@@ -98,3 +110,15 @@ jobs:
           name: daily-qa-report
           path: qa/reports/latest.md
           retention-days: 30
+
+      # הדוח האישי (כולל ממצאי הנתונים החיים) — נשמר רק כקובץ להורדה
+      # ולזמן קצר, ולא נכנס למאגר. נמחק מהדיסק לפני שלב השמירה, ולכן
+      # השלב הזה חייב לרוץ לפניו — הוא ממוקם כאן ומופעל בנפרד.
+      - name: העלאת הדוח האישי (לא נשמר במאגר)
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: personal-report
+          path: /tmp/report_stdout.txt
+          retention-days: 7

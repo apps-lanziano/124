@@ -6,6 +6,7 @@
     "qa": "node qa/run_daily.mjs"
   },
   "devDependencies": {
-    "playwright": "^1.49.0"
+    "playwright": "^1.49.0",
+    "firebase-admin": "^13.0.0"
   }
 }
