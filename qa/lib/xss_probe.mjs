@@ -41,8 +41,9 @@ export async function runXssProbe(){
       const shedObj = {id:shed, name:"סככה 1"};
       await enterFrameworkAfterAuth(shedObj, "מפקד", "TEST");
       const person = PERSONNEL.find(p=>p.role==="מפקד");
-      const salt = genSalt();
-      person.pinHash = await hashPin("1234", salt); person.pinSalt = salt;
+      // חייב לעבור דרך buildPinFields — הגדרת pinHash בלי שדה האלגוריתם
+      // גורמת ל-verifyPin לבדוק מול הפורמט הישן והכניסה נכשלת.
+      Object.assign(person, await buildPinFields("1234"));
       document.getElementById("login-select").value = person.name;
       onLoginNameChange();
       document.getElementById("login-pin").value = "1234";

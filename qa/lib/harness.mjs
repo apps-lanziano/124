@@ -107,8 +107,9 @@ export async function loginAsFramework(page, shedId, role, personIndex=0){
       const person = people[personIndex] || people[0];
       if(!person) return {ok:false, why:"לא נמצא משתמש מתאים במסגרת", errors};
       // הגדרת PIN אמיתי דרך פונקציות האפליקציה, כדי שהאימות ירוץ באמת
-      const salt = genSalt();
-      person.pinHash = await hashPin("1234", salt); person.pinSalt = salt;
+      // חייב לעבור דרך buildPinFields — הגדרת pinHash בלי שדה האלגוריתם
+      // גורמת ל-verifyPin לבדוק מול הפורמט הישן והכניסה נכשלת.
+      Object.assign(person, await buildPinFields("1234"));
       const sel = document.getElementById("login-select");
       sel.value = person.name;
       onLoginNameChange();
