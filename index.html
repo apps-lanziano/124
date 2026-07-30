@@ -2854,10 +2854,54 @@ function genSalt(){
   const a = new Uint8Array(8); crypto.getRandomValues(a);
   return Array.from(a, b=>b.toString(16).padStart(2,"0")).join("");
 }
-async function hashPin(pin, salt){
+/* ===== הצפנת ה-PIN =====
+   בעבר: גיבוב SHA-256 יחיד. הבעיה — PIN הוא 4 ספרות בלבד (10,000
+   אפשרויות), וגיבוב יחיד מאפשר לעבור על כולן כמעט מיידית למי שמשיג
+   את רשימת הגיבובים. עכשיו: PBKDF2 עם מאות אלפי סבבים, שהופך כל
+   ניחוש יחיד ליקר. זה לא הופך PIN של 4 ספרות לחזק — זה מייקר תקיפה
+   המונית בסדרי גודל.
+
+   תאימות לאחור קריטית: לכל מי שכבר הגדיר PIN יש גיבוב בפורמט הישן.
+   מעבר "נקי" היה נועל את כל הטייסת בחוץ. לכן verifyPin מזהה את שני
+   הפורמטים, וכל כניסה מוצלחת עם פורמט ישן משדרגת אותו בשקט לחדש. */
+const PIN_ITERATIONS = 210000;
+const PIN_ALGO = "pbkdf2";
+
+async function hashPinLegacy(pin, salt){
   const data = new TextEncoder().encode("sq124|" + salt + "|" + pin);
   const buf = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(buf), b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+async function hashPin(pin, salt, iterations){
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode("sq124|" + pin), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name:"PBKDF2", salt: enc.encode(salt), iterations: iterations || PIN_ITERATIONS, hash:"SHA-256" },
+    key, 256);
+  return Array.from(new Uint8Array(bits), b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+/* שדות ה-PIN לשמירה על רשומת אדם — במקום אחד, כדי שכל נתיב הגדרה
+   (כניסה ראשונה, מפקד, מנהל מערכת) יכתוב בדיוק את אותו פורמט. */
+async function buildPinFields(pin){
+  const salt = genSalt();
+  return { pinHash: await hashPin(pin, salt), pinSalt: salt, pinAlgo: PIN_ALGO, pinIter: PIN_ITERATIONS };
+}
+
+/* משדרג בשקט גיבוב בפורמט ישן אחרי כניסה מוצלחת. כשל כאן לא חוסם
+   כניסה — המשתמש כבר אומת; השדרוג פשוט יקרה בפעם הבאה. */
+async function upgradePinIfLegacy(person, pin){
+  if(!person || !person.pinHash || person.pinAlgo === PIN_ALGO) return;
+  try{
+    const f = await buildPinFields(pin);
+    const saved = await mutatePersonnel(list=>{
+      const m = list.find(x=>x.name===person.name);
+      if(!m) return false;
+      Object.assign(m, f);
+    });
+    if(saved) Object.assign(person, f);
+  }catch(e){ console.error("upgradePin", e); }
 }
 /* בעבר חסמנו PIN שזהה לקוד כניסה. מרגע שהקודים הוסרו מהמקור, אין דרך (ולא צורך)
    להשוות מולם: הכניסה נעשית מול השרת, וה-PIN הוא נעילה אישית נפרדת. לכן אין קוד
@@ -2867,7 +2911,12 @@ function validPinFormat(pin){ return /^\d{4}$/.test(pin); }
 /* מאמת PIN מול רשומת אדם. אם אין ל-אדם PIN — עובר (אין נעילה). */
 async function verifyPin(person, pin){
   if(!person || !person.pinHash) return true;
-  try{ return (await hashPin(pin, person.pinSalt)) === person.pinHash; }
+  try{
+    // מזהה את שני הפורמטים — אחרת כל מי שהגדיר PIN לפני השדרוג ננעל בחוץ
+    if(person.pinAlgo === PIN_ALGO)
+      return (await hashPin(pin, person.pinSalt, person.pinIter)) === person.pinHash;
+    return (await hashPinLegacy(pin, person.pinSalt)) === person.pinHash;
+  }
   catch(e){ console.error("verifyPin", e); return false; }
 }
 
@@ -3419,24 +3468,25 @@ async function doLogin(){
       // יש PIN — חובה להזין נכון
       if(!entered){ toast("הזן PIN אישי 🔒"); pinEl.focus(); return; }
       if(!(await verifyPin(person, entered))){ registerLoginFail(); toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
+      // אימות עבר — אם הגיבוב עדיין בפורמט הישן, משדרגים אותו כאן בשקט
+      await upgradePinIfLegacy(person, entered);
     } else {
       // אין PIN — הגדרה חובה בכניסה ראשונה (אי אפשר לדלג)
       if(!entered){ toast("כניסה ראשונה — יש להגדיר PIN אישי 🔒"); pinEl.focus(); return; }
       if(!validPinFormat(entered)){ toast("PIN חייב להיות 4 ספרות ⛔"); pinEl.focus(); return; }
       if(isReservedCode(entered)){ toast("קוד זה שמור למסגרת — בחר קוד אחר ⛔"); pinEl.value=""; pinEl.focus(); return; }
-      const salt = genSalt();
-      const newHash = await hashPin(entered, salt);
+      const pinFields = await buildPinFields(entered);
       const setAt = new Date().toLocaleDateString("he-IL");
       // כתיבה ממוזגת — כדי שהגדרת PIN של חייל אחד לא תדרוס PIN שחייל אחר
       // הגדיר באותן דקות (ראו ההערה ב-mutatePersonnel)
       const pinSaved = await mutatePersonnel(list=>{
         const m = list.find(x=>x.name===person.name);
         if(!m) return false;
-        m.pinHash = newHash; m.pinSalt = salt;
+        Object.assign(m, pinFields);
         m.pinSetBy = person.name + " (עצמי)"; m.pinSetAt = setAt;
       });
       if(!pinSaved){ toast("⚠️ הגדרת ה-PIN לא נשמרה — בדוק חיבור ונסה שוב"); pinEl.focus(); return; }
-      person.pinHash = newHash; person.pinSalt = salt;   // סנכרון העותק המקומי להמשך ההתחברות
+      Object.assign(person, pinFields);   // סנכרון העותק המקומי להמשך ההתחברות
       toast("ה-PIN האישי שלך נקבע 🔒");
     }
   }
@@ -4369,7 +4419,7 @@ async function renderDuties(){
     el.innerHTML = `
       <div class="duty-name"><div class="avatar">${initials(p.name)}</div><b>${escapeHTML(p.name)}</b></div>
       <select class="duty-select ${row.duty?"filled":""}" ${canEdit?"":"disabled"} onchange="saveDuty('${jsStr(p.name)}','duty',this.value);this.classList.toggle('filled',!!this.value)">${opts}</select>
-      <input type="date" class="duty-dateinp" value="${row.date||""}" ${canEdit?"":"disabled"} onchange="saveDuty('${jsStr(p.name)}','date',this.value)">`;
+      <input type="date" class="duty-dateinp" aria-label="תאריך תורנות — ${escapeHTML(p.name)}" value="${row.date||""}" ${canEdit?"":"disabled"} onchange="saveDuty('${jsStr(p.name)}','date',this.value)">`;
     list.appendChild(el);
   });
   document.getElementById("duty-lock-note").textContent =
@@ -5471,12 +5521,14 @@ async function saveMessage(){
   const msgObj = {id:"msg_"+Date.now(), text, type:msgType, by:user, date:new Date().toLocaleDateString("he-IL"), dept: myDept};
   if(isAdmin){
     // מנהל — פרסום לכל המסגרות + עותק ברשימת המנהל
-    let allOk = true;
-    for(const shed of SHEDS){
+    // כל מסגרת היא מסמך נפרד ולכן אפשר לטפל בכולן במקביל — במקום 8 סבבי
+    // רשת בטור. מקצר את הפרסום מכמה שניות לפחות משנייה.
+    const results = await Promise.all(SHEDS.map(async shed=>{
       const list = (await sGetIn(shed.id, "messages_list")) || [];
       list.unshift({...msgObj, by:squadronPublisher()});
-      if(!(await sSetIn(shed.id, "messages_list", list))) allOk = false;
-    }
+      return sSetIn(shed.id, "messages_list", list);
+    }));
+    let allOk = results.every(Boolean);
     const adminList = (await sGetRaw("admin_messages")) || [];
     adminList.unshift({...msgObj, by:squadronPublisher()});
     if(!(await sSetRaw("admin_messages", adminList))) allOk = false;
@@ -5511,11 +5563,12 @@ async function deleteMessage(id, fromModal){
   let ok = true;
   let removedText = id;
   if(isAdmin){
-    for(const shed of SHEDS){
+    const results = await Promise.all(SHEDS.map(async shed=>{
       let list = (await sGetIn(shed.id, "messages_list")) || [];
       list = list.filter(m=>m.id!==id);
-      if(!(await sSetIn(shed.id, "messages_list", list))) ok = false;
-    }
+      return sSetIn(shed.id, "messages_list", list);
+    }));
+    if(!results.every(Boolean)) ok = false;
     let adminList = (await sGetRaw("admin_messages")) || [];
     const removed = adminList.find(m=>m.id===id);
     if(removed) removedText = removed.text.slice(0,40);
@@ -6022,13 +6075,12 @@ async function saveTeamMember(){
   else if(pinInput){
     if(!validPinFormat(pinInput)){ toast("PIN חייב להיות 4 ספרות ⛔"); return; }
     if(isReservedCode(pinInput)){ toast("קוד זה שמור למסגרת — בחר קוד אחר ⛔"); return; }
-    const salt = genSalt();
-    pinFields = {pinHash: await hashPin(pinInput, salt), pinSalt: salt};
+    pinFields = await buildPinFields(pinInput);
   }
   const applyPin = m => {
     if(!pinFields) return;
-    if(pinFields.remove){ delete m.pinHash; delete m.pinSalt; delete m.pinSetBy; delete m.pinSetAt; }
-    else { m.pinHash = pinFields.pinHash; m.pinSalt = pinFields.pinSalt; m.pinSetBy = user || "מפקד"; m.pinSetAt = new Date().toLocaleDateString("he-IL"); }
+    if(pinFields.remove){ delete m.pinHash; delete m.pinSalt; delete m.pinAlgo; delete m.pinIter; delete m.pinSetBy; delete m.pinSetAt; }
+    else { Object.assign(m, pinFields); m.pinSetBy = user || "מפקד"; m.pinSetAt = new Date().toLocaleDateString("he-IL"); }
   };
 
   if(editMemberIdx>=0){
@@ -6607,8 +6659,7 @@ async function saveUserEdit(){
   else if(pinInput){
     if(!validPinFormat(pinInput)){ toast("PIN חייב להיות 4 ספרות ⛔"); return; }
     if(isReservedCode(pinInput)){ toast("קוד זה שמור למסגרת — בחר קוד אחר ⛔"); return; }
-    const salt = genSalt();
-    pinFields = {pinHash: await hashPin(pinInput, salt), pinSalt: salt};
+    pinFields = await buildPinFields(pinInput);
   }
 
   const srcList = (await sGetIn(ueShedId,"cfg_personnel")) || [];
@@ -6633,8 +6684,8 @@ async function saveUserEdit(){
     }
     if(!m.joined) m.joined = todayKey();
     if(pinFields){
-      if(pinFields.remove){ delete m.pinHash; delete m.pinSalt; delete m.pinSetBy; delete m.pinSetAt; }
-      else { m.pinHash = pinFields.pinHash; m.pinSalt = pinFields.pinSalt; m.pinSetBy = user || "מנהל מערכת"; m.pinSetAt = new Date().toLocaleDateString("he-IL"); }
+      if(pinFields.remove){ delete m.pinHash; delete m.pinSalt; delete m.pinAlgo; delete m.pinIter; delete m.pinSetBy; delete m.pinSetAt; }
+      else { Object.assign(m, pinFields); m.pinSetBy = user || "מנהל מערכת"; m.pinSetAt = new Date().toLocaleDateString("he-IL"); }
     }
     return m;
   };
@@ -6675,7 +6726,7 @@ async function resetUserPin(shedId, idx){
   const p = list[idx];
   if(!p || !p.pinHash) return;
   if(!confirm(`לאפס את ה-PIN של "${p.name}"?\nהוא יתבקש להגדיר PIN חדש בכניסה הבאה.`)) return;
-  delete p.pinHash; delete p.pinSalt; delete p.pinSetBy; delete p.pinSetAt;
+  delete p.pinHash; delete p.pinSalt; delete p.pinAlgo; delete p.pinIter; delete p.pinSetBy; delete p.pinSetAt;
   await sSetIn(shedId,"cfg_personnel", list);
   await ownerLog(`איפס PIN של "${p.name}" (${SHEDS.find(s=>s.id===shedId).name})`);
   toast("ה-PIN אופס — המשתמש יגדיר חדש בכניסה הבאה 🔓");
@@ -6883,12 +6934,12 @@ async function migratePicoHoursService(){
   let mch = false;
   maint.forEach(v=>{ if(isPico(v) && (v.hoursNext==null||v.hoursNext==="")){ v.hoursNext = nextFor(v.hours); mch=true; } });
   if(mch) await sSetRaw("admin_maint_vehicles", maint);
-  for(const shed of SHEDS){
+  await Promise.all(SHEDS.map(async shed=>{
     let list = (await sGetIn(shed.id,"vehicles_list")) || [];
     let c = false;
     list.forEach(v=>{ if(isPico(v) && (v.hoursNext==null||v.hoursNext==="")){ v.hoursNext = nextFor(v.hours); c=true; } });
     if(c) await sSetIn(shed.id,"vehicles_list", list);
-  }
+  }));
   await sSetRaw(flag, true);
   console.log("✅ פיקו — טיפול לפי שעות מנוע נזרע לכל המסגרות");
 }
@@ -7369,14 +7420,17 @@ async function publishEventToAllSheds(id, title, meta, fileData, thumb){
   const adminList = await getAdminEventsList();
   adminList.unshift({id, title, ftype:meta.type, fname:meta.name, mime:meta.mime, thumb, date:new Date().toLocaleDateString("he-IL")});
   let allOk = await sSetRaw("admin_events", adminList);
-  for(const shed of SHEDS){
+  // 8 מסגרות × (כתיבת קובץ + קריאת רשימה + כתיבת רשימה) = 24 פניות בטור.
+  // במקביל זה שלושה סבבים בלבד — ההבדל מורגש היטב בפרסום עם תמונה.
+  const results = await Promise.all(SHEDS.map(async shed=>{
     const okFile = await sSetIn(shed.id, "safety_ev_"+id, fileData);
     const events = (await sGetIn(shed.id, "safety_events")) || [];
     events.unshift({id, title, by:squadronPublisher(), date:new Date().toLocaleDateString("he-IL"),
                     ftype:meta.type, fname:meta.name, mime:meta.mime, thumb});
     const okList = await sSetIn(shed.id, "safety_events", events);
-    if(!okFile || !okList) allOk = false;
-  }
+    return okFile && okList;
+  }));
+  if(!results.every(Boolean)) allOk = false;
   return allOk;
 }
 async function getAdminEventsList(){ return (await sGetRaw("admin_events")) || []; }
@@ -7400,12 +7454,14 @@ async function deleteAdminEvent(id){
   const removed = list.find(e=>e.id===id);
   list = list.filter(e=>e.id!==id);
   let ok = await sSetRaw("admin_events", list);
-  for(const shed of SHEDS){
+  const results = await Promise.all(SHEDS.map(async shed=>{
     let events = (await sGetIn(shed.id, "safety_events")) || [];
     events = events.filter(e=>e.id!==id);
-    if(!(await sSetIn(shed.id, "safety_events", events))) ok = false;
+    const okList = await sSetIn(shed.id, "safety_events", events);
     await sDelRaw(shed.id+"_safety_ev_"+id);
-  }
+    return okList;
+  }));
+  if(!results.every(Boolean)) ok = false;
   if(!ok){ toast("⚠️ המחיקה נכשלה בחלק מהמסגרות — נסה שוב"); return; }
   await logAdminAction("מחיקת קרא-וחתום מכל המסגרות", removed?removed.title:id);
   renderAdminEvents();
@@ -7770,13 +7826,14 @@ async function publishTrainingToAllSheds(id, title, ftype, fileData, thumb){
   adminList.unshift({id, title, ftype, fname:title, date:new Date().toLocaleDateString("he-IL")});
   let allOk = await sSetRaw("admin_training", adminList);
   if(!(await sSetRaw("admin_training_file_"+id, fileData))) allOk = false;
-  for(const shed of SHEDS){
+  const results = await Promise.all(SHEDS.map(async shed=>{
     const list = (await sGetIn(shed.id, "training_list")) || [];
     list.unshift({id, title, ftype, fname:title, thumb, by:"אחראי הדרכה", date:new Date().toLocaleDateString("he-IL")});
     const okList = await sSetIn(shed.id, "training_list", list);
     const okFile = await sSetIn(shed.id, "training_file_"+id, fileData);
-    if(!okList || !okFile) allOk = false;
-  }
+    return okList && okFile;
+  }));
+  if(!results.every(Boolean)) allOk = false;
   return allOk;
 }
 /* ===== מילואים — כלל-טייסתי, רענון ידני (תאריך אחרון + פ.ת הבא) ===== */
@@ -7907,12 +7964,14 @@ async function deleteTraining(id){
   list = list.filter(t=>t.id!==id);
   let ok = await sSetRaw("admin_training", list);
   await sDelRaw("admin_training_file_"+id);
-  for(const shed of SHEDS){
+  const results = await Promise.all(SHEDS.map(async shed=>{
     let sl = (await sGetIn(shed.id, "training_list")) || [];
     sl = sl.filter(t=>t.id!==id);
-    if(!(await sSetIn(shed.id, "training_list", sl))) ok = false;
+    const okList = await sSetIn(shed.id, "training_list", sl);
     await sDelRaw(shed.id+"_training_file_"+id);
-  }
+    return okList;
+  }));
+  if(!results.every(Boolean)) ok = false;
   if(!ok){ toast("⚠️ המחיקה נכשלה בחלק מהמסגרות — נסה שוב"); return; }
   await logAdminAction("מחיקת חומר הדרכה מכל המסגרות", removed?removed.title:id);
   renderAdminTraining();
@@ -8309,7 +8368,16 @@ async function openTrainingItem(id){
   const t = list.find(x=>x.id===id); if(!t) return;
   if(t.ftype==="image"){
     const w = window.open("");
-    if(w) w.document.write(`<img src="${data}" style="max-width:100%">`);
+    if(w){
+      // בונים את האלמנט במקום להרכיב HTML כמחרוזת: התוכן נכנס כערך של
+      // תכונה ולא נקרא כקוד, ובנוסף יש כותרת ותיאור לקוראי מסך.
+      w.document.title = t.title || "חומר הדרכה";
+      const img = w.document.createElement("img");
+      img.src = data;
+      img.alt = t.title || "חומר הדרכה";
+      img.style.maxWidth = "100%";
+      w.document.body.appendChild(img);
+    }
   } else {
     const a = document.createElement("a"); a.href=data; a.download=t.fname||t.title; a.click();
     toast("מוריד את הקובץ…");
