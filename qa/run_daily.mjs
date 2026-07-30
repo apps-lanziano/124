@@ -49,6 +49,34 @@ async function runRegression(){
   return { name:"בדיקות רגרסיה", summary:{ pass, fail, total:files.length }, findings };
 }
 
+/* מילון: מונחים מקצועיים -> הסבר בשפה יומיומית.
+   הדוח נקרא ע"י מפקד, לא ע"י מתכנת. כל מונח שדורש רקע טכני מקבל
+   כאן תרגום שמסביר *מה זה אומר בפועל למשתמשים באפליקציה*. */
+const PLAIN = [
+  [/\bXSS\b/g,            "הזרקת קוד עוין"],
+  [/\bSRI\b/g,            "בדיקת תקינות של קוד חיצוני"],
+  [/\bPBKDF2\b/gi,        "שיטת הצפנה מוקשחת"],
+  [/\bSHA-256\b/gi,       "שיטת הצפנה רגילה"],
+  [/\bsalt\b/gi,          "ערבול אקראי"],
+  [/\bCDN\b/g,            "שרת חיצוני"],
+  [/\bPromise\.all\b/g,   "טעינה במקביל"],
+  [/\bFirestore\b/g,      "מסד הנתונים"],
+  [/\bCloud Function\b/g, "השרת ששולח את ההתראות"],
+  [/\blocalStorage\b/g,   "הזיכרון המקומי בטלפון"],
+  [/\bסינק\b/g,           "מקום בקוד שמריץ פקודות"],
+  [/\bרגרסיה\b/g,         "בדיקות חוזרות"],
+  [/\bקוד מת\b/g,         "קוד שלא בשימוש"],
+];
+function plain(s){ return PLAIN.reduce((t,[re,to])=>t.replace(re,to), String(s||"")); }
+
+/* כותרות הסוכנים בשפה פשוטה */
+const SECTION_PLAIN = {
+  "סריקת זהויות ומסכים": "בדיקת כל המשתמשים וכל המסכים",
+  "בדיקות רגרסיה":       "בדיקה שתקלות ישנות לא חזרו",
+  "אבטחת מידע":          "אבטחה",
+  "שיפור וייעול":        "הצעות לשיפור",
+};
+
 /* ---------- בניית הדוח ---------- */
 function buildReport(sections){
   const now = new Date();
@@ -61,55 +89,67 @@ function buildReport(sections){
   const roles = sections.find(s=>s.name==="סריקת זהויות ומסכים");
   const reg   = sections.find(s=>s.name==="בדיקות רגרסיה");
 
-  let md = `# 🛡️ דוח יומי — אפליקציית טייסת 124\n\n**${dateHe}**\n\n`;
+  let md = `# הדוח היומי של אפליקציית טייסת 124\n\n**${dateHe}**\n\n`;
 
-  /* שורה תחתונה בראש — מה שצריך לדעת ב-10 שניות */
+  /* השורה הראשונה — מה שצריך לדעת ב-10 שניות, בלי מונחים */
   if(high.length===0){
-    md += `## ✅ שורה תחתונה: הכל תקין\n\n`;
-    md += `לא נמצאה שום תקלה שדורשת טיפול. `;
+    md += `## ✅ הכל תקין\n\n`;
+    md += `בדקתי את האפליקציה מקצה לקצה ולא מצאתי שום תקלה. אין צורך לעשות כלום.\n\n`;
   } else {
-    md += `## ⚠️ שורה תחתונה: ${high.length} ${high.length===1?'נושא דורש':'נושאים דורשים'} טיפול\n\n`;
-    high.forEach((f,i)=>{ md += `${i+1}. **${f.title}** — ${f.detail}\n`; });
-    md += `\n`;
+    md += `## ⚠️ ${high.length===1?'נמצאה תקלה אחת':`נמצאו ${high.length} תקלות`}\n\n`;
+    high.forEach((f,i)=>{ md += `**${i+1}. ${plain(f.title)}**\n${plain(f.detail)}\n\n`; });
   }
-  if(roles) md += `נסרקו **${roles.summary.identities} זהויות** ו-**${roles.summary.screens} מסכים**`;
-  if(reg)   md += `, והורצו **${reg.summary.total} קבצי בדיקה**`;
-  md += `.\n\n---\n\n`;
+
+  md += `### מה נבדק היום\n\n`;
+  if(roles) md += `- נכנסתי לאפליקציה בתור **כל ${roles.summary.identities} סוגי המשתמשים** שיש בה (מפקדים, חיילים, אחראי הדרכה, מ״ע אחזקה, מנהל מערכת ועוד)\n`;
+  if(roles) md += `- פתחתי **${roles.summary.screens} מסכים** ובדקתי שכולם נטענים ומציגים נתונים\n`;
+  if(reg)   md += `- הרצתי **${reg.summary.total} בדיקות** שמוודאות שתקלות שכבר תוקנו לא חזרו\n`;
+  md += `- ניסיתי לפרוץ לאפליקציה בשיטות מוכרות, כדי לוודא שאי אפשר\n`;
+  md += `\n---\n\n`;
 
   /* פירוט לפי סוכן */
   for(const s of sections){
     const f = s.findings.slice().sort((a,b)=>SEV_ORDER[a.sev]-SEV_ORDER[b.sev]);
     const bad = f.filter(x=>x.sev!=='info').length;
-    md += `## ${s.name}\n\n`;
-    md += `> ${bad===0 ? '✅ ללא ממצאים הדורשים טיפול' : `${bad} ממצאים`}\n\n`;
-    if(!f.length){ md += `_אין ממצאים._\n\n`; continue; }
+    md += `## ${SECTION_PLAIN[s.name] || s.name}\n\n`;
+    md += `> ${bad===0 ? '✅ הכל תקין' : `${bad} ${bad===1?'נקודה':'נקודות'} לתשומת לב`}\n\n`;
+    if(!f.length){ md += `_אין מה לדווח._\n\n`; continue; }
     for(const x of f){
-      md += `**${SEV_HE[x.sev]} · ${x.title}**${x.area && x.area!==s.name ? ` _(${x.area})_`:''}\n`;
-      md += `${x.detail}\n`;
-      if(x.where) md += `\`${x.where}\`\n`;
-      md += `\n`;
+      md += `**${SEV_HE[x.sev]} · ${plain(x.title)}**\n`;
+      md += `${plain(x.detail)}\n\n`;
     }
     md += `---\n\n`;
   }
 
-  /* המלצות — מה כדאי לעשות, לפי סדר עדיפות */
-  md += `## 📋 מה מומלץ לעשות\n\n`;
+  /* המלצות */
+  md += `## מה מומלץ לעשות\n\n`;
   const actions = [...high, ...med].slice(0,6);
   if(!actions.length){
-    md += `אין פעולה נדרשת היום. האפליקציה תקינה בכל הבדיקות.\n\n`;
+    md += `שום דבר. האפליקציה עברה את כל הבדיקות.\n\n`;
   } else {
-    actions.forEach((f,i)=>{ md += `${i+1}. **${f.title}** — ${f.detail.split('.')[0]}.\n`; });
+    actions.forEach((f,i)=>{ md += `${i+1}. **${plain(f.title)}** — ${plain(f.detail.split('.')[0])}.\n`; });
     md += `\n`;
   }
-  if(low.length) md += `_בנוסף ${low.length} ממצאים קלים (נגישות, קוד מת, סימוני TODO) — לא דחופים._\n\n`;
+  if(low.length) md += `_יש עוד ${low.length} הערות קטנות שלא דחופות._\n\n`;
 
   md += `---\n\n`;
-  md += `### מה הדוח הזה כן ולא מכסה\n\n`;
-  md += `**כן:** כל זהות באפליקציה נבדקת בכניסה אמיתית, כל מסך שגלוי לה נטען ונבדק, `;
-  md += `כל מנגנוני הכתיבה (פרסום, חתימה, שמירה) נבדקים מקצה לקצה, ומטענים עוינים מוזרקים כדי לבדוק פרצות בפועל.\n\n`;
-  md += `**לא:** הדוח רץ על הקוד, לא על השרת החי. הוא **אינו** מזהה חדירה בזמן אמת ואינו רואה תעבורה אמיתית — `;
-  md += `לכך נדרשות התראות מצד Firebase עצמו (ר' \`qa/README.md\`, סעיף "ניטור חי").\n`;
-  return { md, high, med, low };
+  md += `### מה הבדיקה הזו לא מכסה\n\n`;
+  md += `הבדיקה רצה על הקוד של האפליקציה — לא על השרת החי. `;
+  md += `כלומר היא **לא רואה** אם מישהו מנסה לפרוץ ברגע זה, ולא רואה את הנתונים האמיתיים של הטייסת. `;
+  md += `כדי לקבל התראה על ניסיון חדירה בזמן אמת צריך להפעיל את ההתראות של Firebase עצמו — כתוב איך ב-\`qa/README.md\`.\n`;
+
+  /* גרסה קצרה לפוש — מה שנכנס להתראה בטלפון */
+  let push;
+  if(high.length===0){
+    push = `✅ אפליקציית טייסת 124 — הכל תקין\n` +
+           `נבדקו ${roles?roles.summary.identities:0} סוגי משתמשים ו-${roles?roles.summary.screens:0} מסכים. לא נמצאה שום תקלה.` +
+           (med.length ? `\n(${med.length} הצעות לשיפור בדוח המלא)` : ``);
+  } else {
+    push = `⚠️ אפליקציית טייסת 124 — ${high.length===1?'נמצאה תקלה':`נמצאו ${high.length} תקלות`}\n` +
+           high.slice(0,3).map((f,i)=>`${i+1}. ${plain(f.title)}`).join('\n') +
+           `\nהפירוט בדוח המצורף.`;
+  }
+  return { md, push, high, med, low };
 }
 
 /* ---------- ריצה ---------- */
@@ -132,12 +172,13 @@ for(const [label, loader] of [
 }
 await closeBrowser();
 
-const { md, high } = buildReport(sections);
+const { md, push, high } = buildReport(sections);
 const stamp = new Date().toISOString().slice(0,10);
 mkdirSync(`${ROOT}/qa/reports`, {recursive:true});
 const path = `${ROOT}/qa/reports/${stamp}.md`;
 writeFileSync(path, md, 'utf8');
 writeFileSync(`${ROOT}/qa/reports/latest.md`, md, 'utf8');
+writeFileSync(`${ROOT}/qa/reports/latest_push.txt`, push, 'utf8');   // הטקסט הקצר להתראה בטלפון
 console.log(md);
 console.error(`\n[דוח נשמר: ${path} · ${Math.round((Date.now()-t0)/1000)} שניות]`);
 process.exit(high.length ? 1 : 0);
