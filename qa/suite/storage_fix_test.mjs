@@ -1,5 +1,5 @@
-import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
-const b = await chromium.launch({ executablePath:'/opt/pw-browsers/chromium' });
+import { launchBrowser } from '../lib/pw.mjs';
+const b = await launchBrowser();
 const p = await b.newPage();
 await p.route('**gstatic.com/**', r=>r.abort()); await p.route('**googleapis.com/**', r=>r.abort());
 const errs=[]; p.on('pageerror',e=>errs.push(e.message));

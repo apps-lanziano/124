@@ -1,5 +1,5 @@
-import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
-const b = await chromium.launch({ executablePath:'/opt/pw-browsers/chromium' });
+import { launchBrowser } from '../lib/pw.mjs';
+const b = await launchBrowser();
 const results = [];
 async function page(){
   const p = await b.newPage();
