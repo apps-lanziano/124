@@ -84,7 +84,15 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const body = fs.readFileSync('qa/reports/latest.md', 'utf8').slice(0, 60000);
+            // שורת האבחון של הנתונים החיים (מצב חיבור + כמות ממצאים בלבד,
+            // בלי שום פרט על הטייסת) — כדי שאפשר יהיה לאבחן מכאן.
+            let diag = '';
+            try{
+              const err = fs.readFileSync('/tmp/report_stderr.txt', 'utf8');
+              const m = err.match(/\[נתונים חיים:[^\]]+\]/);
+              if(m) diag = `> ${m[0]}\n\n`;
+            }catch{}
+            const body = diag + fs.readFileSync('qa/reports/latest.md', 'utf8').slice(0, 58000);
             const title = `🔴 דוח בדיקה יומי — נמצאו ממצאים (${new Date().toISOString().slice(0,10)})`;
             // אם כבר פתוח issue מהסוכן — מוסיפים תגובה במקום לפתוח חדש
             const open = await github.rest.issues.listForRepo({
