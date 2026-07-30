@@ -205,5 +205,15 @@ const pushText = liveHigh.length
 writeFileSync(`${ROOT}/qa/reports/latest_push.txt`, pushText, 'utf8');
 
 console.log(personal);
-console.error(`\n[דוח נשמר · ${Math.round((Date.now()-t0)/1000)} שניות]`);
+
+/* שורת אבחון בטוחה ללוג. הלוג של מאגר ציבורי גלוי לכולם, ולכן
+   מדווחים כאן רק על מצב החיבור וכמות הממצאים — בלי שום פרט על
+   הטייסת עצמה (לא שמות מסגרות, לא מספרים, לא כותרות). */
+if(liveSection){
+  const state = liveSection.skipped ? "לא הוגדר מפתח"
+    : liveSection.findings.some(f=>f.title.includes("החיבור ל-Firebase נכשל")) ? "החיבור נכשל"
+    : "התחבר בהצלחה";
+  console.error(`[נתונים חיים: ${state} · ${liveHigh.length} ממצאים חמורים]`);
+}
+console.error(`[דוח נשמר · ${Math.round((Date.now()-t0)/1000)} שניות]`);
 process.exit(allHigh.length ? 1 : 0);
