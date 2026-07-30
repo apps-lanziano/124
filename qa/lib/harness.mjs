@@ -6,7 +6,7 @@
    הנמוכה ביותר (window.storage) ולא ברמת sGet/sSet — כך שכל
    הלוגיקה של האפליקציה רצה באמת, ולא מוחלפת בבדיקה.
    ============================================================ */
-import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
+import { launchBrowser } from './pw.mjs';
 
 export const APP_URL = 'file:///home/user/124/index.html';
 
@@ -27,7 +27,7 @@ export const ALL_SCREENS = [
 
 let browser = null;
 export async function getBrowser(){
-  if(!browser) browser = await chromium.launch({ executablePath:'/opt/pw-browsers/chromium' });
+  if(!browser) browser = await launchBrowser();
   return browser;
 }
 export async function closeBrowser(){ if(browser){ await browser.close(); browser = null; } }

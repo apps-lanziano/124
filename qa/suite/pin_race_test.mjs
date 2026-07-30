@@ -3,8 +3,8 @@
    וכתיבה של העותק הזה במלואו מוחקת שינויים שמכשירים אחרים ביצעו בינתיים.
    הבדיקות מדמות שני מכשירים עם עותקים נפרדים, ומוודאות שאף אחד מהם
    לא מוחק את ה-PIN של השני. */
-import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
-const b = await chromium.launch({ executablePath:'/opt/pw-browsers/chromium' });
+import { launchBrowser } from '../lib/pw.mjs';
+const b = await launchBrowser();
 const results = [];
 async function page(){
   const p = await b.newPage();

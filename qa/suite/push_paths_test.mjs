@@ -3,8 +3,8 @@
    Function (functions/index.js) מאזינה לו. זה לא בודק שליחת פוש אמיתית
    (דורש טוקן מכשיר אמיתי + פרויקט Firebase אמיתי) — זה בודק שהקוד כותב
    לנתיב הנכון, כלומר שה-Function שכבר נפרסה תיתפס ע"י כל אחד מהם. */
-import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
-const b = await chromium.launch({ executablePath:'/opt/pw-browsers/chromium' });
+import { launchBrowser } from '../lib/pw.mjs';
+const b = await launchBrowser();
 const results = [];
 async function page(){
   const p = await b.newPage();

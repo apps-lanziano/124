@@ -2,3 +2,4 @@
 .claude/settings.local.json
 qa/reports/*.md
 !qa/reports/latest.md
+node_modules/

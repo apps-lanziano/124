@@ -1,0 +1,11 @@
+{
+  "name": "sq124-qa",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "qa": "node qa/run_daily.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}
