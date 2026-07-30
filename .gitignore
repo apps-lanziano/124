@@ -4,3 +4,4 @@ qa/reports/*.md
 !qa/reports/latest.md
 node_modules/
 qa/reports/latest_push.txt
+qa/reports/latest_personal.md

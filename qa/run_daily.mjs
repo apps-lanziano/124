@@ -156,6 +156,7 @@ for(const [label, loader] of [
   ["רגרסיה",       null],
   ["אבטחה",        ()=>import('./scan_security.mjs')],
   ["שיפור",        ()=>import('./scan_quality.mjs')],
+  ["נתונים חיים",  ()=>import('./scan_live.mjs')],
 ]){
   try{
     if(label==="רגרסיה"){ sections.push(await runRegression()); continue; }
@@ -168,13 +169,41 @@ for(const [label, loader] of [
 }
 await closeBrowser();
 
-const { md, push, high } = buildReport(sections);
+/* ⚠️ הפרדת פרטיות — המאגר ציבורי.
+   ממצאי הנתונים החיים נוגעים לטייסת עצמה (כמה אנשים, איזו מסגרת
+   לא מקבלת התראות) ולכן אינם נשמרים במאגר. הדוח הציבורי מכיל רק
+   את בדיקות הקוד; הממצאים החיים נכתבים לקובץ נפרד שמוחרג מגיט
+   ומגיע רק לדוח האישי. */
+const liveSection   = sections.find(s=>s.name==="נתונים חיים");
+const publicSections = sections.filter(s=>s.name!=="נתונים חיים");
+
+const { md, push, high } = buildReport(publicSections);
 const stamp = new Date().toISOString().slice(0,10);
 mkdirSync(`${ROOT}/qa/reports`, {recursive:true});
-const path = `${ROOT}/qa/reports/${stamp}.md`;
-writeFileSync(path, md, 'utf8');
+writeFileSync(`${ROOT}/qa/reports/${stamp}.md`, md, 'utf8');
 writeFileSync(`${ROOT}/qa/reports/latest.md`, md, 'utf8');
-writeFileSync(`${ROOT}/qa/reports/latest_push.txt`, push, 'utf8');   // הטקסט הקצר להתראה בטלפון
-console.log(md);
-console.error(`\n[דוח נשמר: ${path} · ${Math.round((Date.now()-t0)/1000)} שניות]`);
-process.exit(high.length ? 1 : 0);
+
+/* הדוח האישי = דוח הקוד + פרק הנתונים החיים */
+let personal = md;
+let liveHigh = [];
+if(liveSection && liveSection.findings.length){
+  liveHigh = liveSection.findings.filter(f=>f.sev==="high");
+  personal += `\n---\n\n## 🔒 בדיקת הנתונים האמיתיים של הטייסת\n\n`;
+  personal += `> _הפרק הזה אינו נשמר במאגר הציבורי._\n\n`;
+  const order = {high:0, med:1, low:2, info:3};
+  for(const f of liveSection.findings.slice().sort((a,b)=>order[a.sev]-order[b.sev])){
+    personal += `**${SEV_HE[f.sev]} · ${f.title}**\n${f.detail}\n\n`;
+  }
+}
+writeFileSync(`${ROOT}/qa/reports/latest_personal.md`, personal, 'utf8');
+
+const allHigh = [...high, ...liveHigh];
+const pushText = liveHigh.length
+  ? `⚠️ אפליקציית טייסת 124 — ${allHigh.length} ${allHigh.length===1?'תקלה':'תקלות'}\n` +
+    allHigh.slice(0,3).map((f,i)=>`${i+1}. ${f.title}`).join('\n') + `\nהפירוט בדוח המצורף.`
+  : push;
+writeFileSync(`${ROOT}/qa/reports/latest_push.txt`, pushText, 'utf8');
+
+console.log(personal);
+console.error(`\n[דוח נשמר · ${Math.round((Date.now()-t0)/1000)} שניות]`);
+process.exit(allHigh.length ? 1 : 0);
