@@ -31,9 +31,27 @@ jobs:
         run: |
           set +e
           node qa/run_daily.mjs > /tmp/report_stdout.txt 2>/tmp/report_stderr.txt
-          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          code=$?
           set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           cat /tmp/report_stderr.txt || true
+          # קוד 0 = הכל תקין, קוד 1 = נמצאו ממצאים (שניהם ריצה תקינה).
+          # כל דבר אחר = הסורק עצמו קרס — חייב להכשיל את ה-workflow ולא
+          # להציג "success" מטעה. אותה בעיה בדיוק שתיקנו באפליקציה עצמה.
+          if [ "$code" -gt 1 ]; then
+            echo "::error::הסורק קרס (קוד $code) — הדוח לא הופק"
+            tail -40 /tmp/report_stdout.txt || true
+            exit 1
+          fi
+          # ודא שהדוח באמת נכתב מחדש בריצה הזו (ולא נשאר ישן מהמאגר)
+          if [ ! -f qa/reports/latest.md ]; then
+            echo "::error::קובץ הדוח לא נוצר"
+            exit 1
+          fi
+          if [ -z "$(find qa/reports/latest.md -mmin -10)" ]; then
+            echo "::error::הדוח לא עודכן בריצה הזו — כנראה הסורק לא רץ בפועל"
+            exit 1
+          fi
 
       - name: שמירת הדוח במאגר
         run: |
