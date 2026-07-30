@@ -10,7 +10,7 @@
    ============================================================ */
 import { readFileSync } from 'fs';
 
-const ROOT = '/home/user/124';
+import { ROOT } from './lib/pw.mjs';   // שורש המאגר — נגזר, לא מקובע
 const html = readFileSync(`${ROOT}/index.html`, 'utf8');
 const findings = [];
 function add(sev, title, detail, where="index.html"){ findings.push({sev, area:"שיפור", title, detail, where}); }

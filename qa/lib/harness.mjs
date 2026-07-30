@@ -6,9 +6,9 @@
    הנמוכה ביותר (window.storage) ולא ברמת sGet/sSet — כך שכל
    הלוגיקה של האפליקציה רצה באמת, ולא מוחלפת בבדיקה.
    ============================================================ */
-import { launchBrowser } from './pw.mjs';
+import { launchBrowser, APP_URL as APP_URL_RESOLVED } from './pw.mjs';
 
-export const APP_URL = 'file:///home/user/124/index.html';
+export const APP_URL = APP_URL_RESOLVED;
 
 export const SHED_LIST = [
   {id:"shed1", name:"סככה 1"}, {id:"shed2", name:"סככה 2"}, {id:"shed3", name:"סככה 3"},

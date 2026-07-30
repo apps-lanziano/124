@@ -1,6 +1,6 @@
 /* מוודא שדשבורד המפקד ("תמונת מצב — מפקד") הוסר מאחראי ההדרכה,
    ושלא נפגעה שום זהות אחרת: מפקד סככה רגיל, מ״ע אחזקה, וחייל. */
-import { launchBrowser } from '../lib/pw.mjs';
+import { launchBrowser, APP_URL } from '../lib/pw.mjs';
 const b = await launchBrowser();
 const results = [];
 async function page(){
@@ -8,7 +8,7 @@ async function page(){
   await p.route('**gstatic.com/**', r=>r.abort());
   await p.route('**googleapis.com/**', r=>r.abort());
   const errs=[]; p.on('pageerror',e=>errs.push(e.message));
-  await p.goto('file:///home/user/124/index.html', { waitUntil:'domcontentloaded' });
+  await p.goto(APP_URL, { waitUntil:'domcontentloaded' });
   await p.waitForTimeout(250);
   return {p, errs};
 }

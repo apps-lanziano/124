@@ -1,11 +1,11 @@
-import { launchBrowser } from '../lib/pw.mjs';
+import { launchBrowser, APP_URL } from '../lib/pw.mjs';
 const b = await launchBrowser();
 const p = await b.newPage();
 await p.setViewportSize({ width:390, height:800 });
 await p.route('**gstatic.com/**', r=>r.abort()); await p.route('**googleapis.com/**', r=>r.abort());
 const errs=[]; p.on('pageerror',e=>errs.push('PAGEERR: '+e.message));
 p.on('console', m=>{ if(m.type()==='error') errs.push('CONSOLE: '+m.text()); });
-await p.goto('file:///home/user/124/index.html', { waitUntil:'domcontentloaded' });
+await p.goto(APP_URL, { waitUntil:'domcontentloaded' });
 await p.waitForTimeout(400);
 await p.evaluate(async ()=>{
   const store={};

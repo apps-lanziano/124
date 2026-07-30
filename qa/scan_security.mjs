@@ -11,7 +11,7 @@
    ============================================================ */
 import { readFileSync, existsSync } from 'fs';
 
-const ROOT = '/home/user/124';
+import { ROOT } from './lib/pw.mjs';   // שורש המאגר — נגזר, לא מקובע
 const findings = [];
 function add(sev, title, detail, where){ findings.push({sev, area:"אבטחה", title, detail, where}); }
 

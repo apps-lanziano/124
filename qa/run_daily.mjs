@@ -15,7 +15,7 @@ import { writeFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { closeBrowser } from './lib/harness.mjs';
 
-const ROOT = '/home/user/124';
+import { ROOT } from './lib/pw.mjs';   // שורש המאגר — נגזר, לא מקובע
 const SEV_ORDER = { high:0, med:1, low:2, info:3 };
 const SEV_HE = { high:"🔴 חמור", med:"🟠 בינוני", low:"🟡 קל", info:"🔵 מידע" };
 
