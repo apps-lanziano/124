@@ -1002,6 +1002,10 @@ nav{
       <div id="quick-users"></div>
       <div id="quick-pin-area" style="display:none;margin-top:6px">
         <div id="quick-hello" style="font-size:13.5px;color:#ffd3d9;margin-bottom:8px"></div>
+        <div id="quick-faceid-wrap" style="display:none;margin-bottom:10px">
+          <button type="button" class="login-go" id="quick-faceid-btn" onclick="quickLoginBiometric()" style="background:rgba(255,255,255,.18);margin-bottom:8px">🆔 המשך עם Face ID</button>
+          <div style="text-align:center;color:#ffd3d9;font-size:12px">— או הקלד PIN —</div>
+        </div>
         <input id="quick-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
           placeholder="🔒 הזן PIN אישי"
           style="width:100%;padding:15px 18px;border-radius:14px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;font-family:'Heebo';font-size:16px;text-align:center;letter-spacing:6px;outline:none;backdrop-filter:blur(8px)">
@@ -3217,6 +3221,7 @@ function initLoginScreen(){
     document.getElementById("quick-pin-area").style.display = "block";
     q.style.display="block"; cstep.style.display="none"; nstep.style.display="none";
     setTimeout(()=>document.getElementById("quick-pin").focus(), 100);
+    updateFaceIdButton(users[0]);
   } else if(users.length > 1){
     // כמה משתמשים במכשיר — בחירה ואז PIN
     document.getElementById("quick-title").style.display = "";
@@ -3249,6 +3254,7 @@ function selectQuickUser(i){
   document.getElementById("quick-pin").value = "";
   document.getElementById("quick-pin-area").style.display = "block";
   document.getElementById("quick-pin").focus();
+  updateFaceIdButton(quickSelected);
 }
 function forgetQuickUser(i){
   const users = getDeviceUsers();
@@ -3257,6 +3263,98 @@ function forgetQuickUser(i){
   quickSelected = null;
   document.getElementById("quick-pin-area").style.display = "none";
   if(getDeviceUsers().length) renderQuickUsers(); else switchUser();
+}
+
+/* ===== כניסה עם Face ID / טביעת אצבע (WebAuthn, "גרסה קלה") =====
+   WebAuthn משמש כאן רק כמפתח פתיחה מקומי במכשיר — בדיוק כמו ה-PIN היום,
+   בלי אימות חתימה מול שרת (זו הבחירה המודעת ל"גרסה הקלה" — תואמת לרמת
+   האמון הקיימת של ה-PIN, בלי לפתוח תשתית שרת חדשה). ההוכחה היא זו:
+   navigator.credentials.get() לא יכול להסתיים בהצלחה בלי שהמכשיר עצמו
+   פתח את המפתח באמצעות Face ID/טביעת אצבע/קוד המכשיר — מערכת ההפעלה
+   אוכפת את זה, לא הקוד כאן. */
+async function biometricAvailable(){
+  try{
+    return !!(window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());
+  }catch(_){ return false; }
+}
+function b64uEncode(buf){
+  return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function b64uDecode(str){
+  str = str.replace(/-/g,'+').replace(/_/g,'/');
+  while(str.length % 4) str += '=';
+  const bin = atob(str);
+  return Uint8Array.from(bin, c=>c.charCodeAt(0)).buffer;
+}
+/* מציג/מסתיר את כפתור ה-Face ID לפי מה שנרשם למכשיר הזה + תמיכת הדפדפן בפועל */
+async function updateFaceIdButton(dev){
+  const wrap = document.getElementById("quick-faceid-wrap");
+  if(!wrap) return;
+  wrap.style.display = "none";
+  if(!dev || !dev.faceId) return;
+  if(await biometricAvailable()) wrap.style.display = "block";
+}
+/* רישום מפתח ביומטרי חדש למכשיר הזה — נקרא רק אחרי שהזהות כבר אומתה (PIN הוקלד בהצלחה) */
+async function enrollBiometric(dev){
+  try{
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rp: { name: "טייסת 124" },
+      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: dev.name, displayName: dev.name },
+      pubKeyCredParams: [{type:"public-key", alg:-7}, {type:"public-key", alg:-257}],
+      authenticatorSelection: { authenticatorAttachment:"platform", userVerification:"required" },
+      timeout: 60000,
+    }});
+    if(!cred) return false;
+    const arr = getDeviceUsers();
+    const rec = arr.find(u=>u.shedId===dev.shedId && u.name===dev.name);
+    if(!rec) return false;
+    rec.faceId = b64uEncode(cred.rawId);
+    saveDeviceUsers(arr);
+    return true;
+  }catch(e){ console.error("enrollBiometric", e); return false; }
+}
+/* מציע להפעיל Face ID פעם אחת בלבד — אם המכשיר תומך, עוד לא הופעל, ולא נדחה
+   בעבר. לא חוסם את מסך הכניסה (נקרא בלי await מתוך doLogin). */
+async function maybeOfferBiometricEnroll(dev){
+  try{
+    const arr = getDeviceUsers();
+    const rec = arr.find(u=>u.shedId===dev.shedId && u.name===dev.name);
+    if(!rec || rec.faceId || rec.faceIdDeclined) return;
+    if(!(await biometricAvailable())) return;
+    if(!confirm("להפעיל כניסה עם Face ID / טביעת אצבע במכשיר הזה, כדי לא להקליד PIN בפעם הבאה?")){
+      rec.faceIdDeclined = true; saveDeviceUsers(arr); return;
+    }
+    const ok = await enrollBiometric(dev);
+    toast(ok ? "כניסה עם Face ID/טביעת אצבע הופעלה 🆔" : "ההפעלה לא הצליחה — אפשר לנסות שוב בכניסה הבאה");
+  }catch(e){ console.error("maybeOfferBiometricEnroll", e); }
+}
+/* דגל חד-פעמי: Face ID/טביעת אצבע כבר אימתו נוכחות — דילוג על שער ה-PIN
+   בתוך doLogin(). מתאפס מיד אחרי שימוש כדי שלא "ידלוף" לכניסה הבאה. */
+let biometricUnlockOK = false;
+
+/* גרעין משותף לכניסה מהירה (PIN או ביומטריה): מתחבר לחשבון ה-Firebase האמיתי,
+   טוען את נתוני המסגרת, ומוודא שהאדם עדיין קיים ותקין. מחזיר את ה-person
+   בהצלחה, או null אם יש לעצור (הודעה כבר הוצגה למשתמש). */
+async function quickLoginCore(dev, shed){
+  if(!(await signInAs(authEmailFromCode(dev.code), deriveAuthPassword(dev.code)))){
+    toast("בעיית אימות — התחבר עם קוד מסגרת"); switchUser(); return null;
+  }
+  currentShed = shed; enteredRole = dev.role; isAdmin = false; lastEnteredCode = dev.code;
+  if((await loadRuntimeLists()) === false){ toast("בעיית טעינה — נסה שוב 🔄"); return null; }
+  const person = PERSONNEL.find(p=>p.name===dev.name);
+  if(!person || person.role!==dev.role){ toast("המשתמש לא נמצא — התחבר עם קוד"); removeDeviceUser(dev.shedId, dev.name); switchUser(); return null; }
+  if(!person.pinHash){ toast("ה-PIN אופס — התחבר עם קוד מסגרת"); removeDeviceUser(dev.shedId, dev.name); switchUser(); return null; }
+  return person;
+}
+function finishQuickLoginUI(dev, pinValue){
+  document.getElementById("login-step-quick").style.display="none";
+  document.getElementById("login-step-name").style.display="block";
+  const sel = document.getElementById("login-select");
+  sel.innerHTML = `<option value="${escapeHTML(dev.name)}">${escapeHTML(dev.name)}</option>`;
+  sel.value = dev.name;
+  document.getElementById("login-pin-wrap").style.display="block";
+  document.getElementById("login-pin").value = pinValue;
 }
 /* כניסה מהירה — למשתמש שנבחר: PIN בלבד. מאמת מול חשבון ה-Firebase Auth
    שנוצר בפועל בכניסה הראשונה (u<קוד>@, ראו authEmailFromCode) — לא מול
@@ -3273,23 +3371,37 @@ async function quickLogin(){
   if(!entered){ toast("הזן PIN אישי 🔒"); pinEl.focus(); return; }
   setBtnLoading(btn, true);
   try{
-    if(!(await signInAs(authEmailFromCode(dev.code), deriveAuthPassword(dev.code)))){
-      toast("בעיית אימות — התחבר עם קוד מסגרת"); switchUser(); return;
-    }
-    currentShed = shed; enteredRole = dev.role; isAdmin = false; lastEnteredCode = dev.code;
-    if((await loadRuntimeLists()) === false){ toast("בעיית טעינה — נסה שוב 🔄"); return; }
-    const person = PERSONNEL.find(p=>p.name===dev.name);
-    if(!person || person.role!==dev.role){ toast("המשתמש לא נמצא — התחבר עם קוד"); removeDeviceUser(dev.shedId, dev.name); switchUser(); return; }
-    if(!person.pinHash){ toast("ה-PIN אופס — התחבר עם קוד מסגרת"); removeDeviceUser(dev.shedId, dev.name); switchUser(); return; }
+    const person = await quickLoginCore(dev, shed);
+    if(!person) return;
     if(!(await verifyPin(person, entered))){ registerLoginFail(); toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
-    // מאומת — מריצים את מסלול הכניסה הרגיל
-    document.getElementById("login-step-quick").style.display="none";
-    document.getElementById("login-step-name").style.display="block";
-    const sel = document.getElementById("login-select");
-    sel.innerHTML = `<option value="${escapeHTML(dev.name)}">${escapeHTML(dev.name)}</option>`;
-    sel.value = dev.name;
-    document.getElementById("login-pin-wrap").style.display="block";
-    document.getElementById("login-pin").value = entered;
+    finishQuickLoginUI(dev, entered);
+    await doLogin();
+  } finally { setBtnLoading(btn, false); }
+}
+/* כניסה מהירה עם Face ID/טביעת אצבע — אותו מסלול בדיוק, בלי הקלדת PIN.
+   ההצלחה של navigator.credentials.get() היא ההוכחה (ראו הערה למעלה). */
+async function quickLoginBiometric(){
+  if(loginLockedGuard()) return;
+  const dev = quickSelected || getDeviceUsers()[0];
+  if(!dev || !dev.faceId) return;
+  const shed = SHEDS.find(s=>s.id===dev.shedId);
+  if(!shed){ removeDeviceUser(dev.shedId, dev.name); switchUser(); return; }
+  const btn = document.getElementById("quick-faceid-btn");
+  setBtnLoading(btn, true);
+  try{
+    try{
+      const assertion = await navigator.credentials.get({ publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        allowCredentials: [{ id: b64uDecode(dev.faceId), type:"public-key" }],
+        userVerification: "required",
+        timeout: 60000,
+      }});
+      if(!assertion) return;
+    }catch(e){ console.error("quickLoginBiometric", e); toast("לא זוהה — הקלד PIN 🔒"); return; }
+    const person = await quickLoginCore(dev, shed);
+    if(!person) return;
+    finishQuickLoginUI(dev, "");
+    biometricUnlockOK = true;
     await doLogin();
   } finally { setBtnLoading(btn, false); }
 }
@@ -3463,7 +3575,10 @@ async function doLogin(){
     const pinEl = document.getElementById("login-pin");
     if(wrap.style.display === "none"){ onLoginNameChange(); pinEl.focus(); return; }
     const entered = (pinEl.value||"").trim();
-    if(person.pinHash){
+    if(biometricUnlockOK){
+      // Face ID/טביעת אצבע כבר אימתו נוכחות ברגע זה — לא דורשים גם PIN
+      biometricUnlockOK = false;
+    } else if(person.pinHash){
       // יש PIN — חובה להזין נכון
       if(!entered){ toast("הזן PIN אישי 🔒"); pinEl.focus(); return; }
       if(!(await verifyPin(person, entered))){ registerLoginFail(); toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
@@ -3609,7 +3724,9 @@ async function doLogin(){
     clearLoginFails();   // כניסה מוצלחת מאפסת את מונה הניסיונות
     // זכירת מכשיר — המשתמש מתווסף לרשימה (מספר משתמשים לכל מכשיר)
     if(currentShed && user && person.pinHash && lastEnteredCode){
-      addDeviceUser({shedId: currentShed.id, role: enteredRole, code: lastEnteredCode, name: user});
+      const devRec = {shedId: currentShed.id, role: enteredRole, code: lastEnteredCode, name: user};
+      addDeviceUser(devRec);
+      maybeOfferBiometricEnroll(devRec);   // לא ממתינים — לא חוסם את מסך הכניסה
     }
     toast("ברוך הבא, " + user.split(" ")[0] + " 👋");
     ensureBadgePermission();   // בקשת אישור התראות (חד-פעמי) כדי שה-badge על הסמל יעבוד
