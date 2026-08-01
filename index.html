@@ -2829,13 +2829,6 @@ function authActive(){ return AUTH_MODE !== "legacy"; }
 /* קוד בן 4 ספרות אינו עומד במינימום של Firebase (6 תווים) — גוזרים ממנו
    סיסמה דטרמיניסטית. המשתמש עדיין מקליד 4 ספרות; זו הסיסמה שמאחורי הקלעים. */
 function deriveAuthPassword(code){ return "sq124:" + code; }
-/* חשבון האימות של מסגרת+תפקיד: "shed3.cmd@sq124.app" / "shed3.sol@sq124.app".
-   הכללים (גרסה 2) גוזרים את המסגרת מהחלק שלפני הנקודה. */
-function frameworkAuthEmail(shedId, role){
-  return shedId + "." + (role === "מפקד" ? "cmd" : "sol") + "@" + AUTH_DOMAIN;
-}
-/* חשבונות-על כלל-טייסתיים. */
-function roleAuthEmail(slug){ return slug + "@" + AUTH_DOMAIN; }
 
 /* ===== כניסה מבוססת-שרת (CODE_LOGIN="server") =====
    הרעיון: הדפדפן לא מחזיק שום מיפוי קוד→מסגרת. הוא נכנס עם חשבון שנגזר
@@ -3265,7 +3258,9 @@ function forgetQuickUser(i){
   document.getElementById("quick-pin-area").style.display = "none";
   if(getDeviceUsers().length) renderQuickUsers(); else switchUser();
 }
-/* כניסה מהירה — למשתמש שנבחר: PIN בלבד. מאמת מול חשבון המסגרת שמור ברקע. */
+/* כניסה מהירה — למשתמש שנבחר: PIN בלבד. מאמת מול חשבון ה-Firebase Auth
+   שנוצר בפועל בכניסה הראשונה (u<קוד>@, ראו authEmailFromCode) — לא מול
+   פורמט "שם מסגרת" ישן שמעולם לא נוצר עבורו, וגרם לתקלה השקטה הזו. */
 async function quickLogin(){
   if(loginLockedGuard()) return;
   const dev = quickSelected || getDeviceUsers()[0];
@@ -3278,7 +3273,7 @@ async function quickLogin(){
   if(!entered){ toast("הזן PIN אישי 🔒"); pinEl.focus(); return; }
   setBtnLoading(btn, true);
   try{
-    if(!(await signInAs(frameworkAuthEmail(dev.shedId, dev.role), deriveAuthPassword(dev.code)))){
+    if(!(await signInAs(authEmailFromCode(dev.code), deriveAuthPassword(dev.code)))){
       toast("בעיית אימות — התחבר עם קוד מסגרת"); switchUser(); return;
     }
     currentShed = shed; enteredRole = dev.role; isAdmin = false; lastEnteredCode = dev.code;
