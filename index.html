@@ -3140,6 +3140,14 @@ let isOwner = false;         // מנהל מערכת — בעל האפליקצי�
 let impersonating = null;    // {shedId,name} כשמנהל המערכת צופה/עורך בתור משתמש אחר
 let enteredRole = null;      // "חייל" | "מפקד" | "מנהל" | "מ״ע אחזקה" | "אחראי תקציבים" | "קצין טכני" after code check
 
+/* ===== קיצורי דרך ממסך הבית (PWA shortcuts, manifest.json) =====
+   נכנס עם ?shortcut=rollcall/faults בכתובת — נקרא פעם אחת בטעינה,
+   ומנוקה מיד מה-URL כדי שרענון אחרי הכניסה לא יפעיל אותו שוב. מיושם
+   בפועל בסוף doLogin(), במקום מסך הנחיתה הרגיל. */
+const SHORTCUT_SCREENS = { rollcall: "scr-rollcall", faults: "scr-faults" };
+let pendingShortcut = new URLSearchParams(location.search).get("shortcut");
+if(pendingShortcut){ history.replaceState(null, "", location.pathname); }
+
 /* מפתח storage ממוספר לפי סככה — הפרדת נתונים מלאה */
 function shedKey(key){
   return currentShed ? (currentShed.id + "_" + key) : key;
@@ -3717,15 +3725,25 @@ async function doLogin(){
 
     // commander lands on commander screen; soldier on safety —
     // switched before refreshAll() so the wrong screen never flashes underneath the overlay
+    let landingScreen, landingBtn;
     if(userRole === "מפקד" && currentShed.isTraining){
-      go("scr-admin", document.getElementById("nav-admin"));
+      landingScreen = "scr-admin"; landingBtn = document.getElementById("nav-admin");
     } else if(userRole === "מפקד" && currentShed.isMaint){
-      go("scr-vehicle-officer", document.getElementById("nav-vehicle-officer"));
+      landingScreen = "scr-vehicle-officer"; landingBtn = document.getElementById("nav-vehicle-officer");
     } else if(userRole === "מפקד"){
-      go("scr-cmd", document.querySelector('[data-scr="scr-cmd"]'));
+      landingScreen = "scr-cmd"; landingBtn = document.querySelector('[data-scr="scr-cmd"]');
     } else {
-      go("scr-safety", document.querySelector('[data-scr="scr-safety"]'));
+      landingScreen = "scr-safety"; landingBtn = document.querySelector('[data-scr="scr-safety"]');
     }
+    // קיצור דרך ממסך הבית (PWA shortcuts) — נכנס עם ?shortcut=... בכתובת.
+    // go() לא דורש שהכפתור המפעיל יהיה גלוי, ולכן הקיצור עובד גם אם המסך
+    // מגיע דרך תפריט "עוד" ולא סרגל ניווט — במקום מסך הנחיתה הרגיל בלבד.
+    if(pendingShortcut && SHORTCUT_SCREENS[pendingShortcut]){
+      landingScreen = SHORTCUT_SCREENS[pendingShortcut];
+      landingBtn = document.querySelector(`[data-scr="${landingScreen}"]`);
+      pendingShortcut = null;
+    }
+    go(landingScreen, landingBtn);
     await refreshAll();
     clearLoginFails();   // כניסה מוצלחת מאפסת את מונה הניסיונות
     // זכירת מכשיר — המשתמש מתווסף לרשימה (מספר משתמשים לכל מכשיר)
