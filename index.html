@@ -1408,6 +1408,7 @@ nav{
           <button class="admin-card" onclick="openAdminBoard()"><span class="a-ic">📅</span><b>העלאת לוח צוות</b><span>לכל המסגרות</span></button>
           <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>פרסום הודעה</b><span>לכל המסגרות</span></button>
           <button class="admin-card" onclick="openAdminAlerts()"><span class="a-ic">🔔</span><b>מרכז התראות</b><span>כל המסגרות</span></button>
+          <button class="admin-card" onclick="repairDistributionGaps()"><span class="a-ic">🩹</span><b>תיקון פערי הפצה</b><span>סנכרון קרא-וחתום/הדרכה שלא הגיעו לכל המסגרות</span></button>
         </div>
         <div class="cmd-section-title">📄 קרא וחתום שפורסמו — כלל הטייסת</div>
         <div id="admin-events-list"></div>
@@ -7442,6 +7443,55 @@ async function publishEventToAllSheds(id, title, meta, fileData, thumb){
   return allOk;
 }
 async function getAdminEventsList(){ return (await sGetRaw("admin_events")) || []; }
+
+/* תיקון פערי הפצה: פריט שפורסם לכל המסגרות (admin_events/admin_training) אבל
+   בכשל חד-פעמי (רשת/מכשיר) לא נכתב אצל מסגרת אחת או יותר. הפונקציה רק *מוסיפה*
+   את מה שחסר — לא מוחקת ולא נוגעת בפריטים קיימים — ולכן לא פוגעת בחתימות
+   שכבר נקלטו במסגרות שכן קיבלו את הפריט (החתימות נשמרות לפי id, לא לפי מסגרת). */
+async function repairDistributionGaps(){
+  if(!confirm("לבדוק ולתקן פערי הפצה של קרא-וחתום וחומרי הדרכה בכל המסגרות?")) return;
+  toast("בודק פערים…");
+  const report = [];
+
+  const adminEvents = await getAdminEventsList();
+  const localEvents = {};
+  await Promise.all(SHEDS.map(async shed=>{
+    localEvents[shed.id] = (await sGetIn(shed.id, "safety_events")) || [];
+  }));
+  for(const item of adminEvents){
+    if(!item || !item.id) continue;
+    const missingSheds = SHEDS.filter(s=>!localEvents[s.id].some(e=>e && e.id===item.id));
+    if(!missingSheds.length) continue;
+    const sourceShed = SHEDS.find(s=>localEvents[s.id].some(e=>e && e.id===item.id));
+    const fileData = sourceShed ? await sGetIn(sourceShed.id, "safety_ev_"+item.id) : null;
+    await Promise.all(missingSheds.map(async shed=>{
+      if(fileData !== null && fileData !== undefined) await sSetIn(shed.id, "safety_ev_"+item.id, fileData);
+      localEvents[shed.id].unshift({...item});
+      await sSetIn(shed.id, "safety_events", localEvents[shed.id]);
+    }));
+    report.push(`"${item.title}" חסר ב-${missingSheds.map(s=>s.name).join(", ")} — תוקן`);
+  }
+
+  const adminTraining = await getTrainingList();
+  await Promise.all(SHEDS.map(async shed=>{
+    const local = (await sGetIn(shed.id, "training_list")) || [];
+    const ids = new Set(local.map(e=>e && e.id));
+    const missing = adminTraining.filter(e=>e && e.id && !ids.has(e.id));
+    if(!missing.length) return;
+    await Promise.all(missing.map(async item=>{
+      const fileData = await sGetRaw("admin_training_file_"+item.id);
+      if(fileData !== null && fileData !== undefined) await sSetIn(shed.id, "training_file_"+item.id, fileData);
+      local.unshift({...item});
+    }));
+    await sSetIn(shed.id, "training_list", local);
+    report.push(`חומרי הדרכה חסרים ב-${shed.name}: ${missing.length} — תוקן`);
+  }));
+
+  toast(report.length ? "התיקון בוצע ✓" : "אין פערים — הכל מסונכרן ✓");
+  await logAdminAction("תיקון פערי הפצה", report.join(" · ") || "אין פערים");
+  renderAdminEvents(); renderAdminTraining();
+}
+
 async function renderAdminEvents(){
   const box = document.getElementById("admin-events-list");
   if(!box) return;
