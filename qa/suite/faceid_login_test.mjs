@@ -135,6 +135,32 @@ async function freshPage(){
   console.log("errs5", errs); await p.close();
 }
 
+// 6. הבאג שדווח: addDeviceUser לא ימחק faceId/faceIdDeclined בכניסה הבאה.
+//    זה בדיוק מה שקרה בפועל — doLogin קורא ל-addDeviceUser בכל כניסה מוצלחת
+//    (לא רק בפעם הראשונה), וההחלפה המלאה מחקה את הרישום ביומטרי כל פעם.
+{
+  const {p, errs} = await freshPage();
+  const out = await p.evaluate(async ()=>{
+    localStorage.setItem("sq124_devices", JSON.stringify([
+      {shedId:"shed2", role:"חייל", name:"דני", code:"7788", faceId:"already-enrolled"},
+      {shedId:"shed3", role:"חייל", name:"רון", code:"9999", faceIdDeclined:true},
+    ]));
+    // מדמה בדיוק את מה ש-doLogin עושה בסוף כל כניסה מוצלחת
+    addDeviceUser({shedId:"shed2", role:"חייל", code:"7788", name:"דני"});
+    addDeviceUser({shedId:"shed3", role:"חייל", code:"9999", name:"רון"});
+    const users = getDeviceUsers();
+    return {
+      daniFaceId: users.find(u=>u.name==="דני")?.faceId,
+      ronDeclined: users.find(u=>u.name==="רון")?.faceIdDeclined,
+    };
+  });
+  record("כניסה חוזרת לא מוחקת רישום Face ID קיים",
+    out.daniFaceId === "already-enrolled", JSON.stringify(out));
+  record("כניסה חוזרת לא מוחקת סימון 'נדחה' — לא חוזר לשאול שוב",
+    out.ronDeclined === true, JSON.stringify(out));
+  console.log("errs6", errs); await p.close();
+}
+
 console.log("\n=== SUMMARY ===");
 let allPass = true;
 for(const r of results){
