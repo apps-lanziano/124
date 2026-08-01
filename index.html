@@ -1704,7 +1704,7 @@ nav{
     <button class="nav-btn hidden" id="nav-binui-admin" data-scr="scr-binui-admin" onclick="go('scr-binui-admin',this)"><span class="ic">🚧</span><span>תקלות בינוי</span><span class="nav-badge hidden" id="badge-binui-admin">0</span></button>
     <button class="nav-btn hidden" id="nav-vo-team" onclick="openVoTeamMgmt()"><span class="ic">👥</span><span>צוות</span></button>
     <button class="nav-btn hidden" id="nav-budget-officer" data-scr="scr-budget-officer" onclick="go('scr-budget-officer',this)"><span class="ic">💰</span><span>תקציבים</span></button>
-    <button class="nav-btn hidden" id="nav-rollcall" data-scr="scr-rollcall" onclick="go('scr-rollcall',this)"><span class="ic">🛡️</span><span>נכס</span></button>
+    <button class="nav-btn hidden" id="nav-rollcall" data-scr="scr-rollcall" onclick="go('scr-rollcall',this)"><span class="ic">🛡️</span><span>נכס</span><span class="nav-badge hidden" id="badge-rollcall">0</span></button>
     <button class="nav-btn hidden" id="nav-users" data-scr="scr-users" onclick="go('scr-users',this)"><span class="ic">👑</span><span>משתמשים</span></button>
   </nav>
 
@@ -5355,6 +5355,14 @@ async function updateBadges(){
     const faults = (await sGet("faults_list")) || [];
     const openFaults = faults.filter(f=>f.status!=="closed").length;
     setBadge("badge-faults", openFaults);
+    /* נכס פעיל שהמשתמש עוד לא סימן בו נוכחות. עד עכשיו לא הייתה שום
+       אינדיקציה באפליקציה שהופעל נכס — מי שלא נכנס במקרה למסך פשוט
+       לא ידע. הבדיקה מקומית למסגרת (sGet), ולכן נכס של סככה אחת לא
+       מופיע אצל אחרת. */
+    const rcSuf = rollcallKeySuffix();
+    const rcActive = await sGet("rollcall_active"+rcSuf);
+    const rcChecks = (await sGet("rollcall_checkins"+rcSuf)) || {};
+    setBadge("badge-rollcall", (rcActive && !rcChecks[user]) ? 1 : 0);
   }
   updateAppBadge();
 }
@@ -8249,6 +8257,17 @@ async function computeAlerts(){
      ומעקב רכבים סככתי — אין להתריע על מסכים שלא קיימים בהן. נשארות
      התראות קרא וחתום. */
   const isTrimmedUnit = !!(currentShed.isMaint || currentShed.isTraining);
+
+  /* נכס פעיל — התראה למפקד עם מספר מי שטרם סימן נוכחות. מסגרתית בלבד. */
+  {
+    const rcSuf = rollcallKeySuffix();
+    if(await sGet("rollcall_active"+rcSuf)){
+      const checks = (await sGet("rollcall_checkins"+rcSuf)) || {};
+      const missing = PERSONNEL.filter(p=>!checks[p.name]).length;
+      if(missing>0) alerts.push({icon:"🛡️", text:`נכס פעיל — ${missing} טרם סימנו נוכחות`, level:"high"});
+    }
+  }
+
   const events = await getEvents();
   // unsigned events (per soldier count) — שולפים את החתימות של כולם פעם אחת במקביל, לא בכל אירוע מחדש
   const sigsArrA = await Promise.all(PERSONNEL.map(p => sGet("sigs_"+safeName(p.name))));

@@ -34,16 +34,30 @@ exports.notifyOnPublish = onDocumentWritten(
   else if (docId.endsWith("_safety_events")) kind = "safety";
   else if (docId.endsWith("_boards_list")) kind = "board";
   else if (docId.endsWith("_training_list")) kind = "training";
+  else if (docId.includes("_rollcall_active")) kind = "rollcall";
   else return; // כל שאר המסמכים (צוות, הסמכות, טוקנים…) — לא רלוונטי
 
-  const shedId = docId.replace(/_(messages_list|safety_events|boards_list|training_list)$/, "");
-  const before = event.data.before.exists ? (event.data.before.data().v || []) : [];
-  const after = event.data.after.exists ? (event.data.after.data().v || []) : [];
-  if (!Array.isArray(after)) return;
+  const before = event.data.before.exists ? event.data.before.data().v : undefined;
+  const after = event.data.after.exists ? event.data.after.data().v : undefined;
 
-  const beforeIds = new Set((Array.isArray(before) ? before : []).map((x) => x && x.id));
-  const newItems = after.filter((x) => x && x.id && !beforeIds.has(x.id));
-  if (!newItems.length) return; // לא נוסף פריט חדש (עריכה/מחיקה) — לא שולחים
+  /* נכס הוא מתג בוליאני, לא רשימה של פריטים — ולכן הוא לא יכול לעבור
+     בהשוואת המזהים שלמטה. שולחים רק במעבר כבוי→פעיל: סיום נכס או
+     כתיבה חוזרת של אותו ערך לא מייצרים התראה.
+     המפתח הוא <מסגרת>_rollcall_active[_<מחלקה>], ולכן ההתראה יוצאת
+     מעצמה רק לטוקנים של אותה מסגרת — בדיוק כנדרש. */
+  let newItems = [];
+  let shedId;
+  if (kind === "rollcall") {
+    if (!(after === true && before !== true)) return;
+    shedId = docId.slice(0, docId.indexOf("_rollcall_active"));
+  } else {
+    shedId = docId.replace(/_(messages_list|safety_events|boards_list|training_list)$/, "");
+    const afterArr = Array.isArray(after) ? after : [];
+    if (!Array.isArray(after)) return;
+    const beforeIds = new Set((Array.isArray(before) ? before : []).map((x) => x && x.id));
+    newItems = afterArr.filter((x) => x && x.id && !beforeIds.has(x.id));
+    if (!newItems.length) return; // לא נוסף פריט חדש (עריכה/מחיקה) — לא שולחים
+  }
 
   // הטוקנים של המסגרת הזו
   const tokRef = db.doc("sq124/push_tokens_" + shedId);
@@ -52,23 +66,25 @@ exports.notifyOnPublish = onDocumentWritten(
   const tokens = Object.keys(tokMap);
   if (!tokens.length) return;
 
-  const item = newItems[0];
+  const item = newItems[0] || {};
   const shedName = SHED_NAMES[shedId] || shedId;
   const KIND_TITLES = {
     message: "הודעה חדשה · " + shedName,
     safety: "קרא וחתום חדש · " + shedName,
     board: "לוח צוות חדש · " + shedName,
     training: "חומר הדרכה חדש · " + shedName,
+    rollcall: "🚨 נכס · " + shedName,
   };
   const title = KIND_TITLES[kind];
-  const body = kind === "message" ? String(item.text || "").slice(0, 140)
+  const body = kind === "rollcall" ? "הופעל נכס — יש לסמן נוכחות עכשיו"
+    : kind === "message" ? String(item.text || "").slice(0, 140)
     : kind === "board" ? String(item.label || "")
     : String(item.title || item.fname || "");
 
   // data-only: ה-Service Worker מציג את ההתראה ומעדכן את ה-badge (נדרש לאייפון)
   const resp = await getMessaging().sendEachForMulticast({
     tokens,
-    data: {title, body, kind, n: String(newItems.length)},
+    data: {title, body, kind, n: String(newItems.length || 1)},
   });
 
   // ניקוי טוקנים שכבר לא תקפים
