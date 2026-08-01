@@ -14,6 +14,7 @@
 import { writeFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { closeBrowser } from './lib/harness.mjs';
+import { IDEAS as UPGRADE_IDEAS } from './improvement_ideas.mjs';
 
 import { ROOT } from './lib/pw.mjs';   // שורש המאגר — נגזר, לא מקובע
 const SEV_ORDER = { high:0, med:1, low:2, info:3 };
@@ -114,6 +115,17 @@ function buildReport(sections){
       md += `**${SEV_HE[x.sev]} · ${plain(x.title)}**\n`;
       md += `${plain(x.detail)}\n\n`;
     }
+    md += `---\n\n`;
+  }
+
+  /* רעיונות לשדרוג — שיפוט אנושי, לא נבדק אוטומטית. ראו improvement_ideas.mjs
+     להסבר למה זה קטע נפרד מ"הצעות לשיפור" (שם רק ניקיון קוד אוטומטי). */
+  if(UPGRADE_IDEAS.length){
+    md += `## רעיונות לשדרוג\n\n`;
+    md += `_אלה לא ממצאי סריקה — הצעות מוצר שנכתבות ומתעדכנות בסקירה אנושית של האפליקציה, כדי שהדוח תמיד יכלול גם רעיונות ולא רק ניקיון קוד._\n\n`;
+    UPGRADE_IDEAS.forEach((idea,i)=>{
+      md += `**${i+1}. ${idea.title}** _(${idea.effort})_\n${idea.detail}\n\n`;
+    });
     md += `---\n\n`;
   }
 
