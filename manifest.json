@@ -14,5 +14,21 @@
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "סימון נוכחות בנכס",
+      "short_name": "נכס",
+      "description": "מעבר ישיר לסימון נוכחות כשהופעל נכס",
+      "url": "./index.html?shortcut=rollcall",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "דיווח תקלה",
+      "short_name": "תקלה",
+      "description": "מעבר ישיר לדיווח תקלה",
+      "url": "./index.html?shortcut=faults",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }

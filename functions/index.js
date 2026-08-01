@@ -8,9 +8,13 @@
    הסיסמאות/מפתחות של השליחה נשמרים בשרת (Admin SDK) — לא בקוד הלקוח. */
 
 const {onDocumentWritten} = require("firebase-functions/v2/firestore");
+const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore} = require("firebase-admin/firestore");
 const {getMessaging} = require("firebase-admin/messaging");
+const {getStorage} = require("firebase-admin/storage");
+const {findUnsignedReminders} = require("./lib/reminders");
+const {dumpCollection} = require("./lib/backup");
 
 initializeApp();
 const db = getFirestore();
@@ -105,3 +109,66 @@ exports.notifyOnPublish = onDocumentWritten(
   }
   console.log(`push ${kind}→${shedId}: ${resp.successCount}/${tokens.length} נשלחו, ${bad.length} טוקנים נוקו`);
 });
+
+/* ===== תזכורת אוטומטית — קרא-וחתום שלא נסגר =====
+   רץ כל בוקר. שולח פוש רק למפקדי המסגרת (לא לכל הצוות) — המטרה היא
+   לדחוף למי שיכול לרדוף אחרי החותמים, לא להציף את כל הסככה. פריט
+   שכבר קיבל תזכורת ב-3 הימים האחרונים לא נשלח שוב (ראו lib/reminders). */
+exports.remindUnsignedDaily = onSchedule(
+  {
+    schedule: "0 7 * * *",
+    timeZone: "Asia/Jerusalem",
+    memory: "256MiB",
+    timeoutSeconds: 120,
+  },
+  async () => {
+    const {toSend, updatedLog} = await findUnsignedReminders(db);
+    if (!toSend.length) return;
+
+    let sentCount = 0;
+    for (const item of toSend) {
+      const tokRef = db.doc("sq124/push_tokens_" + item.shedId);
+      const tokSnap = await tokRef.get();
+      const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
+      const cmdTokens = Object.entries(tokMap)
+        .filter(([, m]) => m && m.role === "מפקד")
+        .map(([t]) => t);
+      if (!cmdTokens.length) continue;
+
+      const shedName = SHED_NAMES[item.shedId] || item.shedId;
+      await getMessaging().sendEachForMulticast({
+        tokens: cmdTokens,
+        data: {
+          title: "⏳ תזכורת חתימות · " + shedName,
+          body: `"${item.title}" — ${item.missing} עדיין לא חתמו`,
+          kind: "reminder",
+          n: String(item.missing),
+        },
+      });
+      sentCount++;
+    }
+    await db.doc("sq124/_reminder_log").set({v: updatedLog, updated: Date.now()}, {merge: true});
+    console.log(`תזכורות חתימות: ${toSend.length} פריטים דורשים תזכורת, ${sentCount} נשלחו בפועל`);
+  },
+);
+
+/* ===== גיבוי שבועי =====
+   מייצא את כל אוסף sq124 לקובץ JSON ב-Cloud Storage (הדלי הדיפולטי של
+   הפרויקט), כל יום ראשון בלילה. לא נוגע באפליקציה שהמשתמשים רואים —
+   הגנה מפני מחיקה בטעות/תקלה שתאבד נתונים בלי שום עותק. */
+exports.weeklyBackup = onSchedule(
+  {
+    schedule: "0 3 * * 0",
+    timeZone: "Asia/Jerusalem",
+    memory: "512MiB",
+    timeoutSeconds: 300,
+  },
+  async () => {
+    const {docs, count} = await dumpCollection(db);
+    const stamp = new Date().toISOString().slice(0, 10);
+    const path = `backups/sq124-${stamp}.json`;
+    const bucket = getStorage().bucket();
+    await bucket.file(path).save(JSON.stringify(docs), {contentType: "application/json"});
+    console.log(`גיבוי שבועי: ${count} מסמכים -> ${path}`);
+  },
+);
