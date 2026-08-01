@@ -2070,6 +2070,9 @@ nav{
         <input class="m-input" id="tool-serial" type="text" placeholder="מס' סידורי" style="margin-bottom:8px">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תוקף כיול (פ.ת)</label>
         <input class="m-input" id="tool-expiry" type="date" style="margin-bottom:10px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:10px">
+          <input type="checkbox" id="tool-in-repair" style="width:auto;margin:0"> 🔧 הכלי בתיקון/כיול — לא להתריע עד שיחזור
+        </label>
         <button class="m-btn primary" onclick="addTool()" style="width:100%">➕ הוסף כלי</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
@@ -8164,24 +8167,40 @@ async function renderTrends(){
 
   // בדיקות תקופתיות (שמיעה + מטווח בסיסי) — התראה רק על פ.ת/קרוב לפ.ת.
   // חייל ללא תאריך פ.ת אינו נחשב "פג תוקף" ואינו מוצג כאן.
+  // פער כזה לא נסגר ברמה יומית (תיאום מרפאה/מטווח לוקח זמן), ולכן מרוכז בשורה
+  // אחת לכל סוג בדיקה במקום שורה נפרדת לכל חייל — כדי לא להציף את מיקוד היום.
+  // הפירוט המלא לפי שם עדיין זמין במסך "כשירות חיילים".
   const medData = await getMedChecks();
   let medExpired=0, medSoon=0;
+  const medAgg = {};
   medPeople().forEach(p=>{
     const r = medData[safeName(p.name)] || {};
     Object.keys(MED_TYPES).forEach(k=>{
       const st = medStatus(r[k]);
       if(!st.set) return;   // אין תאריך פ.ת — לא מציגים בדשבורד
-      const lbl = MED_TYPES[k].label, ic = MED_TYPES[k].ic;
-      if(st.cls==="r"){ medExpired++; priorityFeed.push({cls:"r", ic, title:`${p.name} — ${lbl}`, sub:`פג תוקף לפני ${Math.abs(st.days)} ימים`, tag:st.tag, days:st.days, go:"closeMoreAnd('scr-medchecks')"}); }
-      else if(st.cls==="y"){ medSoon++; priorityFeed.push({cls:"y", ic, title:`${p.name} — ${lbl}`, sub:`פג בעוד ${st.days} ימים`, tag:st.tag, days:st.days, go:"closeMoreAnd('scr-medchecks')"}); }
+      if(st.cls!=="r" && st.cls!=="y") return;
+      if(st.cls==="r") medExpired++; else medSoon++;
+      const key = k+"_"+st.cls;
+      if(!medAgg[key]) medAgg[key] = {count:0, minDays:st.days};
+      medAgg[key].count++;
+      medAgg[key].minDays = Math.min(medAgg[key].minDays, st.days);
     });
+  });
+  Object.keys(medAgg).forEach(key=>{
+    const [k, cls] = key.split("_");
+    const {count, minDays} = medAgg[key];
+    const lbl = MED_TYPES[k].label, ic = MED_TYPES[k].ic;
+    const sub = cls==="r"
+      ? `${count} חיילים — הוותיק ביותר פג לפני ${Math.abs(minDays)} ימים`
+      : `${count} חיילים — הקרוב ביותר פג בעוד ${minDays} ימים`;
+    priorityFeed.push({cls, ic, title:`${lbl} — ${count} חיילים`, sub, tag:count+" חיילים", days:minDays, go:"closeMoreAnd('scr-medchecks')"});
   });
 
   // tools (חדר כלים) — לא רלוונטי ליוזר מחלקות
   const tools = isDeptUnit ? [] : await getTools();
   let toolExpired=0, toolSoon=0;
   tools.forEach(t=>{
-    if(!t.expiry) return;
+    if(t.inRepair || !t.expiry) return;
     const d = Math.round((new Date(t.expiry+"T00:00:00")-today)/86400000);
     const label = t.name + (t.serial?(" — מספר "+t.serial):"");
     if(d<0){ toolExpired++; priorityFeed.push({cls:"r", ic:"🧰", title:label, sub:`פג תוקף כיול לפני ${Math.abs(d)} ימים`, tag:"פג תוקף", days:d, go:"go('scr-tools',document.querySelector('[data-scr=\\'scr-tools\\']'))"}); }
@@ -8360,7 +8379,7 @@ async function computeAlerts(){
   // expiring tool calibrations — חדר כלים (שבוע לפני)
   const tools = (await sGet("tools_list")) || [];
   for(const t of tools){
-    if(!t.expiry) continue;
+    if(t.inRepair || !t.expiry) continue;
     const exp = new Date(t.expiry+"T00:00:00");
     const daysLeft = Math.round((exp-today)/86400000);
     if(daysLeft<0) alerts.push({icon:"🧰", text:`${t.name}${t.serial?(" (מספר "+t.serial+")"):""} — פג תוקף כיול!`, level:"high"});
@@ -8859,6 +8878,7 @@ function openToolAdd(){
   document.getElementById("tool-name").value = "";
   document.getElementById("tool-serial").value = "";
   document.getElementById("tool-expiry").value = "";
+  document.getElementById("tool-in-repair").checked = false;
   document.querySelector("#tool-modal h3").textContent = "🧰 הוספת כלי לחדר הכלים";
   document.querySelector("#tool-modal .m-btn.primary").textContent = "➕ הוסף כלי";
   document.getElementById("tool-modal").classList.add("open");
@@ -8872,6 +8892,7 @@ async function openToolEdit(id){
   document.getElementById("tool-name").value = t.name;
   document.getElementById("tool-serial").value = t.serial || "";
   document.getElementById("tool-expiry").value = t.expiry || "";
+  document.getElementById("tool-in-repair").checked = !!t.inRepair;
   document.querySelector("#tool-modal h3").textContent = "✏️ עריכת כלי";
   document.querySelector("#tool-modal .m-btn.primary").textContent = "💾 שמור שינויים";
   document.getElementById("tool-modal").classList.add("open");
@@ -8880,11 +8901,12 @@ async function addTool(){
   const name = document.getElementById("tool-name").value.trim();
   const serial = document.getElementById("tool-serial").value.trim();
   const expiry = document.getElementById("tool-expiry").value;
+  const inRepair = document.getElementById("tool-in-repair").checked;
   if(name.length<2){ toast("נא למלא שם כלי"); return; }
   const tools = await getTools();
   if(toolEditId){
     const t = tools.find(x=>x.id===toolEditId);
-    if(t){ t.name=name; t.serial=serial; t.expiry=expiry; }
+    if(t){ t.name=name; t.serial=serial; t.expiry=expiry; t.inRepair=inRepair; }
     toolEditId = null;
     await sSet("tools_list", tools);
     document.getElementById("tool-modal").classList.remove("open");
@@ -8892,9 +8914,10 @@ async function addTool(){
     toast("הכלי עודכן ✓");
     return;
   }
-  tools.push({id:"tool"+Date.now(), name, serial, expiry});
+  tools.push({id:"tool"+Date.now(), name, serial, expiry, inRepair});
   await sSet("tools_list", tools);
   document.getElementById("tool-name").value=""; document.getElementById("tool-serial").value=""; document.getElementById("tool-expiry").value="";
+  document.getElementById("tool-in-repair").checked = false;
   renderToolsPage(); updateAlertBell();
   toast("הכלי נוסף לחדר הכלים ✓ — ניתן להוסיף עוד");
 }
@@ -8906,8 +8929,20 @@ async function removeToolById(id){
   renderToolsPage(); updateAlertBell();
   toast("הכלי הוסר מחדר הכלים");
 }
-/* סטטוס תוקף כלי — שבוע לפני = צהוב, אחרי התאריך = אדום (כמו הסמכות אך עם סף של שבוע) */
+/* החלפת מצב "בתיקון" ישירות מכרטיס הכלי — בלי לפתוח עריכה */
+async function toggleToolInRepair(id){
+  const tools = await getTools();
+  const t = tools.find(x=>x.id===id);
+  if(!t) return;
+  t.inRepair = !t.inRepair;
+  await sSet("tools_list", tools);
+  renderToolsPage(); updateAlertBell();
+  toast(t.inRepair ? "הכלי סומן כ״בתיקון״ — לא יופיע יותר כפער 🔧" : "הכלי הוחזר למעקב תוקף רגיל");
+}
+/* סטטוס תוקף כלי — שבוע לפני = צהוב, אחרי התאריך = אדום (כמו הסמכות אך עם סף של שבוע).
+   כלי שסומן "בתיקון" לא נחשב פער — נשלח לטיפול, אין טעם להתריע עליו שוב עד שיחזור. */
 function toolStatus(t){
+  if(t.inRepair) return {tag:"🔧 בתיקון", cls:"n"};
   if(!t.expiry) return {tag:"ללא תוקף", cls:"g"};
   const today = new Date(); today.setHours(0,0,0,0);
   const exp = new Date(t.expiry+"T00:00:00");
@@ -8934,8 +8969,8 @@ async function renderToolsPage(){
       <small>${urgent.map(t=>escapeHTML(t.name)).join(" · ")}</small>
     </div>`;
   }
-  // מיון: פג תוקף → קרוב לפוג → בתוקף
-  const order = {r:0, y:1, g:2};
+  // מיון: פג תוקף → קרוב לפוג → בתיקון → בתוקף
+  const order = {r:0, y:1, n:2, g:3};
   withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
   const cards = withStatus.map(t=>`
     <div class="cert-sum-card" style="cursor:default">
@@ -8943,7 +8978,7 @@ async function renderToolsPage(){
         <div class="avatar" style="width:40px;height:40px;font-size:18px">🧰</div>
         <div class="cert-sum-name"><b>${escapeHTML(t.name)}</b><span>${t.serial?("מספר סידורי: "+escapeHTML(t.serial)):"ללא מספר סידורי"}</span></div>
         <span class="pill ${t.st.cls}" style="font-size:10px;white-space:nowrap">${t.st.tag}</span>
-        ${isCmdr?`<button class="cert-chip-edit" onclick="openToolEdit('${t.id}')">✏️</button><button class="cert-chip-del" onclick="removeToolById('${t.id}')">✕</button>`:''}
+        ${isCmdr?`<button class="cert-chip-edit" onclick="toggleToolInRepair('${t.id}')" title="${t.inRepair?'החזר למעקב תוקף':'סמן כבתיקון'}">${t.inRepair?'↩️':'🔧'}</button><button class="cert-chip-edit" onclick="openToolEdit('${t.id}')">✏️</button><button class="cert-chip-del" onclick="removeToolById('${t.id}')">✕</button>`:''}
       </div>
     </div>`).join("");
   box.innerHTML = banner + cards;
