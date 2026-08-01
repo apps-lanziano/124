@@ -3196,9 +3196,15 @@ function getDeviceUsers(){
 }
 function saveDeviceUsers(arr){ try{ localStorage.setItem("sq124_devices", JSON.stringify(arr.slice(0,8))); }catch(_){ } }
 /* מוסיף/מעדכן משתמש זכור (המשתמש האחרון בראש הרשימה) */
+/* עדכון/הוספת משתמש זכור — ממוזג עם הרשומה הקיימת (לא מוחלף). קריטי: הקריאה
+   הזו קורית בכל כניסה מוצלחת (לא רק בפעם הראשונה), ולכן החלפה מלאה הייתה
+   מוחקת בכל פעם את faceId/faceIdDeclined שנשמרו — וגורמת להצעת Face ID
+   לחזור ולהופיע בכל כניסה, גם אחרי שכבר הופעל/נדחה. */
 function addDeviceUser(o){
+  const existing = getDeviceUsers().find(u=>u.shedId===o.shedId && u.name===o.name);
+  const merged = existing ? {...existing, ...o} : o;
   const arr = getDeviceUsers().filter(u=>!(u.shedId===o.shedId && u.name===o.name));
-  arr.unshift(o);
+  arr.unshift(merged);
   saveDeviceUsers(arr);
 }
 function removeDeviceUser(shedId, name){
