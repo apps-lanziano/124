@@ -982,6 +982,16 @@ nav{
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .hidden{display:none!important}
+
+/* ייצוא PDF ליומן תיעוד קרא-וחתום — אזור ייעודי, מוסתר תמיד חוץ מזמן הדפסה */
+#admin-log-print-area{display:none}
+@media print{
+  body *{visibility:hidden}
+  #admin-log-print-area, #admin-log-print-area *{visibility:visible}
+  #admin-log-print-area{display:block;position:absolute;top:0;right:0;left:0;padding:24px;color:#000;direction:rtl}
+  #admin-log-print-area h2{margin:0 0 4px;font-size:20px}
+  #admin-log-print-area p{margin:0 0 16px;color:#555;font-size:13px}
+}
 </style>
 </head>
 <body>
@@ -1100,6 +1110,19 @@ nav{
           <button class="add-btn hidden" id="add-event-btn" onclick="openAddEvent()">+ פריט</button>
         </div>
       </div>
+      <!-- מפקד בלבד — סיכום חתימות לכלל הצוות. הועבר לכאן מלשונית "חתימות" בדשבורד
+           המפקד, כדי שהתמונה המלאה תהיה במסך שבו קורים דברים (קרא-וחתום), לא בלשונית נפרדת -->
+      <div id="safety-cmd-summary" class="hidden">
+        <div class="cmd-kpis">
+          <div class="kpi info"><b id="kpi-events">—</b><span>קרא וחתום פעילים</span></div>
+          <div class="kpi good"><b id="kpi-read">—</b><span>חתימות שהתקבלו</span></div>
+          <div class="kpi bad"><b id="kpi-pending">—</b><span>חתימות חסרות</span></div>
+          <div class="kpi warn"><b id="kpi-fullsign">—</b><span>חתמו על כל הפריטים</span></div>
+        </div>
+        <div class="cmd-section-title">👥 סטטוס חתימה לפי איש צוות</div>
+        <div class="cmd-table" id="cmd-reads"></div>
+        <div class="cmd-section-title">📋 פריטים</div>
+      </div>
       <div class="search-box" id="safety-search-box" style="display:none">
         <span class="search-ic">🔍</span>
         <input type="text" id="safety-search" placeholder="חיפוש לפי כותרת או תאריך…" oninput="renderDocs()">
@@ -1117,10 +1140,6 @@ nav{
         </div>
       </div>
       <div id="morning-alert"></div>
-      <div class="all-done-banner" id="all-done">
-        ✅ כל מטלות הבוקר הושלמו!
-        <small>עבודה מצוינת. יום בטוח ופורה 🛩️</small>
-      </div>
       <div class="progress-wrap">
         <div class="progress-top"><b>התקדמות יומית</b><span id="progress-label">0 מתוך 4</span></div>
         <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
@@ -1338,45 +1357,11 @@ nav{
       <div class="sec-head">
         <div>
           <h2>תמונת מצב — מפקד</h2>
-          <p>מעקב נפרד: חתימות ומטלות בוקר.</p>
+          <p>מגמות ומדדים לכל הטייסת. חתימות ומטלות בוקר עברו למסכים שלהן.</p>
         </div>
       </div>
-      <div class="cmd-tabs">
-        <button class="cmd-tab active" id="tab-trends" onclick="cmdTab('trends')">📈 מגמות</button>
-        <button class="cmd-tab" id="tab-safety" onclick="cmdTab('safety')">📄 חתימות</button>
-        <button class="cmd-tab" id="tab-morning" onclick="cmdTab('morning')">🧰 מטלות</button>
-      </div>
 
-      <!-- PANE: TRENDS (feature 1 - dashboard) -->
-      <div class="cmd-pane active" id="pane-trends">
-        <div id="trends-content"><div class="skel-card"><div class="skel-line w40"></div><div class="skel-line w90"></div></div><div class="skel-card"><div class="skel-line w60"></div><div class="skel-line w90"></div></div></div>
-      </div>
-
-      <!-- PANE: SAFETY -->
-      <div class="cmd-pane" id="pane-safety">
-        <div class="cmd-kpis">
-          <div class="kpi info"><b id="kpi-events">—</b><span>קרא וחתום פעילים</span></div>
-          <div class="kpi good"><b id="kpi-read">—</b><span>חתימות שהתקבלו</span></div>
-          <div class="kpi bad"><b id="kpi-pending">—</b><span>חתימות חסרות</span></div>
-          <div class="kpi warn"><b id="kpi-fullsign">—</b><span>חתמו על כל הפריטים</span></div>
-        </div>
-        <div class="cmd-section-title">👥 סטטוס חתימה לפי איש צוות</div>
-        <div class="cmd-table" id="cmd-reads"></div>
-        <div class="cmd-section-title" id="events-title" style="display:none">📋 סטטוס לפי פריט</div>
-        <div class="cmd-table" id="cmd-events" style="display:none"></div>
-      </div>
-
-      <!-- PANE: MORNING -->
-      <div class="cmd-pane" id="pane-morning">
-        <div id="morning-status-banner"></div>
-        <div class="cmd-kpis">
-          <div class="kpi good"><b id="kpi-morning-done">—</b><span>מטלות שבוצעו היום</span></div>
-          <div class="kpi bad"><b id="kpi-morning-open">—</b><span>מטלות שטרם בוצעו</span></div>
-        </div>
-        <button class="admin-card" id="morning-edit-btn" onclick="openTaskMgmt()" style="margin-bottom:12px"><span class="a-ic">✏️</span><b>עריכת מטלות בוקר</b><span>הוספה ושינוי מטלות</span></button>
-        <div class="cmd-section-title">🧰 מטלות בוקר — סטטוס ביצוע היום</div>
-        <div class="cmd-table" id="cmd-morning"></div>
-      </div>
+      <div id="trends-content"><div class="skel-card"><div class="skel-line w40"></div><div class="skel-line w90"></div></div><div class="skel-card"><div class="skel-line w60"></div><div class="skel-line w90"></div></div></div>
 
       <!-- ADMIN quick actions -->
       <div class="cmd-section-title">⚙️ ניהול</div>
@@ -1491,10 +1476,20 @@ nav{
         <div id="admin-reserves-list"></div>
       </div>
 
-      <!-- PANE: LOG -->
+      <!-- PANE: LOG — יומן תיעוד ביצוע קרא-וחתום (לא יומן פעולות כללי) -->
       <div class="admin-pane" id="apane-log">
-        <div class="cmd-section-title">📜 יומן תיעוד כלל-טייסתי</div>
-        <div class="matrix-hint">כל הפעולות מכל המסגרות, מהחדש לישן</div>
+        <div class="sec-head" style="margin-bottom:10px">
+          <div>
+            <h3 style="margin:0;font-size:16px">📜 יומן תיעוד — ביצוע קרא וחתום</h3>
+            <p class="matrix-hint" style="margin:2px 0 0">מעקב חתימות בלבד, כלל-טייסתי</p>
+          </div>
+          <button class="add-btn" onclick="printAdminLog()" style="background:var(--card);color:var(--red);border:1px solid var(--red-line);flex-shrink:0">📄 ייצוא PDF</button>
+        </div>
+        <div class="cmd-tabs" style="margin-bottom:16px">
+          <button class="cmd-tab active" id="logview-byName" onclick="adminLogView('byName')">👤 לפי שם</button>
+          <button class="cmd-tab" id="logview-byShed" onclick="adminLogView('byShed')">🏠 לפי סככה</button>
+          <button class="cmd-tab" id="logview-byItem" onclick="adminLogView('byItem')">📄 לפי קרא-וחתום</button>
+        </div>
         <div id="admin-log-list"></div>
       </div>
     </section>
@@ -2581,6 +2576,9 @@ nav{
 
   <!-- hidden training file input -->
   <input type="file" id="training-input" accept="image/*,.pdf,.doc,.docx,.ppt,.pptx" class="hidden" onchange="onTrainingFile(event)">
+
+  <!-- אזור הדפסה ל-PDF (יומן תיעוד קרא-וחתום) — גלוי רק בזמן הדפסה, ר' printAdminLog() -->
+  <div id="admin-log-print-area"></div>
 
   <div id="toast"></div>
 </div>
@@ -3702,11 +3700,6 @@ async function doLogin(){
       // ימי הולדת נשארים, ועוברים לתפריט "עוד" כמו בסככות
       document.getElementById("more-bdays-item").classList.remove("hidden");
       document.getElementById("nav-bdays").classList.add("hidden");
-      // גם טאב "מטלות" במסך המפקד — אחרת נשארת דרך עוקפת למטלות הבוקר
-      document.getElementById("tab-morning").classList.add("hidden");
-      if(document.getElementById("pane-morning").classList.contains("active")) cmdTab("trends");
-    } else {
-      document.getElementById("tab-morning").classList.remove("hidden");
     }
 
     /* אחראי הדרכה — דשבורד המפקד ("תמונת מצב — מפקד") מוסר לגמרי.
@@ -3902,6 +3895,33 @@ async function renderDocs(){
   document.getElementById("safety-search-box").style.display = events.length>=4 ? "flex" : "none";
   const q = (document.getElementById("safety-search")?.value || "").trim().toLowerCase();
   list.innerHTML = "";
+
+  /* סיכום חתימות למפקד — הועבר ממסך הדשבורד לכאן. תמיד לפי כל הפריטים
+     (לא מושפע מסינון החיפוש), כי זו תמונת מצב כללית ולא רשימת התוצאות. */
+  const summaryBox = document.getElementById("safety-cmd-summary");
+  if(sigMap && events.length>0){
+    let totalSigs = 0, fullSign = 0;
+    const readsRows = [];
+    for(const p of PERSONNEL){
+      const sigs = sigMap[p.name];
+      const rc = events.filter(e=>sigs[e.id]).length;
+      totalSigs += rc;
+      if(rc===events.length) fullSign++;
+      const pill = rc===events.length ? '<span class="pill g">חתם על הכל ✓</span>'
+                 : rc===0 ? '<span class="pill r">לא חתם</span>'
+                 : `<span class="pill y">${rc}/${events.length} נחתמו</span>`;
+      readsRows.push(rowHTML(p.name, pill));
+    }
+    document.getElementById("kpi-events").textContent = events.length;
+    document.getElementById("kpi-read").textContent = totalSigs;
+    document.getElementById("kpi-pending").textContent = Math.max(0, PERSONNEL.length*events.length - totalSigs);
+    document.getElementById("kpi-fullsign").textContent = fullSign + "/" + PERSONNEL.length;
+    document.getElementById("cmd-reads").innerHTML = readsRows.join("");
+    summaryBox.classList.remove("hidden");
+  } else {
+    summaryBox.classList.add("hidden");
+  }
+
   if(events.length === 0){
     list.innerHTML = `<div class="empty-state">
       <div class="ic">🗂️</div>
@@ -3929,9 +3949,13 @@ async function renderDocs(){
       const signed = PERSONNEL.filter(p=>sigMap[p.name][ev.id]).length;
       const total = PERSONNEL.length;
       const done = total>0 && signed===total;
-      cmdSigRow = `<div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+      const age = eventAgeDays(ev.id);
+      const stale = (!done && age>=3);
+      const ageTag = stale ? `<span style="font-size:10.5px;color:var(--red);font-weight:700">⏳ ${age} ימים ללא חתימה מלאה</span>` : "";
+      cmdSigRow = `<div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
         <span class="pill ${done?'g':signed===0?'r':'y'}" style="font-size:11px">${signed}/${total} חתמו</span>
         ${!done?`<button class="m-btn ghost" style="padding:4px 10px;font-size:11px;width:auto" onclick="event.stopPropagation();showSigDetail('${ev.id}')">📢 תזכורת</button>`:""}
+        ${ageTag}
       </div>`;
     }
     el.innerHTML = `
@@ -4317,23 +4341,28 @@ async function renderTasks(){
   fill.style.width = pct+"%";
   fill.classList.toggle("full", pct===100);
   document.getElementById("progress-label").textContent = count+" מתוך "+MORNING_TASKS.length+" בוצעו";
-  document.getElementById("all-done").style.display = pct===100 ? "block":"none";
-  // 11:00 alert (feature 1)
+
+  /* באנר סטטוס תלת-מצבי — הועבר לכאן מדשבורד המפקד (שם הוצג רק ללשונית
+     נפרדת); עכשיו גלוי לכולם ישירות במסך מטלות הבוקר, תמיד ולא רק אחרי 11:00. */
   const alertBox = document.getElementById("morning-alert");
   const now = new Date();
   const past11 = now.getHours() >= 11;
   const openCount = MORNING_TASKS.length - count;
   morningOpenTasks = MORNING_TASKS.filter(t=>!done[t.id]).map(t=>t.title);   // לשימוש תזכורת הוואטסאפ
-  if(past11 && openCount>0){
-    // כפתור תזכורת בוואטסאפ — למפקד בלבד, כשחלף 11:00 והמטלות טרם נסגרו
-    const waBtn = (userRole==="מפקד")
-      ? `<button class="ma-wa-btn" onclick="event.stopPropagation();openWaPrompt('morning')">📲 שלח תזכורת בוואטסאפ</button>`
-      : "";
-    alertBox.innerHTML = `<div class="morning-alert-box">
-      <span class="ma-ic">⏰</span>
-      <div class="ma-tx"><b>שים לב — חלף 11:00</b><span>${openCount} מטלות בוקר עדיין לא בוצעו. יש להשלים בהקדם.</span></div>
-    </div>${waBtn}`;
-  } else { alertBox.innerHTML=""; }
+  // כפתור תזכורת בוואטסאפ — למפקד בלבד, כשחלף 11:00 והמטלות טרם נסגרו (התנהגות מקורית, ללא שינוי)
+  const waBtn = (userRole==="מפקד" && past11 && openCount>0)
+    ? `<button class="ma-wa-btn" onclick="event.stopPropagation();openWaPrompt('morning')">📲 שלח תזכורת בוואטסאפ</button>`
+    : "";
+  const lateNote = (past11 && openCount>0) ? '<small style="font-weight:700">⏰ חלף 11:00 — נדרשת השלמה דחופה</small>' : '';
+  if(MORNING_TASKS.length===0){
+    alertBox.innerHTML = "";
+  } else if(count===MORNING_TASKS.length){
+    alertBox.innerHTML = `<div class="mstat-banner ok"><span class="big">✅ כל מטלות הבוקר בוצעו</span><small>עבודה מצוינת. יום בטוח ופורה 🛩️</small></div>`;
+  } else if(count===0){
+    alertBox.innerHTML = `<div class="mstat-banner none"><span class="big">⚠️ מטלות הבוקר טרם בוצעו</span><small>0/${MORNING_TASKS.length} — נדרש ביצוע לפני תחילת פעילות</small>${lateNote}</div>${waBtn}`;
+  } else {
+    alertBox.innerHTML = `<div class="mstat-banner partial"><span class="big">🔶 ביצוע חלקי</span><small>${count}/${MORNING_TASKS.length} בוצעו · ${openCount} מטלות עדיין פתוחות</small>${lateNote}</div>${waBtn}`;
+  }
 }
 async function toggleTask(id){
   const key = "team_morning_"+todayKey();
@@ -5174,115 +5203,18 @@ async function deleteBoard(id){
 }
 
 /* ============ COMMANDER (מעקב מופרד) ============ */
-let cmdEventsCache = [];
-
-function cmdTab(which){
-  ["trends","safety","morning"].forEach(w=>{
-    const tab=document.getElementById("tab-"+w), pane=document.getElementById("pane-"+w);
-    if(tab) tab.classList.toggle("active", which===w);
-    if(pane) pane.classList.toggle("active", which===w);
-  });
-  if(which==="trends") renderTrends();
-}
-
+/* דשבורד המפקד — היו כאן גם לשוניות "חתימות" ו"מטלות" (מסלול עקיף עם
+   הכפלת מידע שכבר קיים במסכים "קרא וחתום" ו"מטלות בוקר" עצמם). הועברו
+   לשם, ונשאר כאן רק מגמות — מסך אחד, בלי לשוניות. */
 async function renderCommander(){
   renderTrends();
   updateAlertBell();
-  const events = await getEvents();
-  cmdEventsCache = events;
-  const totalDocs = events.length;
-
-  /* ---- collect all sigs once (במקביל) ---- */
-  const sigMap = {}; // name -> sigs obj
-  const sigsArr = await Promise.all(PERSONNEL.map(p => sGet("sigs_"+safeName(p.name))));
-  PERSONNEL.forEach((p,i)=>{ sigMap[p.name] = sigsArr[i] || {}; });
-
-  /* ===== SAFETY PANE ===== */
-  let totalSigs = 0, fullSign = 0;
-  const readsRows = [];
-  for(const p of PERSONNEL){
-    const sigs = sigMap[p.name];
-    const rc = events.filter(e=>sigs[e.id]).length;
-    totalSigs += rc;
-    if(totalDocs>0 && rc===totalDocs) fullSign++;
-    const pill = totalDocs===0 ? '<span class="pill y">אין פריטים</span>'
-               : rc===totalDocs ? '<span class="pill g">חתם על הכל ✓</span>'
-               : rc===0 ? '<span class="pill r">לא חתם</span>'
-               : `<span class="pill y">${rc}/${totalDocs} נחתמו</span>`;
-    readsRows.push(rowHTML(p.name, pill));
-  }
-  document.getElementById("kpi-events").textContent = totalDocs;
-  document.getElementById("kpi-read").textContent = totalSigs;
-  document.getElementById("kpi-pending").textContent = Math.max(0, PERSONNEL.length*totalDocs - totalSigs);
-  document.getElementById("kpi-fullsign").textContent = fullSign + "/" + PERSONNEL.length;
-  document.getElementById("cmd-reads").innerHTML = readsRows.join("");
-
-  /* per-event breakdown (clickable) */
-  const evTitle = document.getElementById("events-title");
-  const evTable = document.getElementById("cmd-events");
-  if(totalDocs>0){
-    evTitle.style.display=""; evTable.style.display="";
-    const evRows = events.map(e=>{
-      const signed = PERSONNEL.filter(p=>sigMap[p.name][e.id]).length;
-      const ft = FTYPE[e.ftype] || FTYPE.image;
-      const cls = signed===PERSONNEL.length ? "g" : signed===0 ? "r" : "y";
-      const age = eventAgeDays(e.id);
-      const stale = (signed < PERSONNEL.length && age>=3);
-      const ageTag = stale ? `<span style="font-size:10px;color:var(--red);font-weight:700"> · ⏳ ${age} ימים ללא חתימה מלאה</span>` : "";
-      return `<div class="cmd-row clickable" onclick="showSigDetail('${e.id}')">
-        <div class="avatar" style="border-radius:11px">${ft.emoji}</div>
-        <div class="cmd-name">${escapeHTML(e.title)}<br><span style="font-size:11px;color:var(--ink-3);font-weight:300">${e.date}${ageTag}</span></div>
-        <span class="pill ${cls}">${signed}/${PERSONNEL.length} חתמו</span>
-        <span class="chev">‹</span>
-      </div>`;
-    }).join("");
-    evTable.innerHTML = evRows;
-  } else {
-    evTitle.style.display="none"; evTable.style.display="none";
-  }
-
-  /* ===== MORNING PANE (מטלות צוות) ===== */
-  const teamDone = (await sGet("team_morning_"+todayKey())) || {};
-  let doneCount = 0;
-  const mRows = MORNING_TASKS.map(t=>{
-    const rec = teamDone[t.id];
-    const isDone = !!rec;
-    if(isDone) doneCount++;
-    return `<div class="mtask-row">
-      <div class="mtask-ic ${isDone?"done":"open"}">${isDone?"✓":"○"}</div>
-      <div class="mtask-info">
-        <h4>${escapeHTML(t.title)}</h4>
-        <span class="${isDone?"done":""}">${isDone ? 'בוצע ע"י '+escapeHTML(rec.by)+' · '+rec.time : "טרם בוצע"}</span>
-      </div>
-      ${isDone?'<span class="pill g">בוצע ✓</span>':'<span class="pill r">פתוח</span>'}
-    </div>`;
-  }).join("");
-  const openCount = MORNING_TASKS.length - doneCount;
-  document.getElementById("kpi-morning-done").textContent = doneCount + "/" + MORNING_TASKS.length;
-  document.getElementById("kpi-morning-open").textContent = openCount;
-  document.getElementById("cmd-morning").innerHTML = mRows;
-
-  /* status banner - the headline answer: did morning tasks get done? */
-  const banner = document.getElementById("morning-status-banner");
-  const past11 = new Date().getHours() >= 11;
-  const lateNote = (past11 && openCount>0) ? '<small style="font-weight:700">⏰ חלף 11:00 — נדרשת השלמה דחופה</small>' : '';
-  if(doneCount===MORNING_TASKS.length){
-    banner.innerHTML = `<div class="mstat-banner ok"><span class="big">✅ כל מטלות הבוקר בוצעו</span><small>${MORNING_TASKS.length}/${MORNING_TASKS.length} הושלמו · הרחבה מוכנה ליום</small></div>`;
-  } else if(doneCount===0){
-    banner.innerHTML = `<div class="mstat-banner none"><span class="big">⚠️ מטלות הבוקר טרם בוצעו</span><small>0/${MORNING_TASKS.length} — נדרש ביצוע לפני תחילת פעילות</small>${lateNote}</div>`;
-  } else {
-    banner.innerHTML = `<div class="mstat-banner partial"><span class="big">🔶 ביצוע חלקי</span><small>${doneCount}/${MORNING_TASKS.length} בוצעו · ${openCount} מטלות עדיין פתוחות</small>${lateNote}</div>`;
-  }
 }
 
 /* signature detail per event */
 let sigDetailCurrent = null; // {title, unsigned:[names]} — לכפתור תזכורת הוואטסאפ
 async function showSigDetail(evId){
-  // cmdEventsCache מתמלא רק ב-renderCommander() — אם המפקד מגיע הישר
-  // ממסך "קרא וחתום" (בלי לעבור קודם דרך הדשבורד), הוא ריק. נופלים חזרה
-  // לטעינה ישירה כדי שהכפתור יעבוד תמיד, לא רק אחרי ביקור בדשבורד.
-  let ev = cmdEventsCache.find(e=>e.id===evId);
-  if(!ev) ev = (await getEvents()).find(e=>e.id===evId);
+  const ev = (await getEvents()).find(e=>e.id===evId);
   if(!ev) return;
   document.getElementById("sigdetail-title").textContent = ev.title;
   const rows = [];
@@ -8198,25 +8130,128 @@ async function deleteTraining(id){
   toast("חומר ההדרכה נמחק");
 }
 
-/* ---- FEATURE 11: squadron-wide audit log ---- */
+/* ---- FEATURE 11: יומן תיעוד — ביצוע קרא-וחתום בלבד (לא יומן פעולות כללי) ----
+   מבוסס על admin_events (מקור האמת של מה שפורסם בפועל לכל המסגרות — ראו
+   ההערה המלאה ב-renderAdminSignatures) + מצב החתימות הנוכחי בכל מסגרת.
+   שלוש תצוגות על אותם נתונים בדיוק: לפי שם, לפי סככה, לפי פריט. */
+let adminLogData = null;         // מחושב פעם אחת לרענון; החלפת תצוגה לא קוראת מהשרת שוב
+let adminLogCurrentView = "byName";
+
+async function computeAdminSigLog(){
+  const adminItems = await getAdminEventsList();
+  const perShed = await Promise.all(SHEDS.map(async shed=>{
+    const [personnel, events] = await Promise.all([
+      sGetIn(shed.id, "cfg_personnel").then(v=>v||[]),
+      sGetIn(shed.id, "safety_events").then(v=>v||[]),
+    ]);
+    const eventIds = new Set(events.map(e=>e.id));
+    const sigsArr = await Promise.all(personnel.map(p => sGetIn(shed.id, "sigs_"+safeName(p.name))));
+    const sigsBy = {}; personnel.forEach((p,i)=> sigsBy[p.name] = sigsArr[i] || {});
+    return {shed, personnel, eventIds, sigsBy};
+  }));
+  return {adminItems, perShed};
+}
+
+function renderLogByName({adminItems, perShed}){
+  const rows = [];
+  for(const {shed, personnel, eventIds, sigsBy} of perShed){
+    const relevant = adminItems.filter(it=>eventIds.has(it.id));
+    for(const p of personnel){
+      const total = relevant.length;
+      const missing = relevant.filter(it=>!sigsBy[p.name][it.id]);
+      const signed = total - missing.length;
+      const pill = total===0 ? '<span class="pill y">אין פריטים במסגרת</span>'
+                 : signed===total ? '<span class="pill g">חתם על הכל ✓</span>'
+                 : signed===0 ? '<span class="pill r">לא חתם</span>'
+                 : `<span class="pill y">${signed}/${total} נחתמו</span>`;
+      const missTxt = (missing.length && missing.length<total) ? " · טרם: "+missing.map(it=>escapeHTML(it.title)).join("، ") : "";
+      rows.push(`<div class="cmd-row">
+        <div class="avatar">${initials(p.name)}</div>
+        <div class="cmd-name">${escapeHTML(p.name)}<br><span style="font-size:11px;color:var(--ink-3);font-weight:300">${escapeHTML(shed.name)}${missTxt}</span></div>
+        ${pill}
+      </div>`);
+    }
+  }
+  return rows.length ? rows.join("") : `<div class="empty-state" style="padding:20px"><div class="ic">👤</div><h3>אין עדיין אנשי צוות</h3></div>`;
+}
+
+function renderLogByShed({adminItems, perShed}){
+  const rows = perShed.map(({shed, personnel, eventIds, sigsBy})=>{
+    const relevant = adminItems.filter(it=>eventIds.has(it.id));
+    const total = relevant.length;
+    const maxC = personnel.length * total;
+    let got = 0;
+    relevant.forEach(it=> personnel.forEach(p=>{ if(sigsBy[p.name][it.id]) got++; }));
+    const openItems = relevant.filter(it=> personnel.some(p=>!sigsBy[p.name][it.id])).length;
+    const pct = maxC ? Math.round(got/maxC*100) : null;
+    const pill = total===0 ? '<span class="pill y">אין פריטים</span>'
+               : pct===100 ? '<span class="pill g">100% הושלם</span>'
+               : `<span class="pill ${pct>=70?'y':'r'}">${pct}%</span>`;
+    const sub = total===0 ? `${personnel.length} אנשי צוות`
+      : `${personnel.length} אנשי צוות · ${total} פריטים${openItems?" · "+openItems+" עם חתימות חסרות":""}`;
+    return `<div class="cmd-row">
+      <div class="avatar" style="border-radius:11px">🏠</div>
+      <div class="cmd-name">${escapeHTML(shed.name)}<br><span style="font-size:11px;color:var(--ink-3);font-weight:300">${sub}</span></div>
+      ${pill}
+    </div>`;
+  });
+  return rows.join("");
+}
+
+function renderLogByItem({adminItems, perShed}){
+  if(!adminItems.length) return `<div class="empty-state" style="padding:20px"><div class="ic">📄</div><h3>אין עדיין פריטי קרא-וחתום שפורסמו</h3></div>`;
+  return adminItems.slice().reverse().map(item=>{
+    const shedStatus = perShed.map(({shed,personnel,eventIds,sigsBy})=>{
+      if(!eventIds.has(item.id)) return {shed, present:false, total:personnel.length};
+      const missing = personnel.filter(p=>!sigsBy[p.name][item.id]);
+      return {shed, present:true, c:personnel.length-missing.length, total:personnel.length, missing};
+    });
+    const needsReminder = shedStatus.some(s=>s.present && s.missing && s.missing.length);
+    const allDelivered = shedStatus.every(s=>s.present);
+    return `<div class="sr-ev">
+      <div class="sr-ev-top"><b>${escapeHTML(item.title)}</b>${!allDelivered?'<span class="sr-count r">⚠️ לא בכל המסגרות</span>':""}</div>
+      ${item.date?`<div class="sr-ev-date">📅 ${escapeHTML(item.date)}</div>`:""}
+      ${shedStatus.map(s=>{
+        if(!s.present) return `<div class="sr-line"><span class="sr-tag r">${escapeHTML(s.shed.name)}</span>⚠️ לא נקלט במסגרת זו</div>`;
+        if(s.total===0) return `<div class="sr-line"><span class="sr-tag" style="background:#eee;color:var(--ink-3)">${escapeHTML(s.shed.name)}</span>אין צוות רשום</div>`;
+        const cls = s.c===s.total ? "g" : (s.c===0 ? "r" : "y");
+        return `<div class="sr-line"><span class="sr-tag ${cls}">${escapeHTML(s.shed.name)}: ${s.c}/${s.total}</span>${s.missing.length?s.missing.map(p=>escapeHTML(p.name)).join("، "):"כולם חתמו"}</div>`;
+      }).join("")}
+      ${needsReminder?`<button class="m-btn ghost" style="width:100%;margin-top:6px;font-size:12px" onclick="remindNonSigners('${item.id}','${jsStr(item.title)}')">📢 שלח תזכורת למפקדים — מי טרם ביצע</button>`:""}
+    </div>`;
+  }).join("");
+}
+
 async function renderAdminLog(){
   const box = document.getElementById("admin-log-list");
   box.innerHTML = '<div style="text-align:center;padding:14px;color:var(--ink-3)">⏳ טוען…</div>';
-  let all = [];
-  await Promise.all(SHEDS.map(async shed=>{
-    const log = (await sGetIn(shed.id, "audit_log")) || [];
-    log.forEach(l=>all.push({...l, shed:shed.name}));
-  }));
-  // פעולות כלל-טייסתיות (פרסום/מחיקה של מפקדי הדרכה/אחזקה/מנהל-על) — ראו logAdminAction
-  const adminLog = (await sGetRaw("admin_audit_log")) || [];
-  adminLog.forEach(l=>all.push({...l, shed:"🏛️ כלל הטייסת"}));
-  all.sort((a,b)=>b.ts-a.ts);
-  all = all.slice(0,150);
-  if(all.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">📜</div><h3>אין עדיין פעולות</h3><p>פעולות מכל המסגרות יופיעו כאן</p></div>'; return; }
-  box.innerHTML = all.map(l=>`<div class="audit-row">
-    <div class="audit-main"><b>${escapeHTML(l.action)}</b>${l.detail?` · <span>${escapeHTML(l.detail)}</span>`:""}</div>
-    <div class="audit-meta">${escapeHTML(l.shed)} · ${escapeHTML(l.by)} · ${fmtLogTime(l.ts)}</div>
-  </div>`).join("");
+  adminLogData = await computeAdminSigLog();
+  adminLogView(adminLogCurrentView);
+}
+function adminLogView(which){
+  adminLogCurrentView = which;
+  ["byName","byShed","byItem"].forEach(w=>{
+    const tab = document.getElementById("logview-"+w);
+    if(tab) tab.classList.toggle("active", which===w);
+  });
+  if(!adminLogData) return;
+  const box = document.getElementById("admin-log-list");
+  if(which==="byName") box.innerHTML = renderLogByName(adminLogData);
+  else if(which==="byShed") box.innerHTML = renderLogByShed(adminLogData);
+  else box.innerHTML = renderLogByItem(adminLogData);
+}
+/* ייצוא ל-PDF: אין ספריית PDF חדשה בקוד (נמנעים מתלות/CDN נוספת) — משתמשים
+   בדפדפן עצמו: מכינים אזור הדפסה ייעודי ומפעילים window.print(), שבו "שמור
+   כ-PDF" זמין בכל דפדפן/מערכת הפעלה בלי שום ספרייה חיצונית. */
+function printAdminLog(){
+  const box = document.getElementById("admin-log-list");
+  if(!box || !box.innerHTML.trim()){ toast("אין נתונים לייצוא"); return; }
+  const printArea = document.getElementById("admin-log-print-area");
+  const viewLabel = {byName:"לפי שם", byShed:"לפי סככה", byItem:"לפי קרא-וחתום"}[adminLogCurrentView];
+  printArea.innerHTML = `<h2>יומן תיעוד — ביצוע קרא וחתום (${escapeHTML(viewLabel)})</h2>`+
+    `<p>${new Date().toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p>` +
+    box.innerHTML;
+  window.print();
 }
 
 /* ---- squadron-wide alerts (overview) ---- */

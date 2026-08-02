@@ -12,7 +12,10 @@ async function page(){
 }
 function record(name, pass, detail){ results.push({name, pass, detail}); }
 
-// 1. logAdminAction writes + renderAdminLog merges correctly
+/* יומן התיעוד שונה מיומן פעולות כללי לכזה שעוקב אחרי ביצוע קרא-וחתום
+   בלבד (לפי בקשה מפורשת), עם 3 תצוגות: לפי שם/סככה/פריט + ייצוא PDF.
+   בדיקה זו מחליפה את הבדיקה הישנה של יומן-הפעולות הכללי. */
+// 1. renderAdminLog: שלוש התצוגות מציגות נכון פריט פורסם + חתימה חלקית
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
@@ -20,25 +23,59 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
     window.sGetRaw = async k => store[k] ?? null;
     window.sSetRaw = async (k,v) => { store[k]=v; return true; };
     window.sGetIn = async (shed,k) => store[shed+"_"+k] ?? null;
-    user="טומי"; userRole="מפקד"; isOwner=false; isTechOfficer=false;
-    await logAdminAction("פרסום קרא-וחתום לכל המסגרות", "תדריך בוקר");
-    await new Promise(r=>setTimeout(r,10));
-    await logAdminAction("מחיקת קרא-וחתום מכל המסגרות", "תדריך בוקר");
+    const put = (k,v)=>{ store[k]=v; };
+    put("admin_events", [{id:"ev1", title:"תדריך בוקר", ftype:"image", date:"1.1"}]);
+    put("shed2_cfg_personnel", [{name:"דני"},{name:"רון"}]);
+    put("shed2_safety_events", [{id:"ev1", title:"תדריך בוקר"}]);
+    put("shed2_sigs_דני", {ev1:{date:"1.1"}});   // דני חתם, רון לא
+    put("shed3_cfg_personnel", [{name:"משה"}]);
+    put("shed3_safety_events", []);              // הפריט לא הגיע לסככה 3 בכלל
+
     await renderAdminLog();
-    const html = document.getElementById("admin-log-list").innerHTML;
+    const byName = document.getElementById("admin-log-list").innerHTML;
+    adminLogView("byShed");
+    const byShed = document.getElementById("admin-log-list").innerHTML;
+    adminLogView("byItem");
+    const byItem = document.getElementById("admin-log-list").innerHTML;
     return {
-      hasPublish: html.includes("פרסום קרא-וחתום לכל המסגרות"),
-      hasDelete: html.includes("מחיקת קרא-וחתום מכל המסגרות"),
-      hasDetail: html.includes("תדריך בוקר"),
-      hasBy: html.includes("טומי"),
-      hasSquadronTag: html.includes("כלל הטייסת"),
-      deleteBeforePublishInOrder: html.indexOf("מחיקת קרא-וחתום") < html.indexOf("פרסום קרא-וחתום"),
+      byNameShowsSigned: /דני[\s\S]{0,250}חתם על הכל/.test(byName),
+      byNameShowsMissing: /רון[\s\S]{0,250}לא חתם/.test(byName),
+      byShedShowsGap: byShed.includes("סככה 2") && byShed.includes("50%"),
+      byItemShowsSyncGap: byItem.includes("לא בכל המסגרות") && byItem.includes("לא נקלט במסגרת זו"),
+      byItemShowsTitle: byItem.includes("תדריך בוקר"),
     };
   });
-  record("logAdminAction + renderAdminLog: entries recorded with who/what/detail, newest first",
-    out.hasPublish && out.hasDelete && out.hasDetail && out.hasBy && out.hasSquadronTag && out.deleteBeforePublishInOrder,
-    JSON.stringify(out));
+  record("יומן תיעוד — 'לפי שם': מציג מי חתם ומי לא, לפי סככה",
+    out.byNameShowsSigned && out.byNameShowsMissing, JSON.stringify(out));
+  record("יומן תיעוד — 'לפי סככה': מציג אחוז השלמה לכל מסגרת",
+    out.byShedShowsGap, JSON.stringify(out));
+  record("יומן תיעוד — 'לפי קרא-וחתום': מזהה פריט שלא הגיע לכל המסגרות",
+    out.byItemShowsSyncGap && out.byItemShowsTitle, JSON.stringify(out));
   console.log("errs1",errs); await p.close();
+}
+
+// 1b. printAdminLog: מכין את אזור ההדפסה עם תוכן התצוגה הנוכחית, בלי לקרוס בלי נתונים
+{
+  const {p, errs} = await page();
+  const out = await p.evaluate(async ()=>{
+    window.sGetRaw = async ()=>null; window.sGetIn = async ()=>null;
+    // בלי נתונים בכלל — לא אמור לקרוס, רק להראות הודעה
+    let toastMsg = ""; window.toast = m=>toastMsg=m;
+    printAdminLog();
+    const noDataToast = toastMsg;
+
+    // עכשיו עם נתונים אמיתיים
+    await renderAdminLog();
+    let printed = false;
+    window.print = ()=>{ printed = true; };
+    printAdminLog();
+    return { noDataToast, printed, printAreaHtml: document.getElementById("admin-log-print-area").innerHTML };
+  });
+  record("printAdminLog: בלי נתונים מציג הודעה ולא קורא ל-print()",
+    out.noDataToast.includes("אין נתונים"), String(out.noDataToast));
+  record("printAdminLog: עם נתונים ממלא את אזור ההדפסה וקורא ל-window.print()",
+    out.printed && out.printAreaHtml.includes("יומן תיעוד"), JSON.stringify({printed: out.printed, has: out.printAreaHtml.includes("יומן תיעוד")}));
+  console.log("errs1b",errs); await p.close();
 }
 
 // 2. saveEvent (admin) logs only on success, not on failure
