@@ -96,7 +96,7 @@ function lineOf(idx){ return html.slice(0, idx).split('\n').length; }
     // דגל חד-פעמי: קריאת sGetRaw שמיד נבדקת כתנאי יציאה מוקדמת ("if(דגל) return")
     const hasFlagGuard = /await\s+sGetRaw\([^)]*\)\s*;?\s*\n?\s*if\s*\([^)]*\)\s*return|if\s*\(\s*!?\(?\s*await\s+sGetRaw\(/.test(body);
     if(!hasFlagGuard) continue;
-    if(/fbReadFailed/.test(body)) continue;   // כבר מוגן
+    if(/fbReadFailed|onceFlagDone\(/.test(body)) continue;   // כבר מוגן (ישירות או דרך ההלפר)
     risky.push({name, at: lineOf(m.index)});
   }
   if(risky.length){
