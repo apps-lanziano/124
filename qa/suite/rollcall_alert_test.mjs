@@ -37,8 +37,10 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
 }
 
 // 2. שרת ההתראות מזהה את הנכס ושולח רק במעבר כבוי->פעיל
+// (הלוגיקה הופרדה ל-functions/lib/notify.js כדי שתהיה ניתנת לבדיקה ישירה —
+// ראו notify_lib_test.mjs לבדיקת ההתנהגות בפועל; זו נשארת בדיקת-מקור למבנה הקוד)
 {
-  const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
+  const fn = readFileSync(`${ROOT}/functions/lib/notify.js`, 'utf8');
   const watches   = /rollcall_active/.test(fn);
   const onlyOnRise = /after === true && before !== true/.test(fn);
   const hasTitle  = /rollcall:\s*"🚨 נכס/.test(fn);
