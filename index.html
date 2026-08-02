@@ -2666,7 +2666,16 @@ async function ensureConvertedFrameworksSeed(scope){
     let team = (await sGetIn("maint","cfg_personnel")) || [];
     let changed = false;
     // מפקד מ״ע אחזקה כבר שמור ב-Firestore — לא זורעים שם מהקוד (פרטיות)
-    if(!(await sGetRaw("maint_drivers_migrated_v1"))){
+    // בדיקת הדגל עמידה למרוץ טוקן — ראו הערה מקבילה ומלאה ב-migrateLegacyShed2
+    let driversMigrated = null;
+    for(let attempt=0; attempt<3; attempt++){
+      fbReadFailed = false;
+      driversMigrated = await sGetRaw("maint_drivers_migrated_v1");
+      if(driversMigrated !== null || !fbReadFailed) break;
+      await new Promise(r=>setTimeout(r, 300*(attempt+1)));
+    }
+    if(fbReadFailed){ console.error("ensureConvertedFrameworksSeed: לא הצלחתי לוודא את דגל הנהגים — מדלג הפעם"); }
+    else if(!driversMigrated){
       const drivers = (await sGetRaw("vo_personnel")) || [];
       drivers.forEach(d=>{
         if(d && d.name && !team.some(p=>p.name===d.name)){
@@ -8067,8 +8076,16 @@ const todayISO = () => new Date().toISOString().slice(0,10);
    getReserves() כבר לא קורא מהמפתח הישן. מיזוג חד-פעמי פנימה לכל מסגרת. */
 async function migrateLegacyReservesList(){
   try{
-    const already = await sGetRaw("legacy_reserves_migrated_v1");
+    // בדיקת הדגל עמידה למרוץ טוקן — ראו הערה מקבילה ומלאה ב-migrateLegacyShed2
+    let already = null;
+    for(let attempt=0; attempt<3; attempt++){
+      fbReadFailed = false;
+      already = await sGetRaw("legacy_reserves_migrated_v1");
+      if(already !== null || !fbReadFailed) break;
+      await new Promise(r=>setTimeout(r, 300*(attempt+1)));
+    }
     if(already) return;
+    if(fbReadFailed){ console.error("migrateLegacyReservesList: לא הצלחתי לוודא את דגל המיגרציה — עוצר"); return; }
     const legacy = (await sGetRaw("admin_reserves_list")) || [];
     const byShed = {};
     legacy.forEach(r=>{ if(r && r.shedId && r.person) (byShed[r.shedId] = byShed[r.shedId] || []).push(r); });
