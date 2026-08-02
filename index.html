@@ -982,16 +982,6 @@ nav{
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .hidden{display:none!important}
-
-/* ייצוא PDF ליומן תיעוד קרא-וחתום — אזור ייעודי, מוסתר תמיד חוץ מזמן הדפסה */
-#admin-log-print-area{display:none}
-@media print{
-  body *{visibility:hidden}
-  #admin-log-print-area, #admin-log-print-area *{visibility:visible}
-  #admin-log-print-area{display:block;position:absolute;top:0;right:0;left:0;padding:24px;color:#000;direction:rtl}
-  #admin-log-print-area h2{margin:0 0 4px;font-size:20px}
-  #admin-log-print-area p{margin:0 0 16px;color:#555;font-size:13px}
-}
 </style>
 </head>
 <body>
@@ -1382,12 +1372,11 @@ nav{
 
       <!-- admin tabs -->
       <div class="cmd-tabs" style="margin-bottom:16px">
-        <button class="cmd-tab active" id="atab-overview" onclick="adminTab('overview')">📊 סקירה</button>
+        <button class="cmd-tab active" id="atab-overview" onclick="adminTab('overview')">📊 דשבורד מפקד</button>
         <button class="cmd-tab" id="atab-signatures" onclick="adminTab('signatures')">✍️ חתימות</button>
         <button class="cmd-tab" id="atab-certs" onclick="adminTab('certs')">🎓 הסמכות</button>
         <button class="cmd-tab" id="atab-training" onclick="adminTab('training')">📚 הדרכה</button>
         <button class="cmd-tab" id="atab-reserves" onclick="adminTab('reserves')">🎖️ מילואים</button>
-        <button class="cmd-tab" id="atab-log" onclick="adminTab('log')">📜 יומן</button>
       </div>
 
       <!-- PANE: OVERVIEW -->
@@ -1401,20 +1390,28 @@ nav{
         </div>
         <div class="cmd-section-title">📄 קרא וחתום שפורסמו — כלל הטייסת</div>
         <div id="admin-events-list"></div>
-        <div class="cmd-section-title">📊 מצבת מסגרות · לחץ לצלילה</div>
-        <div class="matrix-hint">לפירוט מי חתם ומי טרם — לשונית ✍️ חתימות</div>
-        <div id="admin-sheds-grid"></div>
       </div>
 
-      <!-- PANE: SIGNATURES — מיקרו-נתונים לכל מסגרת, תזכורת למפקדים, היסטוריה -->
+      <!-- PANE: SIGNATURES — סטטוס כללי + יומן תיעוד ביצוע קרא-וחתום (לפי שם/סככה/פריט) + ייצוא -->
       <div class="admin-pane" id="apane-signatures">
-        <div class="cmd-section-title">📊 סטטוס חתימות · כלל הטייסת</div>
-        <div id="admin-sig-stats"></div>
-        <div class="cmd-section-title">📄 מעקב לפי מסגרת — מי חתם ומי טרם</div>
-        <div class="matrix-hint">כל פריט שלא הושלם כולל כפתור תזכורת למפקדי המסגרת</div>
-        <div id="admin-sig-items"></div>
-        <div class="cmd-section-title">🕐 היסטוריית חתימות אחרונות</div>
-        <div id="admin-sig-history"></div>
+        <div class="sec-head" style="margin-bottom:10px">
+          <div>
+            <h3 style="margin:0;font-size:16px">✍️ חתימות ותיעוד קרא-וחתום</h3>
+          </div>
+          <button class="add-btn" onclick="exportAdminLog()" style="background:var(--card);color:var(--red);border:1px solid var(--red-line);flex-shrink:0">📄 ייצוא לדוח</button>
+        </div>
+        <div class="cmd-tabs" style="margin-bottom:16px">
+          <button class="cmd-tab active" id="logview-byName" onclick="adminLogView('byName')">👤 לפי שם</button>
+          <button class="cmd-tab" id="logview-byShed" onclick="adminLogView('byShed')">🏠 לפי סככה</button>
+          <button class="cmd-tab" id="logview-byItem" onclick="adminLogView('byItem')">📄 לפי קרא-וחתום</button>
+        </div>
+        <!-- אזור זה (לא רק admin-log-list) הוא מה שנלכד בייצוא — כדי שהדוח יכלול גם את הסטטוס הכללי -->
+        <div id="admin-log-export-box">
+          <div class="cmd-section-title">📊 סטטוס חתימות · כלל הטייסת</div>
+          <div id="admin-sig-stats"></div>
+          <div class="cmd-section-title">📜 יומן תיעוד</div>
+          <div id="admin-log-list"></div>
+        </div>
       </div>
 
       <!-- PANE: CERTS -->
@@ -1476,22 +1473,6 @@ nav{
         <div id="admin-reserves-list"></div>
       </div>
 
-      <!-- PANE: LOG — יומן תיעוד ביצוע קרא-וחתום (לא יומן פעולות כללי) -->
-      <div class="admin-pane" id="apane-log">
-        <div class="sec-head" style="margin-bottom:10px">
-          <div>
-            <h3 style="margin:0;font-size:16px">📜 יומן תיעוד — ביצוע קרא וחתום</h3>
-            <p class="matrix-hint" style="margin:2px 0 0">מעקב חתימות בלבד, כלל-טייסתי</p>
-          </div>
-          <button class="add-btn" onclick="printAdminLog()" style="background:var(--card);color:var(--red);border:1px solid var(--red-line);flex-shrink:0">📄 ייצוא PDF</button>
-        </div>
-        <div class="cmd-tabs" style="margin-bottom:16px">
-          <button class="cmd-tab active" id="logview-byName" onclick="adminLogView('byName')">👤 לפי שם</button>
-          <button class="cmd-tab" id="logview-byShed" onclick="adminLogView('byShed')">🏠 לפי סככה</button>
-          <button class="cmd-tab" id="logview-byItem" onclick="adminLogView('byItem')">📄 לפי קרא-וחתום</button>
-        </div>
-        <div id="admin-log-list"></div>
-      </div>
     </section>
 
     <!-- ===== VEHICLE OFFICER / MAINT DEPT — VEHICLES TAB (מ״ע אחזקה, לשעבר קצין רכב) ===== -->
@@ -2569,16 +2550,8 @@ nav{
     </div>
   </div>
 
-  <!-- DRILL-DOWN MODAL -->
-  <div class="modal-bg" id="drill-modal">
-    <div class="modal" id="drill-body"></div>
-  </div>
-
   <!-- hidden training file input -->
   <input type="file" id="training-input" accept="image/*,.pdf,.doc,.docx,.ppt,.pptx" class="hidden" onchange="onTrainingFile(event)">
-
-  <!-- אזור הדפסה ל-PDF (יומן תיעוד קרא-וחתום) — גלוי רק בזמן הדפסה, ר' printAdminLog() -->
-  <div id="admin-log-print-area"></div>
 
   <div id="toast"></div>
 </div>
@@ -6451,32 +6424,21 @@ async function exportSafetyReport(){
    לשם בפועל — כך שרואים גם כשלי הפצה, לא רק כשלי חתימה. */
 async function renderAdminSignatures(){
   const statsBox = document.getElementById("admin-sig-stats");
-  const itemsBox = document.getElementById("admin-sig-items");
-  const histBox = document.getElementById("admin-sig-history");
-  if(!statsBox || !itemsBox || !histBox) return;
-  statsBox.innerHTML = itemsBox.innerHTML = histBox.innerHTML = '<div style="text-align:center;padding:14px;color:var(--ink-3)">⏳ טוען…</div>';
+  const logBox = document.getElementById("admin-log-list");
+  if(!statsBox || !logBox) return;
+  statsBox.innerHTML = logBox.innerHTML = '<div style="text-align:center;padding:14px;color:var(--ink-3)">⏳ טוען…</div>';
 
-  const adminItems = await getAdminEventsList();
-  const historyAll = [];
-  const perShedData = await Promise.all(SHEDS.map(async shed=>{
-    const [personnel, events, hist] = await Promise.all([
-      sGetIn(shed.id, "cfg_personnel").then(v=>v||[]),
-      sGetIn(shed.id, "safety_events").then(v=>v||[]),
-      sGetIn(shed.id, "sig_history").then(v=>v||[]),
-    ]);
-    hist.forEach(h=>historyAll.push({...h, shedName:shed.name}));
-    const eventIds = new Set(events.map(e=>e.id));
-    const sigsArr = await Promise.all(personnel.map(p => sGetIn(shed.id, "sigs_"+safeName(p.name))));
-    const sigsBy = {}; personnel.forEach((p,i)=> sigsBy[p.name] = sigsArr[i] || {});
-    return {shed, personnel, eventIds, sigsBy};
-  }));
+  // אותם נתונים משרתים גם את תיבת הסטטוס וגם את יומן התיעוד (לפי שם/סככה/פריט) —
+  // ר' computeAdminSigLog ב-lib המקומי (renderLogByName/Shed/Item).
+  adminLogData = await computeAdminSigLog();
+  const {adminItems, perShed} = adminLogData;
 
   let totalConfirms=0, maxC=0, fullyDone=0, syncGaps=0;
-  const itemRows = adminItems.map(item=>{
-    const shedStatus = perShedData.map(({shed,personnel,eventIds,sigsBy})=>{
-      if(!eventIds.has(item.id)) return {shed, present:false, total:personnel.length};
+  adminItems.forEach(item=>{
+    const shedStatus = perShed.map(({shed,personnel,eventIds,sigsBy})=>{
+      if(!eventIds.has(item.id)) return {present:false, total:personnel.length};
       const missing = personnel.filter(p=>!sigsBy[p.name][item.id]);
-      return {shed, present:true, c:personnel.length-missing.length, total:personnel.length, missing};
+      return {present:true, c:personnel.length-missing.length, total:personnel.length};
     });
     shedStatus.forEach(s=>{
       if(!s.present){ syncGaps++; return; }
@@ -6486,7 +6448,6 @@ async function renderAdminSignatures(){
     const fullySigned = relevantSheds.length>0 && relevantSheds.every(s=>s.c===s.total);
     const allDelivered = shedStatus.every(s=>s.present);
     if(fullySigned && allDelivered) fullyDone++;
-    return {item, shedStatus, allDelivered};
   });
   const pct = maxC ? Math.round(totalConfirms/maxC*100) : 0;
 
@@ -6498,29 +6459,7 @@ async function renderAdminSignatures(){
   </div>
   ${syncGaps?`<div class="sr-line" style="margin-top:8px"><span class="sr-tag r">⚠️ ${syncGaps} מקרים של פריט שלא נקלט במסגרת מסוימת</span></div>`:""}`;
 
-  itemsBox.innerHTML = itemRows.length ? itemRows.slice().reverse().map(({item,shedStatus,allDelivered})=>{
-    const needsReminder = shedStatus.some(s=>s.present && s.missing && s.missing.length);
-    return `
-    <div class="sr-ev">
-      <div class="sr-ev-top"><b>${escapeHTML(item.title)}</b>${!allDelivered?'<span class="sr-count r">⚠️ לא בכל המסגרות</span>':""}</div>
-      ${item.date?`<div class="sr-ev-date">📅 ${escapeHTML(item.date)}</div>`:""}
-      ${shedStatus.map(s=>{
-        if(!s.present) return `<div class="sr-line"><span class="sr-tag r">${escapeHTML(s.shed.name)}</span>⚠️ לא נקלט במסגרת זו</div>`;
-        if(s.total===0) return `<div class="sr-line"><span class="sr-tag" style="background:#eee;color:var(--ink-3)">${escapeHTML(s.shed.name)}</span>אין צוות רשום</div>`;
-        const cls = s.c===s.total ? "g" : (s.c===0 ? "r" : "y");
-        return `<div class="sr-line"><span class="sr-tag ${cls}">${escapeHTML(s.shed.name)}: ${s.c}/${s.total}</span>${s.missing.length?s.missing.map(p=>escapeHTML(p.name)).join("، "):"כולם חתמו"}</div>`;
-      }).join("")}
-      ${needsReminder?`<button class="m-btn ghost" style="width:100%;margin-top:6px;font-size:12px" onclick="remindNonSigners('${item.id}','${jsStr(item.title)}')">📢 שלח תזכורת למפקדים — מי טרם ביצע</button>`:""}
-    </div>`;
-  }).join("") : `<div class="empty-state" style="padding:20px"><div class="ic">✍️</div><h3>אין עדיין פריטי קרא-וחתום שפורסמו לכל המסגרות</h3><p>יופיעו כאן ברגע שתפרסם פריט</p></div>`;
-
-  historyAll.sort((a,b)=>b.ts-a.ts);
-  const recent = historyAll.slice(0,40);
-  histBox.innerHTML = recent.length ? recent.map(h=>`
-    <div class="audit-row">
-      <div class="audit-main"><b>${h.type==="sig"?"✍️ חתם/ה":"✓ אישר/ה קריאה"}</b> · <span>${escapeHTML(h.eventTitle||"")}</span></div>
-      <div class="audit-meta">${escapeHTML(h.shedName)} · ${escapeHTML(h.person||"")} · ${fmtLogTime(h.ts)}</div>
-    </div>`).join("") : `<div class="empty-state" style="padding:14px"><div class="ic">🕐</div><p>אין עדיין היסטוריית חתימות</p></div>`;
+  adminLogView(adminLogCurrentView);
 }
 
 /* שולח תזכורת "מי טרם ביצע" למפקדי כל מסגרת שיש בה מי שטרם חתם על הפריט —
@@ -7401,7 +7340,8 @@ async function ensurePfBackfill(){
       const certs = (await sGetIn(shedId,"certs_list")) || [];
       let changed = false;
       for(const p of pers){
-        if(p.role==="חייל" && !p.reserve && !certs.some(c=>c.person===p.name && certCleanName(c.name)==="PF")){
+        // פקיד כלים לא עובר מסלול הסמכות — יש לו רק הסמכת חדר כלים (ראו pfStatus/stage7Status)
+        if(p.role==="חייל" && !p.reserve && p.profession!=="פקיד כלים" && !certs.some(c=>c.person===p.name && certCleanName(c.name)==="PF")){
           certs.push({id:"cert"+Date.now()+Math.random().toString(36).slice(2,6), person:p.name, name:"PF", expiry:""});
           changed = true;
         }
@@ -7412,10 +7352,31 @@ async function ensurePfBackfill(){
   await sSetRaw(flagKey, true);
   console.log("✅ כל החיילים הקיימים סומנו כמוסמכי PF");
 }
+/* ניקוי חד-פעמי: ensurePfBackfill (למעלה) לא בדק את מקצוע "פקיד כלים" לפני
+   שהוסיף PF אוטומטית — כך שפקידי כלים קיימים יכלו לקבל רשומת PF ריקה־תוקף
+   בטעות. מסיר רשומות כאלה בכל המסגרות (כולל מחלקות/מ״ע אחזקה/הדרכה,
+   ליתר ביטחון גם אם הבאקפיל המקורי לא נגע בהן). */
+async function cleanupPfForToolsClerk(){
+  const flagKey = "pf_toolsclerk_cleanup_v1";
+  if(await sGetRaw(flagKey)) return;
+  await Promise.all(SHEDS.map(async shed=>{
+    try{
+      const pers = (await sGetIn(shed.id,"cfg_personnel")) || [];
+      const clerkNames = new Set(pers.filter(p=>p.profession==="פקיד כלים").map(p=>p.name));
+      if(!clerkNames.size) return;
+      const certs = (await sGetIn(shed.id,"certs_list")) || [];
+      const filtered = certs.filter(c=> !(clerkNames.has(c.person) && certCleanName(c.name)==="PF"));
+      if(filtered.length !== certs.length) await sSetIn(shed.id,"certs_list", filtered);
+    }catch(e){ console.error("cleanupPfForToolsClerk "+shed.id, e); }
+  }));
+  await sSetRaw(flagKey, true);
+  console.log("✅ רשומות PF שגויות לפקידי כלים נוקו");
+}
 
 async function ensureExtraCertsSeed(scopeShedId){
   await selfHealShedCertsAndRoster(scopeShedId);
   await ensurePfBackfill();
+  await cleanupPfForToolsClerk();
 
   const flagKey = "extra_certs_seed_v2";
   if(await sGetRaw(flagKey)) return;
@@ -7481,28 +7442,6 @@ async function ensureShed2Seed(){
 
 async function renderAdminDashboard(){
   renderAdminEvents();
-  const grid = document.getElementById("admin-sheds-grid");
-  grid.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען נתונים מכל המסגרות…</div>';
-  const cards = await Promise.all(SHEDS.map(async shed=>{
-    const [personnel, events] = await Promise.all([
-      sGetIn(shed.id, "cfg_personnel").then(v=>v||[]),
-      sGetIn(shed.id, "safety_events").then(v=>v||[])
-    ]);
-    const num = shed.id.replace("shed","");
-
-    return `<div class="shed-card clickable" onclick="drillShed('${shed.id}')">
-      <div class="shed-card-head">
-        <h3><span class="shed-num">${num}</span>${shed.name}
-          ${personnel.length===0?'<span class="shed-empty-tag">· טרם הוזן צוות</span>':''}</h3>
-        <span class="drill-hint">צלילה ›</span>
-      </div>
-      <div class="shed-stats">
-        <div class="shed-stat info"><b>${personnel.length}</b><span>אנשי צוות</span></div>
-        <div class="shed-stat info"><b>${events.length}</b><span>קרא וחתום</span></div>
-      </div>
-    </div>`;
-  }));
-  grid.innerHTML = cards.join("");
 }
 
 /* ===== ADMIN: publish event to ALL sheds ===== */
@@ -7645,7 +7584,7 @@ async function publishBoardToAllSheds(id, label, thumb, fullImg){
    ADMIN v20: certs matrix, expiries, cert bank, training, log, drill
    ============================================================ */
 function adminTab(which){
-  ["overview","signatures","certs","training","reserves","log"].forEach(w=>{
+  ["overview","signatures","certs","training","reserves"].forEach(w=>{
     document.getElementById("atab-"+w).classList.toggle("active", which===w);
     document.getElementById("apane-"+w).classList.toggle("active", which===w);
   });
@@ -7653,7 +7592,6 @@ function adminTab(which){
   if(which==="certs") renderAdminCerts();
   if(which==="training") renderAdminTraining();
   if(which==="reserves") renderReserves();
-  if(which==="log") renderAdminLog();
 }
 
 /* ---- default cert bank ---- */
@@ -8222,12 +8160,6 @@ function renderLogByItem({adminItems, perShed}){
   }).join("");
 }
 
-async function renderAdminLog(){
-  const box = document.getElementById("admin-log-list");
-  box.innerHTML = '<div style="text-align:center;padding:14px;color:var(--ink-3)">⏳ טוען…</div>';
-  adminLogData = await computeAdminSigLog();
-  adminLogView(adminLogCurrentView);
-}
 function adminLogView(which){
   adminLogCurrentView = which;
   ["byName","byShed","byItem"].forEach(w=>{
@@ -8240,18 +8172,27 @@ function adminLogView(which){
   else if(which==="byShed") box.innerHTML = renderLogByShed(adminLogData);
   else box.innerHTML = renderLogByItem(adminLogData);
 }
-/* ייצוא ל-PDF: אין ספריית PDF חדשה בקוד (נמנעים מתלות/CDN נוספת) — משתמשים
-   בדפדפן עצמו: מכינים אזור הדפסה ייעודי ומפעילים window.print(), שבו "שמור
-   כ-PDF" זמין בכל דפדפן/מערכת הפעלה בלי שום ספרייה חיצונית. */
-function printAdminLog(){
-  const box = document.getElementById("admin-log-list");
-  if(!box || !box.innerHTML.trim()){ toast("אין נתונים לייצוא"); return; }
-  const printArea = document.getElementById("admin-log-print-area");
-  const viewLabel = {byName:"לפי שם", byShed:"לפי סככה", byItem:"לפי קרא-וחתום"}[adminLogCurrentView];
-  printArea.innerHTML = `<h2>יומן תיעוד — ביצוע קרא וחתום (${escapeHTML(viewLabel)})</h2>`+
-    `<p>${new Date().toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p>` +
-    box.innerHTML;
-  window.print();
+/* ייצוא הדוח כתמונה — לא window.print(): ב-PWA מותקן במסך הבית (בעיקר
+   באייפון, ה"מצב standalone") הדפדפן לא מציג את דיאלוג ההדפסה בכלל,
+   כך שהכפתור לא עשה שום דבר. html2canvas כבר בשימוש מוכח באפליקציה
+   (דוח קרא-וחתום/מגמות) ועובד בכל הפלטפורמות, כולל PWA מותקן. */
+async function exportAdminLog(){
+  const box = document.getElementById("admin-log-export-box");
+  const listBox = document.getElementById("admin-log-list");
+  if(!box || !listBox || !listBox.innerHTML.trim()){ toast("אין נתונים לייצוא"); return; }
+  toast("מכין תמונה…");
+  try{
+    if(!window.html2canvas){
+      await new Promise((res,rej)=>{ const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; s.integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H"; s.crossOrigin="anonymous"; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+    }
+    const canvas = await window.html2canvas(box, {scale:2, backgroundColor:"#ffffff"});
+    canvas.toBlob(blob=>{
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href=url; a.download="יומן_תיעוד_קרא_וחתום_"+adminLogCurrentView+".png"; a.click();
+      URL.revokeObjectURL(url);
+      toast("הדוח יוצא כתמונה 📸");
+    });
+  }catch(e){ toast("⚠️ ייצוא נכשל"); console.error(e); }
 }
 
 /* ---- squadron-wide alerts (overview) ---- */
@@ -8290,31 +8231,6 @@ async function openAdminAlerts(){
   const rows = rowsPerShed.flat();
   if(rows.length===0){ body.innerHTML='<div style="text-align:center;padding:30px;color:var(--ink-3)"><div style="font-size:40px;margin-bottom:8px">✅</div><b style="font-size:15px;color:var(--green)">אין התראות בכלל הטייסת</b></div>'; return; }
   body.innerHTML = rows.map(a=>`<div class="alert-row ${a.level}"><span class="al-ic">${a.icon}</span><span class="al-tx">${escapeHTML(a.text)}</span></div>`).join("");
-}
-
-/* ---- FEATURE 8: drill into a shed (read-only snapshot) ---- */
-async function drillShed(shedId){
-  const shed = SHEDS.find(s=>s.id===shedId); if(!shed) return;
-  const personnel = (await sGetIn(shedId,"cfg_personnel")) || [];
-  const events = (await sGetIn(shedId,"safety_events")) || [];
-  const certs = (await sGetIn(shedId,"certs_list")) || [];
-  const cmds = personnel.filter(p=>p.role==="מפקד");
-  const sols = personnel.filter(p=>p.role==="חייל");
-
-  document.getElementById("drill-body").innerHTML = `
-    <h3>${shed.name} — צלילה מלאה</h3>
-    <div class="m-sub">תמונת מצב מפורטת · לצפייה בלבד</div>
-    <div class="drill-grid">
-      <div class="drill-stat"><b>${personnel.length}</b><span>אנשי צוות</span></div>
-      <div class="drill-stat"><b>${events.length}</b><span>קרא וחתום</span></div>
-      <div class="drill-stat"><b>${certs.length}</b><span>הסמכות</span></div>
-    </div>
-    <div class="drill-sec">🎖️ מפקדים (${cmds.length})</div>
-    <div class="drill-people">${cmds.length?cmds.map(p=>escapeHTML(p.name)).join(" · "):"—"}</div>
-    <div class="drill-sec">👤 חיילים (${sols.length})</div>
-    <div class="drill-people">${sols.length?sols.map(p=>escapeHTML(p.name)).join(" · "):"—"}</div>
-    <button class="m-btn ghost" onclick="document.getElementById('drill-modal').classList.remove('open')" style="width:100%;margin-top:14px">סגור</button>`;
-  document.getElementById("drill-modal").classList.add("open");
 }
 
 /* ============================================================

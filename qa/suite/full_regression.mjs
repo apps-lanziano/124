@@ -173,7 +173,7 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
   await p.close();
 }
 
-// ===== 9. Admin overview: safety-report button/function removed, shed cards no longer show duplicate sig% =====
+// ===== 9. Admin overview: safety-report button/function removed, "מצבת מסגרות" grid removed entirely =====
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
@@ -181,12 +181,12 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
     const noBtn = !document.querySelector('[onclick="openAdminSafetyReport()"]');
     const fnGone = typeof window.openAdminSafetyReport === "undefined";
     await renderAdminDashboard();
-    const gridHtml = document.getElementById("admin-sheds-grid").innerHTML;
-    const noSigPctStat = !gridHtml.includes(">חתימות<");
-    return { noBtn, fnGone, noSigPctStat };
+    const gridGone = !document.getElementById("admin-sheds-grid");
+    const drillFnGone = typeof window.drillShed === "undefined";
+    return { noBtn, fnGone, gridGone, drillFnGone };
   });
-  record("Admin overview decluttered: no redundant safety-report button/fn, no duplicate sig% on shed cards",
-    out.noBtn && out.fnGone && out.noSigPctStat, JSON.stringify(out));
+  record("Admin overview decluttered: no redundant safety-report button/fn, 'מצבת מסגרות' grid+drill-down removed entirely",
+    out.noBtn && out.fnGone && out.gridGone && out.drillFnGone, JSON.stringify(out));
   console.log("errs9", errs);
   await p.close();
 }

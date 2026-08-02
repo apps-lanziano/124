@@ -31,7 +31,7 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
     put("shed3_cfg_personnel", [{name:"משה"}]);
     put("shed3_safety_events", []);              // הפריט לא הגיע לסככה 3 בכלל
 
-    await renderAdminLog();
+    await renderAdminSignatures();
     const byName = document.getElementById("admin-log-list").innerHTML;
     adminLogView("byShed");
     const byShed = document.getElementById("admin-log-list").innerHTML;
@@ -54,27 +54,40 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
   console.log("errs1",errs); await p.close();
 }
 
-// 1b. printAdminLog: מכין את אזור ההדפסה עם תוכן התצוגה הנוכחית, בלי לקרוס בלי נתונים
+/* exportAdminLog: window.print() לא עובד בכלל ב-PWA מותקן במסך הבית
+   (בעיקר iOS standalone) — לכן הוחלף בייצוא תמונה עם html2canvas, אותה
+   שיטה שכבר מוכחת בדוח קרא-וחתום/מגמות. בודק גם מקרה בלי נתונים (לא
+   קורא ל-html2canvas בכלל) וגם עם נתונים (קורא לו על האזור הנכון). */
+// 1b. exportAdminLog: בלי נתונים מציג הודעה; עם נתונים קורא ל-html2canvas על admin-log-export-box
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
     window.sGetRaw = async ()=>null; window.sGetIn = async ()=>null;
-    // בלי נתונים בכלל — לא אמור לקרוס, רק להראות הודעה
     let toastMsg = ""; window.toast = m=>toastMsg=m;
-    printAdminLog();
+
+    // בלי נתונים בכלל — לא אמור לקרוס, רק להראות הודעה, ולא לגעת ב-html2canvas
+    let html2canvasCalled = false;
+    window.html2canvas = async ()=>{ html2canvasCalled = true; return {toBlob(cb){ cb(new Blob(["x"])); }}; };
+    await exportAdminLog();
     const noDataToast = toastMsg;
+    const noDataSkipped = !html2canvasCalled;
 
     // עכשיו עם נתונים אמיתיים
-    await renderAdminLog();
-    let printed = false;
-    window.print = ()=>{ printed = true; };
-    printAdminLog();
-    return { noDataToast, printed, printAreaHtml: document.getElementById("admin-log-print-area").innerHTML };
+    await renderAdminSignatures();
+    let capturedEl = null;
+    window.html2canvas = async (el)=>{ capturedEl = el; return {toBlob(cb){ cb(new Blob(["x"])); }}; };
+    toastMsg = "";
+    await exportAdminLog();
+    return {
+      noDataToast, noDataSkipped,
+      withDataToast: toastMsg,
+      capturedCorrectBox: capturedEl && capturedEl.id === "admin-log-export-box",
+    };
   });
-  record("printAdminLog: בלי נתונים מציג הודעה ולא קורא ל-print()",
-    out.noDataToast.includes("אין נתונים"), String(out.noDataToast));
-  record("printAdminLog: עם נתונים ממלא את אזור ההדפסה וקורא ל-window.print()",
-    out.printed && out.printAreaHtml.includes("יומן תיעוד"), JSON.stringify({printed: out.printed, has: out.printAreaHtml.includes("יומן תיעוד")}));
+  record("exportAdminLog: בלי נתונים מציג הודעה ולא קורא ל-html2canvas",
+    out.noDataToast.includes("אין נתונים") && out.noDataSkipped, JSON.stringify(out));
+  record("exportAdminLog: עם נתונים קורא ל-html2canvas על admin-log-export-box ומציג הצלחה",
+    out.capturedCorrectBox && out.withDataToast.includes("יוצא"), JSON.stringify(out));
   console.log("errs1b",errs); await p.close();
 }
 
