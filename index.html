@@ -434,6 +434,7 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
 .file-badge.word{background:linear-gradient(135deg,#1a4d8f,#2b7cd3)}
 .file-badge.ppt{background:linear-gradient(135deg,#b7472a,#e8663f)}
 .file-badge.img{background:linear-gradient(135deg,#5c4a4f,#8a7)}
+.file-badge.link{background:linear-gradient(135deg,#0a7a5c,#1fa87e)}
 .doc-fileicon{font-size:22px;line-height:1}
 .file-viewer{width:100%;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-lg);overflow:hidden}
 .file-viewer iframe{width:100%;height:62vh;border:none;display:block;background:#525659}
@@ -1361,6 +1362,7 @@ nav{
       <div class="admin-grid">
         <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic">📋</span><b>תדריך בוקר</b><span>תדריך יומי לצוות</span></button>
         <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
+        <button class="admin-card" onclick="openTrainingLinkAdd()"><span class="a-ic">🔗</span><b>קישור הדרכה</b><span>הוספת קישור לצוות שלי</span></button>
       </div>
     </section>
 
@@ -1470,6 +1472,7 @@ nav{
       <div class="admin-pane" id="apane-training">
         <div class="admin-actions-row">
           <button class="admin-card" onclick="openTrainingUpload()" style="grid-column:1/-1"><span class="a-ic">📚</span><b>פרסום חומר הדרכה</b><span>מצגת / מסמך לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openTrainingLinkAdd()" style="grid-column:1/-1"><span class="a-ic">🔗</span><b>הוספת קישור</b><span>קישור חיצוני לכל המסגרות</span></button>
           <a class="admin-card" href="https://tikshuv.sharepoint.com/sites/AU_09-124/" target="_blank" rel="noopener noreferrer" style="grid-column:1/-1;display:flex;text-decoration:none">
             <span class="a-ic">🔗</span><b>אתר המצגות האזרחי</b><span>SharePoint · המקור למצגות ההדרכה</span>
           </a>
@@ -2454,6 +2457,20 @@ nav{
     </div>
   </div>
 
+  <!-- TRAINING LINK MODAL — קישור (לא קובץ) לחומר הדרכה, למפקד מסגרת (מקומי) או אחראי הדרכה (כלל-טייסתי) -->
+  <div class="modal-bg" id="training-link-modal">
+    <div class="modal">
+      <h3>🔗 הוספת קישור לחומר הדרכה</h3>
+      <div class="m-sub">קישור חיצוני (מצגת, סרטון, מסמך) — לא קובץ שמועלה לאפליקציה.</div>
+      <input class="m-input" id="tl-title" type="text" placeholder="כותרת" style="margin-bottom:8px">
+      <input class="m-input" id="tl-url" type="text" placeholder="https://…" style="margin-bottom:10px">
+      <button class="m-btn primary" onclick="saveTrainingLink()" style="width:100%">➕ הוסף קישור</button>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn ghost" onclick="document.getElementById('training-link-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
   <!-- BRIEF MODAL (feature 24) -->
   <div class="modal-bg" id="brief-modal">
     <div class="modal">
@@ -2765,6 +2782,7 @@ const FTYPE = {
   pdf:{label:"מסמך PDF", badge:"pdf", short:"PDF", emoji:"📕"},
   word:{label:"מסמך Word", badge:"word", short:"DOC", emoji:"📘"},
   ppt:{label:"מצגת PowerPoint", badge:"ppt", short:"PPT", emoji:"📙"},
+  link:{label:"קישור", badge:"link", short:"LINK", emoji:"🔗"},
   other:{label:"קובץ", badge:"img", short:"קובץ", emoji:"📎"}
 };
 
@@ -7970,6 +7988,65 @@ async function publishTrainingToAllSheds(id, title, ftype, fileData, thumb){
   if(!results.every(Boolean)) allOk = false;
   return allOk;
 }
+
+/* ===== חומר הדרכה כקישור (לא קובץ) =====
+   אחראי הדרכה מפרסם קישור לכל המסגרות (בדיוק כמו publishTrainingToAllSheds,
+   אבל בלי קובץ), ומפקד מסגרת רגילה מוסיף קישור מקומי לצוות שלו בלבד —
+   אותה כפילות מקומי/כלל-טייסתי שכבר קיימת בפרסום פריטי קרא-וחתום. אין
+   כאן קובץ מועלה בכלל, ולכן אין training_file_<id> להוסיף/למחוק. */
+function openTrainingLinkAdd(){
+  document.getElementById("tl-title").value = "";
+  document.getElementById("tl-url").value = "";
+  document.getElementById("training-link-modal").classList.add("open");
+}
+async function saveTrainingLink(){
+  const title = document.getElementById("tl-title").value.trim();
+  let url = document.getElementById("tl-url").value.trim();
+  if(!title){ toast("נא להזין כותרת"); return; }
+  if(!url){ toast("נא להזין קישור"); return; }
+  if(!/^https?:\/\//i.test(url)) url = "https://" + url;
+  try{ new URL(url); }catch(e){ toast("הקישור לא תקין ⛔"); return; }
+
+  const id = "trainlink_" + Date.now();
+  const ok = isAdmin
+    ? await publishTrainingLinkToAllSheds(id, title, url)
+    : await addLocalTrainingLink(id, title, url);
+  if(!ok){ toast("⚠️ ההוספה נכשלה — בדוק חיבור רשת ונסה שוב"); return; }
+
+  document.getElementById("training-link-modal").classList.remove("open");
+  toast(isAdmin ? "הקישור פורסם לכל המסגרות 🔗" : "הקישור נוסף ✓");
+  if(isAdmin){ await logAdminAction("פרסום קישור הדרכה לכל המסגרות", title); if(typeof renderAdminTraining==="function") renderAdminTraining(); }
+  if(typeof renderTrainingView==="function") renderTrainingView();
+}
+async function publishTrainingLinkToAllSheds(id, title, url){
+  const adminList = await getTrainingList();
+  adminList.unshift({id, title, ftype:"link", url, date:new Date().toLocaleDateString("he-IL")});
+  let allOk = await sSetRaw("admin_training", adminList);
+  const results = await Promise.all(SHEDS.map(async shed=>{
+    const list = (await sGetIn(shed.id, "training_list")) || [];
+    list.unshift({id, title, ftype:"link", url, by:"אחראי הדרכה", date:new Date().toLocaleDateString("he-IL")});
+    return sSetIn(shed.id, "training_list", list);
+  }));
+  if(!results.every(Boolean)) allOk = false;
+  return allOk;
+}
+/* קישור מקומי בלבד — לא נוגע ב-admin_training ולא במסגרות אחרות */
+async function addLocalTrainingLink(id, title, url){
+  const list = (await sGet("training_list")) || [];
+  list.unshift({id, title, ftype:"link", url, by:user||"מפקד", date:new Date().toLocaleDateString("he-IL")});
+  return sSet("training_list", list);
+}
+/* הסרת קישור מקומי שהמפקד עצמו הוסיף — לא מוחקת חומר שפורסם ע"י אחראי ההדרכה */
+async function removeLocalTrainingLink(id){
+  if(!confirm("להסיר את הקישור?")) return;
+  const list = (await sGet("training_list")) || [];
+  const filtered = list.filter(t=>t.id!==id);
+  if(filtered.length === list.length) return;
+  if(!(await sSet("training_list", filtered))){ toast("⚠️ ההסרה נכשלה — נסה שוב"); return; }
+  toast("הקישור הוסר");
+  renderTrainingView();
+}
+
 /* ===== מילואים — כלל-טייסתי, רענון ידני (תאריך אחרון + פ.ת הבא) ===== */
 const todayISO = () => new Date().toISOString().slice(0,10);
 /* מיגרציה חד-פעמית: לפני המעבר לשמירת מילואים כ-cfg_personnel לכל מסגרת, כל
@@ -8643,23 +8720,33 @@ async function renderTrainingView(){
   if(!box) return;
   const list = (await sGet("training_list")) || [];
   if(list.length===0){ box.innerHTML='<div class="empty-state"><div class="ic">📚</div><h3>אין עדיין חומרי הדרכה</h3><p>חומרים שיפרסם אחראי ההדרכה יופיעו כאן</p></div>'; return; }
+  // מפקד מסגרת רגילה יכול להסיר קישור מקומי שהוא עצמו הוסיף (לא חומר שפורסם
+  // ע"י אחראי ההדרכה — לזה אין "מחיקה חלקית", רק דרך deleteTraining הכלל-טייסתי)
+  const canRemoveOwnLinks = userRole==="מפקד" && !isAdmin;
   box.innerHTML = list.map(t=>{
     const ft = FTYPE[t.ftype] || FTYPE.image;
     const visual = (t.ftype==="image" && t.thumb)
       ? `<img class="doc-thumb" src="${t.thumb}" alt="">`
       : `<div class="doc-thumb file-badge ${ft.badge}"><span class="doc-fileicon">${ft.emoji}</span></div>`;
+    const delBtn = (canRemoveOwnLinks && t.ftype==="link" && t.by!=="אחראי הדרכה")
+      ? `<button class="cert-chip-del" onclick="event.stopPropagation();removeLocalTrainingLink('${jsStr(t.id)}')">✕</button>` : "";
     return `<div class="card doc-item" onclick="openTrainingItem('${t.id}')">
       ${visual}
       <div class="doc-body"><h3>${escapeHTML(t.title)}</h3><div class="meta">${ft.label} · ${t.date}</div></div>
+      ${delBtn}
       <div class="doc-state read">📚</div>
     </div>`;
   }).join("");
 }
 async function openTrainingItem(id){
-  const data = await sGet("training_file_"+id);
-  if(!data){ toast("הקובץ לא נמצא"); return; }
   const list = (await sGet("training_list")) || [];
   const t = list.find(x=>x.id===id); if(!t) return;
+  if(t.ftype==="link"){
+    if(t.url) window.open(t.url, "_blank", "noopener,noreferrer");
+    return;
+  }
+  const data = await sGet("training_file_"+id);
+  if(!data){ toast("הקובץ לא נמצא"); return; }
   if(t.ftype==="image"){
     const w = window.open("");
     if(w){
