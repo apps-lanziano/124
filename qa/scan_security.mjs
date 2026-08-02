@@ -9,7 +9,7 @@
    תעבורה חיה ולכן לא מזהה חדירה בזמן אמת — לכך נדרשת התראה
    מצד Firebase עצמו (ר' סעיף "ניטור חי" ב-qa/README.md).
    ============================================================ */
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, readdirSync } from 'fs';
 
 import { ROOT } from './lib/pw.mjs';   // שורש המאגר — נגזר, לא מקובע
 const findings = [];
@@ -18,7 +18,23 @@ function add(sev, title, detail, where){ findings.push({sev, area:"אבטחה", 
 const html = readFileSync(`${ROOT}/index.html`, 'utf8');
 const lines = html.split('\n');
 const rules = existsSync(`${ROOT}/firestore.rules`) ? readFileSync(`${ROOT}/firestore.rules`,'utf8') : "";
-const fn    = existsSync(`${ROOT}/functions/index.js`) ? readFileSync(`${ROOT}/functions/index.js`,'utf8') : "";
+/* קוד ה-Cloud Function מפוצל בין functions/index.js ו-functions/lib/*.js
+   (הופרד כדי שהלוגיקה תהיה ניתנת לבדיקה ישירה — ראו notify_lib_test.mjs
+   וכו'). בדיקות שמחפשות תבנית "בקובץ אחד" (למשל Array.isArray לצד .data().v)
+   צריכות לראות את כל הקוד יחד, אחרת פיצול לגיטימי נראה כרגרסיה. */
+function readFunctionsCode(){
+  let combined = "";
+  const idx = `${ROOT}/functions/index.js`;
+  if(existsSync(idx)) combined += readFileSync(idx, 'utf8');
+  const libDir = `${ROOT}/functions/lib`;
+  if(existsSync(libDir)){
+    for(const f of readdirSync(libDir).filter(f=>f.endsWith('.js'))){
+      combined += "\n" + readFileSync(`${libDir}/${f}`, 'utf8');
+    }
+  }
+  return combined;
+}
+const fn = readFunctionsCode();
 
 function lineOf(idx){ return html.slice(0, idx).split('\n').length; }
 
