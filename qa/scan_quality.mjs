@@ -5,7 +5,9 @@
    שומר על תיקונים קריטיים שכבר בוצעו, כדי שלא יחזרו בדלת האחורית:
      · "כתיבה עיוורת" של רשימת הצוות (הבאג שמחק PIN-ים)
      · "כשל שמירה שקט שמוצג כהצלחה" (הבאג שהעלים קרא-וחתום)
-   שתי הבדיקות האלה הן רגרסיה-שומרת: הן ייכשלו אם מישהו יוסיף
+     · "דגל חד-פעמי בלי הגנה מפני כשל קריאה חולף" (הבאג שדרס נתוני סככה 2 —
+       ראו migrateLegacyShed2, commit 4ec3d73)
+   שלוש הבדיקות האלה הן רגרסיה-שומרת: הן ייכשלו אם מישהו יוסיף
    בעתיד קוד שחוזר על אותה תבנית.
    ============================================================ */
 import { readFileSync } from 'fs';
@@ -44,6 +46,68 @@ function lineOf(idx){ return html.slice(0, idx).split('\n').length; }
       `משמעות: כשל אמיתי מדווח כהצלחה, והמשתמש חושב שהמידע נשמר.`);
   } else {
     add("info", "ההגנה על יושרת השמירה במקומה", "אין catch שמחזיר true — כשלי שמירה מדווחים כפי שהם.");
+  }
+}
+
+/* ---------- שמירה על התיקון: דגל חד-פעמי בלי הגנה מפני כשל קריאה חולף ---------- */
+{
+  // דגל "כבר בוצע" (מיגרציה/זריעה חד-פעמית) שנקרא פעם אחת בלי retry ובלי
+  // בדיקת fbReadFailed חשוף לכשל רשת/מרוץ טוקן רגעי: הפונקציה תפרש את זה
+  // כ"עוד לא בוצע" ותרוץ שוב — בדיוק הבאג שדרס נתונים חיים בסככה 2
+  // (migrateLegacyShed2, commit 4ec3d73). כדי לאתר כל מופע במדויק, מוצאים
+  // את גוף כל פונקציה בפועל (התאמת סוגריים מודעת למחרוזות/הערות), לא רק
+  // "עד הפונקציה הבאה" כמו בבדיקת "פונקציות ארוכות" — אחרת יתקבלו טווחים
+  // שגויים שבולעים כמה פונקציות יחד.
+  function findMatchingBrace(src, openIdx){
+    let depth = 0;
+    for(let i=openIdx; i<src.length; i++){
+      const c = src[i];
+      if(c === '/' && src[i+1] === '/'){ const nl = src.indexOf('\n', i); i = (nl<0 ? src.length : nl); continue; }
+      if(c === '/' && src[i+1] === '*'){ const endc = src.indexOf('*/', i+2); i = (endc<0 ? src.length : endc+1); continue; }
+      if(c === '"' || c === "'"){
+        const quote = c; i++;
+        while(i<src.length && src[i] !== quote){ if(src[i]==='\\') i++; i++; }
+        continue;
+      }
+      if(c === '`'){
+        i++; let tdepth = 0;
+        while(i<src.length){
+          if(src[i]==='\\'){ i++; }
+          else if(src[i]==='`' && tdepth===0){ break; }
+          else if(src[i]==='$' && src[i+1]==='{'){ tdepth++; i++; }
+          else if(src[i]==='}' && tdepth>0){ tdepth--; }
+          i++;
+        }
+        continue;
+      }
+      if(c === '{') depth++;
+      else if(c === '}'){ depth--; if(depth===0) return i; }
+    }
+    return -1;
+  }
+  const funcRe = /(?:^|\n)(async\s+function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*)\{/g;
+  let m; const risky = [];
+  while((m = funcRe.exec(html))){
+    const name = m[2];
+    const openBrace = m.index + m[1].length;
+    const closeBrace = findMatchingBrace(html, openBrace);
+    if(closeBrace<0) continue;
+    const body = html.slice(openBrace+1, closeBrace);
+    // דגל חד-פעמי: קריאת sGetRaw שמיד נבדקת כתנאי יציאה מוקדמת ("if(דגל) return")
+    const hasFlagGuard = /await\s+sGetRaw\([^)]*\)\s*;?\s*\n?\s*if\s*\([^)]*\)\s*return|if\s*\(\s*!?\(?\s*await\s+sGetRaw\(/.test(body);
+    if(!hasFlagGuard) continue;
+    if(/fbReadFailed/.test(body)) continue;   // כבר מוגן
+    risky.push({name, at: lineOf(m.index)});
+  }
+  if(risky.length){
+    add("high", "דגל חד-פעמי (מיגרציה/זריעה) בלי הגנה מפני כשל קריאה חולף",
+      `${risky.length} פונקציות בודקות דגל "כבר בוצע" בלי ניסיון חוזר/בדיקת fbReadFailed: ` +
+      risky.slice(0,10).map(r=>`${r.name} (שורה ${r.at})`).join(", ") + (risky.length>10?"…":"") +
+      `. כשל רשת רגעי בדיוק ברגע הבדיקה יגרום לפונקציה לחשוב שהיא רצה לראשונה ולהריץ מיגרציה/זריעה שוב — ` +
+      `סיכון לדריסה או להחייאת נתונים ישנים/מחוקים (ראו migrateLegacyShed2, commit 4ec3d73 — שם זה קרה בפועל).`);
+  } else {
+    add("info", "דגלי מיגרציה/זריעה חד-פעמיים מוגנים מפני כשל קריאה חולף",
+      "כל הפונקציות שבודקות דגל \"כבר בוצע\" מתייחסות ל-fbReadFailed לפני שהן מחליטות לרוץ מחדש.");
   }
 }
 
