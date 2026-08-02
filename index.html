@@ -4162,6 +4162,31 @@ async function logSigHistory(eventId, eventTitle, type){
     await sSet("sig_history", hist);
   }catch(e){ console.error("sig history", e); }
 }
+/* מונע lost-update על sigs_<name>: כל אדם חותם/מאשר קריאה על מסמכים שונים
+   לפעמים ברצף מהיר (למשל שני פריטים זה אחר זה, לפני שהכתיבה הראשונה
+   הספיקה להסתיים) — קריאה-ואז-כתיבה "רגילה" הייתה חושפת את זה בדיוק
+   כמו PERSONNEL בלי mutatePersonnel: כתיבה שנייה עם עותק ישן-יותר-מהראשונה
+   הייתה דורסת/מוחקת חתימה שכבר נקלטה. נעילה בזיכרון לכל שם מבטיחה שכל
+   קריאה מתבצעת רק אחרי שהכתיבה הקודמת לאותו שם הסתיימה בפועל. */
+const sigsMutateLocks = new Map();
+async function mutateSigs(name, mutateFn){
+  const key = "sigs_"+safeName(name);
+  const prevLock = sigsMutateLocks.get(key) || Promise.resolve();
+  let releaseLock;
+  const myLock = new Promise(r => { releaseLock = r; });
+  sigsMutateLocks.set(key, prevLock.then(() => myLock));
+  await prevLock;
+  try{
+    fbReadFailed = false;
+    const fresh = await sGet(key);
+    if(fbReadFailed) return false;
+    const reads = fresh || {};
+    mutateFn(reads);
+    return await sSet(key, reads);
+  } finally {
+    releaseLock();
+  }
+}
 async function saveSignature(){
   if(!sigHasInk || !currentDoc) return;
   const c = document.getElementById("sig-canvas");
@@ -4172,17 +4197,15 @@ async function saveSignature(){
   sctx.fillStyle="#ffffff"; sctx.fillRect(0,0,300,110);
   sctx.drawImage(c,0,0,300,110);
   const sigData = s.toDataURL("image/jpeg",.8);
+  const docId = currentDoc.id, docTitle = currentDoc.title;
 
-  const key = "sigs_"+safeName(user);
-  const reads = (await sGet(key)) || {};
-  reads[currentDoc.id] = {date:new Date().toLocaleDateString("he-IL"), sig:sigData};
-  const ok = await sSet(key, reads);
+  const ok = await mutateSigs(user, reads=>{ reads[docId] = {date:new Date().toLocaleDateString("he-IL"), sig:sigData}; });
   if(!ok){ toast("⚠️ החתימה לא נקלטה — בדוק חיבור רשת ונסה שוב"); return; }
   closeSignature();
-  await logAction("חתימה על פריט", currentDoc.title);
-  await logSigHistory(currentDoc.id, currentDoc.title, "sig");
+  await logAction("חתימה על פריט", docTitle);
+  await logSigHistory(docId, docTitle, "sig");
   toast("החתימה נקלטה — המסר אושר ✍️");
-  await openReader(currentDoc.id);
+  await openReader(docId);
   renderDocs();
 }
 
@@ -4190,15 +4213,13 @@ async function saveSignature(){
    מבנה הנתונים נשמר (reads[docId]) כך שכל מסכי המעקב ממשיכים לעבוד. */
 async function confirmRead(){
   if(!currentDoc) return;
-  const key = "sigs_"+safeName(user);
-  const reads = (await sGet(key)) || {};
-  reads[currentDoc.id] = {date:new Date().toLocaleDateString("he-IL"), read:true};
-  const ok = await sSet(key, reads);
+  const docId = currentDoc.id, docTitle = currentDoc.title;
+  const ok = await mutateSigs(user, reads=>{ reads[docId] = {date:new Date().toLocaleDateString("he-IL"), read:true}; });
   if(!ok){ toast("⚠️ האישור לא נקלט — בדוק חיבור רשת ונסה שוב"); return; }
-  await logAction("אישור קריאה", currentDoc.title);
-  await logSigHistory(currentDoc.id, currentDoc.title, "read");
+  await logAction("אישור קריאה", docTitle);
+  await logSigHistory(docId, docTitle, "read");
   toast("אישור הקריאה נקלט ✓");
-  await openReader(currentDoc.id);
+  await openReader(docId);
   renderDocs();
 }
 
