@@ -27,7 +27,32 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
     filtersToCommander, String(filtersToCommander));
 }
 
-// 3. גיבוי שבועי — מתוזמן, כותב ל-Storage בנתיב backups/, ומחובר ל-dumpCollection
+// 3. תזכורת הסמכות — מתוזמנת, בטיימזון ישראל, מחוברת ללוגיקה הטהורה, מסננת למפקדים
+{
+  const hasSchedule = /remindCertExpiryDaily\s*=\s*onSchedule/.test(fn);
+  const usesLib = /findExpiringCerts\(db\)/.test(fn);
+  const importsLib = /require\("\.\/lib\/cert_expiry_reminders"\)/.test(fn);
+  record("תזכורת הסמכות: מתוזמנת עם onSchedule, ומשתמשת בלוגיקה מ-lib/cert_expiry_reminders",
+    hasSchedule && usesLib && importsLib, JSON.stringify({hasSchedule, usesLib, importsLib}));
+}
+
+// 4. תזכורת רענון מילואים — מתוזמנת, מחוברת ללוגיקה הטהורה
+{
+  const hasSchedule = /remindReserveRefreshDaily\s*=\s*onSchedule/.test(fn);
+  const usesLib = /findOverdueReserves\(db\)/.test(fn);
+  const importsLib = /require\("\.\/lib\/reserve_refresh_reminders"\)/.test(fn);
+  record("תזכורת רענון מילואים: מתוזמנת עם onSchedule, ומשתמשת בלוגיקה מ-lib/reserve_refresh_reminders",
+    hasSchedule && usesLib && importsLib, JSON.stringify({hasSchedule, usesLib, importsLib}));
+}
+
+// 5. שתי התזכורות החדשות מסננות טוקנים למפקדים בלבד (אותו תבנית כמו remindUnsignedDaily)
+{
+  const filterCount = (fn.match(/filter\(\(\[, m\]\)\s*=>\s*m\s*&&\s*m\.role\s*===\s*"מפקד"\)/g) || []).length;
+  record("סה״כ 3 מקומות מסננים למפקד בלבד (חתימות, הסמכות, מילואים)",
+    filterCount===3, String(filterCount));
+}
+
+// 6. גיבוי שבועי — מתוזמן, כותב ל-Storage בנתיב backups/, ומחובר ל-dumpCollection
 {
   const hasSchedule = /weeklyBackup\s*=\s*onSchedule/.test(fn);
   const hasTZ = (fn.match(/timeZone:\s*"Asia\/Jerusalem"/g) || []).length >= 2;

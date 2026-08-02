@@ -14,6 +14,8 @@ const {getFirestore} = require("firebase-admin/firestore");
 const {getMessaging} = require("firebase-admin/messaging");
 const {getStorage} = require("firebase-admin/storage");
 const {findUnsignedReminders} = require("./lib/reminders");
+const {findExpiringCerts} = require("./lib/cert_expiry_reminders");
+const {findOverdueReserves} = require("./lib/reserve_refresh_reminders");
 const {dumpCollection} = require("./lib/backup");
 const {decide, SHED_NAMES} = require("./lib/notify");
 
@@ -107,6 +109,92 @@ exports.remindUnsignedDaily = onSchedule(
     }
     await db.doc("sq124/_reminder_log").set({v: updatedLog, updated: Date.now()}, {merge: true});
     console.log(`תזכורות חתימות: ${toSend.length} פריטים דורשים תזכורת, ${sentCount} נשלחו בפועל`);
+  },
+);
+
+/* ===== תזכורת אוטומטית — הסמכות שפגו/עומדות לפוג =====
+   רץ כל בוקר, שולח פוש מרוכז למפקד המסגרת (לא לכל חייל בנפרד) — רשימת
+   כל ההסמכות באותה מסגרת שדורשות תשומת לב. אותה הסמכה לא מזכירה שוב
+   תוך תקופת ה-cooldown (ראו lib/cert_expiry_reminders). */
+exports.remindCertExpiryDaily = onSchedule(
+  {
+    schedule: "15 7 * * *",
+    timeZone: "Asia/Jerusalem",
+    memory: "256MiB",
+    timeoutSeconds: 120,
+  },
+  async () => {
+    const {toSend, updatedLog} = await findExpiringCerts(db);
+    if (!toSend.length) return;
+
+    let sentCount = 0;
+    for (const group of toSend) {
+      const tokRef = db.doc("sq124/push_tokens_" + group.shedId);
+      const tokSnap = await tokRef.get();
+      const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
+      const cmdTokens = Object.entries(tokMap)
+        .filter(([, m]) => m && m.role === "מפקד")
+        .map(([t]) => t);
+      if (!cmdTokens.length) continue;
+
+      const shedName = SHED_NAMES[group.shedId] || group.shedId;
+      const expiredCount = group.items.filter((i) => i.daysLeft < 0).length;
+      const body = expiredCount
+        ? `${expiredCount} הסמכות פג תוקפן, ${group.items.length - expiredCount} עומדות לפוג בקרוב`
+        : `${group.items.length} הסמכות עומדות לפוג בקרוב`;
+      await getMessaging().sendEachForMulticast({
+        tokens: cmdTokens,
+        data: {
+          title: "🎓 הסמכות דורשות תשומת לב · " + shedName,
+          body,
+          kind: "cert_reminder",
+          n: String(group.items.length),
+        },
+      });
+      sentCount++;
+    }
+    await db.doc("sq124/_cert_reminder_log").set({v: updatedLog, updated: Date.now()}, {merge: true});
+    console.log(`תזכורות הסמכות: ${toSend.length} מסגרות דורשות תשומת לב, ${sentCount} נשלחו בפועל`);
+  },
+);
+
+/* ===== תזכורת אוטומטית — מילואים שלא רועננו זמן רב =====
+   אותו רעיון בדיוק כמו תזכורת ההסמכות — פוש מרוכז למפקד המסגרת בלבד. */
+exports.remindReserveRefreshDaily = onSchedule(
+  {
+    schedule: "30 7 * * *",
+    timeZone: "Asia/Jerusalem",
+    memory: "256MiB",
+    timeoutSeconds: 120,
+  },
+  async () => {
+    const {toSend, updatedLog} = await findOverdueReserves(db);
+    if (!toSend.length) return;
+
+    let sentCount = 0;
+    for (const group of toSend) {
+      const tokRef = db.doc("sq124/push_tokens_" + group.shedId);
+      const tokSnap = await tokRef.get();
+      const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
+      const cmdTokens = Object.entries(tokMap)
+        .filter(([, m]) => m && m.role === "מפקד")
+        .map(([t]) => t);
+      if (!cmdTokens.length) continue;
+
+      const shedName = SHED_NAMES[group.shedId] || group.shedId;
+      await getMessaging().sendEachForMulticast({
+        tokens: cmdTokens,
+        data: {
+          title: "🎖️ רענון מילואים · " + shedName,
+          body: `${group.items.length} אנשי מילואים לא רועננו זמן רב`,
+          kind: "reserve_reminder",
+          n: String(group.items.length),
+        },
+      });
+      sentCount++;
+    }
+    await db.doc("sq124/_reserve_reminder_log").set({v: updatedLog, updated: Date.now()}, {merge: true});
+    console.log(`תזכורות מילואים: ${toSend.length} מסגרות דורשות תשומת לב, ${sentCount} נשלחו בפועל`);
   },
 );
 
