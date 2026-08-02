@@ -7996,12 +7996,27 @@ async function migrateLegacyReservesList(){
   }catch(e){ console.error("migrateLegacyReservesList", e); }
 }
 /* אנשי מילואים נשמרים כאנשי צוות (cfg_personnel) עם reserve:true — כך הם יכולים
-   להתחבר כחייל — ומרוכזים כאן לאחראי ההדרכה מכל המסגרות. id = "<shedId>::<שם>". */
+   להתחבר כחייל — ומרוכזים כאן לאחראי ההדרכה מכל המסגרות. id = "<shedId>::<שם>".
+   כשל קריאה חולף (מרוץ טוקן, רשת) לא אמור להיראות כמו "אין מילואים" — לכן יש
+   ניסיון חוזר לכל מסגרת, וכשל מתמשך מסומן ב-reservesReadFailed כדי ש-renderReserves
+   יציג הודעת שגיאה ולא מסך-ריק מטעה. הקריאות רצות בטור (לא Promise.all) בכוונה —
+   fbReadFailed הוא דגל גלובלי משותף, וקריאות מקבילות היו "דורסות" זו את בדיקת
+   הכשל של זו (מסגרת אחת מצליחה ומאפסת את הדגל בדיוק כשמסגרת אחרת בודקת אותו). */
+let reservesReadFailed = false;
 async function getReserves(){
-  const per = await Promise.all(SHEDS.map(async s=>{
-    const list = (await sGetIn(s.id,"cfg_personnel")) || [];
-    return list.filter(p=>p.reserve).map(p=>({id:s.id+"::"+p.name, shedId:s.id, person:p.name, last:p.refresh||""}));
-  }));
+  reservesReadFailed = false;
+  const per = [];
+  for(const s of SHEDS){
+    let list = null;
+    for(let attempt=0; attempt<3; attempt++){
+      fbReadFailed = false;
+      list = await sGetIn(s.id,"cfg_personnel");
+      if(list !== null || !fbReadFailed) break;   // הצליח, או שהמסגרת ריקה באמת (לא כשל)
+      await new Promise(r=>setTimeout(r, 300*(attempt+1)));
+    }
+    if(list===null && fbReadFailed){ reservesReadFailed = true; per.push([]); continue; }
+    per.push((list||[]).filter(p=>p.reserve).map(p=>({id:s.id+"::"+p.name, shedId:s.id, person:p.name, last:p.refresh||""})));
+  }
   return per.flat();
 }
 function populateReserveShed(selected){
@@ -8039,30 +8054,34 @@ async function saveReserve(){
 
   if(reserveEditId){
     const [oldShed, oldName] = String(reserveEditId).split("::");
-    reserveEditId = null;
     let oldList = (await sGetIn(oldShed,"cfg_personnel")) || [];
     const idx = oldList.findIndex(x=>x.name===oldName && x.reserve);
     const obj = idx>=0 ? oldList[idx] : {role:"חייל", bday:"2000-01-01"};
     if(oldShed===shedId){
       obj.name=person; obj.refresh=last; obj.reserve=true;
       if(idx<0) oldList.push(obj);
-      await sSetIn(shedId,"cfg_personnel", oldList);
+      if(!(await sSetIn(shedId,"cfg_personnel", oldList))){ toast("⚠️ השמירה נכשלה — בדוק חיבור רשת ונסה שוב"); return; }
       if(currentShed && currentShed.id===shedId) PERSONNEL=oldList;
     } else {
-      if(idx>=0){ oldList.splice(idx,1); await sSetIn(oldShed,"cfg_personnel", oldList); if(currentShed && currentShed.id===oldShed) PERSONNEL=oldList; }
+      if(idx>=0){
+        oldList.splice(idx,1);
+        if(!(await sSetIn(oldShed,"cfg_personnel", oldList))){ toast("⚠️ השמירה נכשלה — בדוק חיבור רשת ונסה שוב"); return; }
+        if(currentShed && currentShed.id===oldShed) PERSONNEL=oldList;
+      }
       const newList = (await sGetIn(shedId,"cfg_personnel")) || [];
       obj.name=person; obj.refresh=last; obj.reserve=true;
       newList.push(obj);
-      await sSetIn(shedId,"cfg_personnel", newList);
+      if(!(await sSetIn(shedId,"cfg_personnel", newList))){ toast("⚠️ השמירה נכשלה — בדוק חיבור רשת ונסה שוב"); return; }
       if(currentShed && currentShed.id===shedId) PERSONNEL=newList;
     }
+    reserveEditId = null;
     toast("העדכון נשמר ✓");
   } else {
     const list = (await sGetIn(shedId,"cfg_personnel")) || [];
     const existing = list.find(x=>x.name===person);
     if(existing){ existing.reserve=true; existing.refresh=last; if(!existing.role) existing.role="חייל"; }
     else list.push({name:person, role:"חייל", reserve:true, refresh:last, bday:"2000-01-01", joined:(typeof todayKey==="function"?todayKey():last)});
-    await sSetIn(shedId,"cfg_personnel", list);
+    if(!(await sSetIn(shedId,"cfg_personnel", list))){ toast("⚠️ השמירה נכשלה — בדוק חיבור רשת ונסה שוב"); return; }
     if(currentShed && currentShed.id===shedId) PERSONNEL=list;
     toast("איש המילואים נוסף ✓");
   }
@@ -8074,7 +8093,7 @@ async function removeReserve(id){
   const [shedId, name] = String(id).split("::");
   let list = (await sGetIn(shedId,"cfg_personnel")) || [];
   list = list.filter(p=>!(p.name===name && p.reserve));
-  await sSetIn(shedId,"cfg_personnel", list);
+  if(!(await sSetIn(shedId,"cfg_personnel", list))){ toast("⚠️ ההסרה נכשלה — בדוק חיבור רשת ונסה שוב"); return; }
   if(currentShed && currentShed.id===shedId) PERSONNEL=list;
   toast("הוסר מהצוות");
   renderReserves();
@@ -8084,6 +8103,10 @@ async function renderReserves(){
   if(!box) return;
   const list = await getReserves();
   if(list.length===0){
+    if(reservesReadFailed){
+      box.innerHTML = `<div class="empty-state"><div class="ic">⚠️</div><h3>הטעינה נכשלה</h3><p>בעיית תקשורת מנעה טעינת מילואים ממסגרת אחת או יותר — משוך לרענון ונסה שוב</p></div>`;
+      return;
+    }
     box.innerHTML = `<div class="empty-state"><div class="ic">🎖️</div><h3>אין עדיין אנשי מילואים במעקב</h3><p>הוסף איש מילואים באמצעות "הוספת איש מילואים"</p></div>`;
     return;
   }
