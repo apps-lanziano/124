@@ -2601,15 +2601,33 @@ let morningOpenTasks = [];   // כותרות מטלות הבוקר שטרם בו
 let PERSONNEL = PERSONNEL_SEED.slice();
 let MORNING_TASKS = MORNING_TASKS_SEED.slice();
 
-/* מיגרציה חד-פעמית: נתוני v14 (סככה 2) נשמרו ללא פרפיקס — מעבירים ל-shed2_ */
+/* מיגרציה חד-פעמית: נתוני v14 (סככה 2) נשמרו ללא פרפיקס — מעבירים ל-shed2_.
+   שני מנגנוני הגנה, כי זו כתיבה שדורסת נתונים חיים בסככה 2:
+   1) בדיקת הדגל עמידה למרוץ טוקן (בדיוק כמו הקריאה הרגילה ל-cfg_personnel
+      ב-loadRuntimeLists) — כשל קריאה חולף לא אמור להיראות כמו "טרם היגרתי"
+      ולגרום למיגרציה לרוץ שוב ולדרוס נתונים עדכניים בטעות.
+   2) גם אם המיגרציה בכל זאת רצה שוב, כל מפתח נכתב רק אם היעד ב-shed2 עדיין
+      ריק — כמו התבנית הבטוחה ב-ensureShed2Seed/ensureAllShedsSeed — כדי
+      שלעולם לא תידרס רשומה חיה (כולל הודעה/פריט שנמחק בכוונה) בנתונים
+      ישנים מהמפתחות הלא-מקודמים. */
 async function migrateLegacyShed2(){
-  const already = await sGetRaw("shed2_migrated");
+  let already = null;
+  for(let attempt=0; attempt<3; attempt++){
+    fbReadFailed = false;
+    already = await sGetRaw("shed2_migrated");
+    if(already !== null || !fbReadFailed) break;
+    await new Promise(r=>setTimeout(r, 300*(attempt+1)));
+  }
   if(already) return;
+  if(fbReadFailed){ console.error("migrateLegacyShed2: לא הצלחתי לוודא את דגל המיגרציה — עוצר בלי לגעת בנתונים"); return; }
   const legacyPersonnel = await sGetRaw("cfg_personnel");
   if(!legacyPersonnel || !legacyPersonnel.length){ await sSetRaw("shed2_migrated", true); return; }
   console.log("מעביר נתוני v14 לסככה 2…");
-  // simple keys
+  // simple keys — רק אם היעד עדיין ריק, כדי לא לדרוס נתונים חיים אם המיגרציה
+  // הזו בכל זאת רצה יותר מפעם אחת
   for(const k of ["cfg_personnel","cfg_tasks","safety_events","boards_list","faults_list","messages_list","duty_table"]){
+    const existing = await sGetRaw("shed2_"+k);
+    if(existing !== null && (!Array.isArray(existing) || existing.length>0)) continue;
     const v = await sGetRaw(k);
     if(v !== null) await sSetRaw("shed2_"+k, v);
   }
