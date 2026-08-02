@@ -58,7 +58,8 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     document.getElementById('scr-admin').classList.add('active');
     await renderAdminSignatures();
-    const itemsHtml = document.getElementById("admin-sig-items").innerHTML;
+    adminLogView('byItem');   // התצוגה "לפי קרא-וחתום" — המקבילה של admin-sig-items הישן
+    const itemsHtml = document.getElementById("admin-log-list").innerHTML;
     const statsHtml = document.getElementById("admin-sig-stats").innerHTML;
     return {
       hasTitle: itemsHtml.includes("פריט כלל-טייסתי"),
