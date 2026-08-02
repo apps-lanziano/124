@@ -32,7 +32,6 @@ async function applyIdentity(p, shed, role){
        "nav-morning","more-tasks-item","more-binui-item","sheet-closeday","close-mgmt-btn",
        "nav-faults","more-faults-item","sheet-naatim","naatim-mgmt-btn"
       ].forEach(id=>document.getElementById(id).classList.add("hidden"));
-      document.getElementById("tab-morning").classList.add("hidden");
     }
     // הענף שנוסף: הסרת דשבורד המפקד מאחראי ההדרכה
     if(userRole === "מפקד" && currentShed.isTraining){
