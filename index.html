@@ -1372,7 +1372,7 @@ nav{
 
       <!-- admin tabs -->
       <div class="cmd-tabs" style="margin-bottom:16px">
-        <button class="cmd-tab active" id="atab-overview" onclick="adminTab('overview')">📊 דשבורד מפקד</button>
+        <button class="cmd-tab active" id="atab-overview" onclick="adminTab('overview')">📊 דשבורד</button>
         <button class="cmd-tab" id="atab-signatures" onclick="adminTab('signatures')">✍️ חתימות</button>
         <button class="cmd-tab" id="atab-certs" onclick="adminTab('certs')">🎓 הסמכות</button>
         <button class="cmd-tab" id="atab-training" onclick="adminTab('training')">📚 הדרכה</button>
@@ -1387,6 +1387,13 @@ nav{
           <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>פרסום הודעה</b><span>לכל המסגרות</span></button>
           <button class="admin-card" onclick="openAdminAlerts()"><span class="a-ic">🔔</span><b>מרכז התראות</b><span>כל המסגרות</span></button>
           <button class="admin-card" onclick="repairDistributionGaps()"><span class="a-ic">🩹</span><b>תיקון פערי הפצה</b><span>סנכרון קרא-וחתום/הדרכה שלא הגיעו לכל המסגרות</span></button>
+        </div>
+        <div class="cmd-kpis" id="admin-overview-kpis">
+          <div class="kpi info"><b id="akpi-personnel">—</b><span>סה״כ אנשי צוות</span></div>
+          <div class="kpi info"><b id="akpi-items">—</b><span>קרא וחתום פעילים</span></div>
+          <div class="kpi good"><b id="akpi-signrate">—</b><span>אחוז חתימה כללי</span></div>
+          <div class="kpi bad"><b id="akpi-missing">—</b><span>חתימות ממתינות</span></div>
+          <div class="kpi warn"><b id="akpi-reserves">—</b><span>אנשי מילואים</span></div>
         </div>
         <div class="cmd-section-title">📄 קרא וחתום שפורסמו — כלל הטייסת</div>
         <div id="admin-events-list"></div>
@@ -6520,6 +6527,7 @@ async function applyTrainingCommanderPowers(){
   document.getElementById("nav-admin").classList.remove("hidden");
   await ensureShed2Seed();
   await ensureAllShedsSeed();   // ללא scope — הוא רואה את כל המסגרות
+  await migrateLegacyReservesList();
 }
 
 async function applyMaintCommanderPowers(){
@@ -7452,6 +7460,26 @@ async function ensureShed2Seed(){
 
 async function renderAdminDashboard(){
   renderAdminEvents();
+  renderAdminOverviewKpis();
+}
+
+/* מדדים ויזואליים כלל-טייסתיים בדשבורד — תמונת מצב מהירה לאחראי ההדרכה,
+   בלי לפתוח את לשונית ה"חתימות" המפורטת */
+async function renderAdminOverviewKpis(){
+  const [{adminItems, perShed}, reserves] = await Promise.all([computeAdminSigLog(), getReserves()]);
+  let totalPersonnel = 0, maxC = 0, gotC = 0;
+  for(const {personnel, eventIds, sigsBy} of perShed){
+    totalPersonnel += personnel.length;
+    const relevant = adminItems.filter(it=>eventIds.has(it.id));
+    maxC += personnel.length * relevant.length;
+    relevant.forEach(it=> personnel.forEach(p=>{ if(sigsBy[p.name][it.id]) gotC++; }));
+  }
+  const rate = maxC>0 ? Math.round(gotC/maxC*100) : 100;
+  document.getElementById("akpi-personnel").textContent = totalPersonnel;
+  document.getElementById("akpi-items").textContent = adminItems.length;
+  document.getElementById("akpi-signrate").textContent = rate + "%";
+  document.getElementById("akpi-missing").textContent = Math.max(0, maxC - gotC);
+  document.getElementById("akpi-reserves").textContent = reserves.length;
 }
 
 /* ===== ADMIN: publish event to ALL sheds ===== */
@@ -7938,6 +7966,35 @@ async function publishTrainingToAllSheds(id, title, ftype, fileData, thumb){
 }
 /* ===== מילואים — כלל-טייסתי, רענון ידני (תאריך אחרון + פ.ת הבא) ===== */
 const todayISO = () => new Date().toISOString().slice(0,10);
+/* מיגרציה חד-פעמית: לפני המעבר לשמירת מילואים כ-cfg_personnel לכל מסגרת, כל
+   אנשי המילואים נשמרו ברשימה גלובלית אחת "admin_reserves_list". מי שנוסף שם
+   (למשל אנשי מילואים בסככה 2) "נעלם" מתצוגת אחראי ההדרכה אחרי המעבר, כי
+   getReserves() כבר לא קורא מהמפתח הישן. מיזוג חד-פעמי פנימה לכל מסגרת. */
+async function migrateLegacyReservesList(){
+  try{
+    const already = await sGetRaw("legacy_reserves_migrated_v1");
+    if(already) return;
+    const legacy = (await sGetRaw("admin_reserves_list")) || [];
+    const byShed = {};
+    legacy.forEach(r=>{ if(r && r.shedId && r.person) (byShed[r.shedId] = byShed[r.shedId] || []).push(r); });
+    for(const shedId of Object.keys(byShed)){
+      if(!SHEDS.some(s=>s.id===shedId)) continue;
+      const list = (await sGetIn(shedId,"cfg_personnel")) || [];
+      let changed = false;
+      byShed[shedId].forEach(r=>{
+        const existing = list.find(p=>p.name===r.person);
+        if(existing){
+          if(!existing.reserve){ existing.reserve = true; existing.refresh = r.last || todayISO(); changed = true; }
+        } else {
+          list.push({name:r.person, role:"חייל", reserve:true, refresh:r.last||todayISO(), bday:"2000-01-01", joined:(typeof todayKey==="function"?todayKey():(r.last||todayISO()))});
+          changed = true;
+        }
+      });
+      if(changed) await sSetIn(shedId,"cfg_personnel", list);
+    }
+    await sSetRaw("legacy_reserves_migrated_v1", true);
+  }catch(e){ console.error("migrateLegacyReservesList", e); }
+}
 /* אנשי מילואים נשמרים כאנשי צוות (cfg_personnel) עם reserve:true — כך הם יכולים
    להתחבר כחייל — ומרוכזים כאן לאחראי ההדרכה מכל המסגרות. id = "<shedId>::<שם>". */
 async function getReserves(){

@@ -29,8 +29,8 @@ const out = await p.evaluate(async ()=>{
   return { tabCount: tabs.length, tabs, overviewLabel, logTabGone, logPaneGone, shedsGridGone };
 });
 
-record("לשונית 'סקירה' שונה ל'דשבורד מפקד'",
-  out.overviewLabel.includes("דשבורד מפקד"), out.overviewLabel);
+record("לשונית 'סקירה' שונה ל'דשבורד'",
+  out.overviewLabel.includes("דשבורד") && !out.overviewLabel.includes("דשבורד מפקד"), out.overviewLabel);
 record("יש בדיוק 5 לשוניות (יומן הוסרה, תוכנו עבר לחתימות)",
   out.tabCount===5, JSON.stringify(out.tabs));
 record("לשונית/פאנל 'יומן' לא קיימים יותר ב-DOM",
