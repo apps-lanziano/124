@@ -3890,6 +3890,14 @@ async function renderDocs(){
   const reads = (await sGet("sigs_"+safeName(user))) || {};
   const list = document.getElementById("docs-list");
   const isCmdr = userRole === "מפקד";
+  /* למפקד: כמה חתמו על כל פריט, ישר כאן במסך קרא-וחתום — כדי שכפתור
+     התזכורת לא יהיה נגיש רק דרך הדשבורד (מסלול חבוי שדרש כמה קליקים). */
+  let sigMap = null;
+  if(isCmdr && PERSONNEL.length){
+    sigMap = {};
+    const sigsArr = await Promise.all(PERSONNEL.map(p => sGet("sigs_"+safeName(p.name))));
+    PERSONNEL.forEach((p,i)=>{ sigMap[p.name] = sigsArr[i] || {}; });
+  }
   // search box visibility
   document.getElementById("safety-search-box").style.display = events.length>=4 ? "flex" : "none";
   const q = (document.getElementById("safety-search")?.value || "").trim().toLowerCase();
@@ -3916,11 +3924,22 @@ async function renderDocs(){
     const visual = (ev.ftype==="image" && ev.thumb)
       ? `<img class="doc-thumb" src="${ev.thumb}" alt="">`
       : `<div class="doc-thumb file-badge ${ft.badge}"><span class="doc-fileicon">${ft.emoji}</span></div>`;
+    let cmdSigRow = "";
+    if(sigMap){
+      const signed = PERSONNEL.filter(p=>sigMap[p.name][ev.id]).length;
+      const total = PERSONNEL.length;
+      const done = total>0 && signed===total;
+      cmdSigRow = `<div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+        <span class="pill ${done?'g':signed===0?'r':'y'}" style="font-size:11px">${signed}/${total} חתמו</span>
+        ${!done?`<button class="m-btn ghost" style="padding:4px 10px;font-size:11px;width:auto" onclick="event.stopPropagation();showSigDetail('${ev.id}')">📢 תזכורת</button>`:""}
+      </div>`;
+    }
     el.innerHTML = `
       ${visual}
       <div class="doc-body">
         <h3>${escapeHTML(ev.title)}</h3>
         <div class="meta">${ft.label} · ${escapeHTML(ev.by)} · ${ev.date}</div>
+        ${cmdSigRow}
       </div>
       <div class="doc-state ${isRead?"read":"unread"}">${isRead?"✓ נקרא":"לא נקרא"}</div>
       ${isCmdr?`<button class="board-del" style="width:34px;height:34px;margin-right:2px" onclick="event.stopPropagation();deleteEvent('${ev.id}')">🗑️</button>`:""}`;
@@ -5259,7 +5278,11 @@ async function renderCommander(){
 /* signature detail per event */
 let sigDetailCurrent = null; // {title, unsigned:[names]} — לכפתור תזכורת הוואטסאפ
 async function showSigDetail(evId){
-  const ev = cmdEventsCache.find(e=>e.id===evId);
+  // cmdEventsCache מתמלא רק ב-renderCommander() — אם המפקד מגיע הישר
+  // ממסך "קרא וחתום" (בלי לעבור קודם דרך הדשבורד), הוא ריק. נופלים חזרה
+  // לטעינה ישירה כדי שהכפתור יעבוד תמיד, לא רק אחרי ביקור בדשבורד.
+  let ev = cmdEventsCache.find(e=>e.id===evId);
+  if(!ev) ev = (await getEvents()).find(e=>e.id===evId);
   if(!ev) return;
   document.getElementById("sigdetail-title").textContent = ev.title;
   const rows = [];
