@@ -13,6 +13,7 @@ function classify(docId) {
   if (docId.endsWith("_boards_list")) return "board";
   if (docId.endsWith("_training_list")) return "training";
   if (docId.includes("_rollcall_active")) return "rollcall";
+  if (docId.endsWith("_daily_rollcall_report")) return "morning_rollcall";
   return null;
 }
 
@@ -27,6 +28,12 @@ function decide({docId, before, after}) {
   if (kind === "rollcall") {
     if (!(after === true && before !== true)) return null;
     shedId = docId.slice(0, docId.indexOf("_rollcall_active"));
+  } else if (kind === "morning_rollcall") {
+    if (!after || typeof after !== "object") return null;
+    // כל כתיבה מחליפה את הדיווח הקודם (לא נצבר) — שולחים רק כשזה דיווח
+    // חדש בפועל (חותמת זמן שונה), לא על כל שינוי מקרי במסמך
+    if (before && before.sentAt === after.sentAt) return null;
+    shedId = docId.slice(0, docId.indexOf("_daily_rollcall_report"));
   } else {
     shedId = docId.replace(/_(messages_list|safety_events|boards_list|training_list)$/, "");
     const afterArr = Array.isArray(after) ? after : [];
@@ -44,14 +51,19 @@ function decide({docId, before, after}) {
     board: "לוח צוות חדש · " + shedName,
     training: "חומר הדרכה חדש · " + shedName,
     rollcall: "🚨 נכס · " + shedName,
+    morning_rollcall: "📋 מסדר בוקר · " + shedName,
   };
   const title = KIND_TITLES[kind];
   const body = kind === "rollcall" ? "הופעל נכס — יש לסמן נוכחות עכשיו"
+    : kind === "morning_rollcall" ? `${after.presentCount} נוכחים, ${after.absentCount} נעדרים`
     : kind === "message" ? String(item.text || "").slice(0, 140)
     : kind === "board" ? String(item.label || "")
     : String(item.title || item.fname || "");
 
-  return {kind, shedId, shedName, title, body, count: newItems.length || 1};
+  // מסדר בוקר נשלח רק למפקדי הסככה — לא לכל הצוות (בשונה מכל שאר סוגי ההתראה)
+  const commandersOnly = kind === "morning_rollcall";
+
+  return {kind, shedId, shedName, title, body, count: kind==="morning_rollcall" ? (after.absentCount||0) : (newItems.length || 1), commandersOnly};
 }
 
 module.exports = {SHED_NAMES, classify, decide};

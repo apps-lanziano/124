@@ -1354,6 +1354,12 @@ nav{
 
       <div id="trends-content"><div class="skel-card"><div class="skel-line w40"></div><div class="skel-line w90"></div></div><div class="skel-card"><div class="skel-line w60"></div><div class="skel-line w90"></div></div></div>
 
+      <!-- דיווח מסדר בוקר יומי — נשלח ע"י מ״ע אחזקה, כל מפקד רואה רק את הסככה שלו -->
+      <div id="mc-report-wrap" class="hidden">
+        <div class="cmd-section-title">📋 מסדר בוקר — דיווח אחרון</div>
+        <div id="mc-report-content"></div>
+      </div>
+
       <!-- ADMIN quick actions -->
       <div class="cmd-section-title">⚙️ ניהול</div>
       <div class="admin-grid">
@@ -1500,6 +1506,7 @@ nav{
         <button class="cmd-tab" id="votab-maint" onclick="voTab('maint')">🔧 אחזקה</button>
         <button class="cmd-tab" id="votab-leasing" onclick="voTab('leasing')">🚗 ליסינג</button>
         <button class="cmd-tab" id="votab-licenses" onclick="voTab('licenses')">🪪 רישיונות והסמכות</button>
+        <button class="cmd-tab" id="votab-morningcheck" onclick="voTab('morningcheck')">📋 מסדר בוקר</button>
       </div>
 
       <!-- PANE: OVERVIEW -->
@@ -1561,6 +1568,18 @@ nav{
           <option value="all">הסמכה/רישיון: הכל</option>
         </select>
         <div id="vo-licenses-list"></div>
+      </div>
+
+      <!-- PANE: DAILY MORNING ROLLCALL — מ״ע אחזקה מסמן נוכחות/חיסור לכל חיילי הטייסת -->
+      <div class="admin-pane" id="vopane-morningcheck">
+        <div class="cmd-section-title" id="mc-title">📋 מסדר בוקר</div>
+        <div class="cmd-kpis" id="mc-kpis"></div>
+        <div class="search-box">
+          <span class="search-ic">🔍</span>
+          <input type="text" id="mc-search" placeholder="חיפוש לפי שם…" oninput="renderMorningRollcallList()">
+        </div>
+        <div id="mc-list"></div>
+        <button class="m-btn primary" style="width:100%;margin-top:14px" onclick="sendMorningRollcallReport()">📤 שליחת דיווח למפקדי הסככות</button>
       </div>
     </section>
 
@@ -2828,6 +2847,15 @@ const FTYPE = {
 const todayKey = () => { const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
 /* מפתח שבוע (יום ראשון כתחילת שבוע) — לאיפוס בדיקה שבועית */
 const weekKey = () => { const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-d.getDay()); return "w"+d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
+/* מפתח "יום מסדר" למסדר הבוקר היומי — היום מתחלף ב-7:00, לא בחצות: לפני
+   7:00 עדיין נחשב "יום המסדר" הקודם (מ״ע אחזקה יכול להמשיך לסמן/לשלוח
+   דיווח על מסדר שכבר התחיל), ומ-7:00 ואילך מתחיל אוטומטית יום מסדר חדש
+   וריק בכל המסגרות — בלי צורך בשום cron, רק כי המפתח עצמו מתחלף. */
+function rollcallDayKey(now){
+  const d = now ? new Date(now) : new Date();
+  if(d.getHours() < 7) d.setDate(d.getDate()-1);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
 const safeName = n => n.trim().replace(/[\s/\\'"]+/g,"_");
 
 /* ===== DATA LAYER: Firebase (shared) with local fallback =====
@@ -5282,7 +5310,39 @@ async function deleteBoard(id){
    לשם, ונשאר כאן רק מגמות — מסך אחד, בלי לשוניות. */
 async function renderCommander(){
   renderTrends();
+  renderMorningRollcallReport();
   updateAlertBell();
+}
+/* דיווח מסדר הבוקר האחרון שנשלח ע"י מ״ע אחזקה עבור המסגרת של המפקד —
+   מוצג רק אם הדיווח מ"יום המסדר" הנוכחי (rollcallDayKey, מתחלף ב-7:00);
+   דיווח מיום קודם נחשב לא-רלוונטי יותר ולא מוצג, בדיוק כמו שהמסך של
+   מ״ע אחזקה עצמו מתאפס אוטומטית באותו רגע. */
+async function renderMorningRollcallReport(){
+  const wrap = document.getElementById("mc-report-wrap");
+  if(!wrap || !currentShed) return;
+  const report = await sGet("daily_rollcall_report");
+  if(!report || report.dayKey !== rollcallDayKey()){
+    wrap.classList.add("hidden");
+    return;
+  }
+  wrap.classList.remove("hidden");
+  const sentTime = new Date(report.sentAt).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"});
+  const absentHtml = report.absentNames.length
+    ? `<div style="font-size:12px;color:var(--ink-3);line-height:1.8;margin-top:4px">${report.absentNames.map(escapeHTML).join(" · ")}</div>`
+    : "";
+  document.getElementById("mc-report-content").innerHTML = `
+    <div class="cmd-kpis">
+      <div class="kpi good"><b>${report.presentCount}</b><span>נוכחים</span></div>
+      <div class="kpi bad"><b>${report.absentCount}</b><span>נעדרים</span></div>
+    </div>
+    <div class="cert-sum-card" style="cursor:default">
+      <div class="cert-sum-head">
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">📋</div>
+        <div class="cert-sum-name"><b>נשלח ע"י מ״ע אחזקה</b><span>שעה ${sentTime}</span></div>
+      </div>
+      ${absentHtml}
+    </div>
+  `;
 }
 
 /* signature detail per event */
@@ -9424,6 +9484,7 @@ const VEHICLES_KM_ALERT_BUFFER = 500;  /* 500 ק"מ לפני יעד הטיפול
 
 /* בודק את כל ממדי המעקב (תאריך טיפול, טסט, ק"מ) ומחזיר את החמור מביניהם */
 function vehicleStatus(v){
+  if(v.inService) return {tag:"בטיפול", cls:"n"};
   const today = new Date(); today.setHours(0,0,0,0);
   const checks = [];
 
@@ -9547,7 +9608,8 @@ async function renderVoOverview(){
     shedRows.push({shed, count: vehicles.length, worst: shedWorst});
   }
 
-  const licenses = await getVoLicenses();
+  const [licenses, mcMarks] = await Promise.all([getVoLicenses(), getMorningRollcall()]);
+  const mcMarkedCount = Object.keys(mcMarks).length;
   let licExpired = 0, licSoon = 0, licValid = 0;
   const shedName = id => (SHEDS.find(s=>s.id===id)||{}).name || id;
   for(const l of licenses){
@@ -9625,6 +9687,11 @@ async function renderVoOverview(){
         <div class="db-board-num">${licenses.length}</div>
         <div class="db-board-label">רישיונות · ${licExpired+licSoon? (licExpired+licSoon)+' דורשים טיפול' : 'הכל בתוקף'}</div>
       </div>
+      <div class="db-board-card" onclick="voTab('morningcheck')">
+        <div class="db-board-top"><div class="db-board-ic">📋</div><div class="db-board-dot ${mcMarkedCount===0?'y':'g'}"></div></div>
+        <div class="db-board-num">${mcMarkedCount}</div>
+        <div class="db-board-label">מסדר בוקר · ${mcMarkedCount===0? 'טרם בוצע היום' : 'סומנו עד כה'}</div>
+      </div>
     </div>
 
     <div class="cmd-section-title">🏷️ לפי סככה</div>
@@ -9634,7 +9701,7 @@ async function renderVoOverview(){
 }
 
 function voTab(which){
-  ["overview","vehicles","maint","leasing","licenses"].forEach(w=>{
+  ["overview","vehicles","maint","leasing","licenses","morningcheck"].forEach(w=>{
     document.getElementById("votab-"+w).classList.toggle("active", which===w);
     document.getElementById("vopane-"+w).classList.toggle("active", which===w);
   });
@@ -9643,6 +9710,102 @@ function voTab(which){
   if(which==="maint") renderMaintVehicles();
   if(which==="leasing") renderLeasingVehicles();
   if(which==="licenses") renderVoLicenses();
+  if(which==="morningcheck") renderMorningRollcall();
+}
+
+/* ===== מסדר בוקר יומי — מ״ע אחזקה מסמן נוכחות/חיסור לכל חיילי הטייסת =====
+   שונה מ"נכס" (rollcall): שם כל חייל מסמן לעצמו שהוא תקין/זמין; כאן מ״ע
+   אחזקה מסמן בעצמו נוכחות/חיסור על כל אחד, כמו במסדר בוקר אמיתי. נתון
+   גלובלי אחד (לא per-shed) כדי שהמסך יציג את כל הטייסת יחד; המפתח כולל
+   את "יום המסדר" (rollcallDayKey, מתחלף ב-7:00 לא בחצות) כדי שהמסך יתאפס
+   אוטומטית מדי בוקר בלי שום cron. */
+async function getMorningRollcall(){ return (await sGetRaw("daily_rollcall_"+rollcallDayKey())) || {}; }
+
+let mcCache = null;   // {marks, perShed} — נטען פעם אחת בכניסה ללשונית, מסונן מחדש בלי קריאת רשת בכל הקלדה בחיפוש
+async function renderMorningRollcall(){
+  const listBox = document.getElementById("mc-list");
+  if(!listBox) return;
+  listBox.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען את כל חיילי הטייסת…</div>';
+  const [marks, perShed] = await Promise.all([
+    getMorningRollcall(),
+    Promise.all(SHEDS.map(async s=>({shed:s, pers:(await sGetIn(s.id,"cfg_personnel"))||[]}))),
+  ]);
+  mcCache = {marks, perShed};
+  renderMorningRollcallList();
+}
+function renderMorningRollcallList(){
+  if(!mcCache) return;
+  const {marks, perShed} = mcCache;
+  const search = (document.getElementById("mc-search")?.value || "").trim();
+
+  let total=0, present=0, absent=0;
+  perShed.forEach(({shed,pers})=> pers.forEach(p=>{
+    total++;
+    const st = marks[shed.id+"::"+p.name];
+    if(st==="present") present++; else if(st==="absent") absent++;
+  }));
+  const unmarked = total - present - absent;
+
+  const dateStr = new Date().toLocaleDateString("he-IL",{weekday:"long", day:"numeric", month:"long"});
+  document.getElementById("mc-title").textContent = "📋 מסדר בוקר · " + dateStr;
+  document.getElementById("mc-kpis").innerHTML = `
+    <div class="kpi good"><b>${present}</b><span>נוכחים</span></div>
+    <div class="kpi bad"><b>${absent}</b><span>נעדרים</span></div>
+    <div class="kpi warn"><b>${unmarked}</b><span>טרם סומנו</span></div>
+  `;
+
+  let html = "";
+  for(const {shed, pers} of perShed){
+    const filtered = search ? pers.filter(p=>p.name.includes(search)) : pers;
+    if(filtered.length===0) continue;
+    html += `<div class="cmd-section-title">${escapeHTML(shed.name)}</div>` + filtered.map(p=>{
+      const st = marks[shed.id+"::"+p.name] || null;
+      return `<div class="cert-sum-card" style="cursor:default">
+        <div class="cert-sum-head">
+          <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
+          <div class="cert-sum-name"><b>${escapeHTML(p.name)}</b><span>${escapeHTML(p.role)}</span></div>
+          <button class="pill ${st==='present'?'g':'n'}" style="border:none;cursor:pointer" onclick="setMorningRollcallMark('${shed.id}','${jsStr(p.name)}','present')">✅ נוכח</button>
+          <button class="pill ${st==='absent'?'r':'n'}" style="border:none;cursor:pointer" onclick="setMorningRollcallMark('${shed.id}','${jsStr(p.name)}','absent')">❌ נעדר</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+  document.getElementById("mc-list").innerHTML = html || `<div class="empty-state"><div class="ic">🔍</div><h3>אין תוצאות</h3></div>`;
+}
+/* לחיצה חוזרת על אותו סטטוס מבטלת את הסימון (חזרה ל"טרם סומן") */
+async function setMorningRollcallMark(shedId, name, status){
+  if(!mcCache) return;
+  const key = shedId+"::"+name;
+  const newStatus = mcCache.marks[key]===status ? null : status;
+  const data = {...mcCache.marks};
+  if(newStatus===null) delete data[key]; else data[key] = newStatus;
+  const ok = await sSetRaw("daily_rollcall_"+rollcallDayKey(), data);
+  if(!ok){ toast("⚠️ הסימון לא נשמר — בדוק חיבור רשת ונסה שוב"); return; }
+  mcCache.marks = data;
+  renderMorningRollcallList();
+}
+/* שולחת דיווח נוכחות/חיסור לכל מסגרת (מסמך נפרד לכל סככה) — מפעילה את
+   התראת ה-push הרגילה (notifyOnPublish) למפקדי הסככות בלבד, בדיוק כמו
+   תזכורות אחרות. לא דורסת נתונים היסטוריים — כל שליחה מחליפה את הדיווח
+   האחרון של אותה סככה (לא נצבר), כדי שהמפקד תמיד יראה את הדיווח העדכני. */
+async function sendMorningRollcallReport(){
+  if(!mcCache){ toast("עדיין טוען — נסה שוב בעוד רגע"); return; }
+  const {marks, perShed} = mcCache;
+  const dayKey = rollcallDayKey();
+  const results = await Promise.all(perShed.map(async ({shed, pers})=>{
+    if(pers.length===0) return true;
+    let presentCount=0, absentCount=0; const absentNames=[];
+    pers.forEach(p=>{
+      const st = marks[shed.id+"::"+p.name];
+      if(st==="present") presentCount++;
+      else if(st==="absent"){ absentCount++; absentNames.push(p.name); }
+    });
+    const report = {dayKey, sentAt:Date.now(), presentCount, absentCount, totalCount:pers.length, absentNames};
+    return sSetIn(shed.id, "daily_rollcall_report", report);
+  }));
+  if(!results.every(Boolean)){ toast("⚠️ שליחת הדיווח נכשלה בחלק מהמסגרות — נסה שוב"); return; }
+  await logAdminAction("שליחת דיווח מסדר בוקר לכל המסגרות", dayKey);
+  toast("הדיווח נשלח למפקדי כל הסככות 📤");
 }
 
 let voVehicleCtx = null; // {shedId, id} כשעורכים רכב קיים, null כשמוסיפים חדש

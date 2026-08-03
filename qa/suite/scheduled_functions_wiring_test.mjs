@@ -45,11 +45,11 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
     hasSchedule && usesLib && importsLib, JSON.stringify({hasSchedule, usesLib, importsLib}));
 }
 
-// 5. שתי התזכורות החדשות מסננות טוקנים למפקדים בלבד (אותו תבנית כמו remindUnsignedDaily)
+// 5. תזכורות + מסדר בוקר מסננים טוקנים למפקדים בלבד (אותה תבנית כמו remindUnsignedDaily)
 {
   const filterCount = (fn.match(/filter\(\(\[, m\]\)\s*=>\s*m\s*&&\s*m\.role\s*===\s*"מפקד"\)/g) || []).length;
-  record("סה״כ 3 מקומות מסננים למפקד בלבד (חתימות, הסמכות, מילואים)",
-    filterCount===3, String(filterCount));
+  record("סה״כ 4 מקומות מסננים למפקד בלבד (חתימות, הסמכות, מילואים, מסדר בוקר)",
+    filterCount===4, String(filterCount));
 }
 
 // 6. גיבוי שבועי — מתוזמן, כותב ל-Storage בנתיב backups/, ומחובר ל-dumpCollection
@@ -62,6 +62,14 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
   record("גיבוי שבועי: מתוזמן, כותב ל-backups/sq124-<תאריך>.json ב-Storage, ומשתמש ב-dumpCollection",
     hasSchedule && hasTZ && usesLib && writesToBackupsPath && usesStorage,
     JSON.stringify({hasSchedule, hasTZ, usesLib, writesToBackupsPath, usesStorage}));
+}
+
+// 7. notifyOnPublish: מסדר בוקר (commandersOnly) מסונן למפקדים בזמן אמת, לא רק תזכורות מתוזמנות
+{
+  const destructuresFlag = /const\s*\{kind,\s*shedId,\s*title,\s*body,\s*count,\s*commandersOnly\}\s*=\s*decision/.test(fn);
+  const branchesOnFlag = /commandersOnly\s*\?\s*Object\.entries\(tokMap\)\.filter\(\(\[, m\]\)\s*=>\s*m\s*&&\s*m\.role\s*===\s*"מפקד"\)/.test(fn);
+  record("notifyOnPublish: דיווח מסדר בוקר (commandersOnly) מסונן למפקדים בזמן אמת, שאר הסוגים לכולם",
+    destructuresFlag && branchesOnFlag, JSON.stringify({destructuresFlag, branchesOnFlag}));
 }
 
 console.log("\n=== SUMMARY ===");
