@@ -62,7 +62,7 @@ async function page(){
   console.log("errs1b",errs); await p.close();
 }
 
-// 2. סימון נוכחות/חיסור: לחיצה קובעת סטטוס, לחיצה חוזרת מבטלת
+// 2. סימון סטטוס (5 אפשרויות): לחיצה קובעת סטטוס, לחיצה חוזרת מבטלת
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
@@ -80,17 +80,20 @@ async function page(){
     const afterPresent = {...mcCache.marks};
     await setMorningRollcallMark("shed1","דני","present");   // לחיצה חוזרת -> ביטול
     const afterToggleOff = {...mcCache.marks};
+    await setMorningRollcallMark("shed1","דני","duty");     // סטטוס חדש: תורנות
+    const afterDuty = {...mcCache.marks};
     await setMorningRollcallMark("shed1","דני","absent");
     const afterAbsent = {...mcCache.marks};
-    return { afterPresent, afterToggleOff, afterAbsent };
+    return { afterPresent, afterToggleOff, afterDuty, afterAbsent };
   });
   record("סימון 'נוכח' שומר את הסטטוס", out.afterPresent["shed1::דני"]==="present", JSON.stringify(out.afterPresent));
   record("לחיצה חוזרת על אותו סטטוס מבטלת את הסימון", !("shed1::דני" in out.afterToggleOff), JSON.stringify(out.afterToggleOff));
-  record("סימון 'נעדר' אחרי ביטול עובד כרגיל", out.afterAbsent["shed1::דני"]==="absent", JSON.stringify(out.afterAbsent));
+  record("סימון 'תורנות' (אחד מ-5 הסטטוסים החדשים) עובד", out.afterDuty["shed1::דני"]==="duty", JSON.stringify(out.afterDuty));
+  record("מעבר ל'נעדר' אחרי תורנות עובד כרגיל", out.afterAbsent["shed1::דני"]==="absent", JSON.stringify(out.afterAbsent));
   console.log("errs2",errs); await p.close();
 }
 
-// 3. KPI וסינון-חיפוש בתצוגת מ״ע אחזקה
+// 3. 5 כפתורי סטטוס מוצגים לכל אדם, KPI ל-6 קטגוריות, וסינון-חיפוש
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
@@ -106,21 +109,30 @@ async function page(){
     document.getElementById('scr-morning-rollcall').classList.add('active');
     await renderMorningRollcall();
     const kpisAll = document.getElementById("mc-kpis").innerHTML;
+    const kpiBoxCount = document.querySelectorAll("#mc-kpis .kpi").length;
+    const daniButtons = [...document.querySelectorAll(".mc-status-row .pill")].map(b=>b.textContent.trim());
 
     document.getElementById("mc-search").value = "רון";
     renderMorningRollcallList();
     const listFiltered = document.getElementById("mc-list").innerHTML;
 
-    return { kpisAll, listHasRon: listFiltered.includes("רון"), listHasDani: listFiltered.includes("דני") };
+    return { kpisAll, kpiBoxCount, daniButtons, listHasRon: listFiltered.includes("רון"), listHasDani: listFiltered.includes("דני") };
   });
-  record("KPI: 1 נוכח, 1 נעדר, 1 טרם סומן (3 סה\"כ)",
-    out.kpisAll.includes(">1<") , out.kpisAll);
+  record("KPI: 6 תיבות (5 סטטוסים + טרם סומנו)", out.kpiBoxCount===6, "count="+out.kpiBoxCount);
+  record("KPI כולל את כל 5 התוויות + 'טרם סומנו'",
+    ["נוכח","תורנות","אפטר","צוות תורן","חסר","טרם סומנו"].every(l=>out.kpisAll.includes(l)), out.kpisAll);
+  record("כל אדם מקבל 5 כפתורי סימון (אחד לכל סטטוס)",
+    out.daniButtons.length>=5 && out.daniButtons.some(t=>t.includes("נוכח")) && out.daniButtons.some(t=>t.includes("תורנות"))
+    && out.daniButtons.some(t=>t.includes("אפטר")) && out.daniButtons.some(t=>t.includes("צוות תורן")) && out.daniButtons.some(t=>t.includes("חסר")),
+    JSON.stringify(out.daniButtons));
   record("חיפוש-שם מסנן את הרשימה בלי לגעת ברשת (מ-mcCache)",
     out.listHasRon && !out.listHasDani, JSON.stringify({listHasRon:out.listHasRon, listHasDani:out.listHasDani}));
   console.log("errs3",errs); await p.close();
 }
 
-// 4. שליחת דיווח: כותבת לכל סככה בנפרד עם ספירות/רשימת נעדרים נכונה
+// 4. שליחת דיווח: כותבת לכל סככה בנפרד עם ספירות/שמות נכונים לכל אחד מ-5
+//    הסטטוסים, וגם דלי "unmarked" נפרד למי שכלל לא סומן (התיקון לבאג
+//    שהיה מסיק "נוכח" בטעות על מי שפשוט טרם סומן)
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
@@ -134,14 +146,15 @@ async function page(){
     window.sSetIn = async (shed,k,v) => { store[shed+"_"+k]=v; return true; };
     window.logAdminAction = async()=>{};
     window.toast = (m)=>{ window._t=window._t||[]; window._t.push(m); };
-    store["shed1_pers"] = [{name:"דני", role:"חייל"}, {name:"רון", role:"חייל"}];
+    store["shed1_pers"] = [{name:"דני", role:"חייל"}, {name:"רון", role:"חייל"}, {name:"עומר", role:"חייל"}];
     store["shed2_pers"] = [{name:"עידן", role:"חייל"}];
 
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     document.getElementById('scr-morning-rollcall').classList.add('active');
     await renderMorningRollcall();
     await setMorningRollcallMark("shed1","דני","present");
-    await setMorningRollcallMark("shed1","רון","absent");
+    await setMorningRollcallMark("shed1","רון","duty");
+    // עומר לא מסומן בכלל -> אמור ליפול ל"unmarked", לא "present"
     await setMorningRollcallMark("shed2","עידן","present");
 
     window._t = [];
@@ -153,11 +166,16 @@ async function page(){
       toasts: window._t,
     };
   });
-  record("דיווח סככה 1: 1 נוכח, 1 נעדר (רון), הרשימה כוללת את רון",
-    out.shed1Report && out.shed1Report.presentCount===1 && out.shed1Report.absentCount===1 &&
-    out.shed1Report.absentNames.includes("רון"), JSON.stringify(out.shed1Report));
-  record("דיווח סככה 2: 1 נוכח, 0 נעדרים",
-    out.shed2Report && out.shed2Report.presentCount===1 && out.shed2Report.absentCount===0, JSON.stringify(out.shed2Report));
+  record("דיווח סככה 1: counts נכונים (1 נוכח, 1 תורנות, 1 unmarked)",
+    out.shed1Report && out.shed1Report.counts.present===1 && out.shed1Report.counts.duty===1 && out.shed1Report.counts.unmarked===1,
+    JSON.stringify(out.shed1Report && out.shed1Report.counts));
+  record("namesByStatus: עומר (לא סומן) נמצא בדלי unmarked, לא בדלי present",
+    out.shed1Report && out.shed1Report.namesByStatus.unmarked.includes("עומר") && !out.shed1Report.namesByStatus.present.includes("עומר"),
+    JSON.stringify(out.shed1Report && out.shed1Report.namesByStatus));
+  record("שדות תאימות (absentCount/absentNames) עדיין קיימים לצורך פעמון ההתראות",
+    out.shed1Report && out.shed1Report.absentCount===0 && Array.isArray(out.shed1Report.absentNames), JSON.stringify(out.shed1Report));
+  record("דיווח סככה 2: 1 נוכח, אין unmarked",
+    out.shed2Report && out.shed2Report.counts.present===1 && out.shed2Report.counts.unmarked===0, JSON.stringify(out.shed2Report && out.shed2Report.counts));
   record("טוסט הצלחה מוצג", out.toasts.some(t=>t.includes("נשלח")), JSON.stringify(out.toasts));
   console.log("errs4",errs); await p.close();
 }
@@ -186,7 +204,8 @@ async function page(){
   console.log("errs5",errs); await p.close();
 }
 
-// 6. מסך המפקד: מציג דיווח מ"היום" (יום המסדר הנוכחי), מסתיר דיווח ישן
+// 6. מסך המפקד: מציג דיווח מ"היום" (יום המסדר הנוכחי) עם כותרת "מסדר בוקר"
+//    והתאריך הרלוונטי, מסתיר דיווח ישן
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
@@ -194,20 +213,31 @@ async function page(){
     window.sGetRaw = async k => store[k] ?? null;
     window.sGet = async (k) => store[(currentShed?currentShed.id:"")+"_"+k] ?? null;
     currentShed = {id:"shed1", name:"סככה 1"};
-    store["shed1_daily_rollcall_report"] = {dayKey: rollcallDayKey(), sentAt: Date.now(), presentCount:5, absentCount:2, totalCount:7, absentNames:["רון","עידן"]};
+    const sentAt = Date.now();
+    store["shed1_daily_rollcall_report"] = {
+      dayKey: rollcallDayKey(), sentAt,
+      totalCount:7,
+      counts:{present:3, duty:1, after:1, duty_team:0, absent:2, unmarked:0},
+      namesByStatus:{present:["א","ב","ג"], duty:["ד"], after:["ה"], duty_team:[], absent:["רון","עידן"], unmarked:[]},
+      absentCount:2, absentNames:["רון","עידן"],
+    };
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     document.getElementById('scr-cmd').classList.add('active');
     await renderMorningRollcallReport();
-    const shownToday = { hidden: document.getElementById("mc-report-wrap").classList.contains("hidden"), html: document.getElementById("mc-report-content").innerHTML };
+    const wrap = document.getElementById("mc-report-wrap");
+    const shownToday = { hidden: wrap.classList.contains("hidden"), html: document.getElementById("mc-report-content").innerHTML, title: wrap.querySelector(".cmd-section-title").textContent };
 
-    store["shed1_daily_rollcall_report"] = {dayKey:"2000-01-01", sentAt: Date.now(), presentCount:1, absentCount:0, totalCount:1, absentNames:[]};
+    store["shed1_daily_rollcall_report"] = {dayKey:"2000-01-01", sentAt: Date.now(), totalCount:1, counts:{present:1,duty:0,after:0,duty_team:0,absent:0,unmarked:0}, namesByStatus:{present:["א"],duty:[],after:[],duty_team:[],absent:[],unmarked:[]}, absentCount:0, absentNames:[]};
     await renderMorningRollcallReport();
     const hiddenForOld = document.getElementById("mc-report-wrap").classList.contains("hidden");
 
     return { shownToday, hiddenForOld };
   });
-  record("מסך המפקד: דיווח מהיום מוצג, כולל שמות הנעדרים",
-    !out.shownToday.hidden && out.shownToday.html.includes("רון") && out.shownToday.html.includes("עידן"), JSON.stringify(out.shownToday));
+  record("מסך המפקד: הכותרת אומרת 'מסדר בוקר' וכוללת תאריך",
+    out.shownToday.title.includes("מסדר בוקר") && /\d/.test(out.shownToday.title), out.shownToday.title);
+  record("מסך המפקד: דיווח מהיום מוצג, כולל שמות הנעדרים ו-5 קטגוריות ה-KPI",
+    !out.shownToday.hidden && out.shownToday.html.includes("רון") && out.shownToday.html.includes("עידן")
+    && out.shownToday.html.includes("תורנות") && out.shownToday.html.includes("אפטר"), JSON.stringify(out.shownToday));
   record("מסך המפקד: דיווח מיום קודם (dayKey ישן) מוסתר אוטומטית",
     out.hiddenForOld===true, JSON.stringify(out.hiddenForOld));
   console.log("errs6",errs); await p.close();
@@ -308,20 +338,26 @@ async function page(){
   console.log("errs10",errs); await p.close();
 }
 
-// 11. באנר הנוכחים/נעדרים ניתן ללחיצה, ופותח פירוט מלא (מי נוכח ומי נעדר) —
-//     לא רק ספירה ורשימת הנעדרים בלבד
+// 11. באנר הנוכחים/נעדרים ניתן ללחיצה, ופותח פירוט מלא לפי 5 הסטטוסים —
+//     כולל התיקון לבאג שהיה מציג מי שכלל לא סומן ("עומר") כ"נוכח" בטעות
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
     currentShed = { id:"shed1", name:"סככה 1" };
     PERSONNEL = [
-      {name:"דני", role:"חייל"},
-      {name:"רון", role:"חייל"},
-      {name:"עידן", role:"מפקד"},        // לא בסבב הנוכחות -> לא אמור להופיע בפירוט
+      {name:"דני", role:"חייל"},           // present
+      {name:"רון", role:"חייל"},           // absent
+      {name:"עומר", role:"חייל"},          // כלל לא סומן -> צריך "טרם סומן", לא "נוכח"
+      {name:"עידן", role:"מפקד"},          // לא בסבב הנוכחות -> לא אמור להופיע בפירוט
       {name:"עמית", role:"חייל", reserve:true}, // מילואים -> לא אמור להופיע בפירוט
     ];
     window.sGet = async (k) => k==="daily_rollcall_report"
-      ? {dayKey: rollcallDayKey(), sentAt: Date.now(), presentCount:1, absentCount:1, totalCount:2, absentNames:["רון"]}
+      ? {
+          dayKey: rollcallDayKey(), sentAt: Date.now(), totalCount:3,
+          counts:{present:1,duty:0,after:0,duty_team:0,absent:1,unmarked:1},
+          namesByStatus:{present:["דני"],duty:[],after:[],duty_team:[],absent:["רון"],unmarked:["עומר"]},
+          absentCount:1, absentNames:["רון"],
+        }
       : null;
 
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -334,14 +370,19 @@ async function page(){
     const modalOpen = document.getElementById("mc-detail-modal").classList.contains("open");
     const listHtml = document.getElementById("mc-detail-list").innerHTML;
     const subText = document.getElementById("mc-detail-sub").textContent;
+    // מיקום שורת "עומר" ביחס לתוכן שלה — כדי לוודא שהוא מסומן "טרם סומן" ולא "נוכח"
+    const omerRowStart = listHtml.indexOf("עומר");
+    const omerRow = omerRowStart>=0 ? listHtml.slice(omerRowStart, omerRowStart+150) : "";
 
-    return { hasClickHandler, modalOpen, listHtml, subText };
+    return { hasClickHandler, modalOpen, listHtml, subText, omerRow };
   });
   record("הבאנר עצמו ניתן ללחיצה (onclick לפתיחת הפירוט)", out.hasClickHandler, JSON.stringify({hasClickHandler:out.hasClickHandler}));
-  record("לחיצה פותחת את המודל עם סיכום הנוכחים", out.modalOpen && out.subText.includes("1/2"), out.subText);
-  record("הפירוט מציג את מי שנוכח ומי שנעדר (לא רק ספירה)",
-    out.listHtml.includes("דני") && out.listHtml.includes("נוכח") && out.listHtml.includes("רון") && out.listHtml.includes("נעדר"),
+  record("לחיצה פותחת את המודל עם סיכום הנוכחים", out.modalOpen && out.subText.includes("1/3"), out.subText);
+  record("הפירוט מציג את מי שנוכח ומי חסר",
+    out.listHtml.includes("דני") && out.listHtml.includes("נוכח") && out.listHtml.includes("רון") && out.listHtml.includes("חסר"),
     out.listHtml.slice(0,400));
+  record("תיקון הבאג: מי שכלל לא סומן ('עומר') מוצג כ'טרם סומן' — לא כ'נוכח' בטעות",
+    out.omerRow.includes("טרם סומן") && !out.omerRow.includes("✅ נוכח"), out.omerRow);
   record("הפירוט לא כולל מפקדים/מילואים — רק חיילי הסבב עצמו",
     !out.listHtml.includes("עידן") && !out.listHtml.includes("עמית"), out.listHtml.slice(0,400));
   console.log("errs11",errs); await p.close();

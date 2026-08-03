@@ -339,6 +339,8 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
 .pill{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px}
 .pill.g{background:var(--green-soft);color:var(--green)} .pill.r{background:var(--red-soft);color:var(--red)} .pill.y{background:var(--gold-soft);color:var(--gold)}
 .pill.n{background:var(--line);color:var(--ink-3)}
+.mc-status-row{display:flex;flex-wrap:wrap;gap:6px;padding:0 13px 12px}
+.mc-status-row .pill{flex:1;min-width:70px;text-align:center;padding:6px 6px}
 .med-tabs{display:flex;gap:8px;margin-bottom:12px}
 .med-tab{flex:1;padding:10px 8px;border-radius:11px;border:1px solid var(--line);background:var(--card);color:var(--ink-2);font-weight:700;font-size:13px;cursor:pointer;transition:.15s}
 .med-tab.active{background:var(--red);color:#fff;border-color:var(--red)}
@@ -427,6 +429,8 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
 .sig-detail-row .no{font-size:11.5px;font-weight:700;color:var(--red);background:var(--red-soft);padding:4px 10px;border-radius:99px}
 .sig-detail-row .ok{font-size:11.5px;font-weight:700;color:var(--green);background:var(--green-soft);padding:4px 10px;border-radius:99px;white-space:nowrap}
 .sig-detail-row .dt{font-size:11px;color:var(--ink-3);font-weight:300}
+.sig-detail-row .warn{font-size:11.5px;font-weight:700;color:var(--gold);background:var(--gold-soft);padding:4px 10px;border-radius:99px;white-space:nowrap}
+.sig-detail-row .unmarked{font-size:11.5px;font-weight:700;color:var(--ink-3);background:var(--line);padding:4px 10px;border-radius:99px;white-space:nowrap}
 
 /* ---------- FILE (non-image) CARD ---------- */
 .file-badge{width:58px;height:58px;border-radius:13px;flex-shrink:0;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;letter-spacing:.5px}
@@ -5411,13 +5415,17 @@ async function renderMorningRollcallReport(wrapId, contentId){
   }
   wrap.classList.remove("hidden");
   const sentTime = new Date(report.sentAt).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"});
-  const absentHtml = report.absentNames.length
-    ? `<div style="font-size:12px;color:var(--ink-3);line-height:1.8;margin-top:4px">${report.absentNames.map(escapeHTML).join(" · ")}</div>`
+  const dateStr = new Date(report.sentAt).toLocaleDateString("he-IL",{weekday:"long", day:"numeric", month:"long"});
+  const counts = report.counts || {present:report.presentCount||0, absent:report.absentCount||0};
+  const absentNames = (report.namesByStatus && report.namesByStatus.absent) || report.absentNames || [];
+  const absentHtml = absentNames.length
+    ? `<div style="font-size:12px;color:var(--ink-3);line-height:1.8;margin-top:4px">${absentNames.map(escapeHTML).join(" · ")}</div>`
     : "";
+  const wrapTitle = wrap.querySelector(".cmd-section-title");
+  if(wrapTitle) wrapTitle.textContent = `📋 מסדר בוקר — ${dateStr}`;
   document.getElementById(contentId || "mc-report-content").innerHTML = `
     <div class="cmd-kpis">
-      <div class="kpi good"><b>${report.presentCount}</b><span>נוכחים</span></div>
-      <div class="kpi bad"><b>${report.absentCount}</b><span>נעדרים</span></div>
+      ${MC_STATUSES.map(s=>`<div class="kpi ${s.kpiClass}"><b>${counts[s.key]||0}</b><span>${s.label}</span></div>`).join("")}
     </div>
     <div class="cert-sum-card" onclick="openMorningRollcallDetail()">
       <div class="cert-sum-head">
@@ -5439,15 +5447,24 @@ async function openMorningRollcallDetail(){
   const report = await sGet("daily_rollcall_report");
   if(!report || report.dayKey !== rollcallDayKey()) return;
   const sentTime = new Date(report.sentAt).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"});
-  document.getElementById("mc-detail-sub").textContent = `${report.presentCount}/${report.totalCount} נוכחים · נשלח ע"י מ״ע אחזקה בשעה ${sentTime}`;
-  const absentSet = new Set(report.absentNames||[]);
+  const counts = report.counts || {present:report.presentCount||0};
+  document.getElementById("mc-detail-sub").textContent = `${counts.present||0}/${report.totalCount} נוכחים · נשלח ע"י מ״ע אחזקה בשעה ${sentTime}`;
+  // מפת שם->סטטוס נבנית מ-namesByStatus (כולל "unmarked") כדי להציג את הסטטוס
+  // האמיתי של כל אדם — ולא להסיק "נוכח" בשגגה על מי שפשוט טרם סומן.
+  const statusByName = {};
+  const namesByStatus = report.namesByStatus || {absent:report.absentNames||[]};
+  Object.entries(namesByStatus).forEach(([st, names])=> (names||[]).forEach(name=> statusByName[name]=st));
   const roster = PERSONNEL.filter(p=>p.role==="חייל" && !p.reserve).map(p=>p.name);
+  const CLS_BY_PILL = {g:"ok", r:"no", y:"warn"};
   const rows = roster.map(name=>{
-    const absent = absentSet.has(name);
+    const st = statusByName[name];
+    const info = st ? mcStatusInfo(st) : null;
+    const label = info ? `${info.icon} ${info.label}` : "◽ טרם סומן";
+    const cls = info ? CLS_BY_PILL[info.pill] : "unmarked";
     return `<div class="sig-detail-row">
       <div class="avatar">${initials(name)}</div>
       <div class="nm">${escapeHTML(name)}</div>
-      ${absent ? `<span class="no">❌ נעדר</span>` : `<span class="ok">✓ נוכח</span>`}
+      <span class="${cls}">${label}</span>
     </div>`;
   }).join("");
   document.getElementById("mc-detail-list").innerHTML = rows || `<div style="text-align:center;padding:14px;color:var(--ink-3)">אין נתוני צוות</div>`;
@@ -9920,6 +9937,18 @@ function voTab(which){
    אוטומטית מדי בוקר בלי שום cron. */
 async function getMorningRollcall(){ return (await sGetRaw("daily_rollcall_"+rollcallDayKey())) || {}; }
 
+/* 5 הסטטוסים האפשריים לסימון במסדר בוקר — נוכח/תורנות/אפטר/צוות תורן/חסר.
+   pill קובע צבע (g/y/r/n, אותן מחלקות שכבר קיימות ב-.pill), kpiClass קובע
+   את צבע תיבת ה-KPI המקבילה (good/warn/bad). */
+const MC_STATUSES = [
+  {key:"present",   label:"נוכח",       icon:"✅", pill:"g", kpiClass:"good"},
+  {key:"duty",      label:"תורנות",     icon:"🛡️", pill:"y", kpiClass:"warn"},
+  {key:"after",     label:"אפטר",       icon:"💤", pill:"y", kpiClass:"warn"},
+  {key:"duty_team", label:"צוות תורן",  icon:"👥", pill:"y", kpiClass:"warn"},
+  {key:"absent",    label:"חסר",        icon:"❌", pill:"r", kpiClass:"bad"},
+];
+function mcStatusInfo(key){ return MC_STATUSES.find(s=>s.key===key) || null; }
+
 let mcCache = null;   // {marks, perShed} — נטען פעם אחת בכניסה ללשונית, מסונן מחדש בלי קריאת רשת בכל הקלדה בחיפוש
 async function renderMorningRollcall(){
   const listBox = document.getElementById("mc-list");
@@ -9938,21 +9967,19 @@ function renderMorningRollcallList(){
   const {marks, perShed} = mcCache;
   const search = (document.getElementById("mc-search")?.value || "").trim();
 
-  let total=0, present=0, absent=0;
+  let total=0; const counts = Object.fromEntries(MC_STATUSES.map(s=>[s.key,0]));
   perShed.forEach(({shed,pers})=> pers.forEach(p=>{
     total++;
     const st = marks[shed.id+"::"+p.name];
-    if(st==="present") present++; else if(st==="absent") absent++;
+    if(st && counts[st]!==undefined) counts[st]++;
   }));
-  const unmarked = total - present - absent;
+  const unmarked = total - MC_STATUSES.reduce((sum,s)=>sum+counts[s.key],0);
 
   const dateStr = new Date().toLocaleDateString("he-IL",{weekday:"long", day:"numeric", month:"long"});
   document.getElementById("mc-title").textContent = "📋 מסדר בוקר · " + dateStr;
-  document.getElementById("mc-kpis").innerHTML = `
-    <div class="kpi good"><b>${present}</b><span>נוכחים</span></div>
-    <div class="kpi bad"><b>${absent}</b><span>נעדרים</span></div>
-    <div class="kpi warn"><b>${unmarked}</b><span>טרם סומנו</span></div>
-  `;
+  document.getElementById("mc-kpis").innerHTML = MC_STATUSES.map(s=>
+    `<div class="kpi ${s.kpiClass}"><b>${counts[s.key]}</b><span>${s.label}</span></div>`
+  ).join("") + `<div class="kpi warn"><b>${unmarked}</b><span>טרם סומנו</span></div>`;
 
   let html = "";
   for(const {shed, pers} of perShed){
@@ -9960,13 +9987,15 @@ function renderMorningRollcallList(){
     if(filtered.length===0) continue;
     html += `<div class="cmd-section-title">${escapeHTML(shed.name)}</div>` + filtered.map(p=>{
       const st = marks[shed.id+"::"+p.name] || null;
+      const btns = MC_STATUSES.map(s=>
+        `<button class="pill ${st===s.key?s.pill:'n'}" style="border:none;cursor:pointer" onclick="setMorningRollcallMark('${shed.id}','${jsStr(p.name)}','${s.key}')">${s.icon} ${s.label}</button>`
+      ).join("");
       return `<div class="cert-sum-card" style="cursor:default">
-        <div class="cert-sum-head">
+        <div class="cert-sum-head" style="flex-wrap:wrap">
           <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
           <div class="cert-sum-name"><b>${escapeHTML(p.name)}</b><span>${escapeHTML(p.role)}</span></div>
-          <button class="pill ${st==='present'?'g':'n'}" style="border:none;cursor:pointer" onclick="setMorningRollcallMark('${shed.id}','${jsStr(p.name)}','present')">✅ נוכח</button>
-          <button class="pill ${st==='absent'?'r':'n'}" style="border:none;cursor:pointer" onclick="setMorningRollcallMark('${shed.id}','${jsStr(p.name)}','absent')">❌ נעדר</button>
         </div>
+        <div class="mc-status-row">${btns}</div>
       </div>`;
     }).join("");
   }
@@ -9992,15 +10021,24 @@ async function sendMorningRollcallReport(){
   if(!mcCache){ toast("עדיין טוען — נסה שוב בעוד רגע"); return; }
   const {marks, perShed} = mcCache;
   const dayKey = rollcallDayKey();
+  const statusKeys = MC_STATUSES.map(s=>s.key);
   const results = await Promise.all(perShed.map(async ({shed, pers})=>{
     if(pers.length===0) return true;
-    let presentCount=0, absentCount=0; const absentNames=[];
+    // כל אדם משובץ לדלי אחד: אחד מ-5 הסטטוסים, או "unmarked" אם לא סומן כלל —
+    // כך שהפירוט (openMorningRollcallDetail) יציג את הסטטוס האמיתי של כולם,
+    // ולא יסיק "נוכח" בשגגה על מי שפשוט טרם סומן.
+    const namesByStatus = Object.fromEntries(statusKeys.map(k=>[k,[]]));
+    namesByStatus.unmarked = [];
     pers.forEach(p=>{
       const st = marks[shed.id+"::"+p.name];
-      if(st==="present") presentCount++;
-      else if(st==="absent"){ absentCount++; absentNames.push(p.name); }
+      (namesByStatus[st] || namesByStatus.unmarked).push(p.name);
     });
-    const report = {dayKey, sentAt:Date.now(), presentCount, absentCount, totalCount:pers.length, absentNames};
+    const counts = Object.fromEntries(Object.entries(namesByStatus).map(([k,names])=>[k,names.length]));
+    const report = {
+      dayKey, sentAt:Date.now(), totalCount:pers.length,
+      counts, namesByStatus,
+      absentCount: counts.absent, absentNames: namesByStatus.absent, // נשארים לתאימות: אזעקת הפעמון (computeAlerts) קוראת absentCount/dayKey בלבד
+    };
     return sSetIn(shed.id, "daily_rollcall_report", report);
   }));
   if(!results.every(Boolean)){ toast("⚠️ שליחת הדיווח נכשלה בחלק מהמסגרות — נסה שוב"); return; }

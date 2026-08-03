@@ -7,6 +7,24 @@ const SHED_NAMES = {
   dept: "מחלקות", maint: "מ״ע אחזקה", training: "הדרכה",
 };
 
+// אותם 5 סטטוסים כמו MC_STATUSES ב-index.html — סדר ותוויות זהים כדי שגוף
+// ההתראה יתאים למה שהמפקד רואה במסך עצמו.
+const MC_STATUS_LABELS = [
+  ["present", "נוכחים"], ["duty", "תורנות"], ["after", "אפטר"],
+  ["duty_team", "צוות תורן"], ["absent", "נעדרים"],
+];
+function morningRollcallBody(after) {
+  if (after.counts) {
+    const parts = MC_STATUS_LABELS
+      .map(([key, label]) => [after.counts[key] || 0, label])
+      .filter(([n]) => n > 0)
+      .map(([n, label]) => `${n} ${label}`);
+    return parts.length ? parts.join(", ") : "אין נתוני נוכחות";
+  }
+  // מסמכים ישנים (לפני השדרוג ל-5 סטטוסים) — פורמט present/absent בלבד
+  return `${after.presentCount || 0} נוכחים, ${after.absentCount || 0} נעדרים`;
+}
+
 function classify(docId) {
   if (docId.endsWith("_messages_list")) return "message";
   if (docId.endsWith("_safety_events")) return "safety";
@@ -55,7 +73,7 @@ function decide({docId, before, after}) {
   };
   const title = KIND_TITLES[kind];
   const body = kind === "rollcall" ? "הופעל נכס — יש לסמן נוכחות עכשיו"
-    : kind === "morning_rollcall" ? `${after.presentCount} נוכחים, ${after.absentCount} נעדרים`
+    : kind === "morning_rollcall" ? morningRollcallBody(after)
     : kind === "message" ? String(item.text || "").slice(0, 140)
     : kind === "board" ? String(item.label || "")
     : String(item.title || item.fname || "");
