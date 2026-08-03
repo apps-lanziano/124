@@ -1518,7 +1518,7 @@ nav{
       <!-- PANE: MAINTENANCE DEPT VEHICLES (שחורים+שכורים, ללא שיוך לסככה) -->
       <div class="admin-pane" id="vopane-maint">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openMaintVehicleAdd()"><span class="a-ic">➕</span><b>הוספת רכב אחזקה</b><span>רכבים שחורים ושכורים</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openMaintVehicleAdd()"><span class="a-ic">➕</span><b>הוספת רכב צ'</b><span>רכבים שחורים ושכורים</span></button>
         </div>
         <div id="vo-maint-list"></div>
       </div>
@@ -2104,6 +2104,10 @@ nav{
         </div>
         <select class="m-input" id="vo-vehicle-bank-pick" style="margin-bottom:8px" onchange="pickVoVehicleFromBank()"></select>
         <input class="m-input" id="vo-vehicle-name" type="text" placeholder="שם/סוג הרכב" style="margin-bottom:8px">
+        <label style="font-size:12px;color:var(--ink-2);display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;background:var(--gold-soft);border:1px solid #f0dfa8;border-radius:10px;padding:9px 11px">
+          <input type="checkbox" id="vo-vehicle-in-service" style="width:auto;margin:0">
+          <span>🔧 הרכב כרגע בטיפול <span style="color:var(--ink-3);font-weight:400">— משתיק התראות פג-תוקף עד שיוסר הסימון</span></span>
+        </label>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מס' רכב אזרחי</label>
         <input class="m-input" id="vo-vehicle-number" type="text" placeholder="מס' רכב אזרחי" style="margin-bottom:8px">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🪖 מס' רכב צבאי</label>
@@ -2166,10 +2170,14 @@ nav{
   <!-- MAINTENANCE DEPT VEHICLE MODAL (שחורים+שכורים, ללא שיוך לסככה) -->
   <div class="modal-bg" id="maint-vehicle-modal">
     <div class="modal">
-      <h3 id="maint-vehicle-title">🔧 הוספת רכב אחזקה</h3>
-      <div class="m-sub">רכבי מ״ע אחזקה — שחורים ושכורים. גלוי למ״ע אחזקה בלבד.</div>
+      <h3 id="maint-vehicle-title">🔧 הוספת רכב צ'</h3>
+      <div class="m-sub">רכבי צ' — שחורים ושכורים. גלוי למ״ע אחזקה בלבד.</div>
       <div class="team-add-form">
         <input class="m-input" id="maint-vehicle-name" type="text" placeholder="שם/סוג הרכב" style="margin-bottom:8px">
+        <label style="font-size:12px;color:var(--ink-2);display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;background:var(--gold-soft);border:1px solid #f0dfa8;border-radius:10px;padding:9px 11px">
+          <input type="checkbox" id="maint-vehicle-in-service" style="width:auto;margin:0">
+          <span>🔧 הרכב כרגע בטיפול <span style="color:var(--ink-3);font-weight:400">— משתיק התראות פג-תוקף עד שיוסר הסימון</span></span>
+        </label>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מס' רכב אזרחי</label>
         <input class="m-input" id="maint-vehicle-number" type="text" placeholder="מס' רכב אזרחי" style="margin-bottom:8px">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🪖 מס' רכב צבאי</label>
@@ -2227,6 +2235,10 @@ nav{
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏢 סככה משויכת</label>
         <select class="m-input" id="leasing-vehicle-shed" style="margin-bottom:8px"></select>
         <input class="m-input" id="leasing-vehicle-name" type="text" placeholder="שם/סוג הרכב" style="margin-bottom:8px">
+        <label style="font-size:12px;color:var(--ink-2);display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;background:var(--gold-soft);border:1px solid #f0dfa8;border-radius:10px;padding:9px 11px">
+          <input type="checkbox" id="leasing-vehicle-in-service" style="width:auto;margin:0">
+          <span>🔧 הרכב כרגע בטיפול <span style="color:var(--ink-3);font-weight:400">— משתיק התראות פג-תוקף עד שיוסר הסימון</span></span>
+        </label>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מס' רכב</label>
         <input class="m-input" id="leasing-vehicle-number" type="text" placeholder="מס' רכב אזרחי" style="margin-bottom:8px">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏢 חברת ליסינג</label>
@@ -7091,7 +7103,7 @@ async function seedVehiclesFromSheet(){
   await sSetRaw("admin_maint_vehicles", maintList);
 
   await sSetRaw(flag, true);
-  console.log("✅ רכבים תפעוליים ורכבי אחזקה נזרעו מהגיליון");
+  console.log("✅ רכבים תפעוליים ורכבי צ' נזרעו מהגיליון");
 }
 
 /* זריעה חד-פעמית: רכבי ליסינג לפי שם מחזיק (מקבצים אוטומטית לסככה לפי שם, אם קיים) */
@@ -9666,6 +9678,9 @@ function vehicleKmCheck(v){
 }
 function vehicleStatusDetailed(v, checks){
   const order = {r:0,y:1,g:2};
+  // רכב "בטיפול" — משתיק את כל התראות פג-התוקף (מונע עומס ויזואלי על רכבים
+  // שממילא כבר בטיפול), עד שהסימון יוסר ידנית בטופס העריכה
+  if(v.inService) return {tag:"🔧 בטיפול", cls:"n", all:[], issues:[], inService:true};
   // רכב מבוסס-שעות (פיקו): סטטוס לפי שעות מנוע בלבד — מתעלמים מתאריכי טיפול/טסט
   if(isHoursVehicle(v)){
     const h = vehicleHoursCheck(v);
@@ -9686,6 +9701,7 @@ function vehicleStatusDetailed(v, checks){
 /* תווית קצרה ומרוכזת לכותרת הכרטיס המכווצת — במקום שרשור כל הבדיקות (עמוס),
    מציגה רק תמצית: "בתוקף", בדיקה בודדת חריגה (בקיצור), או מונה כשיש כמה. */
 function vehicleShortLabel(status){
+  if(status.inService) return {cls:"n", txt:"בטיפול"};
   const issues = status.issues || [];
   if(issues.length===0) return {cls:"g", txt:"בתוקף"};
   if(issues.length===1){
@@ -9697,7 +9713,7 @@ function vehicleShortLabel(status){
   if(redCount>0) return {cls:"r", txt:redCount+" דורשים טיפול"+(issues.length>redCount?` (+${issues.length-redCount})`:"")};
   return {cls:"y", txt:issues.length+" לתשומת לב"};
 }
-/* כרטיס רכב עשיר משותף — משמש גם למ"ע לפי סככה, גם לרכבי אחזקה, גם לליסינג.
+/* כרטיס רכב עשיר משותף — משמש גם למ"ע לפי סככה, גם לרכבי צ', גם לליסינג.
    תצוגה מכווצת (ברירת מחדל): שם + מס' רכב + תווית סטטוס קצרה אחת בלבד —
    כדי לא להציג שורת מידע עמוסה לכל רכב ברשימה. בלחיצה נפתחת התמונה המלאה:
    כל בדיקה בשורה נפרדת + ק"מ/שעו"מ נוכחי + קוד רכב/דלק + חברה/ביקורת חורף/הערות. */
@@ -9706,7 +9722,15 @@ function vehicleCardHtml(v, actionsHtml, checks){
   const overall = vehicleStatusDetailed(v, checks);
   const short = vehicleShortLabel(overall);
 
-  const numberLine = v.number ? ("מס' "+escapeHTML(v.number)) : (v.militaryNumber ? ("צבאי "+escapeHTML(v.militaryNumber)) : "ללא מספר");
+  // תצוגה ראשית: מספר רישוי אזרחי + צבאי יחד (לא אחד-או-אחר), ותאריך הטיפול
+  // החודשי הקרוב עם "עוד N ימים" — שאר הפרטים (טסט/טיפול שנתי/קודים) רק בהרחבה
+  const idParts = [];
+  if(v.number) idParts.push("מס' "+escapeHTML(v.number));
+  if(v.militaryNumber) idParts.push("צבאי "+escapeHTML(v.militaryNumber));
+  const numberLine = idParts.length ? idParts.join(" · ") : "ללא מספר";
+  // אותה בדיקה בדיוק שכבר חושבה למעלה (overall.all) — לא בדיקה כפולה עם תווית שונה
+  const monthlyCheck = checks.includes("monthlyService")
+    ? (overall.all||[]).find(c=>c.tag.includes("טיפול חודשי")) : null;
 
   // כל בדיקה מוצגת כשורה נפרדת בתצוגה המורחבת (במקום שרשור לשורה אחת)
   const checkRows = (overall.all||[]).map(c=>
@@ -9727,7 +9751,7 @@ function vehicleCardHtml(v, actionsHtml, checks){
   return `<div class="cert-sum-card" onclick="this.classList.toggle('open')">
     <div class="cert-sum-head">
       <div class="avatar" style="width:40px;height:40px;font-size:18px">🚙</div>
-      <div class="cert-sum-name"><b>${escapeHTML(v.name)}</b><span>${numberLine}</span></div>
+      <div class="cert-sum-name"><b>${escapeHTML(v.name)}</b><span>${numberLine}</span>${monthlyCheck ? `<span style="display:block">${monthlyCheck.tag}</span>` : ""}</div>
       <span class="pill ${short.cls}" style="flex-shrink:0;white-space:nowrap">${escapeHTML(short.txt)}</span>
       <div onclick="event.stopPropagation()" style="display:flex;gap:6px">${actionsHtml}</div>
       <span class="cert-sum-chev">‹</span>
@@ -9781,12 +9805,14 @@ const VO_VEHICLE_FIELDS = [
   ["nextService","vo-vehicle-next-service","date"], ["testDate","vo-vehicle-test","date"],
   ["km","vo-vehicle-km","number"], ["kmService","vo-vehicle-km-service","number"], ["hours","vo-vehicle-hours","number"], ["hoursNext","vo-vehicle-hours-next","number"],
   ["monthlyService","vo-vehicle-monthly-service","date"], ["annualService","vo-vehicle-annual-service","date"],
-  ["winterCheck","vo-vehicle-winter","date"], ["notes","vo-vehicle-notes","text"]
+  ["winterCheck","vo-vehicle-winter","date"], ["notes","vo-vehicle-notes","text"],
+  ["inService","vo-vehicle-in-service","checkbox"]
 ];
 function fillVoVehicleForm(v){
   VO_VEHICLE_FIELDS.forEach(([key,id,type])=>{
     const el = document.getElementById(id);
     if(!el) return;
+    if(type==="checkbox"){ el.checked = !!(v && v[key]); return; }
     if(!v){ el.value = ""; return; }
     el.value = type==="number" ? (v[key] ?? "") : (v[key] || "");
   });
@@ -9796,6 +9822,7 @@ function readVoVehicleForm(){
   VO_VEHICLE_FIELDS.forEach(([key,id,type])=>{
     const el = document.getElementById(id);
     if(!el) return;
+    if(type==="checkbox"){ data[key] = el.checked; return; }
     const raw = el.value.trim ? el.value.trim() : el.value;
     if(type==="number") data[key] = raw===""?null:Number(raw);
     else if(key==="name"||key==="number") data[key] = raw; // אלה מטופלים בנפרד לבדיקת תקינות
@@ -9953,7 +9980,8 @@ const MAINT_VEHICLE_FIELDS = [
   ["nextService","maint-vehicle-next-service","date"], ["testDate","maint-vehicle-test","date"],
   ["km","maint-vehicle-km","number"], ["kmService","maint-vehicle-km-service","number"],
   ["monthlyService","maint-vehicle-monthly-service","date"], ["annualService","maint-vehicle-annual-service","date"],
-  ["winterCheck","maint-vehicle-winter","date"], ["notes","maint-vehicle-notes","text"]
+  ["winterCheck","maint-vehicle-winter","date"], ["notes","maint-vehicle-notes","text"],
+  ["inService","maint-vehicle-in-service","checkbox"]
 ];
 async function getMaintVehicles(){ return (await sGetRaw("admin_maint_vehicles")) || []; }
 let maintVehicleEditId = null;
@@ -9961,6 +9989,7 @@ function fillMaintVehicleForm(v){
   MAINT_VEHICLE_FIELDS.forEach(([key,id,type])=>{
     const el = document.getElementById(id);
     if(!el) return;
+    if(type==="checkbox"){ el.checked = !!(v && v[key]); return; }
     if(!v){ el.value = ""; return; }
     el.value = type==="number" ? (v[key] ?? "") : (v[key] || "");
   });
@@ -9968,7 +9997,7 @@ function fillMaintVehicleForm(v){
 function openMaintVehicleAdd(){
   maintVehicleEditId = null;
   fillMaintVehicleForm(null);
-  document.getElementById("maint-vehicle-title").textContent = "🔧 הוספת רכב אחזקה";
+  document.getElementById("maint-vehicle-title").textContent = "🔧 הוספת רכב צ'";
   document.querySelector("#maint-vehicle-modal .m-btn.primary").textContent = "➕ הוסף רכב";
   document.getElementById("maint-vehicle-modal").classList.add("open");
 }
@@ -9977,14 +10006,16 @@ async function openMaintVehicleEdit(id){
   if(!v) return;
   maintVehicleEditId = id;
   fillMaintVehicleForm(v);
-  document.getElementById("maint-vehicle-title").textContent = "✏️ עריכת רכב אחזקה";
+  document.getElementById("maint-vehicle-title").textContent = "✏️ עריכת רכב צ'";
   document.querySelector("#maint-vehicle-modal .m-btn.primary").textContent = "💾 שמור שינויים";
   document.getElementById("maint-vehicle-modal").classList.add("open");
 }
 async function saveMaintVehicle(){
   const data = {};
   MAINT_VEHICLE_FIELDS.forEach(([key,id,type])=>{
-    const raw = document.getElementById(id).value.trim();
+    const el = document.getElementById(id);
+    if(type==="checkbox"){ data[key] = el.checked; return; }
+    const raw = el.value.trim();
     data[key] = type==="number" ? (raw===""?null:Number(raw)) : raw;
   });
   if(data.name.length<2){ toast("נא למלא שם/סוג רכב"); return; }
@@ -10014,7 +10045,7 @@ async function renderMaintVehicles(){
   if(!box) return;
   const vehicles = await getMaintVehicles();
   if(vehicles.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🔧</div><h3>אין עדיין רכבי אחזקה במעקב</h3><p>רכבים שחורים ושכורים — לא משוייכים לסככה ספציפית</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">🔧</div><h3>אין עדיין רכבי צ' במעקב</h3><p>רכבים שחורים ושכורים — לא משוייכים לסככה ספציפית</p></div>`;
     return;
   }
   const checks = ["nextService","monthlyService","annualService","testDate","kmService"];
@@ -10043,12 +10074,14 @@ const LEASING_VEHICLE_FIELDS = [
   ["km","leasing-vehicle-km","number"], ["kmService","leasing-vehicle-km-service","number"],
   ["monthlyService","leasing-vehicle-monthly-service","date"], ["annualService","leasing-vehicle-annual-service","date"],
   ["winterCheck","leasing-vehicle-winter","date"],
-  ["notes","leasing-vehicle-notes","text"]
+  ["notes","leasing-vehicle-notes","text"],
+  ["inService","leasing-vehicle-in-service","checkbox"]
 ];
 function fillLeasingVehicleForm(v){
   LEASING_VEHICLE_FIELDS.forEach(([key,id,type])=>{
     const el = document.getElementById(id);
     if(!el) return;
+    if(type==="checkbox"){ el.checked = !!(v && v[key]); return; }
     if(!v){ el.value = type==="text" && key==="group" ? "גף טכני" : ""; return; }
     el.value = type==="number" ? (v[key] ?? "") : (v[key] || "");
   });
@@ -10073,7 +10106,9 @@ async function openLeasingVehicleEdit(id){
 async function saveLeasingVehicle(){
   const data = {};
   LEASING_VEHICLE_FIELDS.forEach(([key,id,type])=>{
-    const raw = document.getElementById(id).value.trim();
+    const el = document.getElementById(id);
+    if(type==="checkbox"){ data[key] = el.checked; return; }
+    const raw = el.value.trim();
     data[key] = type==="number" ? (raw===""?null:Number(raw)) : raw;
   });
   if(data.name.length<2){ toast("נא למלא שם/סוג רכב"); return; }
