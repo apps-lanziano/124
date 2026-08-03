@@ -1506,7 +1506,6 @@ nav{
         <button class="cmd-tab" id="votab-maint" onclick="voTab('maint')">🔧 אחזקה</button>
         <button class="cmd-tab" id="votab-leasing" onclick="voTab('leasing')">🚗 ליסינג</button>
         <button class="cmd-tab" id="votab-licenses" onclick="voTab('licenses')">🪪 רישיונות והסמכות</button>
-        <button class="cmd-tab" id="votab-morningcheck" onclick="voTab('morningcheck')">📋 מסדר בוקר</button>
       </div>
 
       <!-- PANE: OVERVIEW -->
@@ -1569,18 +1568,24 @@ nav{
         </select>
         <div id="vo-licenses-list"></div>
       </div>
+    </section>
 
-      <!-- PANE: DAILY MORNING ROLLCALL — מ״ע אחזקה מסמן נוכחות/חיסור לכל חיילי הטייסת -->
-      <div class="admin-pane" id="vopane-morningcheck">
-        <div class="cmd-section-title" id="mc-title">📋 מסדר בוקר</div>
-        <div class="cmd-kpis" id="mc-kpis"></div>
-        <div class="search-box">
-          <span class="search-ic">🔍</span>
-          <input type="text" id="mc-search" placeholder="חיפוש לפי שם…" oninput="renderMorningRollcallList()">
+    <!-- ===== DAILY MORNING ROLLCALL — מסך נפרד למ״ע אחזקה, לא חלק ממסך הרכבים ===== -->
+    <section class="screen" id="scr-morning-rollcall">
+      <div class="sec-head">
+        <div>
+          <h2>מסדר בוקר 📋</h2>
+          <p>נוכחות/חיסור לכלל חיילי הטייסת · דיווח למפקדי הסככות</p>
         </div>
-        <div id="mc-list"></div>
-        <button class="m-btn primary" style="width:100%;margin-top:14px" onclick="sendMorningRollcallReport()">📤 שליחת דיווח למפקדי הסככות</button>
       </div>
+      <div class="cmd-section-title" id="mc-title">📋 מסדר בוקר</div>
+      <div class="cmd-kpis" id="mc-kpis"></div>
+      <div class="search-box">
+        <span class="search-ic">🔍</span>
+        <input type="text" id="mc-search" placeholder="חיפוש לפי שם…" oninput="renderMorningRollcallList()">
+      </div>
+      <div id="mc-list"></div>
+      <button class="m-btn primary" style="width:100%;margin-top:14px" onclick="sendMorningRollcallReport()">📤 שליחת דיווח למפקדי הסככות</button>
     </section>
 
     <!-- ===== MAINTENANCE DEPT — MAINT TAB (מ״ע אחזקה: הזמנת חומרים + מעקב כלים מוטוריים) ===== -->
@@ -1714,6 +1719,7 @@ nav{
     <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic">🏛️</span><span>אחראי הדרכה</span></button>
     <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic">🚙</span><span>רכבים</span></button>
     <button class="nav-btn hidden" id="nav-maint-dept" data-scr="scr-maint-dept" onclick="go('scr-maint-dept',this)"><span class="ic">🔧</span><span>אחזקה</span></button>
+    <button class="nav-btn hidden" id="nav-morningcheck" data-scr="scr-morning-rollcall" onclick="go('scr-morning-rollcall',this)"><span class="ic">📋</span><span>מסדר בוקר</span></button>
     <button class="nav-btn hidden" id="nav-binui-admin" data-scr="scr-binui-admin" onclick="go('scr-binui-admin',this)"><span class="ic">🚧</span><span>תקלות בינוי</span><span class="nav-badge hidden" id="badge-binui-admin">0</span></button>
     <button class="nav-btn hidden" id="nav-vo-team" onclick="openVoTeamMgmt()"><span class="ic">👥</span><span>צוות</span></button>
     <button class="nav-btn hidden" id="nav-budget-officer" data-scr="scr-budget-officer" onclick="go('scr-budget-officer',this)"><span class="ic">💰</span><span>תקציבים</span></button>
@@ -3850,6 +3856,7 @@ function logout(){
   document.getElementById("nav-admin").classList.add("hidden");
   document.getElementById("nav-vehicle-officer").classList.add("hidden");
   document.getElementById("nav-maint-dept").classList.add("hidden");
+  document.getElementById("nav-morningcheck").classList.add("hidden");
   document.getElementById("nav-binui-admin").classList.add("hidden");
   document.getElementById("nav-vo-team").classList.add("hidden");
   document.getElementById("nav-budget-officer").classList.add("hidden");
@@ -3892,11 +3899,12 @@ function go(id, btn){
   if(id==="scr-training") renderTrainingView();
   if(id==="scr-vehicle-officer") renderVoOverview();
   if(id==="scr-maint-dept") renderMaterials();
+  if(id==="scr-morning-rollcall") renderMorningRollcall();
   if(id==="scr-binui-admin") renderBinuiFaultsAdmin();
   if(id==="scr-budget-officer") renderBoOverview();
   if(id==="scr-rollcall") renderRollcallPage();
   if(id==="scr-users") renderUsersAdmin();
-  if(id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-binui-admin" && id!=="scr-budget-officer" && id!=="scr-users"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי מ״ע אחזקה/תקלות בינוי/אחראי תקציבים (אין להם סככה)
+  if(id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-morning-rollcall" && id!=="scr-binui-admin" && id!=="scr-budget-officer" && id!=="scr-users"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי מ״ע אחזקה/תקלות בינוי/אחראי תקציבים (אין להם סככה)
   // כפתור "לדשבורד" — מוצג בכל מסך שאינו הדשבורד, רק למי שיש לו דשבורד מפקד (nav-cmd גלוי)
   const backBtn = document.getElementById("back-to-dash");
   if(backBtn){
@@ -6679,6 +6687,7 @@ async function applyMaintCommanderPowers(){
   document.getElementById("hdr-rank").textContent = "🔧 מ״ע אחזקה";
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
   document.getElementById("nav-maint-dept").classList.remove("hidden");
+  document.getElementById("nav-morningcheck").classList.remove("hidden");
   document.getElementById("nav-binui-admin").classList.remove("hidden");
   await ensureShed2Seed();
   await ensureAllShedsSeed();   // רכבים/רישיונות נשלפים מכל המסגרות
@@ -6715,7 +6724,7 @@ async function ownerLogin(){
   document.getElementById("hdr-rank").textContent = "👑 מנהל מערכת";
   document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
-  ["nav-users","nav-admin","nav-vehicle-officer","nav-maint-dept","nav-binui-admin","nav-budget-officer","nav-rollcall"]
+  ["nav-users","nav-admin","nav-vehicle-officer","nav-maint-dept","nav-morningcheck","nav-binui-admin","nav-budget-officer","nav-rollcall"]
     .forEach(id=>document.getElementById(id).classList.remove("hidden"));
   await ensureShed2Seed();
   await ensureAllShedsSeed();
@@ -6967,7 +6976,7 @@ async function impersonateUser(shedId, name){
   isVehicleOfficer = false; isBudgetOfficer = false;
   currentShed = shed; enteredRole = person.role;
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.remove("hidden"));
-  ["nav-cmd","nav-admin","nav-vehicle-officer","nav-maint-dept","nav-binui-admin",
+  ["nav-cmd","nav-admin","nav-vehicle-officer","nav-maint-dept","nav-morningcheck","nav-binui-admin",
    "nav-vo-team","nav-budget-officer","nav-rollcall","nav-users","nav-tools","nav-vehicles"]
     .forEach(id=>document.getElementById(id).classList.add("hidden"));
   await loadRuntimeLists();
@@ -7088,6 +7097,7 @@ async function techOfficerLogin(){
   document.getElementById("nav-admin").classList.remove("hidden");
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
   document.getElementById("nav-maint-dept").classList.remove("hidden");
+  document.getElementById("nav-morningcheck").classList.remove("hidden");
   document.getElementById("nav-binui-admin").classList.remove("hidden");
   document.getElementById("nav-budget-officer").classList.remove("hidden");
   document.getElementById("nav-rollcall").classList.remove("hidden");
@@ -9587,7 +9597,6 @@ async function renderVoOverview(){
   if(!box) return;
   box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען נתונים מכל המסגרות…</div>';
 
-  const feed = [];
   let totalVehicles = 0, vehExpired = 0, vehSoon = 0, testExpired = 0, testSoon = 0;
   const shedRows = [];
 
@@ -9599,40 +9608,65 @@ async function renderVoOverview(){
     for(const v of vehicles){
       const st = vehicleStatus(v);
       if(order[st.cls] < order[shedWorst]) shedWorst = st.cls;
-      if(st.cls==="r" || st.cls==="y"){
-        feed.push({cls:st.cls, ic: v.testDate && st.tag.includes("טסט") ? "🛂" : "🚙", title:`${v.name} — ${shed.name}`, sub:st.tag, tag: st.cls==="r"?"דחוף":st.tag, go:"vehicles"});
-      }
       if(st.tag.includes("טסט")){ if(st.cls==="r") testExpired++; else if(st.cls==="y") testSoon++; }
       else if(st.cls==="r") vehExpired++; else if(st.cls==="y") vehSoon++;
     }
     shedRows.push({shed, count: vehicles.length, worst: shedWorst});
   }
 
-  const [licenses, mcMarks] = await Promise.all([getVoLicenses(), getMorningRollcall()]);
+  const [licenses, mcMarks, materials, motorTools] = await Promise.all([
+    getVoLicenses(), getMorningRollcall(), getMaterials(), getMotorTools(),
+  ]);
   const mcMarkedCount = Object.keys(mcMarks).length;
+
+  // רישיונות מקובצים לפי סוג — כדי שלא יופיעו N שורות נפרדות (למשל 5 "פ.ת" בנפרד)
   let licExpired = 0, licSoon = 0, licValid = 0;
-  const shedName = id => (SHEDS.find(s=>s.id===id)||{}).name || id;
+  const licTypeGroups = {}; // type -> {r,y}
   for(const l of licenses){
     const st = licenseStatus(l);
-    if(st.cls==="r"){ licExpired++; feed.push({cls:"r", ic:"🪪", title:`${l.person} — ${l.type}`, sub:st.tag, tag:"דחוף", go:"licenses"}); }
-    else if(st.cls==="y"){ licSoon++; feed.push({cls:"y", ic:"🪪", title:`${l.person} — ${l.type}`, sub:st.tag, tag:st.tag, go:"licenses"}); }
+    if(st.cls==="r"){ licExpired++; (licTypeGroups[l.type] ||= {r:0,y:0}).r++; }
+    else if(st.cls==="y"){ licSoon++; (licTypeGroups[l.type] ||= {r:0,y:0}).y++; }
     else licValid++;
   }
 
-  feed.sort((a,b)=> (a.cls===b.cls?0:(a.cls==="r"?-1:1)));
+  let matWaiting = 0, matOrdered = 0;
+  for(const m of materials){
+    const cls = materialStatusClass(m.status);
+    if(cls==="r") matWaiting++; else if(cls==="y") matOrdered++;
+  }
+
+  let toolExpired = 0, toolSoon = 0;
+  for(const t of motorTools){
+    const cls = motorToolStatus(t).cls;
+    if(cls==="r") toolExpired++; else if(cls==="y") toolSoon++;
+  }
+
+  // כל התראה מוצגת כבאנר יחיד מרוכז לפי קטגוריה — לא שורה בנפרד לכל פריט —
+  // כדי למנוע עומס ויזואלי (למשל 5 רישיונות מאותו סוג = באנר אחד, לא 5 שורות)
+  const groups = [];
+  const subParts = (r,y,rLabel,yLabel) => [r?`${r} ${rLabel}`:null, y?`${y} ${yLabel}`:null].filter(Boolean).join(", ");
+  if(vehExpired+vehSoon>0) groups.push({cls: vehExpired?"r":"y", ic:"🚙", title:`${vehExpired+vehSoon} רכבים דורשים טיפול`, sub: subParts(vehExpired,vehSoon,"פג תוקף","בקרוב"), go:"vehicles"});
+  if(testExpired+testSoon>0) groups.push({cls: testExpired?"r":"y", ic:"🛂", title:`${testExpired+testSoon} טסטים דורשים טיפול`, sub: subParts(testExpired,testSoon,"עבר המועד","בקרוב"), go:"vehicles"});
+  for(const type of Object.keys(licTypeGroups)){
+    const {r,y} = licTypeGroups[type];
+    groups.push({cls: r?"r":"y", ic:"🪪", title:`${r+y} רישיונות ${type} דורשים טיפול`, sub: subParts(r,y,"פג תוקף","עומד לפוג"), go:"licenses"});
+  }
+  if(matWaiting+matOrdered>0) groups.push({cls: matWaiting?"r":"y", ic:"📦", title:`${matWaiting+matOrdered} הזמנות חומרים דורשות מעקב`, sub: subParts(matWaiting,matOrdered,"ממתינות להזמנה","הוזמנו — ממתינות לקבלה"), go:"materials"});
+  if(toolExpired+toolSoon>0) groups.push({cls: toolExpired?"r":"y", ic:"🔧", title:`${toolExpired+toolSoon} כלים מוטוריים דורשים טיפול`, sub: subParts(toolExpired,toolSoon,"פג תוקף כיול","כיול קרוב"), go:"tools"});
+  groups.sort((a,b)=> (a.cls===b.cls?0:(a.cls==="r"?-1:1)));
 
   let score = 100;
-  score -= (vehExpired+testExpired+licExpired)*3 + (vehSoon+testSoon+licSoon)*1;
+  score -= (vehExpired+testExpired+licExpired+matWaiting+toolExpired)*3 + (vehSoon+testSoon+licSoon+matOrdered+toolSoon)*1;
   score = Math.max(0, Math.min(100, Math.round(score)));
 
   const dateStr = new Date().toLocaleDateString("he-IL",{weekday:"long", day:"numeric", month:"long"});
-  const feedHtml = feed.length===0
-    ? `<div class="db-all-clear"><b>✅ הכל תקין</b><span>אין רכבים, טסטים או רישיונות שדורשים תשומת לב כרגע</span></div>`
-    : `<div class="db-feed">${feed.map(f=>`
-        <div class="db-feed-item ${f.cls}" onclick="voTab('${f.go}')">
+  const feedHtml = groups.length===0
+    ? `<div class="db-all-clear"><b>✅ הכל תקין</b><span>אין רכבים, טסטים, רישיונות, חומרים או כלים שדורשים תשומת לב כרגע</span></div>`
+    : `<div class="db-feed">${groups.map(f=>`
+        <div class="db-feed-item ${f.cls}" onclick="voOverviewGo('${f.go}')">
           <div class="db-feed-ic">${f.ic}</div>
           <div class="db-feed-body"><b>${escapeHTML(f.title)}</b><span>${escapeHTML(f.sub)}</span></div>
-          <div class="db-feed-tag">${escapeHTML(f.tag)}</div>
+          <div class="db-feed-tag">${f.cls==="r"?"דחוף":"קרוב"}</div>
           <div class="db-feed-chev">‹</div>
         </div>`).join("")}</div>`;
 
@@ -9667,30 +9701,40 @@ async function renderVoOverview(){
       </div>
     </div>
 
-    <div class="cmd-section-title">${feed.length? '🔴 דורש טיפול עכשיו' : '✅ סטטוס כללי'}${feed.length?` <span style="background:var(--red-soft);color:var(--red);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${feed.length}</span>`:''}</div>
+    <div class="cmd-section-title">${groups.length? '🔴 דורש טיפול עכשיו' : '✅ סטטוס כללי'}${groups.length?` <span style="background:var(--red-soft);color:var(--red);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${groups.length}</span>`:''}</div>
     ${feedHtml}
 
     <div class="cmd-section-title">📊 תמונת מצב</div>
     <div class="db-board">
-      <div class="db-board-card" onclick="voTab('vehicles')">
+      <div class="db-board-card" onclick="voOverviewGo('vehicles')">
         <div class="db-board-top"><div class="db-board-ic">🚙</div><div class="db-board-dot ${vehExpired?'r':vehSoon?'y':'g'}"></div></div>
         <div class="db-board-num">${totalVehicles}</div>
         <div class="db-board-label">רכבים · ${vehExpired+vehSoon? (vehExpired+vehSoon)+' דורשים טיפול' : 'הכל בתוקף'}</div>
       </div>
-      <div class="db-board-card" onclick="voTab('vehicles')">
+      <div class="db-board-card" onclick="voOverviewGo('vehicles')">
         <div class="db-board-top"><div class="db-board-ic">🛂</div><div class="db-board-dot ${testExpired?'r':testSoon?'y':'g'}"></div></div>
         <div class="db-board-num">${totalVehicles}</div>
         <div class="db-board-label">טסטים · ${testExpired+testSoon? (testExpired+testSoon)+' דורשים טיפול' : 'הכל בתוקף'}</div>
       </div>
-      <div class="db-board-card" onclick="voTab('licenses')">
+      <div class="db-board-card" onclick="voOverviewGo('licenses')">
         <div class="db-board-top"><div class="db-board-ic">🪪</div><div class="db-board-dot ${licExpired?'r':licSoon?'y':'g'}"></div></div>
         <div class="db-board-num">${licenses.length}</div>
         <div class="db-board-label">רישיונות · ${licExpired+licSoon? (licExpired+licSoon)+' דורשים טיפול' : 'הכל בתוקף'}</div>
       </div>
-      <div class="db-board-card" onclick="voTab('morningcheck')">
+      <div class="db-board-card" onclick="voOverviewGo('morningcheck')">
         <div class="db-board-top"><div class="db-board-ic">📋</div><div class="db-board-dot ${mcMarkedCount===0?'y':'g'}"></div></div>
         <div class="db-board-num">${mcMarkedCount}</div>
         <div class="db-board-label">מסדר בוקר · ${mcMarkedCount===0? 'טרם בוצע היום' : 'סומנו עד כה'}</div>
+      </div>
+      <div class="db-board-card" onclick="voOverviewGo('materials')">
+        <div class="db-board-top"><div class="db-board-ic">📦</div><div class="db-board-dot ${matWaiting?'r':matOrdered?'y':'g'}"></div></div>
+        <div class="db-board-num">${materials.length}</div>
+        <div class="db-board-label">הזמנות חומרים · ${matWaiting+matOrdered? (matWaiting+matOrdered)+' דורשות מעקב' : 'הכל התקבל'}</div>
+      </div>
+      <div class="db-board-card" onclick="voOverviewGo('tools')">
+        <div class="db-board-top"><div class="db-board-ic">🔧</div><div class="db-board-dot ${toolExpired?'r':toolSoon?'y':'g'}"></div></div>
+        <div class="db-board-num">${motorTools.length}</div>
+        <div class="db-board-label">כלים מוטוריים · ${toolExpired+toolSoon? (toolExpired+toolSoon)+' דורשים טיפול' : 'הכל בתוקף'}</div>
       </div>
     </div>
 
@@ -9700,8 +9744,17 @@ async function renderVoOverview(){
   `;
 }
 
+/* ניווט מכרטיסי הדשבורד/הבאנרים המרוכזים — חלקם בתוך מסך הרכבים (voTab),
+   וחלקם במסכים נפרדים לגמרי (אחזקה/מסדר בוקר) */
+function voOverviewGo(target){
+  if(target==="materials"){ go("scr-maint-dept", document.getElementById("nav-maint-dept")); mdTab("materials"); }
+  else if(target==="tools"){ go("scr-maint-dept", document.getElementById("nav-maint-dept")); mdTab("tools"); }
+  else if(target==="morningcheck"){ go("scr-morning-rollcall", document.getElementById("nav-morningcheck")); }
+  else voTab(target);
+}
+
 function voTab(which){
-  ["overview","vehicles","maint","leasing","licenses","morningcheck"].forEach(w=>{
+  ["overview","vehicles","maint","leasing","licenses"].forEach(w=>{
     document.getElementById("votab-"+w).classList.toggle("active", which===w);
     document.getElementById("vopane-"+w).classList.toggle("active", which===w);
   });
@@ -9710,7 +9763,6 @@ function voTab(which){
   if(which==="maint") renderMaintVehicles();
   if(which==="leasing") renderLeasingVehicles();
   if(which==="licenses") renderVoLicenses();
-  if(which==="morningcheck") renderMorningRollcall();
 }
 
 /* ===== מסדר בוקר יומי — מ״ע אחזקה מסמן נוכחות/חיסור לכל חיילי הטייסת =====
@@ -9728,7 +9780,8 @@ async function renderMorningRollcall(){
   listBox.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען את כל חיילי הטייסת…</div>';
   const [marks, perShed] = await Promise.all([
     getMorningRollcall(),
-    Promise.all(SHEDS.map(async s=>({shed:s, pers:(await sGetIn(s.id,"cfg_personnel"))||[]}))),
+    // רק חיילים — לא מפקדים ולא אנשי מילואים (מסדר בוקר הוא לחיילי הטייסת בלבד)
+    Promise.all(SHEDS.map(async s=>({shed:s, pers:((await sGetIn(s.id,"cfg_personnel"))||[]).filter(p=>p.role==="חייל" && !p.reserve)}))),
   ]);
   mcCache = {marks, perShed};
   renderMorningRollcallList();
@@ -9816,9 +9869,13 @@ function vehicleDateCheck(dateStr, alertDays, label){
   if(!dateStr) return null;
   const today = new Date(); today.setHours(0,0,0,0);
   const d = Math.round((new Date(dateStr+"T00:00:00")-today)/86400000);
-  if(d<0) return {tag:"🔴 "+label+": עבר המועד ("+Math.abs(d)+" ימים)", cls:"r"};
-  if(d<=alertDays) return {tag:"🟡 "+label+" בעוד "+d+" ימים", cls:"y"};
-  return {tag:"🟢 "+label+" בתוקף", cls:"g"};
+  // התאריך המלא מצורף כמאמר-מוסגר בסוף — vehicleShortLabel כבר מסיר מאמר-מוסגר
+  // אחרון (לתווית הפילה הקצרה), כך שהתאריך מתווסף רק לתצוגה המורחבת בלי לשנות
+  // את הפילה הקצרה
+  const dateFmt = new Date(dateStr+"T00:00:00").toLocaleDateString('he-IL');
+  if(d<0) return {tag:"🔴 "+label+": עבר המועד ("+Math.abs(d)+" ימים, "+dateFmt+")", cls:"r"};
+  if(d<=alertDays) return {tag:"🟡 "+label+" בעוד "+d+" ימים ("+dateFmt+")", cls:"y"};
+  return {tag:"🟢 "+label+" בתוקף ("+dateFmt+")", cls:"g"};
 }
 /* בודק את יעד הטיפול לפי ק"מ/שעות מנוע (kmService מול km או hours, לפי מה שקיים) */
 /* בדיקת טיפול לפי שעות מנוע (פיקו וכו') — לפי "טיפול הבא בשעו"מ". */
@@ -9827,9 +9884,10 @@ function vehicleHoursCheck(v){
   if(v.hoursNext==null || v.hoursNext==="") return null;
   const cur = (v.hours!=null && v.hours!=="") ? Number(v.hours) : 0;
   const left = Number(v.hoursNext) - cur;
-  if(left<0) return {tag:'🔴 עבר יעד הטיפול (חריגה '+Math.abs(left).toFixed(1)+' שעו"מ)', cls:"r"};
-  if(left<=VEHICLES_HOURS_ALERT_BUFFER) return {tag:'🟡 עוד '+left.toFixed(1)+' שעו"מ לטיפול', cls:"y"};
-  return {tag:'🟢 טיפול (שעו"מ) בתוקף — עוד '+left.toFixed(1), cls:"g"};
+  const target = 'יעד: '+Number(v.hoursNext).toLocaleString()+' שעו"מ';
+  if(left<0) return {tag:'🔴 עבר יעד הטיפול (חריגה '+Math.abs(left).toFixed(1)+' שעו"מ, '+target+')', cls:"r"};
+  if(left<=VEHICLES_HOURS_ALERT_BUFFER) return {tag:'🟡 עוד '+left.toFixed(1)+' שעו"מ לטיפול ('+target+')', cls:"y"};
+  return {tag:'🟢 טיפול (שעו"מ) בתוקף — עוד '+left.toFixed(1)+' ('+target+')', cls:"g"};
 }
 /* רכב מבוסס-שעות (יש לו "טיפול הבא בשעו"מ") — הסטטוס נקבע לפי שעות בלבד. */
 function isHoursVehicle(v){ return v.hoursNext!=null && v.hoursNext!==""; }
@@ -9838,9 +9896,10 @@ function vehicleKmCheck(v){
   const current = (v.km!=null && v.km!=="") ? Number(v.km) : ((v.hours!=null && v.hours!=="") ? Number(v.hours) : null);
   if(current==null) return null;
   const left = Number(v.kmService) - current;
-  if(left<0) return {tag:'🔴 עבר יעד ק"מ/שעו"מ (חריגה '+Math.abs(left)+')', cls:"r"};
-  if(left<=VEHICLES_KM_ALERT_BUFFER) return {tag:'🟡 עוד '+left+' ק"מ/שעו"מ לטיפול', cls:"y"};
-  return {tag:'🟢 ק"מ/שעו"מ לטיפול בתוקף', cls:"g"};
+  const target = 'יעד: '+Number(v.kmService).toLocaleString()+' ק"מ';
+  if(left<0) return {tag:'🔴 עבר יעד ק"מ/שעו"מ (חריגה '+Math.abs(left)+', '+target+')', cls:"r"};
+  if(left<=VEHICLES_KM_ALERT_BUFFER) return {tag:'🟡 עוד '+left+' ק"מ/שעו"מ לטיפול ('+target+')', cls:"y"};
+  return {tag:'🟢 ק"מ/שעו"מ לטיפול בתוקף ('+target+')', cls:"g"};
 }
 function vehicleStatusDetailed(v, checks){
   const order = {r:0,y:1,g:2};
@@ -9914,11 +9973,14 @@ function vehicleCardHtml(v, actionsHtml, checks){
   if(v.winterCheck) metaParts.push("❄️ ביקורת חורף: "+new Date(v.winterCheck+"T00:00:00").toLocaleDateString('he-IL'));
   const metaRows = metaParts.map(m=>`<div class="cert-chip-row" style="margin-bottom:6px"><span class="cert-chip-name">${m}</span></div>`).join("");
 
+  // align-items:flex-start (במקום ה-center המשותף) — כי שורת השם כאן יכולה
+  // להיות בת 2-3 שורות (שם + מספרים + טיפול חודשי), ו-center היה ממרכז את
+  // הפילה/כפתורים/החץ מול האמצע שלה ויוצר רושם של "תצוגה שבורה"/חתוכה
   return `<div class="cert-sum-card" onclick="this.classList.toggle('open')">
-    <div class="cert-sum-head">
+    <div class="cert-sum-head" style="align-items:flex-start">
       <div class="avatar" style="width:40px;height:40px;font-size:18px">🚙</div>
-      <div class="cert-sum-name"><b>${escapeHTML(v.name)}</b><span>${numberLine}</span>${monthlyCheck ? `<span style="display:block">${monthlyCheck.tag}</span>` : ""}</div>
-      <span class="pill ${short.cls}" style="flex-shrink:0;white-space:nowrap">${escapeHTML(short.txt)}</span>
+      <div class="cert-sum-name"><b>${escapeHTML(v.name)}</b><span>${numberLine}</span>${monthlyCheck ? `<span style="display:block;margin-top:2px">${monthlyCheck.tag}</span>` : ""}</div>
+      <span class="pill ${short.cls}" style="flex-shrink:0;white-space:nowrap;max-width:96px;overflow:hidden;text-overflow:ellipsis;display:inline-block" title="${escapeHTML(short.txt)}">${escapeHTML(short.txt)}</span>
       <div onclick="event.stopPropagation()" style="display:flex;gap:6px">${actionsHtml}</div>
       <span class="cert-sum-chev">‹</span>
     </div>

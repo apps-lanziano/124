@@ -1,6 +1,10 @@
 /* בקשות מ״ע אחזקה: (3) סטטוס "בטיפול" שמשתיק התראות פג-תוקף, (4) שינוי שם
    "רכבי אחזקה" -> "רכבי צ'", (5) תצוגה ראשית: מס' רישוי אזרחי+צבאי יחד +
-   תאריך טיפול חודשי; בהרחבה: טסט/טיפול שנתי/קוד דלק/קוד רכב. */
+   תאריך טיפול חודשי; בהרחבה: טסט/טיפול שנתי/קוד דלק/קוד רכב.
+   בקשת המשך: (D) תיקון באג תצוגה חתוכה בכרטיס רכב (פס עליון עם שם ארוך +
+   pill רחב ללא הגבלה) — pill מוגבל ברוחב עם title, וכותרת הכרטיס מיושרת
+   ל-flex-start. (E) בהרחבה, כל שורת בדיקה כוללת גם תיאור יחסי וגם תאריך/
+   יעד מוחלט (למשל "טסט בעוד חודש, 21.9.2026"). */
 import { launchBrowser, APP_URL } from '../lib/pw.mjs';
 const b = await launchBrowser();
 const results = [];
@@ -137,6 +141,51 @@ await p.waitForTimeout(250);
   record("saveMaintVehicle שומר inService:true כשהצ'קבוקס מסומן",
     out.saved.length===1 && out.saved[0].inService===true, JSON.stringify(out.saved));
   console.log("errs8",errs);
+}
+
+// 9. תיקון תצוגה חתוכה: pill מוגבל ברוחב עם title, וכותרת הכרטיס לא ממורכזת
+//    אנכית כשלשם יש כמה שורות (מונע "נבלעות"/חפיפה של השם והפעולות)
+{
+  const out = await p.evaluate(()=>{
+    const v = { name:"משאית תדלוק כבדה עם שם ארוך במיוחד לבדיקת גלישה", number:"111-222-33", militaryNumber:"9876543-פ",
+      monthlyService: new Date(Date.now()+5*86400000).toISOString().slice(0,10) };
+    const html = vehicleCardHtml(v, "", ["monthlyService"]);
+    const pillMatch = html.match(/<span class="pill[^"]*" style="([^"]*)"/);
+    return {
+      pillStyle: pillMatch ? pillMatch[1] : "",
+      headHasFlexStart: /cert-sum-head" style="align-items:flex-start"/.test(html),
+      hasTitleAttr: /class="pill[^"]*"[^>]*title="/.test(html),
+    };
+  });
+  record("pill הסטטוס מוגבל ברוחב עם ellipsis (לא נשבר החוצה עם שם ארוך)",
+    out.pillStyle.includes("max-width") && out.pillStyle.includes("ellipsis"), JSON.stringify(out));
+  record("לפיל יש title (טקסט מלא בטולטיפ) כשהטקסט נחתך", out.hasTitleAttr, JSON.stringify(out));
+  record("כותרת הכרטיס מיושרת ל-flex-start (לא center) כדי לא לשבור שם רב-שורות",
+    out.headHasFlexStart, JSON.stringify(out));
+}
+
+// 10. בהרחבה: כל שורת בדיקה כוללת גם ניסוח יחסי וגם תאריך/יעד מוחלט
+{
+  const out = await p.evaluate(()=>{
+    const future = new Date(); future.setMonth(future.getMonth()+1);
+    const futureStr = future.toISOString().slice(0,10);
+    const futureFmt = future.toLocaleDateString('he-IL');
+    const v = { name:"רכב", number:"111", testDate: futureStr, km: 9000, kmService: 10000, hours: 480, hoursNext: 500 };
+    const dateCheck = vehicleDateCheck(v.testDate, 45, "טסט");
+    const kmCheck = vehicleKmCheck(v);
+    const hoursCheck = vehicleHoursCheck(v);
+    return {
+      dateTag: dateCheck && dateCheck.tag, futureFmt,
+      kmTag: kmCheck && kmCheck.tag,
+      hoursTag: hoursCheck && hoursCheck.tag,
+    };
+  });
+  record("בדיקת תאריך (טסט/טיפול): כוללת גם 'בעוד X ימים' וגם תאריך מוחלט",
+    /בעוד \d+ ימים/.test(out.dateTag) && out.dateTag.includes(out.futureFmt), JSON.stringify(out));
+  record("בדיקת ק\"מ: כוללת גם ספירה יחסית וגם יעד ק\"מ מוחלט",
+    /ק"מ/.test(out.kmTag) && out.kmTag.includes("יעד:") && out.kmTag.includes("10,000"), JSON.stringify(out));
+  record("בדיקת שעות מנוע: כוללת גם ספירה יחסית וגם יעד שעו\"מ מוחלט",
+    /שעו"מ/.test(out.hoursTag) && out.hoursTag.includes("יעד:") && out.hoursTag.includes("500"), JSON.stringify(out));
 }
 
 console.log("\n=== SUMMARY ===");
