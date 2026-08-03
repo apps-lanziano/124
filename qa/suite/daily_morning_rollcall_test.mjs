@@ -308,6 +308,45 @@ async function page(){
   console.log("errs10",errs); await p.close();
 }
 
+// 11. באנר הנוכחים/נעדרים ניתן ללחיצה, ופותח פירוט מלא (מי נוכח ומי נעדר) —
+//     לא רק ספירה ורשימת הנעדרים בלבד
+{
+  const {p, errs} = await page();
+  const out = await p.evaluate(async ()=>{
+    currentShed = { id:"shed1", name:"סככה 1" };
+    PERSONNEL = [
+      {name:"דני", role:"חייל"},
+      {name:"רון", role:"חייל"},
+      {name:"עידן", role:"מפקד"},        // לא בסבב הנוכחות -> לא אמור להופיע בפירוט
+      {name:"עמית", role:"חייל", reserve:true}, // מילואים -> לא אמור להופיע בפירוט
+    ];
+    window.sGet = async (k) => k==="daily_rollcall_report"
+      ? {dayKey: rollcallDayKey(), sentAt: Date.now(), presentCount:1, absentCount:1, totalCount:2, absentNames:["רון"]}
+      : null;
+
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('scr-cmd').classList.add('active');
+    await renderMorningRollcallReport();
+    const cardHtml = document.getElementById("mc-report-content").innerHTML;
+    const hasClickHandler = cardHtml.includes('onclick="openMorningRollcallDetail()"');
+
+    await openMorningRollcallDetail();
+    const modalOpen = document.getElementById("mc-detail-modal").classList.contains("open");
+    const listHtml = document.getElementById("mc-detail-list").innerHTML;
+    const subText = document.getElementById("mc-detail-sub").textContent;
+
+    return { hasClickHandler, modalOpen, listHtml, subText };
+  });
+  record("הבאנר עצמו ניתן ללחיצה (onclick לפתיחת הפירוט)", out.hasClickHandler, JSON.stringify({hasClickHandler:out.hasClickHandler}));
+  record("לחיצה פותחת את המודל עם סיכום הנוכחים", out.modalOpen && out.subText.includes("1/2"), out.subText);
+  record("הפירוט מציג את מי שנוכח ומי שנעדר (לא רק ספירה)",
+    out.listHtml.includes("דני") && out.listHtml.includes("נוכח") && out.listHtml.includes("רון") && out.listHtml.includes("נעדר"),
+    out.listHtml.slice(0,400));
+  record("הפירוט לא כולל מפקדים/מילואים — רק חיילי הסבב עצמו",
+    !out.listHtml.includes("עידן") && !out.listHtml.includes("עמית"), out.listHtml.slice(0,400));
+  console.log("errs11",errs); await p.close();
+}
+
 console.log("\n=== SUMMARY ===");
 let allPass = true;
 for(const r of results){

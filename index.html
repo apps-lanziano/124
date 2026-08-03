@@ -1864,6 +1864,18 @@ nav{
     </div>
   </div>
 
+  <!-- פירוט מסדר בוקר — נפתח בלחיצה על באנר הנוכחים/נעדרים בדשבורד המפקד -->
+  <div class="modal-bg" id="mc-detail-modal">
+    <div class="modal">
+      <h3>📋 מסדר בוקר — פירוט נוכחות</h3>
+      <div class="m-sub" id="mc-detail-sub"></div>
+      <div class="sig-detail-list" id="mc-detail-list"></div>
+      <div class="modal-actions">
+        <button class="m-btn ghost" onclick="document.getElementById('mc-detail-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MORE SHEET -->
   <div class="sheet-bg" id="more-sheet" onclick="if(event.target===this)this.classList.remove('open')">
     <div class="sheet">
@@ -2293,8 +2305,10 @@ nav{
           <input type="checkbox" id="leasing-vehicle-in-service" style="width:auto;margin:0">
           <span>🔧 הרכב כרגע בטיפול <span style="color:var(--ink-3);font-weight:400">— משתיק התראות פג-תוקף עד שיוסר הסימון</span></span>
         </label>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מס' רכב</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מס' רכב אזרחי</label>
         <input class="m-input" id="leasing-vehicle-number" type="text" placeholder="מס' רכב אזרחי" style="margin-bottom:8px">
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🪖 מס' רכב צבאי</label>
+        <input class="m-input" id="leasing-vehicle-military-number" type="text" placeholder="מס' רכב צבאי (אם יש)" style="margin-bottom:8px">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏢 חברת ליסינג</label>
         <input class="m-input" id="leasing-vehicle-company" type="text" placeholder="שלמה / אלדן / פרי..." style="margin-bottom:8px">
         <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -5372,14 +5386,39 @@ async function renderMorningRollcallReport(wrapId, contentId){
       <div class="kpi good"><b>${report.presentCount}</b><span>נוכחים</span></div>
       <div class="kpi bad"><b>${report.absentCount}</b><span>נעדרים</span></div>
     </div>
-    <div class="cert-sum-card" style="cursor:default">
+    <div class="cert-sum-card" onclick="openMorningRollcallDetail()">
       <div class="cert-sum-head">
         <div class="avatar" style="width:40px;height:40px;font-size:18px">📋</div>
         <div class="cert-sum-name"><b>נשלח ע"י מ״ע אחזקה</b><span>שעה ${sentTime}</span></div>
+        <span class="cert-sum-chev">‹</span>
       </div>
       ${absentHtml}
     </div>
   `;
+}
+
+/* פירוט מלא של דיווח מסדר הבוקר של היום — נפתח בלחיצה על הבאנר (במקום
+   שהמפקד יראה רק את מספרי הנוכחים/נעדרים ורשימת הנעדרים). רשימת הנוכחים
+   לא נשמרת בדיווח עצמו (רק שמות הנעדרים, כדי לא לשכפל את כל הרוסטר בכל
+   כתיבה) — נגזרת כאן מרשימת הצוות של המסגרת פחות שמות הנעדרים. */
+async function openMorningRollcallDetail(){
+  if(!currentShed) return;
+  const report = await sGet("daily_rollcall_report");
+  if(!report || report.dayKey !== rollcallDayKey()) return;
+  const sentTime = new Date(report.sentAt).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"});
+  document.getElementById("mc-detail-sub").textContent = `${report.presentCount}/${report.totalCount} נוכחים · נשלח ע"י מ״ע אחזקה בשעה ${sentTime}`;
+  const absentSet = new Set(report.absentNames||[]);
+  const roster = PERSONNEL.filter(p=>p.role==="חייל" && !p.reserve).map(p=>p.name);
+  const rows = roster.map(name=>{
+    const absent = absentSet.has(name);
+    return `<div class="sig-detail-row">
+      <div class="avatar">${initials(name)}</div>
+      <div class="nm">${escapeHTML(name)}</div>
+      ${absent ? `<span class="no">❌ נעדר</span>` : `<span class="ok">✓ נוכח</span>`}
+    </div>`;
+  }).join("");
+  document.getElementById("mc-detail-list").innerHTML = rows || `<div style="text-align:center;padding:14px;color:var(--ink-3)">אין נתוני צוות</div>`;
+  document.getElementById("mc-detail-modal").classList.add("open");
 }
 
 /* signature detail per event */
@@ -10337,6 +10376,7 @@ let leasingVehicleEditId = null;
 const LEASING_VEHICLE_FIELDS = [
   ["holder","leasing-vehicle-holder","text"], ["group","leasing-vehicle-group","text"],
   ["name","leasing-vehicle-name","text"], ["number","leasing-vehicle-number","text"],
+  ["militaryNumber","leasing-vehicle-military-number","text"],
   ["company","leasing-vehicle-company","text"], ["vehicleCode","leasing-vehicle-code","text"],
   ["fuelCode","leasing-vehicle-fuel-code","text"], ["nextService","leasing-vehicle-next-service","date"],
   ["testDate","leasing-vehicle-test","date"],
