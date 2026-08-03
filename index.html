@@ -3190,6 +3190,32 @@ async function sDel(key, shared=true){ return sDelRaw(shedKey(key), shared); }
 async function sGetIn(shedId, key){ return sGetRaw(shedId + "_" + key); }
 async function sSetIn(shedId, key, val){ return sSetRaw(shedId + "_" + key, val); }
 
+/* קריאה עמידה לכשל רשת חולף — לקריאות שתוצאה ריקה שלהן מתפרשת כ"לא ביצע"
+   (למשל חתימות קרא-וחתום). כשל רשת בודד מתוך פיזור מקבילי גדול (Promise.all
+   על כל אנשי הצוות) לא אמור לגרום לאדם ספציפי "להיראות" כמי שלא חתם, אף
+   שבפועל הוא חתם וזו רק קריאת הרשת הבודדת שלו שנכשלה זמנית. לא נשענת על
+   הדגל הגלובלי fbReadFailed (לא בטוח בפיזור מקבילי — כשל של קריאה אחת
+   עלול "להידבק" בטעות לקריאה אחרת שמתבצעת באותו רגע ומצליחה): לכל קריאה
+   כאן יש מונה נסיונות משלה. נכנעת בחזרה למטמון המקומי/null אחרי 3 נסיונות,
+   בדיוק כמו sGetRaw הרגילה — רק בלי ה"תקיעה" אחרי הנסיון הראשון. */
+/* מריצה readFn עד 3 פעמים אם היא נכשלת בכשל-רשת חולף (fbReadFailed) —
+   באותו רעיון בדיוק כמו onceFlagDone, רק גנרית לכל קריאה. עוברת דרך
+   sGet/sGetIn עצמן (לא מדלגת עליהן עם קוד Firestore נפרד), כדי שהתנהגות
+   הבדיקות (שממוקאות את sGet/sGetIn) לא תשתנה — רק מוסיפה נסיון חוזר
+   כשקריאה אמיתית נכשלת. */
+async function sGetResilientVia(readFn, attempts=3){
+  let val = null;
+  for(let attempt=0; attempt<attempts; attempt++){
+    fbReadFailed = false;
+    val = await readFn();
+    if(val !== null || !fbReadFailed) return val;
+    await new Promise(r=>setTimeout(r, 300*(attempt+1)));
+  }
+  return val;
+}
+async function sGetSigs(personName){ return (await sGetResilientVia(() => sGet("sigs_"+safeName(personName)))) || {}; }
+async function sGetSigsIn(shedId, personName){ return (await sGetResilientVia(() => sGetIn(shedId, "sigs_"+safeName(personName)))) || {}; }
+
 /* ===== כתיבה בטוחה לרשימת הצוות — מניעת "דריסת עדכון" (lost update) =====
    כל מכשיר מחזיק בזיכרון עותק שלם של PERSONNEL, ורשימת הצוות נשמרת
    כמסמך אחד. כתיבה של העותק שבזיכרון במלואו דורסת כל שינוי שמכשיר אחר
@@ -4019,7 +4045,7 @@ async function getEvents(){ return (await sGet("safety_events")) || []; }
 async function renderDocs(){
   if(isVehicleOfficer && !currentShed) return renderVoDocs();
   const events = await getEvents();
-  const reads = (await sGet("sigs_"+safeName(user))) || {};
+  const reads = await sGetSigs(user);
   const list = document.getElementById("docs-list");
   const isCmdr = userRole === "מפקד";
   /* למפקד: כמה חתמו על כל פריט, ישר כאן במסך קרא-וחתום — כדי שכפתור
@@ -4027,8 +4053,8 @@ async function renderDocs(){
   let sigMap = null;
   if(isCmdr && PERSONNEL.length){
     sigMap = {};
-    const sigsArr = await Promise.all(PERSONNEL.map(p => sGet("sigs_"+safeName(p.name))));
-    PERSONNEL.forEach((p,i)=>{ sigMap[p.name] = sigsArr[i] || {}; });
+    const sigsArr = await Promise.all(PERSONNEL.map(p => sGetSigs(p.name)));
+    PERSONNEL.forEach((p,i)=>{ sigMap[p.name] = sigsArr[i]; });
   }
   // search box visibility
   document.getElementById("safety-search-box").style.display = events.length>=4 ? "flex" : "none";
@@ -4171,7 +4197,7 @@ async function openReader(id, adminSourced){
     if(!currentDoc) return;
     fileData = await sGet("safety_ev_"+currentDoc.id);
   }
-  const reads = adminSourced ? {} : ((await sGet("sigs_"+safeName(user))) || {});
+  const reads = adminSourced ? {} : (await sGetSigs(user));
   const sig = reads[currentDoc.id];
   document.getElementById("reader-title").textContent = currentDoc.title;
   const ftype = currentDoc.ftype || "image";
@@ -5438,7 +5464,7 @@ async function showSigDetail(evId){
   let signedCount = 0;
   const unsigned = [];
   for(const p of PERSONNEL){
-    const sigs = (await sGet("sigs_"+safeName(p.name))) || {};
+    const sigs = await sGetSigs(p.name);
     const s = sigs[evId];
     if(s) signedCount++;
     else unsigned.push(p.name);
@@ -5656,7 +5682,7 @@ async function updateBadges(){
   // safety: unsigned events for this user
   if(user){
     const events = await getEvents();
-    const reads = (await sGet("sigs_"+safeName(user))) || {};
+    const reads = await sGetSigs(user);
     const unsigned = events.filter(e=>!reads[e.id]).length;
     setBadge("badge-safety", unsigned);
     // morning: open tasks today
@@ -5688,7 +5714,7 @@ async function updateAppBadge(){
     let count = 0;
     // קרא-וחתום שטרם אושרו ע"י המשתמש
     const events = await getEvents();
-    const reads = (await sGet("sigs_"+safeName(user))) || {};
+    const reads = await sGetSigs(user);
     count += events.filter(e=>!reads[e.id]).length;
     // הודעות שהמשתמש עדיין לא צפה בהן
     const isDeptUnit = !!(currentShed && currentShed.isDept);
@@ -6625,8 +6651,8 @@ async function openSafetyReport(){
 
   const events = await getEvents();
   const people = PERSONNEL.slice();
-  const sigsArr = await Promise.all(people.map(p => sGet("sigs_"+safeName(p.name))));
-  const sigsBy = {}; people.forEach((p,i)=> sigsBy[p.name] = sigsArr[i] || {});
+  const sigsArr = await Promise.all(people.map(p => sGetSigs(p.name)));
+  const sigsBy = {}; people.forEach((p,i)=> sigsBy[p.name] = sigsArr[i]);
   const total = people.length;
   const now = new Date();
 
@@ -6742,8 +6768,8 @@ async function remindNonSigners(eventId, eventTitle){
     ]);
     if(!personnel.length) continue;
     if(!events.some(e=>e.id===eventId)) continue;   // הפריט לא הגיע לסככה זו — אין למי לתזכר, זה כשל הפצה ולא כשל חתימה
-    const sigsArr = await Promise.all(personnel.map(p => sGetIn(shed.id, "sigs_"+safeName(p.name))));
-    const missing = personnel.filter((p,i)=> !((sigsArr[i]||{})[eventId]));
+    const sigsArr = await Promise.all(personnel.map(p => sGetSigsIn(shed.id, p.name)));
+    const missing = personnel.filter((p,i)=> !(sigsArr[i][eventId]));
     if(missing.length) perShed.push({shed, missing});
   }
   if(!perShed.length){ toast("כולם חתמו — אין למי לשלוח תזכורת ✅"); return; }
@@ -8508,8 +8534,8 @@ async function computeAdminSigLog(){
       sGetIn(shed.id, "safety_events").then(v=>v||[]),
     ]);
     const eventIds = new Set(events.map(e=>e.id));
-    const sigsArr = await Promise.all(personnel.map(p => sGetIn(shed.id, "sigs_"+safeName(p.name))));
-    const sigsBy = {}; personnel.forEach((p,i)=> sigsBy[p.name] = sigsArr[i] || {});
+    const sigsArr = await Promise.all(personnel.map(p => sGetSigsIn(shed.id, p.name)));
+    const sigsBy = {}; personnel.forEach((p,i)=> sigsBy[p.name] = sigsArr[i]);
     return {shed, personnel, eventIds, sigsBy};
   }));
   return {adminItems, perShed};
@@ -8635,7 +8661,7 @@ async function openAdminAlerts(){
       sGetIn(shed.id, "certs_list").then(v=>v||[])
     ]);
     // unsigned — שולפים את חתימות כל הצוות פעם אחת במקביל, לא בכל אירוע מחדש
-    const sigsList = await Promise.all(personnel.map(p => sGetIn(shed.id, "sigs_"+safeName(p.name))));
+    const sigsList = await Promise.all(personnel.map(p => sGetSigsIn(shed.id, p.name)));
     for(const e of events){
       let missing=0;
       sigsList.forEach(s=>{ if(!(s||{})[e.id]) missing++; });
@@ -8671,8 +8697,8 @@ async function renderTrends(boxId){
 
   // signatures % (במקביל)
   let totalSigs=0;
-  const sigsArrT = await Promise.all(PERSONNEL.map(p => sGet("sigs_"+safeName(p.name))));
-  sigsArrT.forEach(sigs=>{ const s = sigs || {}; totalSigs += events.filter(e=>s[e.id]).length; });
+  const sigsArrT = await Promise.all(PERSONNEL.map(p => sGetSigs(p.name)));
+  sigsArrT.forEach(s=>{ totalSigs += events.filter(e=>s[e.id]).length; });
   const maxSigs = PERSONNEL.length*events.length;
   const sigPct = maxSigs ? Math.round(totalSigs/maxSigs*100) : 0;
 
@@ -8884,10 +8910,10 @@ async function computeAlerts(){
 
   const events = await getEvents();
   // unsigned events (per soldier count) — שולפים את החתימות של כולם פעם אחת במקביל, לא בכל אירוע מחדש
-  const sigsArrA = await Promise.all(PERSONNEL.map(p => sGet("sigs_"+safeName(p.name))));
+  const sigsArrA = await Promise.all(PERSONNEL.map(p => sGetSigs(p.name)));
   for(const e of events){
     let missing = 0;
-    sigsArrA.forEach(sigs=>{ if(!(sigs||{})[e.id]) missing++; });
+    sigsArrA.forEach(sigs=>{ if(!sigs[e.id]) missing++; });
     const age = eventAgeDays(e.id);
     if(missing>0 && age>=3){
       alerts.push({icon:"⏳", text:`"${e.title}" — ${missing} לא חתמו (${age} ימים)`, level:"high"});
@@ -11359,7 +11385,7 @@ async function renderProfileBanner(){
   if(!me || userRole==="מפקד" || isAdmin){ area.innerHTML=""; return; }
   // signatures count
   const events = await getEvents();
-  const sigs = (await sGet("sigs_"+safeName(user))) || {};
+  const sigs = await sGetSigs(user);
   const signed = events.filter(e=>sigs[e.id]).length;
   // release countdown
   let releaseHtml = "";
