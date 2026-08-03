@@ -201,6 +201,49 @@ await p.waitForTimeout(250);
     /שעו"מ/.test(out.hoursTag) && out.hoursTag.includes("יעד:") && out.hoursTag.includes("500"), JSON.stringify(out));
 }
 
+// 12. רכבי ליסינג: מס' רכב צבאי נוסף לטופס (חסר עד עכשיו, בשונה מ-VO/רכבי צ'),
+//     מוצג בכותרת המכווצת יחד עם המס' האזרחי, ולא משוכפל בהרחבה
+{
+  const out = await p.evaluate(async ()=>{
+    const hasFormField = !!document.getElementById("leasing-vehicle-military-number");
+    const inFields = LEASING_VEHICLE_FIELDS.some(f=>f[0]==="militaryNumber" && f[1]==="leasing-vehicle-military-number");
+
+    const v = { name:"רכב ליסינג", number:"111-22-333", militaryNumber:"9876543", testDate:"2030-01-01" };
+    const html = vehicleCardHtml(v, "", ["testDate"]);
+    const headHtml = html.split('cert-sum-detail')[0];
+    const detailHtml = html.split('cert-sum-detail')[1] || "";
+    const civilianOccurrences = (html.match(/111-22-333/g)||[]).length;
+    const militaryOccurrences = (html.match(/9876543/g)||[]).length;
+
+    // שמירה בפועל דרך הטופס — לא רק שהשדה קיים ב-DOM
+    const store = { "admin_leasing_vehicles": [] };
+    window.sGetRaw = async k => store[k] ?? null;
+    window.sSetRaw = async (k,v2) => { store[k]=v2; return true; };
+    window.toast = ()=>{}; window.renderLeasingVehicles = ()=>{};
+    document.getElementById("leasing-vehicle-holder").value = "איש-דוגמה";
+    document.getElementById("leasing-vehicle-name").value = "רכב ליסינג";
+    document.getElementById("leasing-vehicle-number").value = "111-22-333";
+    document.getElementById("leasing-vehicle-military-number").value = "9876543";
+    leasingVehicleEditId = null;
+    await saveLeasingVehicle();
+
+    return {
+      hasFormField, inFields,
+      headHasCivilian: headHtml.includes("111-22-333"), headHasMilitary: headHtml.includes("9876543"),
+      civilianOccurrences, militaryOccurrences,
+      savedMilitaryNumber: store["admin_leasing_vehicles"][0] && store["admin_leasing_vehicles"][0].militaryNumber,
+    };
+  });
+  record("שדה מס' רכב צבאי קיים בטופס רכב ליסינג ורשום ב-LEASING_VEHICLE_FIELDS",
+    out.hasFormField && out.inFields, JSON.stringify(out));
+  record("שני המספרים (אזרחי+צבאי) מוצגים יחד בכותרת המכווצת",
+    out.headHasCivilian && out.headHasMilitary, JSON.stringify(out));
+  record("אין שכפול — כל מספר מופיע פעם אחת בלבד בכל הכרטיס (לא גם בהרחבה)",
+    out.civilianOccurrences===1 && out.militaryOccurrences===1, JSON.stringify(out));
+  record("saveLeasingVehicle שומר את מס' הרכב הצבאי בפועל",
+    out.savedMilitaryNumber==="9876543", JSON.stringify(out));
+}
+
 console.log("\n=== SUMMARY ===");
 let allPass = true;
 for(const r of results){
