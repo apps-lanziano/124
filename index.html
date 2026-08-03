@@ -6354,6 +6354,30 @@ function onReserveToggle(){
 /* בעת תיקון שם איש צוות — מעדכן את השם בכל הרשומות שמפנות אליו לפי שם (הסמכות, נט"מים, מילואים),
    כדי שתיקון שם לא ינתק אותו מהיסטוריית ההסמכות/שיבוצים הקיימת שלו */
 async function renamePersonEverywhere(oldName, newName){
+  // חתימות/אישורי קריאה על קרא-וחתום — נשמרות במסמך נפרד לפי שם (sigs_<שם>),
+  // ולכן בלי המיגרציה הזו שינוי שם "מאבד" את כל היסטוריית החתימות של האדם:
+  // הן ממשיכות להישמר תחת המסמך הישן, בעוד כל מסך שמציג סטטוס קורא לפי
+  // השם החדש ורואה מסמך ריק — נראה כאילו לא חתם, למרות שבפועל כן חתם.
+  const oldSigsKey = "sigs_"+safeName(oldName), newSigsKey = "sigs_"+safeName(newName);
+  if(oldSigsKey !== newSigsKey){
+    const oldSigs = await sGet(oldSigsKey);
+    if(oldSigs && Object.keys(oldSigs).length){
+      const newSigs = (await sGet(newSigsKey)) || {};
+      await sSet(newSigsKey, {...oldSigs, ...newSigs});
+      await sSet(oldSigsKey, {});   // מרוקן את המסמך הישן — לא משאיר עותק כפול שיבלבל בהמשך
+    }
+  }
+
+  // כשירות חיילים (שמיעה/מטווח) — נשמר במסמך אחד גלובלי, ממופה לפי שם. אותה
+  // בעיה בדיוק: בלי מיגרציה, הרשומה נשארת "תקועה" תחת השם הישן.
+  const medData = (await sGet("medchecks")) || {};
+  const oldMedKey = safeName(oldName), newMedKey = safeName(newName);
+  if(oldMedKey !== newMedKey && medData[oldMedKey]){
+    medData[newMedKey] = {...medData[oldMedKey], ...(medData[newMedKey]||{})};
+    delete medData[oldMedKey];
+    await sSet("medchecks", medData);
+  }
+
   const certs = (await sGet("certs_list")) || [];
   let certsChanged = false;
   certs.forEach(c=>{ if(c.person===oldName){ c.person=newName; certsChanged=true; } });
