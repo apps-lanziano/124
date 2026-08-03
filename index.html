@@ -1491,6 +1491,37 @@ nav{
 
     </section>
 
+    <!-- ===== VEHICLE OFFICER — OVERVIEW (מסך נפרד, לא לשונית בתוך "רכבים") =====
+         כולל גם את מה שהיה על "עמוד מפקד" (scr-cmd) למ״ע אחזקה — מגמות הצוות
+         הפנימי שלו, דיווח מסדר בוקר אחרון, ופעולות ניהול — כי המפקד הזה כבר
+         לא רואה את scr-cmd (מוסר לגמרי, ראו doLogin). ===== -->
+    <section class="screen" id="scr-vo-overview">
+      <div class="sec-head">
+        <div>
+          <h2>סקירה 📊</h2>
+          <p>תמונת מצב מרוכזת · מ״ע אחזקה</p>
+        </div>
+      </div>
+
+      <div id="vo-overview-content"></div>
+
+      <div id="vo-trends-content"><div class="skel-card"><div class="skel-line w40"></div><div class="skel-line w90"></div></div><div class="skel-card"><div class="skel-line w60"></div><div class="skel-line w90"></div></div></div>
+
+      <!-- דיווח מסדר בוקר יומי — הצוות הפנימי של מ״ע אחזקה עצמו -->
+      <div id="vo-mc-report-wrap" class="hidden">
+        <div class="cmd-section-title">📋 מסדר בוקר — דיווח אחרון</div>
+        <div id="vo-mc-report-content"></div>
+      </div>
+
+      <!-- ADMIN quick actions -->
+      <div class="cmd-section-title">⚙️ ניהול</div>
+      <div class="admin-grid">
+        <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic">📋</span><b>תדריך בוקר</b><span>תדריך יומי לצוות</span></button>
+        <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
+        <button class="admin-card" onclick="openTrainingLinkAdd()"><span class="a-ic">🔗</span><b>קישור הדרכה</b><span>הוספת קישור לצוות שלי</span></button>
+      </div>
+    </section>
+
     <!-- ===== VEHICLE OFFICER / MAINT DEPT — VEHICLES TAB (מ״ע אחזקה, לשעבר קצין רכב) ===== -->
     <section class="screen" id="scr-vehicle-officer">
       <div class="sec-head">
@@ -1501,20 +1532,14 @@ nav{
       </div>
 
       <div class="cmd-tabs" style="margin-bottom:16px">
-        <button class="cmd-tab active" id="votab-overview" onclick="voTab('overview')">📊 סקירה</button>
-        <button class="cmd-tab" id="votab-vehicles" onclick="voTab('vehicles')">🚙 תפעוליים</button>
+        <button class="cmd-tab active" id="votab-vehicles" onclick="voTab('vehicles')">🚙 תפעוליים</button>
         <button class="cmd-tab" id="votab-maint" onclick="voTab('maint')">🔧 אחזקה</button>
         <button class="cmd-tab" id="votab-leasing" onclick="voTab('leasing')">🚗 ליסינג</button>
         <button class="cmd-tab" id="votab-licenses" onclick="voTab('licenses')">🪪 רישיונות והסמכות</button>
       </div>
 
-      <!-- PANE: OVERVIEW -->
-      <div class="admin-pane active" id="vopane-overview">
-        <div id="vo-overview-content"></div>
-      </div>
-
       <!-- PANE: VEHICLES (תפעוליים לפי סככה: מ"ע/טרקטור/פיקו/לפיד) -->
-      <div class="admin-pane" id="vopane-vehicles">
+      <div class="admin-pane active" id="vopane-vehicles">
         <div class="admin-actions-row">
           <button class="admin-card" style="grid-column:1/-1" onclick="openVoVehicleAdd()"><span class="a-ic">➕</span><b>הוספת רכב</b><span>שיוך לסככה + כל פרטי המעקב</span></button>
         </div>
@@ -1717,6 +1742,7 @@ nav{
     <button class="nav-btn" id="nav-bdays" data-scr="scr-bdays" onclick="go('scr-bdays',this)"><span class="ic">🎂</span><span>ימי הולדת</span></button>
     <button class="nav-btn" onclick="openMoreSheet()"><span class="ic">⋯</span><span>עוד</span></button>
     <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic">🏛️</span><span>אחראי הדרכה</span></button>
+    <button class="nav-btn hidden" id="nav-vo-overview" data-scr="scr-vo-overview" onclick="go('scr-vo-overview',this)"><span class="ic">📊</span><span>סקירה</span></button>
     <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic">🚙</span><span>רכבים</span></button>
     <button class="nav-btn hidden" id="nav-maint-dept" data-scr="scr-maint-dept" onclick="go('scr-maint-dept',this)"><span class="ic">🔧</span><span>אחזקה</span></button>
     <button class="nav-btn hidden" id="nav-morningcheck" data-scr="scr-morning-rollcall" onclick="go('scr-morning-rollcall',this)"><span class="ic">📋</span><span>מסדר בוקר</span></button>
@@ -3789,13 +3815,14 @@ async function doLogin(){
     document.getElementById("sheet-duties").classList.toggle("hidden", isTrainingUnit);
     document.getElementById("sheet-medchecks").classList.toggle("hidden", isTrainingUnit);
 
-    /* אחראי הדרכה — דשבורד המפקד ("תמונת מצב — מפקד") מוסר לגמרי.
-       הוא הציג מגמות וחתימות של מסגרת "הדרכה" בלבד — מסגרת תפקידית עם
-       צוות זעיר — לצד "מרכז שליטה" הכלל-טייסתי. שני דשבורדים עם אותן
-       כותרות ונתונים שונים בתכלית הם בדיוק מקור הבלבול. נשאר דשבורד אחד:
-       מרכז השליטה, שמציג את כל הטייסת. (כפתור "לדשבורד" נסמך על נראות
-       nav-cmd ולכן נעלם מעצמו.) */
-    if(userRole === "מפקד" && currentShed.isTraining){
+    /* אחראי הדרכה ומ״ע אחזקה — דשבורד המפקד ("תמונת מצב — מפקד") מוסר לגמרי.
+       הוא הציג מגמות וחתימות של המסגרת התפקידית הזעירה שלהן בלבד — לצד
+       דשבורד ייעודי-יותר שכבר יש להן (מרכז שליטה / סקירת מ״ע אחזקה). שני
+       דשבורדים עם אותן כותרות ונתונים שונים בתכלית הם בדיוק מקור הבלבול.
+       למ״ע אחזקה, מה שהיה כאן (מגמות + דיווח מסדר בוקר + ניהול) עבר למסך
+       "סקירה" (scr-vo-overview). (כפתור "לדשבורד" נסמך על נראות nav-cmd
+       ולכן נעלם מעצמו.) */
+    if(userRole === "מפקד" && (currentShed.isTraining || currentShed.isMaint)){
       document.getElementById("nav-cmd").classList.add("hidden");
     }
 
@@ -3809,7 +3836,7 @@ async function doLogin(){
     if(userRole === "מפקד" && currentShed.isTraining){
       landingScreen = "scr-admin"; landingBtn = document.getElementById("nav-admin");
     } else if(userRole === "מפקד" && currentShed.isMaint){
-      landingScreen = "scr-vehicle-officer"; landingBtn = document.getElementById("nav-vehicle-officer");
+      landingScreen = "scr-vo-overview"; landingBtn = document.getElementById("nav-vo-overview");
     } else if(userRole === "מפקד"){
       landingScreen = "scr-cmd"; landingBtn = document.querySelector('[data-scr="scr-cmd"]');
     } else {
@@ -3854,6 +3881,7 @@ function logout(){
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.remove("hidden"));
   document.getElementById("nav-cmd").classList.add("hidden");
   document.getElementById("nav-admin").classList.add("hidden");
+  document.getElementById("nav-vo-overview").classList.add("hidden");
   document.getElementById("nav-vehicle-officer").classList.add("hidden");
   document.getElementById("nav-maint-dept").classList.add("hidden");
   document.getElementById("nav-morningcheck").classList.add("hidden");
@@ -3897,14 +3925,15 @@ function go(id, btn){
   if(id==="scr-tools") renderToolsPage();
   if(id==="scr-vehicles") vehiclesPageTab("vehicles");
   if(id==="scr-training") renderTrainingView();
-  if(id==="scr-vehicle-officer") renderVoOverview();
+  if(id==="scr-vo-overview"){ renderVoOverview(); renderTrends("vo-trends-content"); renderMorningRollcallReport("vo-mc-report-wrap","vo-mc-report-content"); }
+  if(id==="scr-vehicle-officer") renderVoVehicles();
   if(id==="scr-maint-dept") renderMaterials();
   if(id==="scr-morning-rollcall") renderMorningRollcall();
   if(id==="scr-binui-admin") renderBinuiFaultsAdmin();
   if(id==="scr-budget-officer") renderBoOverview();
   if(id==="scr-rollcall") renderRollcallPage();
   if(id==="scr-users") renderUsersAdmin();
-  if(id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-morning-rollcall" && id!=="scr-binui-admin" && id!=="scr-budget-officer" && id!=="scr-users"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי מ״ע אחזקה/תקלות בינוי/אחראי תקציבים (אין להם סככה)
+  if(id!=="scr-vo-overview" && id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-morning-rollcall" && id!=="scr-binui-admin" && id!=="scr-budget-officer" && id!=="scr-users"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי מ״ע אחזקה/תקלות בינוי/אחראי תקציבים (אין להם סככה)
   // כפתור "לדשבורד" — מוצג בכל מסך שאינו הדשבורד, רק למי שיש לו דשבורד מפקד (nav-cmd גלוי)
   const backBtn = document.getElementById("back-to-dash");
   if(backBtn){
@@ -5325,8 +5354,8 @@ async function renderCommander(){
    מוצג רק אם הדיווח מ"יום המסדר" הנוכחי (rollcallDayKey, מתחלף ב-7:00);
    דיווח מיום קודם נחשב לא-רלוונטי יותר ולא מוצג, בדיוק כמו שהמסך של
    מ״ע אחזקה עצמו מתאפס אוטומטית באותו רגע. */
-async function renderMorningRollcallReport(){
-  const wrap = document.getElementById("mc-report-wrap");
+async function renderMorningRollcallReport(wrapId, contentId){
+  const wrap = document.getElementById(wrapId || "mc-report-wrap");
   if(!wrap || !currentShed) return;
   const report = await sGet("daily_rollcall_report");
   if(!report || report.dayKey !== rollcallDayKey()){
@@ -5338,7 +5367,7 @@ async function renderMorningRollcallReport(){
   const absentHtml = report.absentNames.length
     ? `<div style="font-size:12px;color:var(--ink-3);line-height:1.8;margin-top:4px">${report.absentNames.map(escapeHTML).join(" · ")}</div>`
     : "";
-  document.getElementById("mc-report-content").innerHTML = `
+  document.getElementById(contentId || "mc-report-content").innerHTML = `
     <div class="cmd-kpis">
       <div class="kpi good"><b>${report.presentCount}</b><span>נוכחים</span></div>
       <div class="kpi bad"><b>${report.absentCount}</b><span>נעדרים</span></div>
@@ -6685,6 +6714,7 @@ async function applyTrainingCommanderPowers(){
 async function applyMaintCommanderPowers(){
   isVehicleOfficer = true;
   document.getElementById("hdr-rank").textContent = "🔧 מ״ע אחזקה";
+  document.getElementById("nav-vo-overview").classList.remove("hidden");
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
   document.getElementById("nav-maint-dept").classList.remove("hidden");
   document.getElementById("nav-morningcheck").classList.remove("hidden");
@@ -6724,7 +6754,7 @@ async function ownerLogin(){
   document.getElementById("hdr-rank").textContent = "👑 מנהל מערכת";
   document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
-  ["nav-users","nav-admin","nav-vehicle-officer","nav-maint-dept","nav-morningcheck","nav-binui-admin","nav-budget-officer","nav-rollcall"]
+  ["nav-users","nav-admin","nav-vo-overview","nav-vehicle-officer","nav-maint-dept","nav-morningcheck","nav-binui-admin","nav-budget-officer","nav-rollcall"]
     .forEach(id=>document.getElementById(id).classList.remove("hidden"));
   await ensureShed2Seed();
   await ensureAllShedsSeed();
@@ -6976,7 +7006,7 @@ async function impersonateUser(shedId, name){
   isVehicleOfficer = false; isBudgetOfficer = false;
   currentShed = shed; enteredRole = person.role;
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.remove("hidden"));
-  ["nav-cmd","nav-admin","nav-vehicle-officer","nav-maint-dept","nav-morningcheck","nav-binui-admin",
+  ["nav-cmd","nav-admin","nav-vo-overview","nav-vehicle-officer","nav-maint-dept","nav-morningcheck","nav-binui-admin",
    "nav-vo-team","nav-budget-officer","nav-rollcall","nav-users","nav-tools","nav-vehicles"]
     .forEach(id=>document.getElementById(id).classList.add("hidden"));
   await loadRuntimeLists();
@@ -7095,6 +7125,7 @@ async function techOfficerLogin(){
   document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
   document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
   document.getElementById("nav-admin").classList.remove("hidden");
+  document.getElementById("nav-vo-overview").classList.remove("hidden");
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
   document.getElementById("nav-maint-dept").classList.remove("hidden");
   document.getElementById("nav-morningcheck").classList.remove("hidden");
@@ -8552,8 +8583,8 @@ async function openAdminAlerts(){
    ============================================================ */
 
 /* ===== FEATURE 1: TRENDS DASHBOARD — v25: מכלול הנתונים ===== */
-async function renderTrends(){
-  const box = document.getElementById("trends-content");
+async function renderTrends(boxId){
+  const box = document.getElementById(boxId || "trends-content");
   const isDeptUnit = !!(currentShed && currentShed.isDept);
   const events = await getEvents();
   const faults = await getFaults();
@@ -9672,7 +9703,7 @@ async function renderVoOverview(){
 
   const dotCls = w => w==="r"?"bad":w==="y"?"warn":"ok";
   const shedHtml = shedRows.map(({shed,count,worst})=>`
-    <div class="shed-card clickable" onclick="voTab('vehicles')">
+    <div class="shed-card clickable" onclick="voOverviewGo('vehicles')">
       <div class="shed-card-head">
         <h3><span class="shed-num">${shed.id.replace("shed","")}</span>${shed.name}</h3>
         <span class="drill-hint">${count} רכבים ›</span>
@@ -9744,21 +9775,21 @@ async function renderVoOverview(){
   `;
 }
 
-/* ניווט מכרטיסי הדשבורד/הבאנרים המרוכזים — חלקם בתוך מסך הרכבים (voTab),
-   וחלקם במסכים נפרדים לגמרי (אחזקה/מסדר בוקר) */
+/* ניווט מכרטיסי הדשבורד/הבאנרים המרוכזים — הסקירה היא מסך נפרד משלה, כך
+   שכל יעד (רכבים/רישיונות/אחזקה/מסדר בוקר) דורש מעבר-מסך, לא רק החלפת
+   לשונית בתוך אותו מסך */
 function voOverviewGo(target){
   if(target==="materials"){ go("scr-maint-dept", document.getElementById("nav-maint-dept")); mdTab("materials"); }
   else if(target==="tools"){ go("scr-maint-dept", document.getElementById("nav-maint-dept")); mdTab("tools"); }
   else if(target==="morningcheck"){ go("scr-morning-rollcall", document.getElementById("nav-morningcheck")); }
-  else voTab(target);
+  else { go("scr-vehicle-officer", document.getElementById("nav-vehicle-officer")); voTab(target); }
 }
 
 function voTab(which){
-  ["overview","vehicles","maint","leasing","licenses"].forEach(w=>{
+  ["vehicles","maint","leasing","licenses"].forEach(w=>{
     document.getElementById("votab-"+w).classList.toggle("active", which===w);
     document.getElementById("vopane-"+w).classList.toggle("active", which===w);
   });
-  if(which==="overview") renderVoOverview();
   if(which==="vehicles") renderVoVehicles();
   if(which==="maint") renderMaintVehicles();
   if(which==="leasing") renderLeasingVehicles();
@@ -9980,7 +10011,7 @@ function vehicleCardHtml(v, actionsHtml, checks){
     <div class="cert-sum-head" style="align-items:flex-start">
       <div class="avatar" style="width:40px;height:40px;font-size:18px">🚙</div>
       <div class="cert-sum-name"><b>${escapeHTML(v.name)}</b><span>${numberLine}</span>${monthlyCheck ? `<span style="display:block;margin-top:2px">${monthlyCheck.tag}</span>` : ""}</div>
-      <span class="pill ${short.cls}" style="flex-shrink:0;white-space:nowrap;max-width:96px;overflow:hidden;text-overflow:ellipsis;display:inline-block" title="${escapeHTML(short.txt)}">${escapeHTML(short.txt)}</span>
+      <span class="pill ${short.cls}" style="flex-shrink:0;max-width:130px;white-space:normal;line-height:1.3;text-align:center;display:inline-block">${escapeHTML(short.txt)}</span>
       <div onclick="event.stopPropagation()" style="display:flex;gap:6px">${actionsHtml}</div>
       <span class="cert-sum-chev">‹</span>
     </div>

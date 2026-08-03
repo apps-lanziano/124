@@ -1,5 +1,6 @@
-/* מוודא שדשבורד המפקד ("תמונת מצב — מפקד") הוסר מאחראי ההדרכה,
-   ושלא נפגעה שום זהות אחרת: מפקד סככה רגיל, מ״ע אחזקה, וחייל. */
+/* מוודא שדשבורד המפקד ("תמונת מצב — מפקד") הוסר מאחראי ההדרכה ומ״ע אחזקה
+   (שני אלה עברו למסכי הבית הייעודיים שלהם — מרכז שליטה / סקירה), ושלא
+   נפגעה שום זהות אחרת: מפקד סככה רגיל, וחייל. */
 import { launchBrowser, APP_URL } from '../lib/pw.mjs';
 const b = await launchBrowser();
 const results = [];
@@ -33,8 +34,8 @@ async function applyIdentity(p, shed, role){
        "nav-faults","more-faults-item","sheet-naatim","naatim-mgmt-btn"
       ].forEach(id=>document.getElementById(id).classList.add("hidden"));
     }
-    // הענף שנוסף: הסרת דשבורד המפקד מאחראי ההדרכה
-    if(userRole === "מפקד" && currentShed.isTraining){
+    // הענף שנוסף: הסרת דשבורד המפקד מאחראי ההדרכה ומ״ע אחזקה
+    if(userRole === "מפקד" && (currentShed.isTraining || currentShed.isMaint)){
       document.getElementById("nav-cmd").classList.add("hidden");
     }
     if(userRole === "מפקד" && currentShed.isTraining) await applyTrainingCommanderPowers();
@@ -63,12 +64,12 @@ async function applyIdentity(p, shed, role){
   console.log("errs2",errs); await p.close();
 }
 
-// 3. מ״ע אחזקה — לא הושפע (נשאר כפי שהיה)
+// 3. מ״ע אחזקה — דשבורד המפקד מוסתר גם לו (עבר למסך "סקירה" הייעודי)
 {
   const {p, errs} = await page();
   const out = await applyIdentity(p, {id:"maint", name:"מ״ע אחזקה", isMaint:true}, "מפקד");
-  record("מ״ע אחזקה: לא הושפע מהשינוי",
-    out.navCmdHidden===false, JSON.stringify(out));
+  record("מ״ע אחזקה: דשבורד המפקד מוסתר",
+    out.navCmdHidden===true, JSON.stringify(out));
   console.log("errs3",errs); await p.close();
 }
 

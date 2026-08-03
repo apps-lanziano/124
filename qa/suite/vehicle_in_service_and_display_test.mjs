@@ -143,28 +143,41 @@ await p.waitForTimeout(250);
   console.log("errs8",errs);
 }
 
-// 9. תיקון תצוגה חתוכה: pill מוגבל ברוחב עם title, וכותרת הכרטיס לא ממורכזת
-//    אנכית כשלשם יש כמה שורות (מונע "נבלעות"/חפיפה של השם והפעולות)
+// 9. תיקון תצוגה חתוכה: כותרת הכרטיס לא ממורכזת אנכית כשלשם יש כמה שורות
+//    (מונע "נבלעות"/חפיפה של השם והפעולות), והפילה עוברת שורה במקום להיחתך
 {
   const out = await p.evaluate(()=>{
     const v = { name:"משאית תדלוק כבדה עם שם ארוך במיוחד לבדיקת גלישה", number:"111-222-33", militaryNumber:"9876543-פ",
       monthlyService: new Date(Date.now()+5*86400000).toISOString().slice(0,10) };
     const html = vehicleCardHtml(v, "", ["monthlyService"]);
-    const pillMatch = html.match(/<span class="pill[^"]*" style="([^"]*)"/);
+    const pillMatch = html.match(/<span class="pill[^"]*" style="([^"]*)">([^<]*)<\/span>/);
     return {
       pillStyle: pillMatch ? pillMatch[1] : "",
+      pillText: pillMatch ? pillMatch[2] : "",
       headHasFlexStart: /cert-sum-head" style="align-items:flex-start"/.test(html),
-      hasTitleAttr: /class="pill[^"]*"[^>]*title="/.test(html),
     };
   });
-  record("pill הסטטוס מוגבל ברוחב עם ellipsis (לא נשבר החוצה עם שם ארוך)",
-    out.pillStyle.includes("max-width") && out.pillStyle.includes("ellipsis"), JSON.stringify(out));
-  record("לפיל יש title (טקסט מלא בטולטיפ) כשהטקסט נחתך", out.hasTitleAttr, JSON.stringify(out));
+  record("pill הסטטוס עוטף טקסט ארוך (white-space:normal) במקום לחתוך אותו",
+    out.pillStyle.includes("white-space:normal") && !out.pillStyle.includes("ellipsis"), JSON.stringify(out));
+  record("הטקסט בפילה מוצג במלואו — לא נחתך עם '...'",
+    !out.pillText.includes("…") && !out.pillText.endsWith(".."), JSON.stringify(out));
   record("כותרת הכרטיס מיושרת ל-flex-start (לא center) כדי לא לשבור שם רב-שורות",
     out.headHasFlexStart, JSON.stringify(out));
 }
 
-// 10. בהרחבה: כל שורת בדיקה כוללת גם ניסוח יחסי וגם תאריך/יעד מוחלט
+// 10. אותו תיקון, על מקרה קונקרטי שדווח כחתוך: "1 דורשים טיפול" לא נחתך ל-"1 דורשים טיפ.."
+{
+  const out = await p.evaluate(()=>{
+    const v = { name:"רכב", number:"111", testDate:"2000-01-01" };   // בעיה אדומה אחת -> טקסט לא-קצר בפילה
+    const html = vehicleCardHtml(v, "", ["testDate"]);
+    const pillMatch = html.match(/<span class="pill[^"]*"[^>]*>([^<]*)<\/span>/);
+    return { pillText: pillMatch ? pillMatch[1] : "" };
+  });
+  record("טקסט הפילה על רכב עם בעיה אדומה מוצג במלואו, לא נחתך",
+    !out.pillText.endsWith("..") && !out.pillText.includes("…") && out.pillText.length>0, JSON.stringify(out));
+}
+
+// 11. בהרחבה: כל שורת בדיקה כוללת גם ניסוח יחסי וגם תאריך/יעד מוחלט
 {
   const out = await p.evaluate(()=>{
     const future = new Date(); future.setMonth(future.getMonth()+1);
