@@ -1,7 +1,9 @@
 /* מ״ע אחזקה בקשה 1: מסדר בוקר יומי — מ״ע אחזקה מסמן נוכחות/חיסור לכל
-   חיילי הטייסת, שולח דיווח למפקדי הסככות (רק להם, לא לכל הצוות), מפקד
-   רואה מסך משלו, והמסך מתאפס אוטומטית ב-7:00 (לא בחצות). כולל גם בדיקת
-   רגרסיה ל-vehicleStatus שנמצאה תקולה תוך כדי (לא ידע להשתיק "בטיפול"). */
+   חיילי הטייסת (לא מפקדים, לא מילואים), שולח דיווח למפקדי הסככות (רק
+   להם, לא לכל הצוות), מפקד רואה מסך משלו, והמסך מתאפס אוטומטית ב-7:00
+   (לא בחצות). כולל גם בדיקת רגרסיה ל-vehicleStatus שנמצאה תקולה תוך כדי
+   (לא ידע להשתיק "בטיפול"). מסך "מסדר בוקר" הוא מסך עצמאי (scr-morning-
+   rollcall + nav-morningcheck) ולא עוד לשונית בתוך מסך הרכבים. */
 import { launchBrowser, APP_URL } from '../lib/pw.mjs';
 const b = await launchBrowser();
 const results = [];
@@ -35,6 +37,31 @@ async function page(){
   console.log("errs1",errs); await p.close();
 }
 
+// 1ב. הרשימה כוללת רק חיילים — לא מפקדים ולא אנשי מילואים
+{
+  const {p, errs} = await page();
+  const out = await p.evaluate(async ()=>{
+    const store = {};
+    window.sGetRaw = async k => store[k] ?? null;
+    window.sSetRaw = async (k,v) => { store[k]=v; return true; };
+    window.sGetIn = async (shed,k) => k==="cfg_personnel" ? (store[shed+"_pers"]||[]) : null;
+    store["shed1_pers"] = [
+      {name:"דני", role:"חייל"},
+      {name:"רון", role:"מפקד"},
+      {name:"עמית", role:"חייל", reserve:true},
+    ];
+
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('scr-morning-rollcall').classList.add('active');
+    await renderMorningRollcall();
+    return document.getElementById("mc-list").innerHTML;
+  });
+  record("מסדר בוקר: מציג חייל רגיל", out.includes("דני"), out.slice(0,300));
+  record("מסדר בוקר: לא מציג מפקד", !out.includes("רון"), out.slice(0,300));
+  record("מסדר בוקר: לא מציג איש מילואים", !out.includes("עמית"), out.slice(0,300));
+  console.log("errs1b",errs); await p.close();
+}
+
 // 2. סימון נוכחות/חיסור: לחיצה קובעת סטטוס, לחיצה חוזרת מבטלת
 {
   const {p, errs} = await page();
@@ -46,8 +73,7 @@ async function page(){
     store["shed1_pers"] = [{name:"דני", role:"חייל"}];
 
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-    document.getElementById('scr-vehicle-officer').classList.add('active');
-    document.getElementById('vopane-morningcheck').classList.add('active');
+    document.getElementById('scr-morning-rollcall').classList.add('active');
     await renderMorningRollcall();
 
     await setMorningRollcallMark("shed1","דני","present");
@@ -72,13 +98,12 @@ async function page(){
     window.sGetRaw = async k => store[k] ?? null;
     window.sSetRaw = async (k,v) => { store[k]=v; return true; };
     window.sGetIn = async (shed,k) => k==="cfg_personnel" ? (store[shed+"_pers"]||[]) : null;
-    store["shed1_pers"] = [{name:"דני", role:"חייל"}, {name:"רון", role:"מפקד"}];
+    store["shed1_pers"] = [{name:"דני", role:"חייל"}, {name:"רון", role:"חייל"}];
     store["shed2_pers"] = [{name:"עידן", role:"חייל"}];
     store["daily_rollcall_"+rollcallDayKey()] = {"shed1::דני":"present", "shed2::עידן":"absent"};
 
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-    document.getElementById('scr-vehicle-officer').classList.add('active');
-    document.getElementById('vopane-morningcheck').classList.add('active');
+    document.getElementById('scr-morning-rollcall').classList.add('active');
     await renderMorningRollcall();
     const kpisAll = document.getElementById("mc-kpis").innerHTML;
 
@@ -109,12 +134,11 @@ async function page(){
     window.sSetIn = async (shed,k,v) => { store[shed+"_"+k]=v; return true; };
     window.logAdminAction = async()=>{};
     window.toast = (m)=>{ window._t=window._t||[]; window._t.push(m); };
-    store["shed1_pers"] = [{name:"דני", role:"חייל"}, {name:"רון", role:"מפקד"}];
+    store["shed1_pers"] = [{name:"דני", role:"חייל"}, {name:"רון", role:"חייל"}];
     store["shed2_pers"] = [{name:"עידן", role:"חייל"}];
 
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-    document.getElementById('scr-vehicle-officer').classList.add('active');
-    document.getElementById('vopane-morningcheck').classList.add('active');
+    document.getElementById('scr-morning-rollcall').classList.add('active');
     await renderMorningRollcall();
     await setMorningRollcallMark("shed1","דני","present");
     await setMorningRollcallMark("shed1","רון","absent");
@@ -151,8 +175,7 @@ async function page(){
     SHEDS.forEach(s=>{ store[s.id+"_pers"] = [{name:"איש-"+s.id, role:"חייל"}]; });
 
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-    document.getElementById('scr-vehicle-officer').classList.add('active');
-    document.getElementById('vopane-morningcheck').classList.add('active');
+    document.getElementById('scr-morning-rollcall').classList.add('active');
     await renderMorningRollcall();
     window._t = [];
     await sendMorningRollcallReport();
@@ -200,6 +223,46 @@ async function page(){
   record("vehicleStatus: רכב 'בטיפול' לא מוצג כאדום גם בפונקציית הסטטוס הישנה (דשבורד מ״ע אחזקה)",
     out.cls==="n" && out.tag==="בטיפול", JSON.stringify(out));
   console.log("errs7",errs); await p.close();
+}
+
+// 8. מסך "מסדר בוקר" הוא מסך עצמאי — לא לשונית בתוך מסך הרכבים
+{
+  const {p, errs} = await page();
+  const out = await p.evaluate(()=>({
+    hasOwnScreen: !!document.getElementById("scr-morning-rollcall"),
+    hasOwnNavBtn: !!document.getElementById("nav-morningcheck"),
+    tabRemovedFromVehicles: !document.getElementById("votab-morningcheck") && !document.getElementById("vopane-morningcheck"),
+  }));
+  record("קיים מסך עצמאי scr-morning-rollcall וכפתור ניווט משלו", out.hasOwnScreen && out.hasOwnNavBtn, JSON.stringify(out));
+  record("הלשונית הוסרה ממסך הרכבים (votab/vopane-morningcheck לא קיימים יותר)", out.tabRemovedFromVehicles, JSON.stringify(out));
+  console.log("errs8",errs); await p.close();
+}
+
+// 9. דשבורד מ״ע אחזקה: התראות דומות (למשל כמה רישיונות מאותו סוג) מרוכזות
+//    לבאנר יחיד ולא שורה נפרדת לכל פריט, וכולל גם נתוני חומרים/כלים
+{
+  const {p, errs} = await page();
+  const out = await p.evaluate(async ()=>{
+    const store = {};
+    window.sGetIn = async (shed,k) => k==="vehicles_list" ? [] : null;
+    window.sGetRaw = async k => {
+      if(k==="maint_materials_list") return [{id:"m1",name:"שמן",status:"ממתין להזמנה"}];
+      if(k==="maint_motor_tools_list") return [];
+      if(k && k.startsWith("daily_rollcall_")) return {};
+      return null;
+    };
+    // 5 רישיונות מסוג "פ.ת" שפג תוקפם — אמורים להתמזג לבאנר אחד, לא 5 שורות
+    window.getVoLicenses = async () => Array.from({length:5}, (_,i)=>({id:"l"+i, person:"איש-"+i, type:"פ.ת", expiry:"2000-01-01"}));
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('scr-vehicle-officer').classList.add('active');
+    document.getElementById('vopane-overview').classList.add('active');
+    await renderVoOverview();
+    return document.getElementById("vo-overview-content").innerHTML;
+  });
+  const occurrences = (out.match(/רישיונות פ\.ת/g) || []).length;
+  record("5 רישיונות מאותו סוג מוצגים כבאנר מרוכז אחד (לא 5 שורות נפרדות)", occurrences===1 && out.includes("5 רישיונות פ.ת"), "occurrences="+occurrences);
+  record("הדשבורד כולל גם נתוני הזמנות חומרים (לא רק רכבים/רישיונות)", out.includes("הזמנות חומרים"), out.includes("הזמנות חומרים") ? "found" : "missing");
+  console.log("errs9",errs); await p.close();
 }
 
 console.log("\n=== SUMMARY ===");
