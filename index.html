@@ -1557,6 +1557,9 @@ nav{
             <option value="all">סככה: הכל</option>
           </select>
         </div>
+        <select class="m-input" id="vo-license-type-filter" style="margin-bottom:10px" onchange="renderVoLicenses()">
+          <option value="all">הסמכה/רישיון: הכל</option>
+        </select>
         <div id="vo-licenses-list"></div>
       </div>
     </section>
@@ -10269,6 +10272,17 @@ async function renderLeasingVehicles(){
 
 /* רישיונות והסמכות — נתון טייסתי-רוחבי, לא לפי סככה */
 const LICENSE_BANK_DEFAULT = ["רישיון B", "רישיון C", "רישיון נגרר", "מלגזה", "טרקטור", "פיקו", "חשמלית", "ברלינגו", "רנו קנגו", "בוקסטייל(84)", "רב הינע B", "לטיסינו", "פולריס", "רישיון צבאי", "רישיון אזרחי"];
+/* צבע לפי קטגוריה לכל רישיון/הסמכה — כמו הצבעים בהסמכות המקצועיות (CERT_BANK_DEFAULT),
+   אבל כפונקציית-חיפוש נפרדת ולא מוטבעת במחרוזת ה-type השמורה: רישיונות קיימים
+   ב-vo_licenses_list כבר נשמרו בלי קידומת אימוג'י, ושינוי המחרוזת עצמה היה
+   "מפצל" אותם לקבוצה נפרדת מרישיונות חדשים מאותו סוג. */
+const LICENSE_TYPE_COLORS = {
+  "רישיון B":"🟢", "רישיון C":"🟢", "רישיון נגרר":"🟢", "רישיון אזרחי":"🟢",
+  "מלגזה":"🔵", "טרקטור":"🔵", "רב הינע B":"🔵",
+  "חשמלית":"🟠", "ברלינגו":"🟠", "רנו קנגו":"🟠", "בוקסטייל(84)":"🟠", "לטיסינו":"🟠", "פולריס":"🟠", "פיקו":"🟠",
+  "רישיון צבאי":"🟣",
+};
+function licenseTypeEmoji(type){ return LICENSE_TYPE_COLORS[type] || "🪪"; }
 const LICENSE_ALERT_DAYS = 30;
 async function getVoLicenses(){ return (await sGetRaw("vo_licenses_list")) || []; }
 
@@ -10296,7 +10310,7 @@ function groupLicensesByTypeHtml(withStatus, showShedAndActions, sortMode){
   let html = "";
   types.forEach(type=>{
     const list = groups[type].sort(sortFn);
-    html += `<div class="cmd-section-title">🪪 ${escapeHTML(type)} <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${list.length}</span></div>` +
+    html += `<div class="cmd-section-title">${licenseTypeEmoji(type)} ${escapeHTML(type)} <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${list.length}</span></div>` +
       list.map(l=>`
       <div class="cert-sum-card" style="cursor:default">
         <div class="cert-sum-head">
@@ -10322,7 +10336,7 @@ async function populateVoLicensePerson(){
   sel.innerHTML = html;
 }
 function licenseBankOptions(){
-  return '<option value="">— בחר מהמאגר —</option>' + LICENSE_BANK_DEFAULT.map(c=>`<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`).join("");
+  return '<option value="">— בחר מהמאגר —</option>' + LICENSE_BANK_DEFAULT.map(c=>`<option value="${escapeHTML(c)}">${licenseTypeEmoji(c)} ${escapeHTML(c)}</option>`).join("");
 }
 function pickVoLicenseFromBank(){
   const v = document.getElementById("vo-license-bank-pick").value;
@@ -10394,15 +10408,30 @@ async function renderVoLicenses(){
   if(shedSel && shedSel.options.length<=1){
     shedSel.innerHTML = '<option value="all">סככה: הכל</option>' + SHEDS.map(s=>`<option value="${s.id}">${escapeHTML(s.name)}</option>`).join("");
   }
+  // סינון לפי סוג רישיון/הסמכה — נבנה מחדש מהנתונים בפועל (לא רק מהמאגר הקבוע),
+  // כדי לכלול גם סוגים שהוזנו כטקסט חופשי; שומר על הבחירה הנוכחית אם היא עדיין קיימת
+  const typeSel = document.getElementById("vo-license-type-filter");
+  if(typeSel){
+    const prevVal = typeSel.value;
+    const distinctTypes = [...new Set(licenses.map(l=>l.type))].sort((a,b)=>{
+      const ia = LICENSE_BANK_DEFAULT.indexOf(a), ib = LICENSE_BANK_DEFAULT.indexOf(b);
+      return (ia===-1?999:ia) - (ib===-1?999:ib) || a.localeCompare(b,"he");
+    });
+    typeSel.innerHTML = '<option value="all">הסמכה/רישיון: הכל</option>' +
+      distinctTypes.map(t=>`<option value="${escapeHTML(t)}">${licenseTypeEmoji(t)} ${escapeHTML(t)}</option>`).join("");
+    if(distinctTypes.includes(prevVal)) typeSel.value = prevVal;
+  }
   const search = (document.getElementById("vo-license-search")?.value || "").trim();
   const statusFilter = document.getElementById("vo-license-status-filter")?.value || "all";
   const shedFilter = document.getElementById("vo-license-shed-filter")?.value || "all";
+  const typeFilter = document.getElementById("vo-license-type-filter")?.value || "all";
   const sortMode = document.getElementById("vo-license-sort")?.value || "status";
 
   let withStatus = licenses.map(l=>({...l, st: licenseStatus(l)}));
   if(search) withStatus = withStatus.filter(l=>l.person.includes(search));
   if(statusFilter!=="all") withStatus = withStatus.filter(l=>l.st.cls===statusFilter);
   if(shedFilter!=="all") withStatus = withStatus.filter(l=>l.shedId===shedFilter);
+  if(typeFilter!=="all") withStatus = withStatus.filter(l=>l.type===typeFilter);
 
   if(withStatus.length===0){
     box.innerHTML = `<div class="empty-state"><div class="ic">🔍</div><h3>אין תוצאות</h3><p>נסה לשנות את החיפוש או הסינון</p></div>`;
