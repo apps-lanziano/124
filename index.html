@@ -1740,7 +1740,7 @@ nav{
     <button class="nav-btn hidden" id="nav-vehicles" data-scr="scr-vehicles" onclick="go('scr-vehicles',this)"><span class="ic">🚙</span><span>רכבים</span></button>
     <button class="nav-btn" id="nav-faults" data-scr="scr-faults" onclick="go('scr-faults',this)"><span class="ic">🛠️</span><span>תקלות</span></button>
     <button class="nav-btn" id="nav-bdays" data-scr="scr-bdays" onclick="go('scr-bdays',this)"><span class="ic">🎂</span><span>ימי הולדת</span></button>
-    <button class="nav-btn" onclick="openMoreSheet()"><span class="ic">⋯</span><span>עוד</span></button>
+    <button class="nav-btn" id="nav-more" onclick="openMoreSheet()"><span class="ic">⋯</span><span>עוד</span></button>
     <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic">🏛️</span><span>אחראי הדרכה</span></button>
     <button class="nav-btn hidden" id="nav-vo-overview" data-scr="scr-vo-overview" onclick="go('scr-vo-overview',this)"><span class="ic">📊</span><span>סקירה</span></button>
     <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic">🚙</span><span>רכבים</span></button>
@@ -1892,6 +1892,7 @@ nav{
       <div class="sheet-item hidden" id="more-bdays-item" onclick="closeMoreAnd('scr-bdays')"><div class="s-ic">🎂</div><div class="s-tx"><b>ימי הולדת</b><span>לוח ימי הולדת הצוות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="more-rollcall-item" onclick="closeMoreAnd('scr-rollcall')"><div class="s-ic">🛡️</div><div class="s-tx"><b>נכס</b><span>סימון תקינות וזמינות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-binui-item" onclick="closeMoreAnd('scr-binui-faults')"><div class="s-ic">🚧</div><div class="s-tx"><b>תקלות בינוי</b><span>דיווח ליקויי מבנה, עם תמונה</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-maintdept-item" onclick="closeMoreAnd('scr-maint-dept')"><div class="s-ic">🔧</div><div class="s-tx"><b>אחזקה</b><span>הזמנת חומרים ומעקב כלים מוטוריים</span></div><span class="s-chev">‹</span></div>
     </div>
   </div>
 
@@ -3735,6 +3736,10 @@ async function doLogin(){
   }
   setBtnLoading(btn, true);
   try{
+    // איפוס סדר-תצוגה (order) מותאם-תפקיד לפני ההתחברות עצמה — כך שתפקיד
+    // שלא מגדיר סדר משלו (רוב התפקידים) תמיד רואה את סדר ה-DOM הרגיל,
+    // גם אם לפני כן נכנס בסשן הזה תפקיד שכן הגדיר (מ״ע אחזקה)
+    document.querySelectorAll("nav .nav-btn").forEach(b=>{ b.style.order = ""; });
     user = person.name; userRole = person.role;
     document.getElementById("login-overlay").style.display="none";
     document.getElementById("hdr-username").textContent = user;
@@ -3891,8 +3896,9 @@ function logout(){
   }
   document.getElementById("impersonate-bar").classList.add("hidden");
   document.body.style.paddingTop = "";
-  // restore regular nav buttons
-  document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.remove("hidden"));
+  // restore regular nav buttons — כולל איפוס סדר-תצוגה מותאם-תפקיד (order),
+  // כדי שהוא לא "ידלוף" לתפקיד הבא שנכנס באותה טעינת-עמוד
+  document.querySelectorAll("nav .nav-btn").forEach(b=>{ b.classList.remove("hidden"); b.style.order = ""; });
   document.getElementById("nav-cmd").classList.add("hidden");
   document.getElementById("nav-admin").classList.add("hidden");
   document.getElementById("nav-vo-overview").classList.add("hidden");
@@ -3913,6 +3919,7 @@ function logout(){
   document.getElementById("more-faults-item").classList.add("hidden");
   document.getElementById("more-bdays-item").classList.add("hidden");
   document.getElementById("more-binui-item").classList.add("hidden");
+  document.getElementById("more-maintdept-item").classList.add("hidden");
   document.getElementById("login-overlay").style.display="flex";
   document.getElementById("login-select").value="";
   backToCode();
@@ -6755,9 +6762,19 @@ async function applyMaintCommanderPowers(){
   document.getElementById("hdr-rank").textContent = "🔧 מ״ע אחזקה";
   document.getElementById("nav-vo-overview").classList.remove("hidden");
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
-  document.getElementById("nav-maint-dept").classList.remove("hidden");
   document.getElementById("nav-morningcheck").classList.remove("hidden");
   document.getElementById("nav-binui-admin").classList.remove("hidden");
+  // "אחזקה" (הזמנת חומרים/כלים מוטוריים) עובר לתפריט "עוד" — לא בסדר
+  // הבאנרים המפורש שביקש מ״ע אחזקה בתחתית המסך
+  document.getElementById("nav-maint-dept").classList.add("hidden");
+  document.getElementById("more-maintdept-item").classList.remove("hidden");
+  // סדר תצוגה מפורש בסרגל התחתון (מימין לשמאל): סקירה, רכבים, תקלות בינוי,
+  // מסדר בוקר, קרא וחתום, לוח צוות שבועי, עוד — שונה מסדר ה-DOM הרגיל
+  // שמשותף לכל שאר התפקידים, ולכן נקבע כאן ב-order בלבד (מאופס בכל כניסה
+  // אחרת, ראו הערה בתחילת doLogin/logout/וכו')
+  [["nav-vo-overview",1], ["nav-vehicle-officer",2], ["nav-binui-admin",3], ["nav-morningcheck",4],
+   ["nav-safety",5], ["nav-board",6], ["nav-more",7]]
+    .forEach(([id,ord])=>{ document.getElementById(id).style.order = ord; });
   await ensureShed2Seed();
   await ensureAllShedsSeed();   // רכבים/רישיונות נשלפים מכל המסגרות
   updateBinuiAdminBadge();
@@ -6770,7 +6787,7 @@ async function budgetOfficerLogin(){
   document.getElementById("hdr-rank").textContent = "💰 אחראי תקציבים";
   document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
   // hide regular nav functions; show only budget-officer screen
-  document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
+  document.querySelectorAll("nav .nav-btn").forEach(b=>{ b.classList.add("hidden"); b.style.order = ""; });
   document.getElementById("nav-budget-officer").classList.remove("hidden");
   document.getElementById("nav-rollcall").classList.remove("hidden");
   go("scr-budget-officer", document.getElementById("nav-budget-officer"));
@@ -6792,7 +6809,7 @@ async function ownerLogin(){
   document.getElementById("hdr-username").textContent = user;
   document.getElementById("hdr-rank").textContent = "👑 מנהל מערכת";
   document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
-  document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
+  document.querySelectorAll("nav .nav-btn").forEach(b=>{ b.classList.add("hidden"); b.style.order = ""; });
   ["nav-users","nav-admin","nav-vo-overview","nav-vehicle-officer","nav-maint-dept","nav-morningcheck","nav-binui-admin","nav-budget-officer","nav-rollcall"]
     .forEach(id=>document.getElementById(id).classList.remove("hidden"));
   await ensureShed2Seed();
@@ -7044,7 +7061,7 @@ async function impersonateUser(shedId, name){
   isOwner = false; isAdmin = false; isTechOfficer = false;
   isVehicleOfficer = false; isBudgetOfficer = false;
   currentShed = shed; enteredRole = person.role;
-  document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.remove("hidden"));
+  document.querySelectorAll("nav .nav-btn").forEach(b=>{ b.classList.remove("hidden"); b.style.order = ""; });
   ["nav-cmd","nav-admin","nav-vo-overview","nav-vehicle-officer","nav-maint-dept","nav-morningcheck","nav-binui-admin",
    "nav-vo-team","nav-budget-officer","nav-rollcall","nav-users","nav-tools","nav-vehicles"]
     .forEach(id=>document.getElementById(id).classList.add("hidden"));
@@ -7162,7 +7179,7 @@ async function techOfficerLogin(){
   document.getElementById("hdr-username").textContent = user;
   document.getElementById("hdr-rank").textContent = "🔧 קצין טכני";
   document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
-  document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.add("hidden"));
+  document.querySelectorAll("nav .nav-btn").forEach(b=>{ b.classList.add("hidden"); b.style.order = ""; });
   document.getElementById("nav-admin").classList.remove("hidden");
   document.getElementById("nav-vo-overview").classList.remove("hidden");
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
