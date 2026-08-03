@@ -130,3 +130,45 @@ jobs:
           name: personal-report
           path: /tmp/report_stdout.txt
           retention-days: 7
+
+      # שליחת הדוח במייל — כדי שהדוח יגיע ישירות בלי להיכנס לאתר, בכל
+      # יום (לא רק כשיש ממצא חמור, בשונה מפתיחת ה-issue למעלה). דורש
+      # שני Secrets במאגר: MAIL_USERNAME (כתובת ה-Gmail השולחת) ו-
+      # MAIL_PASSWORD (סיסמת אפליקציה של Gmail — לא הסיסמה הרגילה;
+      # יוצרים ב-myaccount.google.com/apppasswords אחרי הפעלת אימות
+      # דו-שלבי). כל עוד ה-Secrets לא הוגדרו, השלב נכשל בשקט
+      # (continue-on-error) ולא מפיל את שאר ה-workflow.
+      - name: הכנת תוכן המייל
+        if: always()
+        continue-on-error: true
+        id: mail
+        run: |
+          if [ -f qa/reports/latest.md ]; then
+            {
+              echo "body<<QA_MAIL_EOF_924857"
+              cat qa/reports/latest.md
+              echo "QA_MAIL_EOF_924857"
+            } >> "$GITHUB_OUTPUT"
+            if [ "${{ steps.scan.outputs.exit_code }}" = "0" ]; then
+              echo "subject=✅ דוח בדיקה יומי — טייסת 124 ($(date -u +%Y-%m-%d))" >> "$GITHUB_OUTPUT"
+            else
+              echo "subject=🔴 דוח בדיקה יומי — נמצאו ממצאים — טייסת 124 ($(date -u +%Y-%m-%d))" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "body=הסורק קרס ולא הפיק דוח היום. בדוק את ריצת ה-Action בלשונית Actions ב-GitHub." >> "$GITHUB_OUTPUT"
+            echo "subject=⚠️ דוח בדיקה יומי נכשל — טייסת 124 ($(date -u +%Y-%m-%d))" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: שליחת הדוח במייל
+        if: always()
+        continue-on-error: true
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: ${{ steps.mail.outputs.subject }}
+          to: eladlanzianog@gmail.com
+          from: בוט QA טייסת 124 <${{ secrets.MAIL_USERNAME }}>
+          body: ${{ steps.mail.outputs.body }}
