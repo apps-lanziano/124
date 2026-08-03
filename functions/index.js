@@ -36,13 +36,15 @@ exports.notifyOnPublish = onDocumentWritten(
 
   const decision = decide({docId, before, after});
   if (!decision) return;
-  const {kind, shedId, title, body, count} = decision;
+  const {kind, shedId, title, body, count, commandersOnly} = decision;
 
-  // הטוקנים של המסגרת הזו
+  // הטוקנים של המסגרת הזו — מסדר בוקר נשלח רק למפקדים, שאר הסוגים לכולם
   const tokRef = db.doc("sq124/push_tokens_" + shedId);
   const tokSnap = await tokRef.get();
   const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
-  const tokens = Object.keys(tokMap);
+  const tokens = commandersOnly
+    ? Object.entries(tokMap).filter(([, m]) => m && m.role === "מפקד").map(([t]) => t)
+    : Object.keys(tokMap);
   if (!tokens.length) return;
 
   // data-only: ה-Service Worker מציג את ההתראה ומעדכן את ה-badge (נדרש לאייפון)
