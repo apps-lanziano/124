@@ -1,0 +1,59 @@
+name: פריסת Cloud Functions
+
+# רץ אוטומטית על התשתית של GitHub בכל פעם ש-functions/** משתנה ב-main —
+# בלי תלות בטרמינל של אף אחד ובלי תלות בסשן פתוח. תנאי יחיד: הסוד
+# FIREBASE_TOKEN מוגדר במאגר (חד-פעמי, ראו הערה למטה). בלעדיו הריצה
+# מדלגת בבטחה על שלב הפריסה ומזהירה בלוג, בלי להיכשל.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'functions/**'
+      - '.github/workflows/deploy-functions.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: התקנת תלויות הפונקציות
+        run: npm --prefix functions ci
+
+      # שער בטיחות לפני פריסה לפרודקשן — אותן בדיקות טהורות (בלי דרישה
+      # ל-emulator) שכל שינוי ב-functions/lib עובר לפני מיזוג ל-main.
+      # אם משהו נשבר כאן, הפריסה נעצרת ולא מגיעה לייצור.
+      - name: הרצת בדיקות הלוגיקה הטהורה של הפונקציות
+        run: |
+          for f in qa/suite/backup_lib_test.mjs \
+                   qa/suite/cert_expiry_reminders_lib_test.mjs \
+                   qa/suite/morning_rollcall_notify_test.mjs \
+                   qa/suite/notify_lib_test.mjs \
+                   qa/suite/reminders_lib_test.mjs \
+                   qa/suite/reserve_refresh_reminders_lib_test.mjs \
+                   qa/suite/scheduled_functions_wiring_test.mjs \
+                   qa/suite/vo_reminders_lib_test.mjs; do
+            echo "::group::$f"
+            node "$f" || exit 1
+            echo "::endgroup::"
+          done
+
+      - name: פריסה ל-Firebase (Cloud Functions)
+        if: ${{ secrets.FIREBASE_TOKEN != '' }}
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: npx firebase-tools@13 deploy --only functions --project squadron124-96357 --token "$FIREBASE_TOKEN" --non-interactive
+
+      - name: אזהרה אם אין טוקן פריסה מוגדר
+        if: ${{ secrets.FIREBASE_TOKEN == '' }}
+        run: |
+          echo "::warning::FIREBASE_TOKEN אינו מוגדר ב-Secrets של המאגר — שלב הפריסה דולג. ראו הוראות ההגדרה החד-פעמית (README/הודעת ה-PR)."
