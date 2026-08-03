@@ -45,11 +45,22 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
     hasSchedule && usesLib && importsLib, JSON.stringify({hasSchedule, usesLib, importsLib}));
 }
 
-// 5. תזכורות + מסדר בוקר מסננים טוקנים למפקדים בלבד (אותה תבנית כמו remindUnsignedDaily)
+// 5. תזכורות + מסדר בוקר + סקירת מ״ע אחזקה מסננים טוקנים למפקדים בלבד (אותה תבנית כמו remindUnsignedDaily)
 {
   const filterCount = (fn.match(/filter\(\(\[, m\]\)\s*=>\s*m\s*&&\s*m\.role\s*===\s*"מפקד"\)/g) || []).length;
-  record("סה״כ 4 מקומות מסננים למפקד בלבד (חתימות, הסמכות, מילואים, מסדר בוקר)",
-    filterCount===4, String(filterCount));
+  record("סה״כ 5 מקומות מסננים למפקד בלבד (חתימות, הסמכות, מילואים, מסדר בוקר, סקירת מ״ע אחזקה)",
+    filterCount===5, String(filterCount));
+}
+
+// 5ב. תזכורת סקירת מ״ע אחזקה יומית — מתוזמנת, מחוברת ללוגיקה הטהורה, שולחת רק ל-push_tokens_maint
+{
+  const hasSchedule = /remindVoIssuesDaily\s*=\s*onSchedule/.test(fn);
+  const usesLib = /findVoIssues\(db\)/.test(fn);
+  const importsLib = /require\("\.\/lib\/vo_reminders"\)/.test(fn);
+  const targetsMaintOnly = /db\.doc\("sq124\/push_tokens_maint"\)/.test(fn);
+  record("תזכורת סקירת מ״ע אחזקה: מתוזמנת, משתמשת ב-lib/vo_reminders, ושולחת רק לטוקני מסגרת מ״ע אחזקה",
+    hasSchedule && usesLib && importsLib && targetsMaintOnly,
+    JSON.stringify({hasSchedule, usesLib, importsLib, targetsMaintOnly}));
 }
 
 // 6. גיבוי שבועי — מתוזמן, כותב ל-Storage בנתיב backups/, ומחובר ל-dumpCollection

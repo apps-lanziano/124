@@ -264,6 +264,50 @@ async function page(){
   console.log("errs9",errs); await p.close();
 }
 
+// 10. פעמון ההתראות: מפקד מסגרת מקבל התראה על נעדרים במסדר בוקר של היום —
+//     עד עכשיו הדרך היחידה לגלות הייתה להיכנס לדשבורד ולראות את הבאנר
+{
+  const {p, errs} = await page();
+  const out = await p.evaluate(async ()=>{
+    currentShed = { id:"shed1", name:"סככה 1" };
+    isAdmin = false;
+    PERSONNEL = [];
+    window.getEvents = async () => [];
+    window.getFaults = async () => [];
+
+    // א. דיווח של היום עם נעדרים -> מופיעה התראה
+    window.sGet = async (k) => k==="daily_rollcall_report"
+      ? {dayKey: rollcallDayKey(), sentAt: Date.now(), presentCount:5, absentCount:2, totalCount:7, absentNames:["רון","עידן"]}
+      : null;
+    const withAbsentees = await computeAlerts();
+
+    // ב. דיווח של היום בלי נעדרים -> אין התראה
+    window.sGet = async (k) => k==="daily_rollcall_report"
+      ? {dayKey: rollcallDayKey(), sentAt: Date.now(), presentCount:7, absentCount:0, totalCount:7, absentNames:[]}
+      : null;
+    const noAbsentees = await computeAlerts();
+
+    // ג. דיווח מיום קודם (dayKey ישן) -> לא רלוונטי, גם אם יש בו נעדרים
+    window.sGet = async (k) => k==="daily_rollcall_report"
+      ? {dayKey:"2000-01-01", sentAt: Date.now(), presentCount:1, absentCount:5, totalCount:6, absentNames:["א"]}
+      : null;
+    const staleReport = await computeAlerts();
+
+    return {
+      withAbsentees: withAbsentees.map(a=>a.text),
+      noAbsentees: noAbsentees.map(a=>a.text),
+      staleReport: staleReport.map(a=>a.text),
+    };
+  });
+  record("דיווח היום עם נעדרים -> מופיעה התראה עם מספר הנעדרים",
+    out.withAbsentees.some(t=>t.includes("מסדר בוקר") && t.includes("2")), JSON.stringify(out.withAbsentees));
+  record("דיווח היום בלי נעדרים -> אין התראת מסדר בוקר",
+    !out.noAbsentees.some(t=>t.includes("מסדר בוקר")), JSON.stringify(out.noAbsentees));
+  record("דיווח מיום קודם (dayKey ישן) -> לא מייצר התראה למרות נעדרים",
+    !out.staleReport.some(t=>t.includes("מסדר בוקר")), JSON.stringify(out.staleReport));
+  console.log("errs10",errs); await p.close();
+}
+
 console.log("\n=== SUMMARY ===");
 let allPass = true;
 for(const r of results){

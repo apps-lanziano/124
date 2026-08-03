@@ -8792,6 +8792,16 @@ async function computeAlerts(){
     }
   }
 
+  /* מסדר בוקר — דיווח הנוכחות שמ״ע אחזקה שלח היום עבור המסגרת הזו. עד עכשיו
+     המפקד היה צריך להיכנס לדשבורד כדי לגלות; עכשיו זו גם התראה בפעמון,
+     לכל מפקד מסגרת (כולל מ״ע אחזקה/הדרכה — גם הן חלק מ"כלל חיילי הטייסת"). */
+  {
+    const report = await sGet("daily_rollcall_report");
+    if(report && report.dayKey === rollcallDayKey() && report.absentCount>0){
+      alerts.push({icon:"📋", text:`מסדר בוקר — ${report.absentCount} נעדרים היום`, level: report.absentCount>=3 ? "high" : "mid"});
+    }
+  }
+
   const events = await getEvents();
   // unsigned events (per soldier count) — שולפים את החתימות של כולם פעם אחת במקביל, לא בכל אירוע מחדש
   const sigsArrA = await Promise.all(PERSONNEL.map(p => sGet("sigs_"+safeName(p.name))));
