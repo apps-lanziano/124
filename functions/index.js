@@ -16,6 +16,7 @@ const {getStorage} = require("firebase-admin/storage");
 const {findUnsignedReminders} = require("./lib/reminders");
 const {findExpiringCerts} = require("./lib/cert_expiry_reminders");
 const {findOverdueReserves} = require("./lib/reserve_refresh_reminders");
+const {findVoIssues} = require("./lib/vo_reminders");
 const {dumpCollection} = require("./lib/backup");
 const {decide, SHED_NAMES} = require("./lib/notify");
 
@@ -197,6 +198,49 @@ exports.remindReserveRefreshDaily = onSchedule(
     }
     await db.doc("sq124/_reserve_reminder_log").set({v: updatedLog, updated: Date.now()}, {merge: true});
     console.log(`תזכורות מילואים: ${toSend.length} מסגרות דורשות תשומת לב, ${sentCount} נשלחו בפועל`);
+  },
+);
+
+/* ===== תזכורת אוטומטית — סקירת מ״ע אחזקה יומית =====
+   רכבים/טסטים, רישיונות, הזמנות חומרים וכלים מוטוריים — עד עכשיו לא היה
+   לתחומים האלה שום מנגנון תזכורת (בשונה מקרא-וחתום/הסמכות/מילואים למעלה),
+   ומ״ע אחזקה היה צריך להיכנס למסך "סקירה" כדי לגלות שמשהו דורש טיפול.
+   פוש מרוכז אחד ליום, רק למפקד מסגרת מ״ע אחזקה, עם מספר פריטים לכל תחום —
+   לא פריט-פריט, כדי לא להציף (אותו עקרון כמו הבאנרים במסך הסקירה עצמו). */
+exports.remindVoIssuesDaily = onSchedule(
+  {
+    schedule: "45 7 * * *",
+    timeZone: "Asia/Jerusalem",
+    memory: "256MiB",
+    timeoutSeconds: 120,
+  },
+  async () => {
+    const summary = await findVoIssues(db);
+    if (!summary.totalCount) return;
+
+    const tokRef = db.doc("sq124/push_tokens_maint");
+    const tokSnap = await tokRef.get();
+    const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
+    const cmdTokens = Object.entries(tokMap)
+      .filter(([, m]) => m && m.role === "מפקד")
+      .map(([t]) => t);
+    if (!cmdTokens.length) return;
+
+    const parts = [];
+    if (summary.vehCount) parts.push(`${summary.vehCount} רכבים/טסטים`);
+    if (summary.licCount) parts.push(`${summary.licCount} רישיונות`);
+    if (summary.matCount) parts.push(`${summary.matCount} הזמנות חומרים`);
+    if (summary.toolCount) parts.push(`${summary.toolCount} כלים מוטוריים`);
+    await getMessaging().sendEachForMulticast({
+      tokens: cmdTokens,
+      data: {
+        title: "🔧 סקירת מ״ע אחזקה יומית",
+        body: parts.join(", ") + " דורשים תשומת לב",
+        kind: "vo_reminder",
+        n: String(summary.totalCount),
+      },
+    });
+    console.log(`תזכורת מ״ע אחזקה: ${summary.totalCount} פריטים דורשים תשומת לב`);
   },
 );
 
