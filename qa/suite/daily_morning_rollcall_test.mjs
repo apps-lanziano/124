@@ -254,8 +254,7 @@ async function page(){
     // 5 רישיונות מסוג "פ.ת" שפג תוקפם — אמורים להתמזג לבאנר אחד, לא 5 שורות
     window.getVoLicenses = async () => Array.from({length:5}, (_,i)=>({id:"l"+i, person:"איש-"+i, type:"פ.ת", expiry:"2000-01-01"}));
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-    document.getElementById('scr-vehicle-officer').classList.add('active');
-    document.getElementById('vopane-overview').classList.add('active');
+    document.getElementById('scr-vo-overview').classList.add('active');
     await renderVoOverview();
     return document.getElementById("vo-overview-content").innerHTML;
   });
