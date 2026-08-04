@@ -19,6 +19,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # secrets.* אסור לשימוש ישיר בתוך if: (שגיאת "Unrecognized named-value:
+    # 'secrets'" — זו הסיבה שכל ריצה נכשלה עד עכשיו, עוד לפני שהתחיל אף
+    # job). הפתרון: מעתיקים את הסוד ל-env ברמת ה-job, ובודקים env. ב-if:.
+    env:
+      FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -48,12 +53,10 @@ jobs:
           done
 
       - name: פריסה ל-Firebase (Cloud Functions)
-        if: ${{ secrets.FIREBASE_TOKEN != '' }}
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        if: ${{ env.FIREBASE_TOKEN != '' }}
         run: npx firebase-tools@13 deploy --only functions --project squadron124-96357 --token "$FIREBASE_TOKEN" --non-interactive
 
       - name: אזהרה אם אין טוקן פריסה מוגדר
-        if: ${{ secrets.FIREBASE_TOKEN == '' }}
+        if: ${{ env.FIREBASE_TOKEN == '' }}
         run: |
           echo "::warning::FIREBASE_TOKEN אינו מוגדר ב-Secrets של המאגר — שלב הפריסה דולג. ראו הוראות ההגדרה החד-פעמית (README/הודעת ה-PR)."
