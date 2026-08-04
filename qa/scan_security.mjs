@@ -93,12 +93,19 @@ function lineOf(idx){ return html.slice(0, idx).split('\n').length; }
       add("high","כללי Firestore לא דורשים אימות","לא נמצאה בדיקת request.auth — המסד עלול להיות נגיש ללא התחברות.","firestore.rules");
     if(/allow\s+list\s*:\s*if\s+(?!false)/.test(rules))
       add("med","שאילתת list מותרת","מאפשר שאיבה המונית של כל המסד בבקשה אחת.","firestore.rules");
-    // הפרדה בין מסגרות — כרגע כל מאומת רואה הכל
-    if(/allow get:\s*if isAuthed\(\)/.test(rules) && !/myPrefix\(\)/.test(rules.replace(/\/\*[\s\S]*?\*\//g,"")))
+    // הפרדה בין מסגרות — נבדק על הכללים הפעילים בלבד (בלי הערות/גרסאות היסטוריות בתיעוד)
+    const rulesActive = rules.replace(/\/\*[\s\S]*?\*\//g, "");
+    const hasFrameworkSeparation = /myPrefix\(\)/.test(rulesActive);
+    if(/allow get:\s*if isAuthed\(\)/.test(rulesActive) && !hasFrameworkSeparation)
       add("med","מסגרת יכולה לקרוא נתונים של מסגרת אחרת",
-        "כרגע ההפרדה בין המסגרות קיימת רק במסכים של האפליקציה, לא בשרת. "+
-        "מי שמחובר לאפליקציה ויודע לפנות ישירות לשרת יכול למשוך נתונים של כל מסגרת. "+
+        "כל מי שמאומת (אפילו אימות אנונימי אוטומטי, בלי קוד) יכול לקרוא נתונים של כל מסגרת. "+
         "הפתרון כבר כתוב ומוכן בקובץ ההרשאות, אבל הפעלתו דורשת חשבון כניסה נפרד לכל מסגרת — שינוי משמעותי.","firestore.rules");
+    else if(/allow get:\s*if isAuthorized\(\)/.test(rulesActive) && !hasFrameworkSeparation)
+      add("info","הפרדה בין מסגרות אינה אכופה בשרת — החלטה מתועדת, לא פרצה",
+        "תגית authorized חוסמת אימות אנונימי (ראה SECURITY.md שלב 7), אבל כל כניסה אמיתית עם קוד עדיין יכולה "+
+        "לקרוא נתונים של מסגרות אחרות — זו החלטת מוצר מכוונת שתועדה ב-SECURITY.md שלב 4 "+
+        "(\"הוחלט לא לבצע הפרדת מסגרות בשרת — החשש אינו מפני אנשי הטייסת עצמם\"). "+
+        "אם יידרש בעתיד להדק, הפתרון כבר כתוב כתיעוד היסטורי בקובץ הכללים (גרסה 2).","firestore.rules");
   }
 }
 
