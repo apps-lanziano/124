@@ -3022,6 +3022,23 @@ async function signInAs(email, password){
     return false;
   }
 }
+/* מצמידה תגית authorized:true לחשבון מיד אחרי כניסה מוצלחת עם קוד —
+   שלב הכנה לסגירת פרצת הקריאה האנונימית (ראו SECURITY.md; הפונקציה
+   markAuthorized ב-functions/index.js מוודאת בעצמה בצד השרת שזו אכן
+   כניסה עם קוד ולא סתם אימות אנונימי, לא סומכת על הלקוח). כרגע כללי
+   ה-Firestore עדיין דורשים רק isAuthed() — קריאה זו מוסיפה את התגית
+   בלי לשנות שום התנהגות, כדי לוודא בכניסות אמיתיות שהיא אכן נקלטת
+   לפני שהכללים ישודרגו לדרוש אותה. כישלון כאן לא חוסם כניסה בשלב הזה. */
+async function markSessionAuthorized(){
+  if(AUTH_MODE !== "scoped" || !fbAuth || !fbAuth._am) return;
+  try{
+    const fnMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js");
+    const functions = fnMod.getFunctions(fbAuth.app, "me-west1");
+    const markFn = fnMod.httpsCallable(functions, "markAuthorized");
+    await markFn();
+    await fbAuth._am.getIdToken(fbAuth.currentUser, true);   // רענון מיידי כדי שהתגית תהיה זמינה כבר בבקשה הבאה
+  }catch(e){ console.error("markSessionAuthorized", e); }
+}
 const COLLECTION = "sq124";   // מסמכי הנתונים כולם תחת אוסף אחד
 
 /* App Check — מאמת שהבקשות ל-Firestore מגיעות מהאתר האמיתי ולא מסקריפט חיצוני.
@@ -3589,6 +3606,7 @@ async function checkCode(){
     if(!(await signInAs(authEmailFromCode(code), deriveAuthPassword(code)))){
       registerLoginFail(); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return;
     }
+    await markSessionAuthorized();
     const prof = await sGetRaw(await codeProfileKey(code));
     if(!(prof && prof.kind)){
       registerLoginFail(); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return;

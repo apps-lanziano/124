@@ -39,8 +39,10 @@ jobs:
       # אם משהו נשבר כאן, הפריסה נעצרת ולא מגיעה לייצור.
       - name: הרצת בדיקות הלוגיקה הטהורה של הפונקציות
         run: |
-          for f in qa/suite/backup_lib_test.mjs \
+          for f in qa/suite/authorize_lib_test.mjs \
+                   qa/suite/backup_lib_test.mjs \
                    qa/suite/cert_expiry_reminders_lib_test.mjs \
+                   qa/suite/fault_notify_test.mjs \
                    qa/suite/morning_rollcall_notify_test.mjs \
                    qa/suite/notify_lib_test.mjs \
                    qa/suite/reminders_lib_test.mjs \

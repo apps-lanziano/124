@@ -26,6 +26,19 @@ rules_version = '2';
   את כולם כ"לא שייכים לאף מסגרת" ו**ינעל את כל הטייסת בחוץ אם יפורסם**.
   בנוסף — הוחלט לא לבצע הפרדת מסגרות בשרת (החשש אינו מפני אנשי הטייסת
   עצמם). נשאר כתיעוד היסטורי בלבד. ראה SECURITY.md שלב 4.
+
+  ── גרסה 3 (למטה) — סוגרת את פרצת האימות האנונימי, ⚠️ עדיין לא לפרסם ──
+  אימות אנונימי (מופעל אוטומטית בטעינת כל דף, לפני הקלדת קוד) עובר את
+  isAuthed() בדיוק כמו כניסה אמיתית — כך שמי שפותח את האתר האמיתי בלבד
+  (בלי קוד, בלי F12 חכם) יכול לקרוא/לכתוב את כל המסד. הפתרון: תגית
+  authorized:true שמצמידה Cloud Function (markAuthorized, פרוסה ופעילה)
+  רק לכניסה אמיתית עם קוד — לא לאימות אנונימי. הלקוח כבר קורא לה בכל
+  כניסה (checkCode → markSessionAuthorized), אבל הכלל למטה **עדיין לא
+  הופעל**: קודם צריך לוודא בפועל (כניסה חיה + בדיקת ה-custom claim,
+  למשל דרך getIdTokenResult() בקונסולת הדפדפן) שהתגית אכן נקלטת, ורק
+  אז להחליף את בלוק ה-sq124 למעלה בבלוק הזה ולפרסם. אם יפורסם לפני
+  שהתגית מאומתת בפועל — כל מי שכבר מחובר (כולל אימות אנונימי שלא
+  שודרג) ייחסם עד כניסה מחדש.
 */
 
 service cloud.firestore {
@@ -76,6 +89,20 @@ service cloud.firestore {
         if isSquadronWide()
         || (isAuthed() && !isOtherFrameworkDoc(docId));
       allow list: if false;
+    }
+    */
+
+    /* ── גרסה 3 — דורשת את תגית authorized:true (להחליף את בלוק ה-sq124
+       של גרסה 1 למעלה, רק אחרי אימות חי — ראו ההערה למעלה) ──
+
+    function isAuthorized() {
+      return request.auth != null && request.auth.token.authorized == true;
+    }
+    match /sq124/{docId} {
+      allow get:            if isAuthorized();
+      allow create, update: if isAuthorized();
+      allow delete:         if isAuthorized();
+      allow list:           if false;
     }
     */
   }
