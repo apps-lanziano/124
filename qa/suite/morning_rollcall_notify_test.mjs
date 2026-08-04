@@ -51,6 +51,30 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
   record("כל 8 המסגרות מקבלות החלטת שליחה עצמאית עם commandersOnly", allOk, JSON.stringify(decisions.map(d=>d&&d.shedId)));
 }
 
+// 6. פורמט חדש (counts, אחרי שדרוג ה-5 סטטוסים) -> גוף ההודעה מסכם רק
+//    קטגוריות שאינן אפס, בסדר present/duty/after/duty_team/absent
+{
+  const after = {
+    dayKey:"2026-08-03", sentAt:1000, totalCount:7,
+    counts:{present:3, duty:1, after:0, duty_team:0, absent:2, unmarked:1},
+    namesByStatus:{present:["א","ב","ג"], duty:["ד"], after:[], duty_team:[], absent:["ה","ו"], unmarked:["ז"]},
+    absentCount:2, absentNames:["ה","ו"],
+  };
+  const d = decide({docId:"shed2_daily_rollcall_report", before: undefined, after});
+  record("פורמט counts חדש: מסכם רק קטגוריות לא-אפס, ומדלג על 'אפטר'/'צוות תורן' (0)",
+    d !== null && d.body==="3 נוכחים, 1 תורנות, 2 נעדרים" && !d.body.includes("אפטר") && !d.body.includes("צוות תורן"),
+    JSON.stringify(d));
+}
+
+// 7. פורמט ישן (presentCount/absentCount בלבד, ללא counts) -> עדיין עובד
+//    בזמן המעבר, כל עוד קיימים מסמכים ישנים ב-Firestore לפני השליחה הבאה
+{
+  const after = {dayKey:"2026-08-03", sentAt:1000, presentCount:4, absentCount:1, totalCount:5, absentNames:["א"]};
+  const d = decide({docId:"shed2_daily_rollcall_report", before: undefined, after});
+  record("מסמך ישן בפורמט הקודם (בלי counts) עדיין מייצר גוף הודעה תקין",
+    d !== null && d.body==="4 נוכחים, 1 נעדרים", JSON.stringify(d));
+}
+
 console.log("\n=== SUMMARY ===");
 let allPass = true;
 for(const r of results){
