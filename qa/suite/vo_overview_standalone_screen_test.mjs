@@ -86,7 +86,7 @@ async function page(){
       overviewHasContent: document.getElementById("vo-overview-content").innerHTML.length > 100,
       trendsHasContent: document.getElementById("vo-trends-content").innerHTML.length > 100,
       mcReportShown: !document.getElementById("vo-mc-report-wrap").classList.contains("hidden") &&
-                     document.getElementById("vo-mc-report-content").innerHTML.includes("עידן"),
+                     document.getElementById("vo-mc-report-content").innerHTML.includes("נעדרים"),
       hasAdminActions: !!document.querySelector('#scr-vo-overview [onclick="openBriefMgmt()"]') &&
                         !!document.querySelector('#scr-vo-overview [onclick="openMsgMgmt()"]'),
     };

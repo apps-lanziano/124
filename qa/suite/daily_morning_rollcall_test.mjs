@@ -235,9 +235,9 @@ async function page(){
   });
   record("מסך המפקד: הכותרת אומרת 'מסדר בוקר' וכוללת תאריך",
     out.shownToday.title.includes("מסדר בוקר") && /\d/.test(out.shownToday.title), out.shownToday.title);
-  record("מסך המפקד: דיווח מהיום מוצג, כולל שמות הנעדרים ו-5 קטגוריות ה-KPI",
-    !out.shownToday.hidden && out.shownToday.html.includes("רון") && out.shownToday.html.includes("עידן")
-    && out.shownToday.html.includes("תורנות") && out.shownToday.html.includes("אפטר"), JSON.stringify(out.shownToday));
+  record("מסך המפקד: כלל המסגרות — מוצג רק באנר נעדרים עם מספר (לא פירוט 5 הקטגוריות)",
+    !out.shownToday.hidden && out.shownToday.html.includes(">2<") && out.shownToday.html.includes("נעדרים")
+    && !out.shownToday.html.includes("רון") && !out.shownToday.html.includes("תורנות"), JSON.stringify(out.shownToday));
   record("מסך המפקד: דיווח מיום קודם (dayKey ישן) מוסתר אוטומטית",
     out.hiddenForOld===true, JSON.stringify(out.hiddenForOld));
   console.log("errs6",errs); await p.close();
@@ -338,25 +338,20 @@ async function page(){
   console.log("errs10",errs); await p.close();
 }
 
-// 11. באנר הנוכחים/נעדרים ניתן ללחיצה, ופותח פירוט מלא לפי 5 הסטטוסים —
-//     כולל התיקון לבאג שהיה מציג מי שכלל לא סומן ("עומר") כ"נוכח" בטעות
+// 11. כלל המסגרות: הכרטיס אצל המפקד מציג רק באנר "X נעדרים" עם מספר —
+//     לא פירוט לכל 5 הסטטוסים. לחיצה על הבאנר פותחת פירוט של מי שלא
+//     היה נוכח (רק מי שסומן "חסר" בפועל — לא תורנות/אפטר/צוות תורן,
+//     שהן נוכחות מוסברת, ולא מי שכלל לא סומן)
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
     currentShed = { id:"shed1", name:"סככה 1" };
-    PERSONNEL = [
-      {name:"דני", role:"חייל"},           // present
-      {name:"רון", role:"חייל"},           // absent
-      {name:"עומר", role:"חייל"},          // כלל לא סומן -> צריך "טרם סומן", לא "נוכח"
-      {name:"עידן", role:"מפקד"},          // לא בסבב הנוכחות -> לא אמור להופיע בפירוט
-      {name:"עמית", role:"חייל", reserve:true}, // מילואים -> לא אמור להופיע בפירוט
-    ];
     window.sGet = async (k) => k==="daily_rollcall_report"
       ? {
-          dayKey: rollcallDayKey(), sentAt: Date.now(), totalCount:3,
-          counts:{present:1,duty:0,after:0,duty_team:0,absent:1,unmarked:1},
-          namesByStatus:{present:["דני"],duty:[],after:[],duty_team:[],absent:["רון"],unmarked:["עומר"]},
-          absentCount:1, absentNames:["רון"],
+          dayKey: rollcallDayKey(), sentAt: Date.now(), totalCount:5,
+          counts:{present:1,duty:1,after:0,duty_team:0,absent:2,unmarked:1},
+          namesByStatus:{present:["דני"],duty:["יוסי"],after:[],duty_team:[],absent:["רון","עומר"],unmarked:["שי"]},
+          absentCount:2, absentNames:["רון","עומר"],
         }
       : null;
 
@@ -370,21 +365,18 @@ async function page(){
     const modalOpen = document.getElementById("mc-detail-modal").classList.contains("open");
     const listHtml = document.getElementById("mc-detail-list").innerHTML;
     const subText = document.getElementById("mc-detail-sub").textContent;
-    // מיקום שורת "עומר" ביחס לתוכן שלה — כדי לוודא שהוא מסומן "טרם סומן" ולא "נוכח"
-    const omerRowStart = listHtml.indexOf("עומר");
-    const omerRow = omerRowStart>=0 ? listHtml.slice(omerRowStart, omerRowStart+150) : "";
 
-    return { hasClickHandler, modalOpen, listHtml, subText, omerRow };
+    return { cardHtml, hasClickHandler, modalOpen, listHtml, subText };
   });
+  record("הבאנר מציג רק את מספר הנעדרים (לא פירוט 5 הסטטוסים)",
+    out.cardHtml.includes(">2<") && out.cardHtml.includes("נעדרים")
+    && !out.cardHtml.includes("תורנות") && !out.cardHtml.includes("יוסי"), out.cardHtml);
   record("הבאנר עצמו ניתן ללחיצה (onclick לפתיחת הפירוט)", out.hasClickHandler, JSON.stringify({hasClickHandler:out.hasClickHandler}));
-  record("לחיצה פותחת את המודל עם סיכום הנוכחים", out.modalOpen && out.subText.includes("1/3"), out.subText);
-  record("הפירוט מציג את מי שנוכח ומי חסר",
-    out.listHtml.includes("דני") && out.listHtml.includes("נוכח") && out.listHtml.includes("רון") && out.listHtml.includes("חסר"),
-    out.listHtml.slice(0,400));
-  record("תיקון הבאג: מי שכלל לא סומן ('עומר') מוצג כ'טרם סומן' — לא כ'נוכח' בטעות",
-    out.omerRow.includes("טרם סומן") && !out.omerRow.includes("✅ נוכח"), out.omerRow);
-  record("הפירוט לא כולל מפקדים/מילואים — רק חיילי הסבב עצמו",
-    !out.listHtml.includes("עידן") && !out.listHtml.includes("עמית"), out.listHtml.slice(0,400));
+  record("לחיצה פותחת את המודל עם מספר הנעדרים בכותרת המשנה", out.modalOpen && out.subText.includes("2 נעדרים"), out.subText);
+  record("הפירוט מציג את מי שסומן בפועל 'חסר' (רון, עומר)",
+    out.listHtml.includes("רון") && out.listHtml.includes("עומר") && out.listHtml.includes("חסר"), out.listHtml.slice(0,300));
+  record("הפירוט לא כולל מי שבתורנות (יוסי) או לא סומן (שי) — רק נעדרים בפועל",
+    !out.listHtml.includes("יוסי") && !out.listHtml.includes("שי"), out.listHtml.slice(0,300));
   console.log("errs11",errs); await p.close();
 }
 

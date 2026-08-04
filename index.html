@@ -1871,7 +1871,7 @@ nav{
   <!-- פירוט מסדר בוקר — נפתח בלחיצה על באנר הנוכחים/נעדרים בדשבורד המפקד -->
   <div class="modal-bg" id="mc-detail-modal">
     <div class="modal">
-      <h3>📋 מסדר בוקר — פירוט נוכחות</h3>
+      <h3>📋 נעדרים ממסדר בוקר</h3>
       <div class="m-sub" id="mc-detail-sub"></div>
       <div class="sig-detail-list" id="mc-detail-list"></div>
       <div class="modal-actions">
@@ -5414,60 +5414,37 @@ async function renderMorningRollcallReport(wrapId, contentId){
     return;
   }
   wrap.classList.remove("hidden");
-  const sentTime = new Date(report.sentAt).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"});
   const dateStr = new Date(report.sentAt).toLocaleDateString("he-IL",{weekday:"long", day:"numeric", month:"long"});
-  const counts = report.counts || {present:report.presentCount||0, absent:report.absentCount||0};
-  const absentNames = (report.namesByStatus && report.namesByStatus.absent) || report.absentNames || [];
-  const absentHtml = absentNames.length
-    ? `<div style="font-size:12px;color:var(--ink-3);line-height:1.8;margin-top:4px">${absentNames.map(escapeHTML).join(" · ")}</div>`
-    : "";
+  const counts = report.counts || {absent:report.absentCount||0};
+  const absentCount = counts.absent||0;
   const wrapTitle = wrap.querySelector(".cmd-section-title");
   if(wrapTitle) wrapTitle.textContent = `📋 מסדר בוקר — ${dateStr}`;
+  // כלל המסגרות: הכרטיס מציג רק באנר נעדרים עם מספר — לא פירוט לפי כל
+  // 5 הסטטוסים (זה נשאר במסך הסימון של מ״ע אחזקה עצמו). לחיצה פותחת
+  // את הפירוט המלא (openMorningRollcallDetail).
   document.getElementById(contentId || "mc-report-content").innerHTML = `
-    <div class="cmd-kpis">
-      ${MC_STATUSES.map(s=>`<div class="kpi ${s.kpiClass}"><b>${counts[s.key]||0}</b><span>${s.label}</span></div>`).join("")}
-    </div>
-    <div class="cert-sum-card" onclick="openMorningRollcallDetail()">
-      <div class="cert-sum-head">
-        <div class="avatar" style="width:40px;height:40px;font-size:18px">📋</div>
-        <div class="cert-sum-name"><b>נשלח ע"י מ״ע אחזקה</b><span>שעה ${sentTime}</span></div>
-        <span class="cert-sum-chev">‹</span>
-      </div>
-      ${absentHtml}
+    <div class="kpi ${absentCount>0?'bad':'good'}" style="cursor:pointer" onclick="openMorningRollcallDetail()">
+      <b>${absentCount}</b><span>נעדרים ממסדר בוקר · לחיצה לפירוט מי לא היה נוכח</span>
     </div>
   `;
 }
 
-/* פירוט מלא של דיווח מסדר הבוקר של היום — נפתח בלחיצה על הבאנר (במקום
-   שהמפקד יראה רק את מספרי הנוכחים/נעדרים ורשימת הנעדרים). רשימת הנוכחים
-   לא נשמרת בדיווח עצמו (רק שמות הנעדרים, כדי לא לשכפל את כל הרוסטר בכל
-   כתיבה) — נגזרת כאן מרשימת הצוות של המסגרת פחות שמות הנעדרים. */
+/* פירוט מי לא היה נוכח במסדר הבוקר של היום — נפתח בלחיצה על באנר
+   הנעדרים. מציג רק את מי שסומן בפועל כ"חסר" (לא את כל הרוסטר עם כל
+   5 הסטטוסים — תורנות/אפטר/צוות תורן הם נוכחות מוסברת, לא "נעדר"). */
 async function openMorningRollcallDetail(){
   if(!currentShed) return;
   const report = await sGet("daily_rollcall_report");
   if(!report || report.dayKey !== rollcallDayKey()) return;
   const sentTime = new Date(report.sentAt).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"});
-  const counts = report.counts || {present:report.presentCount||0};
-  document.getElementById("mc-detail-sub").textContent = `${counts.present||0}/${report.totalCount} נוכחים · נשלח ע"י מ״ע אחזקה בשעה ${sentTime}`;
-  // מפת שם->סטטוס נבנית מ-namesByStatus (כולל "unmarked") כדי להציג את הסטטוס
-  // האמיתי של כל אדם — ולא להסיק "נוכח" בשגגה על מי שפשוט טרם סומן.
-  const statusByName = {};
-  const namesByStatus = report.namesByStatus || {absent:report.absentNames||[]};
-  Object.entries(namesByStatus).forEach(([st, names])=> (names||[]).forEach(name=> statusByName[name]=st));
-  const roster = PERSONNEL.filter(p=>p.role==="חייל" && !p.reserve).map(p=>p.name);
-  const CLS_BY_PILL = {g:"ok", r:"no", y:"warn"};
-  const rows = roster.map(name=>{
-    const st = statusByName[name];
-    const info = st ? mcStatusInfo(st) : null;
-    const label = info ? `${info.icon} ${info.label}` : "◽ טרם סומן";
-    const cls = info ? CLS_BY_PILL[info.pill] : "unmarked";
-    return `<div class="sig-detail-row">
+  const absentNames = (report.namesByStatus && report.namesByStatus.absent) || report.absentNames || [];
+  document.getElementById("mc-detail-sub").textContent = `${absentNames.length} נעדרים · נשלח ע"י מ״ע אחזקה בשעה ${sentTime}`;
+  const rows = absentNames.map(name=>`<div class="sig-detail-row">
       <div class="avatar">${initials(name)}</div>
       <div class="nm">${escapeHTML(name)}</div>
-      <span class="${cls}">${label}</span>
-    </div>`;
-  }).join("");
-  document.getElementById("mc-detail-list").innerHTML = rows || `<div style="text-align:center;padding:14px;color:var(--ink-3)">אין נתוני צוות</div>`;
+      <span class="no">❌ חסר</span>
+    </div>`).join("");
+  document.getElementById("mc-detail-list").innerHTML = rows || `<div style="text-align:center;padding:14px;color:var(--ink-3)">אין נעדרים — כולם נוכחים 🎉</div>`;
   document.getElementById("mc-detail-modal").classList.add("open");
 }
 
