@@ -26,6 +26,7 @@ const db = getFirestore();
 exports.notifyOnPublish = onDocumentWritten(
   {
     document: "sq124/{docId}",
+    region: "me-west1", // האזור שבו הפונקציה כבר פרוסה בפועל — בלי זה firebase deploy מנסה למחוק אותה (אזור לא תואם למקור)
     maxInstances: 10, // תקרת-בטיחות: לעולם לא יותר מ-10 מופעים במקביל — חוסם "בריחת" עלויות
     memory: "256MiB",
     timeoutSeconds: 60,
@@ -81,6 +82,7 @@ exports.remindUnsignedDaily = onSchedule(
   {
     schedule: "0 7 * * *",
     timeZone: "Asia/Jerusalem",
+    region: "me-west1", // אותו אזור כמו notifyOnPublish — עקביות, בלי תלות שקטה באזור ברירת המחדל
     memory: "256MiB",
     timeoutSeconds: 120,
   },
@@ -123,6 +125,7 @@ exports.remindCertExpiryDaily = onSchedule(
   {
     schedule: "15 7 * * *",
     timeZone: "Asia/Jerusalem",
+    region: "me-west1",
     memory: "256MiB",
     timeoutSeconds: 120,
   },
@@ -167,6 +170,7 @@ exports.remindReserveRefreshDaily = onSchedule(
   {
     schedule: "30 7 * * *",
     timeZone: "Asia/Jerusalem",
+    region: "me-west1",
     memory: "256MiB",
     timeoutSeconds: 120,
   },
@@ -211,6 +215,7 @@ exports.remindVoIssuesDaily = onSchedule(
   {
     schedule: "45 7 * * *",
     timeZone: "Asia/Jerusalem",
+    region: "me-west1",
     memory: "256MiB",
     timeoutSeconds: 120,
   },
@@ -252,6 +257,7 @@ exports.weeklyBackup = onSchedule(
   {
     schedule: "0 3 * * 0",
     timeZone: "Asia/Jerusalem",
+    region: "me-west1",
     memory: "512MiB",
     timeoutSeconds: 300,
   },

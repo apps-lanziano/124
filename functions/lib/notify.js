@@ -30,6 +30,10 @@ function classify(docId) {
   if (docId.endsWith("_safety_events")) return "safety";
   if (docId.endsWith("_boards_list")) return "board";
   if (docId.endsWith("_training_list")) return "training";
+  // חייב לבדוק את binui_faults_list (מסמך גלובלי, בלי קידומת מסגרת) לפני
+  // הבדיקה הכללית — "binui_faults_list" בעצמו מסתיים ב-"_faults_list"
+  if (docId === "binui_faults_list") return "binui_fault";
+  if (docId.endsWith("_faults_list")) return "fault";
   if (docId.includes("_rollcall_active")) return "rollcall";
   if (docId.endsWith("_daily_rollcall_report")) return "morning_rollcall";
   return null;
@@ -52,8 +56,17 @@ function decide({docId, before, after}) {
     // חדש בפועל (חותמת זמן שונה), לא על כל שינוי מקרי במסמך
     if (before && before.sentAt === after.sentAt) return null;
     shedId = docId.slice(0, docId.indexOf("_daily_rollcall_report"));
+  } else if (kind === "binui_fault") {
+    // מסמך גלובלי אחד לכל הטייסת (בלי קידומת מסגרת) — כל התקלות מדווחות
+    // תמיד ל-מ״ע אחזקה, בלי קשר לאיזו מסגרת דיווחה. עד עכשיו התזכורת
+    // היחידה הייתה תזכורת ידנית בוואטסאפ ("openWaPrompt('binui',...)").
+    if (!Array.isArray(after)) return null;
+    const beforeIds = new Set((Array.isArray(before) ? before : []).map((x) => x && x.id));
+    newItems = after.filter((x) => x && x.id && !beforeIds.has(x.id));
+    if (!newItems.length) return null;
+    shedId = "maint";
   } else {
-    shedId = docId.replace(/_(messages_list|safety_events|boards_list|training_list)$/, "");
+    shedId = docId.replace(/_(messages_list|safety_events|boards_list|training_list|faults_list)$/, "");
     const afterArr = Array.isArray(after) ? after : [];
     if (!Array.isArray(after)) return null;
     const beforeIds = new Set((Array.isArray(before) ? before : []).map((x) => x && x.id));
@@ -68,6 +81,8 @@ function decide({docId, before, after}) {
     safety: "קרא וחתום חדש · " + shedName,
     board: "לוח צוות חדש · " + shedName,
     training: "חומר הדרכה חדש · " + shedName,
+    fault: "🔧 תקלה חדשה · " + shedName,
+    binui_fault: "🚧 תקלת בינוי חדשה",
     rollcall: "🚨 נכס · " + shedName,
     morning_rollcall: "📋 מסדר בוקר · " + shedName,
   };
@@ -76,10 +91,12 @@ function decide({docId, before, after}) {
     : kind === "morning_rollcall" ? morningRollcallBody(after)
     : kind === "message" ? String(item.text || "").slice(0, 140)
     : kind === "board" ? String(item.label || "")
+    : kind === "binui_fault" ? (item.shedName ? item.shedName + ": " : "") + String(item.title || "")
     : String(item.title || item.fname || "");
 
-  // מסדר בוקר נשלח רק למפקדי הסככה — לא לכל הצוות (בשונה מכל שאר סוגי ההתראה)
-  const commandersOnly = kind === "morning_rollcall";
+  // מסדר בוקר/תקלה רגילה/תקלת בינוי נשלחים רק למפקדים — לא לכל הצוות
+  // (בשונה מהודעה/קרא-וחתום/לוח/הדרכה, שמגיעים לכולם)
+  const commandersOnly = kind === "morning_rollcall" || kind === "fault" || kind === "binui_fault";
 
   return {kind, shedId, shedName, title, body, count: kind==="morning_rollcall" ? (after.absentCount||0) : (newItems.length || 1), commandersOnly};
 }
