@@ -1825,20 +1825,6 @@ nav{
     </div>
   </div>
 
-  <div class="modal-bg" id="sig-modal">
-    <div class="modal">
-      <h3>✍️ חתימה על פריט</h3>
-      <div class="m-sub">בחתימתך את/ה מאשר/ת: <b>קראתי את הפריט והמסר הועבר אליי</b></div>
-      <canvas id="sig-canvas"></canvas>
-      <div class="sig-hint">חתום/חתמי באצבע או בעכבר בתוך המסגרת</div>
-      <div class="modal-actions">
-        <button class="m-btn ghost" onclick="clearSig()">🧹 נקה</button>
-        <button class="m-btn ghost" onclick="closeSignature()">ביטול</button>
-        <button class="m-btn primary" id="sig-save" onclick="saveSignature()" disabled>אישור וחתימה</button>
-      </div>
-    </div>
-  </div>
-
   <!-- ADD EVENT MODAL (commander) -->
   <div class="modal-bg" id="add-modal">
     <div class="modal">
@@ -2138,27 +2124,6 @@ nav{
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('tool-modal').classList.remove('open')" style="flex:1">סגור</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- VEHICLE TRACKING MODAL (מעקב רכבים) -->
-  <div class="modal-bg" id="vehicle-modal">
-    <div class="modal">
-      <h3>🚙 הוספת רכב למעקב</h3>
-      <div class="m-sub">בחר רכב מהמאגר או הקלד ידנית, הזן מספר רכב ותאריך טיפול הבא.</div>
-      <div class="team-add-form">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗃️ בחר מהמאגר — או הקלד ידני למטה</label>
-        <select class="m-input" id="vehicle-bank-pick" style="margin-bottom:8px" onchange="pickVehicleFromBank()"></select>
-        <input class="m-input" id="vehicle-name" type="text" placeholder="שם/סוג הרכב" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מספר רכב</label>
-        <input class="m-input" id="vehicle-number" type="text" placeholder="מס' רכב" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך טיפול הבא</label>
-        <input class="m-input" id="vehicle-next-service" type="date" style="margin-bottom:10px">
-        <button class="m-btn primary" onclick="addVehicle()" style="width:100%">➕ הוסף רכב</button>
-      </div>
-      <div class="modal-actions" style="margin-top:12px">
-        <button class="m-btn ghost" onclick="document.getElementById('vehicle-modal').classList.remove('open')" style="flex:1">סגור</button>
       </div>
     </div>
   </div>
@@ -3298,8 +3263,6 @@ if(pendingShortcut){ history.replaceState(null, "", location.pathname); }
 function shedKey(key){
   return currentShed ? (currentShed.id + "_" + key) : key;
 }
-function shedKeyFor(shedId, key){ return shedId + "_" + key; }
-
 function setBtnLoading(btn, loading){
   if(!btn) return;
   if(loading){
@@ -4242,49 +4205,6 @@ async function openReader(id, adminSourced){
 }
 function closeReader(){ document.getElementById("doc-reader").classList.remove("open"); }
 
-/* ============ SIGNATURE PAD ============ */
-let sigCtx=null, sigDrawing=false, sigHasInk=false;
-
-function openSignature(){
-  document.getElementById("sig-modal").classList.add("open");
-  setTimeout(initSigCanvas, 60);
-}
-function closeSignature(){ document.getElementById("sig-modal").classList.remove("open"); }
-
-function initSigCanvas(){
-  const c = document.getElementById("sig-canvas");
-  const dpr = window.devicePixelRatio || 1;
-  const rect = c.getBoundingClientRect();
-  c.width = rect.width * dpr; c.height = rect.height * dpr;
-  sigCtx = c.getContext("2d");
-  sigCtx.scale(dpr,dpr);
-  sigCtx.lineWidth = 2.6; sigCtx.lineCap="round"; sigCtx.lineJoin="round";
-  sigCtx.strokeStyle = "#1a1114";
-  sigHasInk = false;
-  document.getElementById("sig-save").disabled = true;
-
-  const pos = e => {
-    const r = c.getBoundingClientRect();
-    const p = e.touches ? e.touches[0] : e;
-    return {x:p.clientX-r.left, y:p.clientY-r.top};
-  };
-  c.onmousedown = c.ontouchstart = e => {
-    e.preventDefault(); sigDrawing=true;
-    const p=pos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x,p.y);
-  };
-  c.onmousemove = c.ontouchmove = e => {
-    if(!sigDrawing) return; e.preventDefault();
-    const p=pos(e); sigCtx.lineTo(p.x,p.y); sigCtx.stroke();
-    if(!sigHasInk){ sigHasInk=true; document.getElementById("sig-save").disabled=false; }
-  };
-  c.onmouseup = c.onmouseleave = c.ontouchend = () => { sigDrawing=false; };
-}
-function clearSig(){
-  const c = document.getElementById("sig-canvas");
-  sigCtx.clearRect(0,0,c.width,c.height);
-  sigHasInk=false;
-  document.getElementById("sig-save").disabled=true;
-}
 /* היסטוריית חתימות — יומן append-only נפרד מ-sigs_<name> (שהוא מצב חי,
    נדרס בכל עדכון). גם אם הפריט עצמו נמחק/משתנה מאוחר יותר, ההיסטוריה
    נשארת: מי חתם/אישר קריאה על מה, ומתי — לצורך מעקב וביקורת. */
@@ -4321,28 +4241,6 @@ async function mutateSigs(name, mutateFn){
     releaseLock();
   }
 }
-async function saveSignature(){
-  if(!sigHasInk || !currentDoc) return;
-  const c = document.getElementById("sig-canvas");
-  // shrink signature
-  const s = document.createElement("canvas");
-  s.width = 300; s.height = 110;
-  const sctx = s.getContext("2d");
-  sctx.fillStyle="#ffffff"; sctx.fillRect(0,0,300,110);
-  sctx.drawImage(c,0,0,300,110);
-  const sigData = s.toDataURL("image/jpeg",.8);
-  const docId = currentDoc.id, docTitle = currentDoc.title;
-
-  const ok = await mutateSigs(user, reads=>{ reads[docId] = {date:new Date().toLocaleDateString("he-IL"), sig:sigData}; });
-  if(!ok){ toast("⚠️ החתימה לא נקלטה — בדוק חיבור רשת ונסה שוב"); return; }
-  closeSignature();
-  await logAction("חתימה על פריט", docTitle);
-  await logSigHistory(docId, docTitle, "sig");
-  toast("החתימה נקלטה — המסר אושר ✍️");
-  await openReader(docId);
-  renderDocs();
-}
-
 /* אישור קריאה — מחליף את החתימה. שומר רק סימון + תאריך, ללא תמונת חתימה.
    מבנה הנתונים נשמר (reads[docId]) כך שכל מסכי המעקב ממשיכים לעבוד. */
 async function confirmRead(){
@@ -5162,13 +5060,6 @@ async function saveVoTeamMember(){
   renderVoTeamMgmt();
   renderBdays();
 }
-/* הסרה אוטומטית של נהגים ששוחררו (תאריך שחרור עבר/היום) — כמו בסככות, אך על vo_personnel הגלובלי */
-async function processVoReleases(){
-  const today = todayKey();
-  const team = (await sGetRaw("vo_personnel")) || [];
-  const stayed = team.filter(p=> !(p.release && p.release <= today));
-  if(stayed.length !== team.length) await sSetRaw("vo_personnel", stayed);
-}
 async function removeVoTeamMember(id){
   const team = (await sGetRaw("vo_personnel")) || [];
   const p = team.find(x=>x.id===id);
@@ -5647,11 +5538,6 @@ async function logAction(action, detail){
     if(log.length > 200) log.length = 200;
     await sSet("audit_log", log);
   }catch(e){ console.error("audit", e); }
-}
-function fmtLogTime(ts){
-  const d = new Date(ts);
-  return d.toLocaleDateString("he-IL",{day:"numeric",month:"numeric"}) + " " +
-         d.toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"});
 }
 let toastT;
 function toast(msg){
@@ -6590,50 +6476,6 @@ async function removeTaskItem(i){
   await sSet("cfg_tasks", MORNING_TASKS);
   renderTaskMgmt(); renderTasks();
   toast("המטלה הוסרה");
-}
-
-/* ===== SAFETY REPORT (feature 5) ===== */
-async function renderReport(){
-  const events = await getEvents();
-  const totalDocs = events.length;
-  let totalSigs=0;
-  for(const p of PERSONNEL){
-    const sigs=(await sGet("sigs_"+safeName(p.name)))||{};
-    totalSigs += events.filter(e=>sigs[e.id]).length;
-  }
-  const maxSigs = PERSONNEL.length*totalDocs;
-  const pct = maxSigs? Math.round(totalSigs/maxSigs*100):0;
-  const done = (await sGet("team_morning_"+todayKey()))||{};
-  const mDone = MORNING_TASKS.filter(t=>done[t.id]).length;
-  const faults = await getFaults();
-  const openF = faults.filter(f=>f.status!=="closed").length;
-  const now = new Date();
-  document.getElementById("report-content").innerHTML = `
-    <div class="report-box" id="report-box">
-      <div class="report-head"><h3>📊 דוח סטטוס · טייסת 124</h3><p>${now.toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p></div>
-      <div class="report-stat"><span class="rs-label">👥 אנשי צוות</span><span class="rs-val">${PERSONNEL.length}</span></div>
-      <div class="report-stat"><span class="rs-label">📄 קרא וחתום פעילים</span><span class="rs-val">${totalDocs}</span></div>
-      <div class="report-stat"><span class="rs-label">✍️ אחוז חתימה כולל</span><span class="rs-val ${pct>=80?'g':''}">${pct}%</span></div>
-      <div class="report-stat"><span class="rs-label">🧰 מטלות בוקר שבוצעו היום</span><span class="rs-val ${mDone===MORNING_TASKS.length?'g':''}">${mDone}/${MORNING_TASKS.length}</span></div>
-      <div class="report-stat"><span class="rs-label">🛠️ תקלות פתוחות</span><span class="rs-val">${openF}</span></div>
-    </div>`;
-}
-async function exportReport(){
-  const box=document.getElementById("report-box");
-  if(!box){ toast("אין דוח להצגה"); return; }
-  toast("מכין תמונה…");
-  try{
-    if(!window.html2canvas){
-      await new Promise((res,rej)=>{ const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; s.integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H"; s.crossOrigin="anonymous"; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
-    }
-    const canvas = await window.html2canvas(box, {scale:2, backgroundColor:"#ffffff"});
-    canvas.toBlob(blob=>{
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement("a"); a.href=url; a.download="דוח_קרא_וחתום_124.png"; a.click();
-      URL.revokeObjectURL(url);
-      toast("הדוח יוצא כתמונה 📸");
-    });
-  }catch(e){ toast("⚠️ ייצוא נכשל"); console.error(e); }
 }
 
 /* ===== דוח קרא-וחתום מפורט (למפקד) — מרכז כל פריט ומי אישר ===== */
@@ -9571,56 +9413,6 @@ function vehicleBankOptions(){
   html += VEHICLES_BANK_DEFAULT.map(c=>`<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`).join("");
   return html;
 }
-function pickVehicleFromBank(){
-  const v = document.getElementById("vehicle-bank-pick").value;
-  if(v) document.getElementById("vehicle-name").value = v;
-}
-let vehicleEditId = null;
-function openVehicleAdd(){
-  vehicleEditId = null;
-  document.getElementById("vehicle-bank-pick").innerHTML = vehicleBankOptions();
-  document.getElementById("vehicle-name").value = "";
-  document.getElementById("vehicle-number").value = "";
-  document.getElementById("vehicle-next-service").value = "";
-  document.querySelector("#vehicle-modal h3").textContent = "🚙 הוספת רכב למעקב";
-  document.querySelector("#vehicle-modal .m-btn.primary").textContent = "➕ הוסף רכב";
-  document.getElementById("vehicle-modal").classList.add("open");
-}
-async function openVehicleEdit(id){
-  const vehicles = await getVehicles();
-  const v = vehicles.find(x=>x.id===id);
-  if(!v) return;
-  vehicleEditId = id;
-  document.getElementById("vehicle-bank-pick").innerHTML = vehicleBankOptions();
-  document.getElementById("vehicle-name").value = v.name;
-  document.getElementById("vehicle-number").value = v.number || "";
-  document.getElementById("vehicle-next-service").value = v.nextService || "";
-  document.querySelector("#vehicle-modal h3").textContent = "✏️ עריכת רכב";
-  document.querySelector("#vehicle-modal .m-btn.primary").textContent = "💾 שמור שינויים";
-  document.getElementById("vehicle-modal").classList.add("open");
-}
-async function addVehicle(){
-  const name = document.getElementById("vehicle-name").value.trim();
-  const number = document.getElementById("vehicle-number").value.trim();
-  const nextService = document.getElementById("vehicle-next-service").value;
-  if(name.length<2){ toast("נא למלא שם/סוג רכב"); return; }
-  const vehicles = await getVehicles();
-  if(vehicleEditId){
-    const v = vehicles.find(x=>x.id===vehicleEditId);
-    if(v){ v.name=name; v.number=number; v.nextService=nextService; }
-    vehicleEditId = null;
-    await sSet("vehicles_list", vehicles);
-    document.getElementById("vehicle-modal").classList.remove("open");
-    renderVehiclesPage(); updateAlertBell();
-    toast("הרכב עודכן ✓");
-    return;
-  }
-  vehicles.push({id:"veh"+Date.now(), name, number, nextService});
-  await sSet("vehicles_list", vehicles);
-  document.getElementById("vehicle-name").value=""; document.getElementById("vehicle-number").value=""; document.getElementById("vehicle-next-service").value="";
-  renderVehiclesPage(); updateAlertBell();
-  toast("הרכב נוסף למעקב ✓ — ניתן להוסיף עוד");
-}
 async function removeVehicleById(id){
   if(!confirm("להסיר את הרכב מהמעקב לצמיתות?")) return;
   let vehicles = await getVehicles();
@@ -9924,8 +9716,6 @@ const MC_STATUSES = [
   {key:"duty_team", label:"צוות תורן",  icon:"👥", pill:"y", kpiClass:"warn"},
   {key:"absent",    label:"חסר",        icon:"❌", pill:"r", kpiClass:"bad"},
 ];
-function mcStatusInfo(key){ return MC_STATUSES.find(s=>s.key===key) || null; }
-
 let mcCache = null;   // {marks, perShed} — נטען פעם אחת בכניסה ללשונית, מסונן מחדש בלי קריאת רשת בכל הקלדה בחיפוש
 async function renderMorningRollcall(){
   const listBox = document.getElementById("mc-list");
@@ -11376,20 +11166,6 @@ async function saveBrief(){
   toast("תדריך הבוקר פורסם 📋");
   renderBrief();
   openWaPrompt("brief", text);
-}
-
-/* ===== FEATURE 2: AUDIT LOG VIEWER ===== */
-async function openAuditLog(){
-  const log = (await sGet("audit_log")) || [];
-  const body = document.getElementById("audit-body");
-  if(log.length===0){ body.innerHTML='<div style="text-align:center;color:var(--ink-3);padding:24px">אין עדיין פעולות רשומות</div>'; }
-  else {
-    body.innerHTML = log.map(l=>`<div class="audit-row">
-      <div class="audit-main"><b>${escapeHTML(l.action)}</b>${l.detail?` · <span>${escapeHTML(l.detail)}</span>`:""}</div>
-      <div class="audit-meta">${escapeHTML(l.by)} · ${fmtLogTime(l.ts)}</div>
-    </div>`).join("");
-  }
-  document.getElementById("audit-modal").classList.add("open");
 }
 
 /* ===== FEATURE 26: personal profile banner (release countdown) ===== */

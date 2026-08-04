@@ -23,37 +23,6 @@ function baseMocks(){
   window._t=[]; window._wa=false;
 }
 
-// ===== 1. saveSignature: success / failure =====
-{
-  const {p, errs} = await page();
-  const out = await p.evaluate(async ()=>{
-    baseMocksInline();
-    function baseMocksInline(){
-      window.toast=(m)=>{window._t=window._t||[];window._t.push(m);};
-      window.logAction=async()=>{}; window.openReader=async()=>{}; window.renderDocs=()=>{};
-    }
-    window.sGet=async()=>({}); window.sSet=async()=>true;
-    currentDoc={id:"e1",title:"פריט"}; sigHasInk=true; user="חייל בדיקה";
-    document.body.insertAdjacentHTML('beforeend','<canvas id="sig-canvas-test" width="10" height="10"></canvas>');
-    // מדמה קנבס חתימה אמיתי
-    const c=document.getElementById('sig-canvas'); c.width=10;c.height=10;
-    window._t=[];
-    await saveSignature();
-    const successToast = window._t.some(t=>t.includes("החתימה נקלטה"));
-
-    // כשל
-    window.sSet=async()=>false;
-    sigHasInk=true;
-    window._t=[];
-    await saveSignature();
-    const failToast = window._t.some(t=>t.includes("⚠️")&&t.includes("לא נקלטה"));
-    return {successToast, failToast};
-  });
-  record("saveSignature: success shows success toast, failure shows error (not fake success)",
-    out.successToast && out.failToast, JSON.stringify(out));
-  console.log("errs1",errs); await p.close();
-}
-
 // ===== 2. confirmRead: success / failure =====
 {
   const {p, errs} = await page();

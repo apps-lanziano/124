@@ -23,7 +23,7 @@ const out = await p.evaluate(async ()=>{
     return { before, after };
   };
   o.teamModal = test('team-modal');
-  o.sigModal = test('sig-modal');
+  o.auditModal = test('audit-modal');
   o.addModal = test('add-modal');
   o.naatimModal = test('naatim-modal');
   // וידוא שלא נוסף X כפול בהרצה חוזרת

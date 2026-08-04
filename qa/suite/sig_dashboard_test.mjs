@@ -12,7 +12,8 @@ async function page(){
 }
 function record(name, pass, detail){ results.push({name, pass, detail}); }
 
-// 1. logSigHistory writes correctly via saveSignature and confirmRead
+// 1. logSigHistory writes correctly via confirmRead (הדרך היחידה החיה כיום —
+//    חתימה מצוירת/saveSignature הוסרה, "אישור קריאה" מחליף אותה לגמרי)
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
@@ -23,17 +24,16 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
     window.openReader = async()=>{}; window.renderDocs=()=>{};
     user = "דני כהן";
     currentDoc = {id:"e1", title:"תדריך בטיחות"};
-    sigHasInk = true;
-    const c = document.getElementById('sig-canvas'); c.width=10; c.height=10;
-    await saveSignature();
+    await confirmRead();
+    user = "רון לוי";
     currentDoc = {id:"e2", title:"נוהל חירום"};
     await confirmRead();
     const hist = store["sig_history"];
     return { count: hist.length, first: hist[0], second: hist[1] };
   });
-  record("logSigHistory: records both signature and read-confirm events with correct type",
-    out.count===2 && out.first.type==="read" && out.first.eventTitle==="נוהל חירום"
-      && out.second.type==="sig" && out.second.eventTitle==="תדריך בטיחות" && out.second.person==="דני כהן",
+  record("logSigHistory: records read-confirm events in order (newest first), עם השם והכותרת הנכונים",
+    out.count===2 && out.first.type==="read" && out.first.eventTitle==="נוהל חירום" && out.first.person==="רון לוי"
+      && out.second.type==="read" && out.second.eventTitle==="תדריך בטיחות" && out.second.person==="דני כהן",
     JSON.stringify(out));
   console.log("errs1",errs); await p.close();
 }
