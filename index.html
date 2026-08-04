@@ -3683,6 +3683,150 @@ function onLoginNameChange(){
   }
 }
 
+/* שער ה-PIN האישי בכניסה — הוצא מתוך doLogin (שער עצמאי, מחזיר
+   true/false לכניסה בפועל) כדי לקצר את הפונקציה הראשית. */
+async function verifyLoginPin(person){
+  const wrap = document.getElementById("login-pin-wrap");
+  const pinEl = document.getElementById("login-pin");
+  if(wrap.style.display === "none"){ onLoginNameChange(); pinEl.focus(); return false; }
+  const entered = (pinEl.value||"").trim();
+  if(biometricUnlockOK){
+    // Face ID/טביעת אצבע כבר אימתו נוכחות ברגע זה — לא דורשים גם PIN
+    biometricUnlockOK = false;
+  } else if(person.pinHash){
+    // יש PIN — חובה להזין נכון
+    if(!entered){ toast("הזן PIN אישי 🔒"); pinEl.focus(); return false; }
+    if(!(await verifyPin(person, entered))){ registerLoginFail(); toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return false; }
+    // אימות עבר — אם הגיבוב עדיין בפורמט הישן, משדרגים אותו כאן בשקט
+    await upgradePinIfLegacy(person, entered);
+  } else {
+    // אין PIN — הגדרה חובה בכניסה ראשונה (אי אפשר לדלג)
+    if(!entered){ toast("כניסה ראשונה — יש להגדיר PIN אישי 🔒"); pinEl.focus(); return false; }
+    if(!validPinFormat(entered)){ toast("PIN חייב להיות 4 ספרות ⛔"); pinEl.focus(); return false; }
+    if(isReservedCode(entered)){ toast("קוד זה שמור למסגרת — בחר קוד אחר ⛔"); pinEl.value=""; pinEl.focus(); return false; }
+    const pinFields = await buildPinFields(entered);
+    const setAt = new Date().toLocaleDateString("he-IL");
+    // כתיבה ממוזגת — כדי שהגדרת PIN של חייל אחד לא תדרוס PIN שחייל אחר
+    // הגדיר באותן דקות (ראו ההערה ב-mutatePersonnel)
+    const pinSaved = await mutatePersonnel(list=>{
+      const m = list.find(x=>x.name===person.name);
+      if(!m) return false;
+      Object.assign(m, pinFields);
+      m.pinSetBy = person.name + " (עצמי)"; m.pinSetAt = setAt;
+    });
+    if(!pinSaved){ toast("⚠️ הגדרת ה-PIN לא נשמרה — בדוק חיבור ונסה שוב"); pinEl.focus(); return false; }
+    Object.assign(person, pinFields);   // סנכרון העותק המקומי להמשך ההתחברות
+    toast("ה-PIN האישי שלך נקבע 🔒");
+  }
+  return true;
+}
+/* עדכון כותרת + נראות ניווט/כפתורים לפי תפקיד ומסגרת — הוצא מתוך doLogin
+   (בלוק אחד, ללא ענפים) כדי לקצר את הפונקציה הראשית. מגדיר isCmd
+   (גלובלי) בתוך התהליך, בדיוק כמו במקור. */
+async function applyLoginUiForRole(person){
+  document.getElementById("hdr-username").textContent = user;
+  document.getElementById("hdr-rank").textContent = userRole === "מפקד" ? "🎖️ מפקד" : "👤 חייל";
+  const shedLabel = (currentShed.isDept && personDept(person)) ? personDept(person) : currentShed.name;
+  document.getElementById("hdr-shed").textContent = "דרג א' · " + shedLabel;
+
+  await refreshAreaPermissions();
+
+  const navCmd = document.getElementById("nav-cmd");
+  const addBtn = document.getElementById("add-event-btn");
+  const repBtn = document.getElementById("safety-report-btn");
+  if(userRole === "מפקד"){
+    isCmd = true;
+    navCmd.classList.remove("hidden");
+    addBtn.classList.remove("hidden");
+    if(repBtn) repBtn.classList.remove("hidden");
+  } else {
+    isCmd = false;
+    navCmd.classList.add("hidden");
+    addBtn.classList.add("hidden");
+    if(repBtn) repBtn.classList.add("hidden");
+  }
+  document.getElementById("safety-search").value = "";
+  document.getElementById("nav-tools").classList.toggle("hidden", !isToolsResp);
+  document.getElementById("nav-vehicles").classList.toggle("hidden", !isVehiclesResp);
+  document.getElementById("tools-add-btn").classList.toggle("hidden", !isToolsResp);
+  document.getElementById("vehicles-add-btn").classList.toggle("hidden", !isVehiclesResp);
+  if(userRole === "מפקד"){
+    document.getElementById("close-mgmt-btn").classList.remove("hidden");
+    document.getElementById("naatim-mgmt-btn").classList.remove("hidden");
+    document.getElementById("cert-add-btn").classList.remove("hidden");
+    document.getElementById("more-team-item").classList.remove("hidden");
+    document.getElementById("more-tasks-item").classList.remove("hidden");
+    document.getElementById("more-binui-item").classList.remove("hidden");
+  } else {
+    document.getElementById("close-mgmt-btn").classList.add("hidden");
+    document.getElementById("naatim-mgmt-btn").classList.add("hidden");
+    document.getElementById("cert-add-btn").classList.add("hidden");
+    document.getElementById("more-team-item").classList.add("hidden");
+    document.getElementById("more-tasks-item").classList.add("hidden");
+    document.getElementById("more-binui-item").classList.add("hidden");
+  }
+  // יוזר "מחלקות" — מעקב מבצעי (מטלות/נע"תים/סגירת יום) לא רלוונטי לשני התפקידים;
+  // הסמכות/חדר כלים/רכבים/עריכת מטלות בוקר מוסרים למפקד בלבד
+  const isDeptUnit = !!(currentShed && currentShed.isDept);
+  document.getElementById("nav-morning").classList.toggle("hidden", isDeptUnit);
+  document.getElementById("sheet-naatim").classList.toggle("hidden", isDeptUnit);
+  document.getElementById("sheet-closeday").classList.toggle("hidden", isDeptUnit);
+  document.getElementById("nav-certs").classList.toggle("hidden", isDeptUnit && userRole==="מפקד");
+  if(isDeptUnit && userRole==="מפקד") document.getElementById("more-tasks-item").classList.add("hidden");
+  // בסככות (לא במחלקות) — תקלות וימי הולדת עוברים מהבאר התחתון לתפריט "עוד" כדי לצמצם עומס
+  document.getElementById("nav-faults").classList.toggle("hidden", !isDeptUnit);
+  document.getElementById("nav-bdays").classList.toggle("hidden", !isDeptUnit);
+  document.getElementById("more-faults-item").classList.toggle("hidden", isDeptUnit);
+  document.getElementById("more-bdays-item").classList.toggle("hidden", isDeptUnit);
+
+  /* מסגרות "מ״ע אחזקה" ו"הדרכה" — מסגרות תפקידיות, לא מסגרות מבצעיות
+     של סככה. מוסרים מהן מסכים שאין להם משמעות בהקשר הזה, וכאלה שכבר
+     קיימים להן ברמה הטייסתית (רכבים ותקלות בינוי במסכי מ״ע אחזקה,
+     הסמכות והדרכה בדשבורד אחראי ההדרכה — שם רואים את כל הטייסת).
+     נשארים: קרא וחתום, הודעות, נכס, ימי הולדת וניהול צוות. */
+  if(currentShed && (currentShed.isMaint || currentShed.isTraining)){
+    [ "nav-tools",        // חדר כלים
+      "tools-add-btn",
+      "nav-vehicles",     // מעקב רכבים סככתי — קיים מעקב טייסתי מלא
+      "vehicles-add-btn",
+      "nav-certs",        // הסמכות
+      "cert-add-btn",
+      "nav-morning",      // מטלות בוקר
+      "more-tasks-item",  // עריכת מטלות בוקר
+      "more-binui-item",  // דיווח תקלות בינוי — קיים מסך ריכוז ועריכה
+      "sheet-closeday",   // סגירת יום
+      "close-mgmt-btn",
+      "nav-faults",       // דיווח תקלות
+      "more-faults-item",
+      "sheet-naatim",     // נע"תים
+      "naatim-mgmt-btn"
+    ].forEach(id=>document.getElementById(id).classList.add("hidden"));
+    // ימי הולדת נשארים, ועוברים לתפריט "עוד" כמו בסככות
+    document.getElementById("more-bdays-item").classList.remove("hidden");
+    document.getElementById("nav-bdays").classList.add("hidden");
+  }
+
+  /* אחראי הדרכה בלבד (לא מ״ע אחזקה) — לוח צוות שבועי/תורנויות/כשירויות
+     חיילים לא רלוונטיים למסגרת "הדרכה" (מסגרת תפקידית, לא מבצעית),
+     ומוסרים רק מהיוזר הזה — לא ממפקדי סככות או ממ״ע אחזקה. toggle()
+     ולא add() בכוונה: כניסה הבאה של מפקד סככה רגיל באותו טעינת-דף
+     חייבת להחזיר את הנראות, לא רק להשאיר אותה מוסתרת מהסשן הקודם. */
+  const isTrainingUnit = !!(currentShed && currentShed.isTraining);
+  document.getElementById("nav-board").classList.toggle("hidden", isTrainingUnit);
+  document.getElementById("sheet-duties").classList.toggle("hidden", isTrainingUnit);
+  document.getElementById("sheet-medchecks").classList.toggle("hidden", isTrainingUnit);
+
+  /* אחראי הדרכה ומ״ע אחזקה — דשבורד המפקד ("תמונת מצב — מפקד") מוסר לגמרי.
+     הוא הציג מגמות וחתימות של המסגרת התפקידית הזעירה שלהן בלבד — לצד
+     דשבורד ייעודי-יותר שכבר יש להן (מרכז שליטה / סקירת מ״ע אחזקה). שני
+     דשבורדים עם אותן כותרות ונתונים שונים בתכלית הם בדיוק מקור הבלבול.
+     למ״ע אחזקה, מה שהיה כאן (מגמות + דיווח מסדר בוקר + ניהול) עבר למסך
+     "סקירה" (scr-vo-overview). (כפתור "לדשבורד" נסמך על נראות nav-cmd
+     ולכן נעלם מעצמו.) */
+  if(userRole === "מפקד" && (currentShed.isTraining || currentShed.isMaint)){
+    document.getElementById("nav-cmd").classList.add("hidden");
+  }
+}
 async function doLogin(){
   const name = document.getElementById("login-select").value;
   const btn = document.getElementById("login-go-btn");
@@ -3692,41 +3836,7 @@ async function doLogin(){
   if(!person){ toast("שם לא מורשה במערכת ⛔"); return; }
   if(person.role !== enteredRole){ toast("אין התאמה בין הקוד לשם ⛔"); return; }
   if(person.release && person.release <= todayKey()){ toast("חייל זה שוחרר מהמסגרת ⛔"); return; }
-  // שער PIN אישי
-  {
-    const wrap = document.getElementById("login-pin-wrap");
-    const pinEl = document.getElementById("login-pin");
-    if(wrap.style.display === "none"){ onLoginNameChange(); pinEl.focus(); return; }
-    const entered = (pinEl.value||"").trim();
-    if(biometricUnlockOK){
-      // Face ID/טביעת אצבע כבר אימתו נוכחות ברגע זה — לא דורשים גם PIN
-      biometricUnlockOK = false;
-    } else if(person.pinHash){
-      // יש PIN — חובה להזין נכון
-      if(!entered){ toast("הזן PIN אישי 🔒"); pinEl.focus(); return; }
-      if(!(await verifyPin(person, entered))){ registerLoginFail(); toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
-      // אימות עבר — אם הגיבוב עדיין בפורמט הישן, משדרגים אותו כאן בשקט
-      await upgradePinIfLegacy(person, entered);
-    } else {
-      // אין PIN — הגדרה חובה בכניסה ראשונה (אי אפשר לדלג)
-      if(!entered){ toast("כניסה ראשונה — יש להגדיר PIN אישי 🔒"); pinEl.focus(); return; }
-      if(!validPinFormat(entered)){ toast("PIN חייב להיות 4 ספרות ⛔"); pinEl.focus(); return; }
-      if(isReservedCode(entered)){ toast("קוד זה שמור למסגרת — בחר קוד אחר ⛔"); pinEl.value=""; pinEl.focus(); return; }
-      const pinFields = await buildPinFields(entered);
-      const setAt = new Date().toLocaleDateString("he-IL");
-      // כתיבה ממוזגת — כדי שהגדרת PIN של חייל אחד לא תדרוס PIN שחייל אחר
-      // הגדיר באותן דקות (ראו ההערה ב-mutatePersonnel)
-      const pinSaved = await mutatePersonnel(list=>{
-        const m = list.find(x=>x.name===person.name);
-        if(!m) return false;
-        Object.assign(m, pinFields);
-        m.pinSetBy = person.name + " (עצמי)"; m.pinSetAt = setAt;
-      });
-      if(!pinSaved){ toast("⚠️ הגדרת ה-PIN לא נשמרה — בדוק חיבור ונסה שוב"); pinEl.focus(); return; }
-      Object.assign(person, pinFields);   // סנכרון העותק המקומי להמשך ההתחברות
-      toast("ה-PIN האישי שלך נקבע 🔒");
-    }
-  }
+  if(!(await verifyLoginPin(person))) return;
   setBtnLoading(btn, true);
   try{
     // איפוס סדר-תצוגה (order) מותאם-תפקיד לפני ההתחברות עצמה — כך שתפקיד
@@ -3735,108 +3845,7 @@ async function doLogin(){
     document.querySelectorAll("nav .nav-btn").forEach(b=>{ b.style.order = ""; });
     user = person.name; userRole = person.role;
     document.getElementById("login-overlay").style.display="none";
-    document.getElementById("hdr-username").textContent = user;
-    document.getElementById("hdr-rank").textContent = userRole === "מפקד" ? "🎖️ מפקד" : "👤 חייל";
-    const shedLabel = (currentShed.isDept && personDept(person)) ? personDept(person) : currentShed.name;
-    document.getElementById("hdr-shed").textContent = "דרג א' · " + shedLabel;
-
-    await refreshAreaPermissions();
-
-    const navCmd = document.getElementById("nav-cmd");
-    const addBtn = document.getElementById("add-event-btn");
-    const repBtn = document.getElementById("safety-report-btn");
-    if(userRole === "מפקד"){
-      isCmd = true;
-      navCmd.classList.remove("hidden");
-      addBtn.classList.remove("hidden");
-      if(repBtn) repBtn.classList.remove("hidden");
-    } else {
-      isCmd = false;
-      navCmd.classList.add("hidden");
-      addBtn.classList.add("hidden");
-      if(repBtn) repBtn.classList.add("hidden");
-    }
-    document.getElementById("safety-search").value = "";
-    document.getElementById("nav-tools").classList.toggle("hidden", !isToolsResp);
-    document.getElementById("nav-vehicles").classList.toggle("hidden", !isVehiclesResp);
-    document.getElementById("tools-add-btn").classList.toggle("hidden", !isToolsResp);
-    document.getElementById("vehicles-add-btn").classList.toggle("hidden", !isVehiclesResp);
-    if(userRole === "מפקד"){
-      document.getElementById("close-mgmt-btn").classList.remove("hidden");
-      document.getElementById("naatim-mgmt-btn").classList.remove("hidden");
-      document.getElementById("cert-add-btn").classList.remove("hidden");
-      document.getElementById("more-team-item").classList.remove("hidden");
-      document.getElementById("more-tasks-item").classList.remove("hidden");
-      document.getElementById("more-binui-item").classList.remove("hidden");
-    } else {
-      document.getElementById("close-mgmt-btn").classList.add("hidden");
-      document.getElementById("naatim-mgmt-btn").classList.add("hidden");
-      document.getElementById("cert-add-btn").classList.add("hidden");
-      document.getElementById("more-team-item").classList.add("hidden");
-      document.getElementById("more-tasks-item").classList.add("hidden");
-      document.getElementById("more-binui-item").classList.add("hidden");
-    }
-    // יוזר "מחלקות" — מעקב מבצעי (מטלות/נע"תים/סגירת יום) לא רלוונטי לשני התפקידים;
-    // הסמכות/חדר כלים/רכבים/עריכת מטלות בוקר מוסרים למפקד בלבד
-    const isDeptUnit = !!(currentShed && currentShed.isDept);
-    document.getElementById("nav-morning").classList.toggle("hidden", isDeptUnit);
-    document.getElementById("sheet-naatim").classList.toggle("hidden", isDeptUnit);
-    document.getElementById("sheet-closeday").classList.toggle("hidden", isDeptUnit);
-    document.getElementById("nav-certs").classList.toggle("hidden", isDeptUnit && userRole==="מפקד");
-    if(isDeptUnit && userRole==="מפקד") document.getElementById("more-tasks-item").classList.add("hidden");
-    // בסככות (לא במחלקות) — תקלות וימי הולדת עוברים מהבאר התחתון לתפריט "עוד" כדי לצמצם עומס
-    document.getElementById("nav-faults").classList.toggle("hidden", !isDeptUnit);
-    document.getElementById("nav-bdays").classList.toggle("hidden", !isDeptUnit);
-    document.getElementById("more-faults-item").classList.toggle("hidden", isDeptUnit);
-    document.getElementById("more-bdays-item").classList.toggle("hidden", isDeptUnit);
-
-    /* מסגרות "מ״ע אחזקה" ו"הדרכה" — מסגרות תפקידיות, לא מסגרות מבצעיות
-       של סככה. מוסרים מהן מסכים שאין להם משמעות בהקשר הזה, וכאלה שכבר
-       קיימים להן ברמה הטייסתית (רכבים ותקלות בינוי במסכי מ״ע אחזקה,
-       הסמכות והדרכה בדשבורד אחראי ההדרכה — שם רואים את כל הטייסת).
-       נשארים: קרא וחתום, הודעות, נכס, ימי הולדת וניהול צוות. */
-    if(currentShed && (currentShed.isMaint || currentShed.isTraining)){
-      [ "nav-tools",        // חדר כלים
-        "tools-add-btn",
-        "nav-vehicles",     // מעקב רכבים סככתי — קיים מעקב טייסתי מלא
-        "vehicles-add-btn",
-        "nav-certs",        // הסמכות
-        "cert-add-btn",
-        "nav-morning",      // מטלות בוקר
-        "more-tasks-item",  // עריכת מטלות בוקר
-        "more-binui-item",  // דיווח תקלות בינוי — קיים מסך ריכוז ועריכה
-        "sheet-closeday",   // סגירת יום
-        "close-mgmt-btn",
-        "nav-faults",       // דיווח תקלות
-        "more-faults-item",
-        "sheet-naatim",     // נע"תים
-        "naatim-mgmt-btn"
-      ].forEach(id=>document.getElementById(id).classList.add("hidden"));
-      // ימי הולדת נשארים, ועוברים לתפריט "עוד" כמו בסככות
-      document.getElementById("more-bdays-item").classList.remove("hidden");
-      document.getElementById("nav-bdays").classList.add("hidden");
-    }
-
-    /* אחראי הדרכה בלבד (לא מ״ע אחזקה) — לוח צוות שבועי/תורנויות/כשירויות
-       חיילים לא רלוונטיים למסגרת "הדרכה" (מסגרת תפקידית, לא מבצעית),
-       ומוסרים רק מהיוזר הזה — לא ממפקדי סככות או ממ״ע אחזקה. toggle()
-       ולא add() בכוונה: כניסה הבאה של מפקד סככה רגיל באותו טעינת-דף
-       חייבת להחזיר את הנראות, לא רק להשאיר אותה מוסתרת מהסשן הקודם. */
-    const isTrainingUnit = !!(currentShed && currentShed.isTraining);
-    document.getElementById("nav-board").classList.toggle("hidden", isTrainingUnit);
-    document.getElementById("sheet-duties").classList.toggle("hidden", isTrainingUnit);
-    document.getElementById("sheet-medchecks").classList.toggle("hidden", isTrainingUnit);
-
-    /* אחראי הדרכה ומ״ע אחזקה — דשבורד המפקד ("תמונת מצב — מפקד") מוסר לגמרי.
-       הוא הציג מגמות וחתימות של המסגרת התפקידית הזעירה שלהן בלבד — לצד
-       דשבורד ייעודי-יותר שכבר יש להן (מרכז שליטה / סקירת מ״ע אחזקה). שני
-       דשבורדים עם אותן כותרות ונתונים שונים בתכלית הם בדיוק מקור הבלבול.
-       למ״ע אחזקה, מה שהיה כאן (מגמות + דיווח מסדר בוקר + ניהול) עבר למסך
-       "סקירה" (scr-vo-overview). (כפתור "לדשבורד" נסמך על נראות nav-cmd
-       ולכן נעלם מעצמו.) */
-    if(userRole === "מפקד" && (currentShed.isTraining || currentShed.isMaint)){
-      document.getElementById("nav-cmd").classList.add("hidden");
-    }
+    await applyLoginUiForRole(person);
 
     // מסגרות שהומרו מיוזר פרטי — המפקד שלהן מקבל בנוסף את ההרשאות הטייסתיות שלו
     if(userRole === "מפקד" && currentShed.isTraining) await applyTrainingCommanderPowers();
@@ -4831,62 +4840,70 @@ async function renderRollcallPage(){
   const box = document.getElementById("rollcall-content");
   if(!box) return;
 
-  if(!currentShed && isVehicleOfficer){
-    // מ״ע אחזקה: רק נכס לצוות הנהגים שלה — בלי מעקב אישי ובלי תצוגה מרוכזת של כל הטייסת
-    box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען…</div>';
-    const [voActive, voCheckins, voTeam] = await Promise.all([
-      sGetRaw("vo_rollcall_active"), sGetRaw("vo_rollcall_checkins"), sGetRaw("vo_personnel")
-    ]);
-    const vChk = voCheckins || {};
-    const team = voTeam || [];
-    let html = "";
-    if(!voActive){
-      html += `<div class="empty-state"><div class="ic">🛡️</div><h3>אין נכס פעיל למחלקה</h3><p>לחץ על הכפתור כדי להפעיל נכס ולסמן עבור הנהגים</p></div>
-        <button class="m-btn primary" style="width:100%;margin-top:10px" onclick="activateVoRollcall()">🚨 הפעל נכס למחלקה</button>`;
+  // מ״ע אחזקה: רק נכס לצוות הנהגים שלה — בלי מעקב אישי ובלי תצוגה מרוכזת של כל הטייסת
+  if(!currentShed && isVehicleOfficer){ await renderRollcallPageVoTeam(box); return; }
+
+  // שאר בעלי תפקידים כלל-טייסתיים — קצין טכני / אחראי הדרכה / אחראי תקציבים:
+  // מסמנים תקינות אישית, ורואים תצוגה מרוכזת (קריאה בלבד) של כל המסגרות
+  if(!currentShed){ await renderRollcallPageSquadronOfficer(box); return; }
+
+  await renderRollcallPageShed(box);
+}
+/* נכס למ״ע אחזקה — נהוג נהג-נהג, בלי מעקב אישי/תצוגה כלל-טייסתית (הוצא
+   מתוך renderRollcallPage כדי לקצר את הפונקציה הראשית). */
+async function renderRollcallPageVoTeam(box){
+  box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען…</div>';
+  const [voActive, voCheckins, voTeam] = await Promise.all([
+    sGetRaw("vo_rollcall_active"), sGetRaw("vo_rollcall_checkins"), sGetRaw("vo_personnel")
+  ]);
+  const vChk = voCheckins || {};
+  const team = voTeam || [];
+  let html = "";
+  if(!voActive){
+    html += `<div class="empty-state"><div class="ic">🛡️</div><h3>אין נכס פעיל למחלקה</h3><p>לחץ על הכפתור כדי להפעיל נכס ולסמן עבור הנהגים</p></div>
+      <button class="m-btn primary" style="width:100%;margin-top:10px" onclick="activateVoRollcall()">🚨 הפעל נכס למחלקה</button>`;
+  } else {
+    const done = team.filter(p=>vChk[p.id]).length;
+    html += `<div class="cmd-section-title">📋 מעקב סימונים <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${done}/${team.length}</span></div>`;
+    if(team.length===0){
+      html += `<div class="empty-state"><div class="ic">👥</div><h3>אין עדיין אנשי צוות</h3><p>הוסף נהגים דרך "ניהול צוות"</p></div>`;
     } else {
-      const done = team.filter(p=>vChk[p.id]).length;
-      html += `<div class="cmd-section-title">📋 מעקב סימונים <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${done}/${team.length}</span></div>`;
-      if(team.length===0){
-        html += `<div class="empty-state"><div class="ic">👥</div><h3>אין עדיין אנשי צוות</h3><p>הוסף נהגים דרך "ניהול צוות"</p></div>`;
-      } else {
-        const sorted = [...team].sort((a,b)=> (vChk[a.id]?1:0) - (vChk[b.id]?1:0));
-        html += sorted.map(p=>`
-          <div class="cert-sum-card" onclick="toggleVoRollcallCheckin('${p.id}')">
-            <div class="cert-sum-head">
-              <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
-              <div class="cert-sum-name"><b>${escapeHTML(p.name)}</b><span>נהג מקצועי</span></div>
-              <span class="pill ${vChk[p.id]?'g':'r'}" style="font-size:10px;white-space:nowrap">${vChk[p.id]?'✅ תקין וזמין':'⏳ טרם סומן'}</span>
-            </div>
-          </div>`).join("");
-        if(team.length>0 && done===team.length){
-          html += `<button class="m-btn primary" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#166534,#22c55e)" onclick="openWaPrompt('rollcall-complete')">✅ דווח בוואטסאפ שהנכס הושלם — כולם תקינים</button>`;
-        }
+      const sorted = [...team].sort((a,b)=> (vChk[a.id]?1:0) - (vChk[b.id]?1:0));
+      html += sorted.map(p=>`
+        <div class="cert-sum-card" onclick="toggleVoRollcallCheckin('${p.id}')">
+          <div class="cert-sum-head">
+            <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
+            <div class="cert-sum-name"><b>${escapeHTML(p.name)}</b><span>נהג מקצועי</span></div>
+            <span class="pill ${vChk[p.id]?'g':'r'}" style="font-size:10px;white-space:nowrap">${vChk[p.id]?'✅ תקין וזמין':'⏳ טרם סומן'}</span>
+          </div>
+        </div>`).join("");
+      if(team.length>0 && done===team.length){
+        html += `<button class="m-btn primary" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#166534,#22c55e)" onclick="openWaPrompt('rollcall-complete')">✅ דווח בוואטסאפ שהנכס הושלם — כולם תקינים</button>`;
       }
-      html += `<div style="display:flex;gap:8px;margin-top:10px">
-        <button class="m-btn ghost" style="flex:1" onclick="endVoRollcall()">🔚 סיים נכס</button>
-        <button class="m-btn primary" style="flex:1" onclick="openWaPrompt('rollcall')">📤 שתף בוואטסאפ</button>
-      </div>`;
     }
-    box.innerHTML = html;
-    return;
-  }
-
-  if(!currentShed){
-    // שאר בעלי תפקידים כלל-טייסתיים — קצין טכני / אחראי הדרכה / אחראי תקציבים:
-    // מסמנים תקינות אישית, ורואים תצוגה מרוכזת (קריאה בלבד) של כל המסגרות
-    box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען נתוני נכס מכל המסגרות…</div>';
-    const officerCheckins = (await sGetRaw("rollcall_officer_checkins")) || {};
-    const myOfficerCheckedIn = !!officerCheckins[userRole];
-    let html = `<div class="all-done-banner" style="display:block;background:${myOfficerCheckedIn?'linear-gradient(135deg,#166534,#22c55e)':'linear-gradient(135deg,#7c2d12,#9a3412)'}">
-      ${myOfficerCheckedIn ? '✅ סימנת שאתה תקין/ה וזמין/ה' : '🚨 נא לסמן שאתה תקין/ה וזמין/ה'}
+    html += `<div style="display:flex;gap:8px;margin-top:10px">
+      <button class="m-btn ghost" style="flex:1" onclick="endVoRollcall()">🔚 סיים נכס</button>
+      <button class="m-btn primary" style="flex:1" onclick="openWaPrompt('rollcall')">📤 שתף בוואטסאפ</button>
     </div>`;
-    if(!myOfficerCheckedIn) html += `<button class="m-btn primary" style="width:100%;margin:10px 0" onclick="checkInOfficerRollcall()">✅ אני תקין/ה וזמין/ה</button>`;
-
-    html += await buildSquadronRollcallRowsHtml();
-    box.innerHTML = html;
-    return;
   }
+  box.innerHTML = html;
+}
+/* נכס לבעלי תפקידים כלל-טייסתיים (קצין טכני/אחראי הדרכה/אחראי תקציבים) —
+   סימון אישי + תצוגה מרוכזת קריאה-בלבד של כל המסגרות. */
+async function renderRollcallPageSquadronOfficer(box){
+  box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען נתוני נכס מכל המסגרות…</div>';
+  const officerCheckins = (await sGetRaw("rollcall_officer_checkins")) || {};
+  const myOfficerCheckedIn = !!officerCheckins[userRole];
+  let html = `<div class="all-done-banner" style="display:block;background:${myOfficerCheckedIn?'linear-gradient(135deg,#166534,#22c55e)':'linear-gradient(135deg,#7c2d12,#9a3412)'}">
+    ${myOfficerCheckedIn ? '✅ סימנת שאתה תקין/ה וזמין/ה' : '🚨 נא לסמן שאתה תקין/ה וזמין/ה'}
+  </div>`;
+  if(!myOfficerCheckedIn) html += `<button class="m-btn primary" style="width:100%;margin:10px 0" onclick="checkInOfficerRollcall()">✅ אני תקין/ה וזמין/ה</button>`;
 
+  html += await buildSquadronRollcallRowsHtml();
+  box.innerHTML = html;
+}
+/* נכס רגיל למסגרת (סככה/מחלקה/הדרכה) — הענף העיקרי שנשאר ב-renderRollcallPage המקורית. */
+async function renderRollcallPageShed(box){
   const rcSuf = rollcallKeySuffix();
   const [active, checkins] = await Promise.all([sGet("rollcall_active"+rcSuf), sGet("rollcall_checkins"+rcSuf)]);
   const chk = checkins || {};
@@ -8525,9 +8542,12 @@ async function openAdminAlerts(){
    ============================================================ */
 
 /* ===== FEATURE 1: TRENDS DASHBOARD — v25: מכלול הנתונים ===== */
-async function renderTrends(boxId){
-  const box = document.getElementById(boxId || "trends-content");
-  const isDeptUnit = !!(currentShed && currentShed.isDept);
+/* מחשבת את כל המדדים (חתימות/מטלות/תקלות/הסמכות/PF/כשירות/כלים/רכבים/נע"תים)
+   ובונה את priorityFeed המשותף — הוצא מתוך renderTrends כחלק טהור (בלי
+   נגיעה ב-DOM) כדי לקצר את הפונקציה הראשית. score/scoreColor/openF/
+   pfMissing/events/faults/today משמשים רק בתוך החישוב עצמו ולא נחוצים
+   מחוץ לו, ולכן לא מוחזרים. */
+async function computeTrendsData(isDeptUnit){
   const events = await getEvents();
   const faults = await getFaults();
 
@@ -8620,17 +8640,33 @@ async function renderTrends(boxId){
   const naatimChecks = (await sGet("naatim_checks_"+weekKey())) || {};
   const naatimOpen = naatim.filter(n=>!naatimChecks[n.id]).length;
 
-  // ===== מדד מוכנות מאוחד (0-100) =====
-  let score = 100;
-  score -= certExpired*3 + certSoon*1 + toolExpired*4 + toolSoon*1.5 + vehExpired*4 + vehSoon*1.5 + pfMissing*3 + openF*2;
-  score = Math.max(0, Math.min(100, Math.round(score)));
-  const scoreColor = score>=85 ? "var(--green)" : score>=60 ? "var(--gold)" : "var(--red-2)";
-
   // מיון פיד העדיפויות: אדום לפני צהוב, ולפי מספר הימים (הכי דחוף קודם)
   priorityFeed.sort((a,b)=> (a.cls===b.cls ? a.days-b.days : (a.cls==="r"?-1:1)));
 
+  return {
+    sigPct, maxSigs, totalSigs, mDone,
+    certs, certExpired, certSoon,
+    tools, toolExpired, toolSoon,
+    vehicles, vehExpired, vehSoon,
+    naatim, naatimOpen,
+    medExpired, medSoon,
+    priorityFeed,
+  };
+}
+async function renderTrends(boxId){
+  const box = document.getElementById(boxId || "trends-content");
+  const isDeptUnit = !!(currentShed && currentShed.isDept);
+  const {
+    sigPct, maxSigs, totalSigs, mDone,
+    certs, certExpired, certSoon,
+    tools, toolExpired, toolSoon,
+    vehicles, vehExpired, vehSoon,
+    naatim, naatimOpen,
+    medExpired, medSoon,
+    priorityFeed,
+  } = await computeTrendsData(isDeptUnit);
+
   const hh = new Date().getHours();
-  const greeting = hh<12 ? "בוקר טוב" : hh<18 ? "צהריים טובים" : "ערב טוב";
   const dateStr = new Date().toLocaleDateString("he-IL",{weekday:"long", day:"numeric", month:"long"});
 
   // ===== קונסולת מפקד v2 =====
@@ -9162,54 +9198,57 @@ function renderCertsPageList(){
     return;
   }
 
-  const cards = shownNames.map(name=>{
-    const list = byPerson[name] || [];
-    // count per level
-    const counts = {saf:0, raf:0, himush:0, elyon:0, stage:0, pa:0, safety:0, other:0};
-    list.forEach(c=>{ counts[certLevel(c.name)]++; });
-    const total = list.length;
+  const cards = shownNames.map(name=>certPersonCardHtml(name, byPerson, isCmdr)).join("");
 
-    // detail groups (collapsed)
-    const detail = CERT_LEVELS.map(lvl=>{
-      const items = list.filter(c=>certLevel(c.name)===lvl.key);
-      if(items.length===0) return "";
-      const rows = items.map(c=>{
-        const st = certStatus(c);
-        const expTag = (c.expiry) ? `<span class="pill ${st.cls}" style="font-size:9px">${st.tag}</span>` : "";
-        return `<div class="cert-chip-row ${specialOtherClass(certCleanName(c.name))}">
-          <span class="cert-chip-name">${escapeHTML(certCleanName(c.name))}</span>
-          ${expTag}
-          ${isCmdr?`<button class="cert-chip-del" onclick="event.stopPropagation();removeCertById('${c.id||''}',${c._idx})">✕</button>`:''}
-        </div>`;
-      }).join("");
-      return `<div class="cert-detail-group">
-        <div class="cert-detail-title ${lvl.cls}">${lvl.label} · ${items.length}</div>
-        <div class="cert-chip-list">${rows}</div>
+  box.innerHTML = trainingCard + legend + cards;
+}
+/* כרטיס הסמכות של אדם אחד (כולל פירוט מקופל לפי רמה) — הוצא מתוך
+   renderCertsPageList כחישוב טהור (לא נוגע ב-DOM) כדי לקצר את הפונקציה. */
+function certPersonCardHtml(name, byPerson, isCmdr){
+  const list = byPerson[name] || [];
+  // count per level
+  const counts = {saf:0, raf:0, himush:0, elyon:0, stage:0, pa:0, safety:0, other:0};
+  list.forEach(c=>{ counts[certLevel(c.name)]++; });
+  const total = list.length;
+
+  // detail groups (collapsed)
+  const detail = CERT_LEVELS.map(lvl=>{
+    const items = list.filter(c=>certLevel(c.name)===lvl.key);
+    if(items.length===0) return "";
+    const rows = items.map(c=>{
+      const st = certStatus(c);
+      const expTag = (c.expiry) ? `<span class="pill ${st.cls}" style="font-size:9px">${st.tag}</span>` : "";
+      return `<div class="cert-chip-row ${specialOtherClass(certCleanName(c.name))}">
+        <span class="cert-chip-name">${escapeHTML(certCleanName(c.name))}</span>
+        ${expTag}
+        ${isCmdr?`<button class="cert-chip-del" onclick="event.stopPropagation();removeCertById('${c.id||''}',${c._idx})">✕</button>`:''}
       </div>`;
     }).join("");
-
-    const roleLabel = counts.raf+counts.himush+counts.elyon>0 ? "מוסמך מתקדם" : total>0 ? "הסמכות סף" : "ללא הסמכות";
-
-    return `<div class="cert-sum-card" onclick="this.classList.toggle('open')">
-      <div class="cert-sum-head">
-        <div class="avatar" style="width:40px;height:40px;font-size:14px">${initials(name)}</div>
-        <div class="cert-sum-name"><b>${escapeHTML(name)}</b><span>${roleLabel} · ${total} סה"כ</span></div>
-        <div class="cert-sum-levels" style="flex-wrap:wrap;max-width:150px;justify-content:flex-end">
-          <div class="lvl-count ${counts.saf?'saf':'zero'}"><b>${counts.saf}</b><span>סף</span></div>
-          <div class="lvl-count ${counts.raf?'raf':'zero'}"><b>${counts.raf}</b><span>רף</span></div>
-          <div class="lvl-count ${counts.himush?'himush':'zero'}"><b>${counts.himush}</b><span>חימ'</span></div>
-          <div class="lvl-count ${counts.elyon?'elyon':'zero'}"><b>${counts.elyon}</b><span>עליון</span></div>
-          <div class="lvl-count ${counts.stage?'stage':'zero'}"><b>${counts.stage}</b><span>שלבים</span></div>
-          <div class="lvl-count ${counts.pa?'pa':'zero'}"><b>${counts.pa}</b><span>פ"א</span></div>
-          <div class="lvl-count ${counts.safety?'safety':'zero'}"><b>${counts.safety}</b><span>בטיחות</span></div>
-        </div>
-        <span class="cert-sum-chev">‹</span>
-      </div>
-      <div class="cert-sum-detail"><div class="cert-sum-detail-inner">${detail}</div></div>
+    return `<div class="cert-detail-group">
+      <div class="cert-detail-title ${lvl.cls}">${lvl.label} · ${items.length}</div>
+      <div class="cert-chip-list">${rows}</div>
     </div>`;
   }).join("");
 
-  box.innerHTML = trainingCard + legend + cards;
+  const roleLabel = counts.raf+counts.himush+counts.elyon>0 ? "מוסמך מתקדם" : total>0 ? "הסמכות סף" : "ללא הסמכות";
+
+  return `<div class="cert-sum-card" onclick="this.classList.toggle('open')">
+    <div class="cert-sum-head">
+      <div class="avatar" style="width:40px;height:40px;font-size:14px">${initials(name)}</div>
+      <div class="cert-sum-name"><b>${escapeHTML(name)}</b><span>${roleLabel} · ${total} סה"כ</span></div>
+      <div class="cert-sum-levels" style="flex-wrap:wrap;max-width:150px;justify-content:flex-end">
+        <div class="lvl-count ${counts.saf?'saf':'zero'}"><b>${counts.saf}</b><span>סף</span></div>
+        <div class="lvl-count ${counts.raf?'raf':'zero'}"><b>${counts.raf}</b><span>רף</span></div>
+        <div class="lvl-count ${counts.himush?'himush':'zero'}"><b>${counts.himush}</b><span>חימ'</span></div>
+        <div class="lvl-count ${counts.elyon?'elyon':'zero'}"><b>${counts.elyon}</b><span>עליון</span></div>
+        <div class="lvl-count ${counts.stage?'stage':'zero'}"><b>${counts.stage}</b><span>שלבים</span></div>
+        <div class="lvl-count ${counts.pa?'pa':'zero'}"><b>${counts.pa}</b><span>פ"א</span></div>
+        <div class="lvl-count ${counts.safety?'safety':'zero'}"><b>${counts.safety}</b><span>בטיחות</span></div>
+      </div>
+      <span class="cert-sum-chev">‹</span>
+    </div>
+    <div class="cert-sum-detail"><div class="cert-sum-detail-inner">${detail}</div></div>
+  </div>`;
 }
 
 function certBankGroupedOptions(){
@@ -9525,11 +9564,10 @@ async function renderShedLicensesView(){
    מ״ע אחזקה טייסתי — מעקב רכבים ורישיונות בכל המסגרות
    ============================================================ */
 /* סקירה כללית — מד מוכנות צי, פיד דחיפויות מאוחד (רכבים+רישיונות) ופילוח לפי סככה */
-async function renderVoOverview(){
-  const box = document.getElementById("vo-overview-content");
-  if(!box) return;
-  box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען נתונים מכל המסגרות…</div>';
-
+/* אוסף וחישוב כל נתוני הסקירה (רכבים/טסטים/רישיונות/חומרים/כלים) מכל
+   המסגרות — הוצא מתוך renderVoOverview כחלק טהור (בלי נגיעה ב-DOM) כדי
+   לקצר את הפונקציה הראשית. */
+async function computeVoOverviewData(){
   let totalVehicles = 0, vehExpired = 0, vehSoon = 0, testExpired = 0, testSoon = 0;
   const shedRows = [];
 
@@ -9591,6 +9629,25 @@ async function renderVoOverview(){
   let score = 100;
   score -= (vehExpired+testExpired+licExpired+matWaiting+toolExpired)*3 + (vehSoon+testSoon+licSoon+matOrdered+toolSoon)*1;
   score = Math.max(0, Math.min(100, Math.round(score)));
+
+  return {
+    totalVehicles, vehExpired, vehSoon, testExpired, testSoon, shedRows,
+    licenses, mcMarkedCount, licExpired, licSoon, licValid,
+    materials, matWaiting, matOrdered, motorTools, toolExpired, toolSoon,
+    groups, score,
+  };
+}
+async function renderVoOverview(){
+  const box = document.getElementById("vo-overview-content");
+  if(!box) return;
+  box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען נתונים מכל המסגרות…</div>';
+
+  const {
+    totalVehicles, vehExpired, vehSoon, testExpired, testSoon, shedRows,
+    licenses, mcMarkedCount, licExpired, licSoon, licValid,
+    materials, matWaiting, matOrdered, motorTools, toolExpired, toolSoon,
+    groups, score,
+  } = await computeVoOverviewData();
 
   const dateStr = new Date().toLocaleDateString("he-IL",{weekday:"long", day:"numeric", month:"long"});
   const feedHtml = groups.length===0
