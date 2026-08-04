@@ -8,13 +8,11 @@
    על שום נתיב מוחלט.
    ============================================================ */
 import { existsSync } from 'fs';
-import { fileURLToPath, pathToFileURL } from 'url';
-import { dirname, resolve, join } from 'path';
+import { pathToFileURL } from 'url';
+import { join } from 'path';
+import { ROOT } from './repo-root.mjs';
 
-/* שורש המאגר — נגזר ממיקום הקובץ הזה, לא מקובע.
-   בלי זה הבדיקות רצות רק במחשב שבו נכתבו: ב-GitHub המאגר יושב
-   תחת /home/runner/work/... ולא תחת /home/user. */
-export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+export { ROOT };
 export const APP_URL = pathToFileURL(join(ROOT, 'index.html')).href;
 
 let chromium;

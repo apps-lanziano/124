@@ -3,7 +3,7 @@
    בלבד, ונתיב הגיבוי). firebase-admin/functions לא מותקנים בסביבת הבדיקה,
    ולכן זו בדיקת מקור (כמו ב-rollcall_alert_test.mjs) ולא הרצה בפועל. */
 import { readFileSync } from 'fs';
-import { ROOT } from '../lib/pw.mjs';
+import { ROOT } from '../lib/repo-root.mjs';
 
 const results = [];
 function record(name, pass, detail){ results.push({name, pass, detail}); }
