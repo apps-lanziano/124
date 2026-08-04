@@ -9,19 +9,46 @@
 
 const {onDocumentWritten} = require("firebase-functions/v2/firestore");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
+const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore} = require("firebase-admin/firestore");
 const {getMessaging} = require("firebase-admin/messaging");
 const {getStorage} = require("firebase-admin/storage");
+const {getAuth} = require("firebase-admin/auth");
 const {findUnsignedReminders} = require("./lib/reminders");
 const {findExpiringCerts} = require("./lib/cert_expiry_reminders");
 const {findOverdueReserves} = require("./lib/reserve_refresh_reminders");
 const {findVoIssues} = require("./lib/vo_reminders");
 const {dumpCollection} = require("./lib/backup");
 const {decide, SHED_NAMES} = require("./lib/notify");
+const {shouldAuthorize} = require("./lib/authorize");
 
 initializeApp();
 const db = getFirestore();
+
+/* ===== markAuthorized — סוגר את פרצת האימות האנונימי =====
+   אימות אנונימי (מופעל אוטומטית בטעינת כל דף, לפני הקלדת קוד) עומד
+   באותה בדיקת isAuthed() כמו כניסה אמיתית — כך שמי שפותח את האתר
+   האמיתי בלבד (בלי להקליד קוד) יכול לקרוא את כל המסד ב-F12 (ראו
+   SECURITY.md). הפונקציה הזו נקראת מהלקוח מיד אחרי כניסה מוצלחת עם
+   קוד (signInAs), ומצמידה תגית authorized:true לחשבון — רק לאחר
+   שווידאה בעצמה בצד השרת (לא סומכת על הלקוח) שזו אכן כניסה עם
+   email/password ולא סתם אימות אנונימי. כללי ה-Firestore (שלב הבא,
+   רק אחרי אימות שהכניסה החיה אכן מקבלת את התגית) ידרשו authorized==true
+   בנוסף לאימות עצמו. */
+exports.markAuthorized = onCall(
+  {region: "me-west1", enforceAppCheck: true},
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "נדרש להיות מחובר");
+    }
+    if (!shouldAuthorize(request.auth)) {
+      throw new HttpsError("permission-denied", "רק כניסה עם קוד תקף מאושרת");
+    }
+    await getAuth().setCustomUserClaims(request.auth.uid, {authorized: true});
+    return {ok: true};
+  },
+);
 
 exports.notifyOnPublish = onDocumentWritten(
   {
