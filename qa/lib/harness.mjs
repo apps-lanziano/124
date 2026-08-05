@@ -19,7 +19,7 @@ export const SHED_LIST = [
 ];
 
 export const ALL_SCREENS = [
-  "scr-safety","scr-morning","scr-duties","scr-faults","scr-binui-faults","scr-board",
+  "scr-safety","scr-morning","scr-duties","scr-calendar","scr-faults","scr-binui-faults","scr-board",
   "scr-bdays","scr-rollcall","scr-closeday","scr-naatim","scr-certs","scr-medchecks",
   "scr-tools","scr-vehicles","scr-training","scr-cmd","scr-admin","scr-vehicle-officer",
   "scr-maint-dept","scr-binui-admin","scr-budget-officer","scr-users",

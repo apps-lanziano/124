@@ -478,6 +478,29 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
 .duty-select.filled{border-color:var(--red-line);background:var(--red-soft);color:var(--red);font-weight:700}
 .duty-lock-note{font-size:11.5px;color:var(--ink-3);font-weight:300;text-align:center;margin-top:10px}
 
+/* ---------- לוח שנה מאוחד ---------- */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 16px;margin-bottom:12px}
+.cal-nav b{font-size:15px;font-weight:800}
+.cal-nav-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:18px;line-height:1;cursor:pointer}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;text-align:center}
+.cal-dow{font-size:10.5px;font-weight:800;color:var(--ink-3);padding-bottom:4px}
+.cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:9px;color:var(--ink-2);font-size:12px;cursor:pointer;gap:2px}
+.cal-day.empty{cursor:default}
+.cal-day:not(.empty):hover{background:var(--bg)}
+.cal-day.today{background:var(--red-soft);color:var(--red);font-weight:800}
+.cal-day.selected{outline:2px solid var(--red);outline-offset:-2px}
+.cal-dots{display:flex;gap:2px}
+.cal-dots i{width:4px;height:4px;border-radius:50%;display:block}
+.cal-legend{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:12px;font-size:11px;color:var(--ink-2)}
+.cal-legend span{display:flex;align-items:center;gap:5px}
+.cal-legend i{width:8px;height:8px;border-radius:50%;display:block}
+.cal-day-hdr{font-size:12.5px;font-weight:800;color:var(--ink-2);margin:16px 0 8px}
+.cal-event-row{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:9px 11px;margin-bottom:7px;font-size:12.5px;box-shadow:var(--shadow)}
+.cal-event-row:last-child{margin-bottom:0}
+.cal-event-row i{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.cal-event-row span{flex:1;min-width:0}
+.cal-event-row b{font-size:10px;font-weight:800;color:var(--ink-3)}
+
 /* ---------- NAV ---------- */
 nav{
   position:absolute;bottom:0;left:0;right:0;background:rgba(255,255,255,.94);backdrop-filter:blur(16px);
@@ -1175,6 +1198,24 @@ nav{
         <div id="duties-list"></div>
       </div>
       <div class="duty-lock-note" id="duty-lock-note"></div>
+    </section>
+
+    <!-- ===== לוח שנה מאוחד — הסמכות/כיול כלים/טסט רכב/תורנויות במבט אחד ===== -->
+    <section class="screen" id="scr-calendar">
+      <div class="sec-head">
+        <div>
+          <h2>לוח שנה מאוחד 📅</h2>
+          <p>כל המועדים הקרובים — הסמכות, כיול כלים, טסט רכב ותורנויות — במבט אחד.</p>
+        </div>
+      </div>
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="calShift(-1)">›</button>
+        <b id="cal-month-label"></b>
+        <button class="cal-nav-btn" onclick="calShift(1)">‹</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div class="cal-legend" id="cal-legend"></div>
+      <div id="cal-day-detail"></div>
     </section>
 
     <!-- ===== FAULTS (feature 10) ===== -->
@@ -1900,6 +1941,7 @@ nav{
       <div class="sheet-item" id="sheet-closeday" onclick="closeMoreAnd('scr-closeday')"><div class="s-ic">🌙</div><div class="s-tx"><b>סגירת יום</b><span>צ'קליסט סוף משמרת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" onclick="closeMoreAnd('scr-training')"><div class="s-ic">📚</div><div class="s-tx"><b>חומרי הדרכה</b><span>מהמנהל הטייסתי</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-medchecks" onclick="closeMoreAnd('scr-medchecks')"><div class="s-ic">🪖</div><div class="s-tx"><b>כשירות חיילים</b><span>שמיעה ומטווח — תוקף וחידוש</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="sheet-calendar" onclick="closeMoreAnd('scr-calendar')"><div class="s-ic">📅</div><div class="s-tx"><b>לוח שנה מאוחד</b><span>הסמכות, כיול כלים, טסט רכב ותורנויות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-team-item" onclick="closeMoreAndFn(openTeamMgmt)"><div class="s-ic">👥</div><div class="s-tx"><b>ניהול צוות</b><span>הוספה, עריכה, ימי הולדת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-tasks-item" onclick="closeMoreAndFn(openTaskMgmt)"><div class="s-ic">🧰</div><div class="s-tx"><b>עריכת מטלות בוקר</b><span>הוספה ושינוי מטלות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-faults-item" onclick="closeMoreAnd('scr-faults')"><div class="s-ic">🛠️</div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות</span></div><span class="s-chev">‹</span></div>
@@ -4072,6 +4114,7 @@ function go(id, btn){
   if(id==="scr-admin") renderAdminDashboard();
   if(id==="scr-closeday") renderCloseDay();
   if(id==="scr-naatim") renderNaatim();
+  if(id==="scr-calendar") renderCalendarPage();
   if(id==="scr-certs") renderCertsPage();
   if(id==="scr-medchecks") renderMedChecks();
   if(id==="scr-tools") renderToolsPage();
@@ -4870,6 +4913,90 @@ async function saveDuty(name, field, value){
   table[name][field] = value;
   await sSet("duty_table", table);
   toast("השיבוץ עודכן ✓");
+}
+
+/* ===== לוח שנה מאוחד (feature: לוח שנה מאוחד) =====
+   מסך תצוגה בלבד שמרכז ארבעה מקורות נתונים קיימים — הסמכות (certs_list),
+   כיול כלים (tools_list), טסט רכב (vehicles_list.testDate) ותורנויות
+   (duty_table) — לנקודות צבעוניות על גבי לוח חודשי אחד. לא מסך ניווט
+   קבוע (נגיש מתפריט "עוד" בלבד), וללא מודל נתונים חדש: קורא מהמקורות
+   הקיימים בדיוק כמו מסכיהם, בלי לשכפל לוגיקה. כלים/רכבים לא רלוונטיים
+   ליוזר מחלקות — אותה גדירה בדיוק כמו ביתר הדשבורד (computeTrendsData). */
+const CAL_TYPES = {
+  cert:    {label:"הסמכה",    color:"#7c3aed"},
+  tool:    {label:"כיול כלי", color:"#b98900"},
+  vehicle: {label:"טסט רכב",  color:"#2563eb"},
+  duty:    {label:"תורנות",   color:"var(--red)"},
+};
+let calYear, calMonth, calSelectedDate = null;
+function calInit(){
+  const now = new Date();
+  calYear = now.getFullYear(); calMonth = now.getMonth();
+}
+function calShift(delta){
+  if(calYear===undefined) calInit();
+  calMonth += delta;
+  if(calMonth<0){ calMonth=11; calYear--; }
+  else if(calMonth>11){ calMonth=0; calYear++; }
+  calSelectedDate = null;
+  renderCalendarPage();
+}
+async function getCalendarEvents(){
+  const isDeptUnit = !!(currentShed && currentShed.isDept);
+  const [certs, tools, vehicles, dutyTable] = await Promise.all([
+    getCerts(),
+    isDeptUnit ? Promise.resolve([]) : getTools(),
+    isDeptUnit ? Promise.resolve([]) : getVehicles(),
+    sGet("duty_table"),
+  ]);
+  const events = [];
+  certs.forEach(c=>{ if(c.expiry) events.push({date:c.expiry, type:"cert", label:`${c.person} — ${certCleanName(c.name)}`}); });
+  tools.forEach(t=>{ if(t.expiry && !t.inRepair) events.push({date:t.expiry, type:"tool", label:t.name+(t.serial?` — מספר ${t.serial}`:"")}); });
+  vehicles.forEach(v=>{ if(v.testDate) events.push({date:v.testDate, type:"vehicle", label:v.name+(v.number?` — מס' ${v.number}`:"")}); });
+  Object.entries(dutyTable || {}).forEach(([name,row])=>{ if(row && row.date && row.duty) events.push({date:row.date, type:"duty", label:`${name} — ${row.duty}`}); });
+  return events;
+}
+async function renderCalendarPage(){
+  if(calYear===undefined) calInit();
+  const events = await getCalendarEvents();
+  const byDate = {};
+  events.forEach(e=>{ (byDate[e.date] = byDate[e.date]||[]).push(e); });
+
+  const first = new Date(calYear, calMonth, 1);
+  const startDow = first.getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const todayStr = todayKey();
+
+  document.getElementById("cal-month-label").textContent = first.toLocaleDateString("he-IL",{month:"long",year:"numeric"});
+
+  const dows = ["א","ב","ג","ד","ה","ו","ש"];
+  let cells = dows.map(d=>`<div class="cal-dow">${d}</div>`).join("");
+  for(let i=0;i<startDow;i++) cells += `<div class="cal-day empty"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    const dayEvents = byDate[dateStr] || [];
+    const types = [...new Set(dayEvents.map(e=>e.type))];
+    const dots = types.map(t=>`<i style="background:${CAL_TYPES[t].color}"></i>`).join("");
+    const cls = ["cal-day", dateStr===todayStr?"today":"", dateStr===calSelectedDate?"selected":""].filter(Boolean).join(" ");
+    cells += `<div class="${cls}" onclick="calSelectDay('${dateStr}')"><span>${day}</span>${dots?`<div class="cal-dots">${dots}</div>`:""}</div>`;
+  }
+  document.getElementById("cal-grid").innerHTML = cells;
+  document.getElementById("cal-legend").innerHTML = Object.values(CAL_TYPES).map(v=>`<span><i style="background:${v.color}"></i>${v.label}</span>`).join("");
+  renderCalDayDetail(byDate);
+}
+async function calSelectDay(dateStr){
+  calSelectedDate = (calSelectedDate===dateStr) ? null : dateStr;
+  await renderCalendarPage();
+}
+function renderCalDayDetail(byDate){
+  const box = document.getElementById("cal-day-detail");
+  if(!calSelectedDate){ box.innerHTML=""; return; }
+  const dayEvents = (byDate && byDate[calSelectedDate]) || [];
+  const dateLabel = new Date(calSelectedDate+"T00:00:00").toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long"});
+  const rows = dayEvents.length
+    ? dayEvents.map(e=>`<div class="cal-event-row"><i style="background:${CAL_TYPES[e.type].color}"></i><span>${escapeHTML(e.label)}</span><b>${CAL_TYPES[e.type].label}</b></div>`).join("")
+    : `<div style="font-size:12.5px;color:var(--ink-3);padding:8px 0">אין אירועים ביום זה</div>`;
+  box.innerHTML = `<div class="cal-day-hdr">${dateLabel}</div>${rows}`;
 }
 
 /* ============ BIRTHDAYS ============ */
