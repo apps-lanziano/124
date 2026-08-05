@@ -3488,6 +3488,7 @@ const SUPER_ADMIN_NAME = "אלעד לנציאנו";
 let isSuperAdmin = false;
 let superAdminSelf = null;   // {shedId,role,name} — הזהות המקורית שלו, לשחזור אחרי "כניסה בתור"
 let skipPinCheck = false;    // דילוג חד-פעמי על בדיקת PIN — כשמנהל-על כבר אימת את זהותו (כניסה בתור/חזרה לעצמו)
+let suppressDeviceRemember = false;   // חד-פעמי — מונע מ"כניסה בתור" לרשום את מי שנכנסים בתורו כ"משתמש זכור" על המכשיר הנוכחי, עם קוד שגוי (של מנהל-העל, לא של אותו אדם)
 
 /* ===== קיצורי דרך ממסך הבית (PWA shortcuts, manifest.json) =====
    נכנס עם ?shortcut=rollcall/faults בכתובת — נקרא פעם אחת בטעינה,
@@ -4138,8 +4139,12 @@ async function doLogin(){
     go(landingScreen, landingBtn);
     await refreshAll();
     clearLoginFails();   // כניסה מוצלחת מאפסת את מונה הניסיונות
-    // זכירת מכשיר — המשתמש מתווסף לרשימה (מספר משתמשים לכל מכשיר)
-    if(currentShed && user && person.pinHash && lastEnteredCode){
+    // זכירת מכשיר — המשתמש מתווסף לרשימה (מספר משתמשים לכל מכשיר). מדולג
+    // ב"כניסה בתור"/חזרה ממנה — lastEnteredCode שם הוא הקוד של מנהל-העל,
+    // לא של מי שנכנסים בתורו, ורישום שגוי כזה על המכשיר (של מנהל-העל או
+    // של מי שבתורו נכנסים) יאפשר בטעות "כניסה מהירה" עם קוד לא תואם.
+    if(suppressDeviceRemember){ suppressDeviceRemember = false; }
+    else if(currentShed && user && person.pinHash && lastEnteredCode){
       const devRec = {shedId: currentShed.id, role: enteredRole, code: lastEnteredCode, name: user};
       addDeviceUser(devRec);
       maybeOfferBiometricEnroll(devRec);   // לא ממתינים — לא חוסם את מסך הכניסה
@@ -7462,6 +7467,7 @@ async function impersonateUser(shedId, name){
   sel.innerHTML = `<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`;
   sel.value = name;
   skipPinCheck = true;   // מנהל-העל כבר אימת את זהותו שלו — לא נדרש גם PIN של מי שהוא נכנס בתורו
+  suppressDeviceRemember = true;   // אחרת המכשיר הנוכחי "זוכר" את מי שנכנסים בתורו עם קוד הכניסה של מנהל-העל (שגוי) במקום הקוד האמיתי שלו
   await doLogin();
   const bar = document.getElementById("impersonate-bar");
   document.getElementById("impersonate-txt").textContent = `👑 ${escapeHTML(superAdminSelf.name)} — צופה בתור ${name} · ${shed.name}`;
@@ -7490,6 +7496,7 @@ async function exitImpersonation(){
   sel.innerHTML = `<option value="${escapeHTML(self.name)}">${escapeHTML(self.name)}</option>`;
   sel.value = self.name;
   skipPinCheck = true;
+  suppressDeviceRemember = true;
   await doLogin();
 }
 
