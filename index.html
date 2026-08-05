@@ -5551,8 +5551,72 @@ async function getDutyRoster(){
 function parseDutyNames(text){
   return (text||"").split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
 }
+async function fetchAllPersonnelByShed(){
+  const map = {};
+  await Promise.all(SHEDS.map(async s=>{ map[s.id] = (await sGetIn(s.id,"cfg_personnel")) || []; }));
+  return map;
+}
+/* שם בלוח עשוי להיות כתוב כשם מלא, רק שם פרטי, או רק שם משפחה — מצליב
+   מול רשימות הצוות המלאות של כל הסככות כדי להשלים לשם המלא הנכון.
+   אם יש יותר מהתאמה אפשרית אחת (למשל שני "דני" בסככות שונות) — לא
+   מנחשים, מסמנים כדו-משמעי ומשאירים לאדם לתקן ידנית. */
+function resolveDutyToken(token, allPersonnel){
+  const exact = [], partial = [];
+  SHEDS.forEach(s=>{
+    (allPersonnel[s.id]||[]).forEach(p=>{
+      if(!p || !p.name) return;
+      if(p.name === token) exact.push({shedId:s.id, fullName:p.name});
+      else if(p.name.trim().split(/\s+/).includes(token)) partial.push({shedId:s.id, fullName:p.name});
+    });
+  });
+  if(exact.length === 1) return {status:"exact", ...exact[0]};
+  if(exact.length > 1) return {status:"ambiguous", candidates:exact};
+  if(partial.length === 1) return {status:"resolved", ...partial[0]};
+  if(partial.length > 1) return {status:"ambiguous", candidates:partial};
+  return {status:"unmatched"};
+}
+function resolveDutyRosterDays(days, allPersonnel){
+  const ambiguous = [];
+  const unmatchedSet = new Set();
+  const fix = (arr) => (arr||[]).map(name=>{
+    const r = resolveDutyToken(name, allPersonnel);
+    if(r.status==="exact" || r.status==="resolved") return r.fullName;
+    if(r.status==="ambiguous") ambiguous.push({name, candidates:r.candidates});
+    else unmatchedSet.add(name);
+    return name;   // משאירים את הטקסט המקורי גלוי לעריכה, לא מנחשים
+  });
+  const resolvedDays = {};
+  WEEK_DAYS_HE.forEach(day=>{
+    const d = days[day] || {duty:[], rest:[]};
+    resolvedDays[day] = {duty: fix(d.duty), rest: fix(d.rest)};
+  });
+  return {days: resolvedDays, ambiguous, unmatched: [...unmatchedSet]};
+}
+function dutyRosterPreviewHtml(resolvedDays, ambiguous, unmatched, allPersonnel, aiNote){
+  const matchedCount = {};
+  Object.values(resolvedDays).forEach(d=>{
+    [...d.duty, ...d.rest].forEach(name=>{
+      const matches = SHEDS.filter(s=>(allPersonnel[s.id]||[]).some(p=>p.name===name));
+      if(matches.length===1) matchedCount[matches[0].id] = (matchedCount[matches[0].id]||0)+1;
+    });
+  });
+  const summary = SHEDS.filter(s=>matchedCount[s.id]).map(s=>`${escapeHTML(s.name)}: ${matchedCount[s.id]}`).join(" · ");
+  const parts = [];
+  if(aiNote) parts.push(`<div class="duty-roster-match">🤖 זו הצעה של AI מתוך תמונת הלוח — בדוק ותקן לפני שמירה. רק לחיצה על "שמור שיבוץ" מפעילה את ההתראות.</div>`);
+  if(summary) parts.push(`<div class="duty-roster-match">✓ זוהו: ${summary}</div>`);
+  if(ambiguous.length) parts.push(`<div class="duty-roster-unmatch">❓ שם דו-משמעי — כמה אנשים תואמים, תקן ידנית לשם המלא הנכון: ${ambiguous.map(a=>`"${escapeHTML(a.name)}" (${a.candidates.map(c=>escapeHTML(c.fullName)).join(" / ")})`).join("; ")}</div>`);
+  if(unmatched.length) parts.push(`<div class="duty-roster-unmatch">⚠️ לא זוהו באף סככה (בדוק איות): ${unmatched.map(escapeHTML).join(", ")}</div>`);
+  return parts.join("");
+}
 async function openDutyRosterModal(aiDays){
-  const roster = aiDays ? {days: aiDays} : await getDutyRoster();
+  const allPersonnel = await fetchAllPersonnelByShed();
+  let roster, resolution = null;
+  if(aiDays){
+    resolution = resolveDutyRosterDays(aiDays, allPersonnel);
+    roster = {days: resolution.days};
+  } else {
+    roster = await getDutyRoster();
+  }
   document.getElementById("duty-roster-days").innerHTML = WEEK_DAYS_HE.map(day=>{
     const d = roster.days[day] || {duty:[], rest:[]};
     return `<div class="duty-roster-day">
@@ -5564,8 +5628,8 @@ async function openDutyRosterModal(aiDays){
     </div>`;
   }).join("");
   // הצעת AI היא טיוטה בלבד — לא נשמרת עד שאדם בודק ולוחץ "שמור שיבוץ" בעצמו
-  document.getElementById("duty-roster-preview").innerHTML = aiDays
-    ? `<div class="duty-roster-match">🤖 זו הצעה של AI מתוך תמונת הלוח — בדוק ותקן לפני שמירה. רק לחיצה על "שמור שיבוץ" מפעילה את ההתראות.</div>`
+  document.getElementById("duty-roster-preview").innerHTML = resolution
+    ? dutyRosterPreviewHtml(resolution.days, resolution.ambiguous, resolution.unmatched, allPersonnel, true)
     : "";
   document.getElementById("duty-roster-modal").classList.add("open");
 }
@@ -5592,6 +5656,10 @@ async function analyzeLatestBoardWithAI(){
     toast("ניתוח ה-AI נכשל — אפשר למלא ידנית ⚠️");
   }
 }
+/* השלמת שמות חלקיים לשם המלא (resolveDutyRosterDays) קורית תמיד לפני
+   שמירה — גם על שיבוץ שהוקלד ידנית, לא רק על הצעת AI — כדי שההתראה
+   היומית (שמצליבה שמות מדויקים בלבד) תעבוד בוודאות. אם נשאר שם
+   דו-משמעי, השמירה נחסמת עד שהאדם מתקן אותו בעצמו. */
 async function saveDutyRoster(){
   const days = {};
   WEEK_DAYS_HE.forEach(day=>{
@@ -5600,27 +5668,16 @@ async function saveDutyRoster(){
       rest: parseDutyNames(document.getElementById("duty-rest-"+day).value),
     };
   });
-  await sSetRaw("board_roster", {weekKey: todayKey(), days});
-  toast("שיבוץ התורנויות נשמר ✓");
-  await renderDutyRosterPreview(days);
-}
-/* בדיקה מיידית — לאיזו סככה כל שם שהוזן שייך בפועל, כדי לתפוס טעויות
-   איות/שם כפול מיד ולא לחכות שההתראה של מחר "תיעלם" בשקט */
-async function renderDutyRosterPreview(days){
-  const box = document.getElementById("duty-roster-preview");
-  const allPersonnel = {};
-  await Promise.all(SHEDS.map(async s=>{ allPersonnel[s.id] = (await sGetIn(s.id,"cfg_personnel")) || []; }));
-  const unmatched = new Set();
-  const matchedCount = {};
-  Object.values(days).forEach(d=>{
-    [...d.duty, ...d.rest].forEach(name=>{
-      const matches = SHEDS.filter(s=>allPersonnel[s.id].some(p=>p.name===name));
-      if(matches.length!==1) unmatched.add(name);
-      else matchedCount[matches[0].id] = (matchedCount[matches[0].id]||0)+1;
-    });
+  const allPersonnel = await fetchAllPersonnelByShed();
+  const {days: resolvedDays, ambiguous, unmatched} = resolveDutyRosterDays(days, allPersonnel);
+  WEEK_DAYS_HE.forEach(day=>{
+    document.getElementById("duty-tp-"+day).value = resolvedDays[day].duty.join("\n");
+    document.getElementById("duty-rest-"+day).value = resolvedDays[day].rest.join("\n");
   });
-  const summary = SHEDS.filter(s=>matchedCount[s.id]).map(s=>`${escapeHTML(s.name)}: ${matchedCount[s.id]}`).join(" · ");
-  box.innerHTML = `${summary?`<div class="duty-roster-match">✓ זוהו: ${summary}</div>`:""}${unmatched.size?`<div class="duty-roster-unmatch">⚠️ לא זוהו באף סככה (בדוק איות): ${[...unmatched].map(escapeHTML).join(", ")}</div>`:""}`;
+  document.getElementById("duty-roster-preview").innerHTML = dutyRosterPreviewHtml(resolvedDays, ambiguous, unmatched, allPersonnel, false);
+  if(ambiguous.length){ toast("❓ יש שמות דו-משמעיים — תקן לשם המלא ונסה לשמור שוב"); return; }
+  await sSetRaw("board_roster", {weekKey: todayKey(), days: resolvedDays});
+  toast("שיבוץ התורנויות נשמר ✓");
 }
 
 /* כפתור "העלאת לוח צוות חדש":

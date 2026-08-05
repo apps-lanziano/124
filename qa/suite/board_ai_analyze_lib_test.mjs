@@ -27,8 +27,12 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
   const hasDutyRest = p.includes('"duty"') && p.includes('"rest"');
   const hasDays = p.includes('"days"');
   const mentionsHumanReview = p.includes("תיבדק") || p.includes("תאושר");
+  const mentionsGreenRule = p.includes("ירוק") && p.includes("נח");
+  const mentionsPartialNames = p.includes("שם פרטי בלבד") && p.includes("שם משפחה בלבד");
   record("הפרומפט כולל את מבנה duty/rest/days הנדרש", hasDutyRest && hasDays, JSON.stringify({hasDutyRest, hasDays}));
   record("הפרומפט מבהיר שזו הצעה שתיבדק ע\"י אדם", mentionsHumanReview, String(mentionsHumanReview));
+  record("הפרומפט מסביר את כלל הצבע הירוק = תורן נח", mentionsGreenRule, String(mentionsGreenRule));
+  record("הפרומפט מבהיר ששמות עשויים להיות חלקיים (פרטי/משפחה בלבד)", mentionsPartialNames, String(mentionsPartialNames));
 }
 
 // --- 3. parseRosterResponse: JSON תקין ישיר ---
