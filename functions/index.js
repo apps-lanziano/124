@@ -20,6 +20,7 @@ const {findExpiringCerts} = require("./lib/cert_expiry_reminders");
 const {findOverdueReserves} = require("./lib/reserve_refresh_reminders");
 const {findVoIssues} = require("./lib/vo_reminders");
 const {buildDailyDigests} = require("./lib/daily_digest");
+const {buildDutyRosterDigests} = require("./lib/duty_roster_digest");
 const {dumpCollection} = require("./lib/backup");
 const {decide, SHED_NAMES} = require("./lib/notify");
 const {shouldAuthorize} = require("./lib/authorize");
@@ -321,6 +322,55 @@ exports.dailyDigest = onSchedule(
       sentCount++;
     }
     console.log(`תקציר יומי: ${digests.length} מסגרות עם ממצאים, ${sentCount} נשלחו בפועל`);
+  },
+);
+
+/* ===== שיבוץ תורנויות יומי (מתוך "לוח צוות שבועי") =====
+   בכל בוקר, לפני תקציר הבוקר הכללי — קוראת את שיבוץ היום (board_roster,
+   מסמך גלובלי שמערבב שמות מכמה סככות), מצליבה כל שם מול רשימות הצוות
+   האמיתיות כדי לדעת לאיזו סככה הוא שייך בפועל, ושולחת לכל מפקד רק את
+   החיילים של המסגרת שלו — לא את כל השיבוץ הטייסתי. */
+exports.dutyRosterDigest = onSchedule(
+  {
+    schedule: "0 6 * * *",
+    timeZone: "Asia/Jerusalem",
+    region: "me-west1",
+    memory: "256MiB",
+    timeoutSeconds: 120,
+  },
+  async () => {
+    const {dayName, digests, unmatched} = await buildDutyRosterDigests(db);
+    if (unmatched.length) {
+      console.warn(`שיבוץ תורנויות (${dayName}): ${unmatched.length} שמות לא זוהו באף סככה: ${unmatched.join(", ")}`);
+    }
+    if (!digests.length) return;
+
+    let sentCount = 0;
+    for (const d of digests) {
+      const tokRef = db.doc("sq124/push_tokens_" + d.shedId);
+      const tokSnap = await tokRef.get();
+      const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
+      const cmdTokens = Object.entries(tokMap)
+        .filter(([, m]) => m && m.role === "מפקד")
+        .map(([t]) => t);
+      if (!cmdTokens.length) continue;
+
+      const shedName = SHED_NAMES[d.shedId] || d.shedId;
+      const parts = [];
+      if (d.duty.length) parts.push(`צוות תורן: ${d.duty.join(", ")}`);
+      if (d.rest.length) parts.push(`נח: ${d.rest.join(", ")}`);
+      await getMessaging().sendEachForMulticast({
+        tokens: cmdTokens,
+        data: {
+          title: `📋 תורנויות היום (${dayName}) · ${shedName}`,
+          body: parts.join(" · "),
+          kind: "duty_roster_digest",
+          n: String(d.duty.length + d.rest.length),
+        },
+      });
+      sentCount++;
+    }
+    console.log(`שיבוץ תורנויות (${dayName}): ${digests.length} מסגרות עם שיבוץ, ${sentCount} נשלחו בפועל`);
   },
 );
 

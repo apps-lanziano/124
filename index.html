@@ -477,6 +477,13 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
 .duty-select:disabled,.duty-dateinp:disabled{background:#faf7f7;color:var(--ink-2);border-color:#f3ebec}
 .duty-select.filled{border-color:var(--red-line);background:var(--red-soft);color:var(--red);font-weight:700}
 .duty-lock-note{font-size:11.5px;color:var(--ink-3);font-weight:300;text-align:center;margin-top:10px}
+.duty-roster-day{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 11px;margin-bottom:8px}
+.duty-roster-day b{display:block;margin-bottom:6px;font-size:13px}
+.duty-roster-day label{font-size:11px;color:var(--ink-3);display:block;margin-bottom:2px}
+.duty-roster-day textarea{margin-bottom:8px}
+.duty-roster-day textarea:last-of-type{margin-bottom:0}
+.duty-roster-match{font-size:12px;color:var(--ink-2);margin-top:2px}
+.duty-roster-unmatch{font-size:12px;color:var(--red);margin-top:6px}
 
 /* ---------- לוח שנה מאוחד ---------- */
 .cal-nav{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 16px;margin-bottom:12px}
@@ -2230,6 +2237,20 @@ nav{
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="closeBoardScopeChoice()" style="flex:1">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DUTY ROSTER MODAL — שיבוץ תורנויות שבועי (צוות תורן / נח) לפי הלוח, להתראה יומית ממוקדת למפקד הרלוונטי -->
+  <div class="modal-bg" id="duty-roster-modal">
+    <div class="modal">
+      <h3>🗓️ שיבוץ תורנויות השבוע</h3>
+      <div class="m-sub">שם מלא כפי שמופיע ברשימת הצוות, אחד בכל שורה — לכל יום בנפרד. המערכת מזהה אוטומטית לאיזו סככה כל שם שייך, ושולחת כל בוקר התראה למפקד הרלוונטי בלבד עם החיילים שלו.</div>
+      <div id="duty-roster-days"></div>
+      <div id="duty-roster-preview"></div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn primary" onclick="saveDutyRoster()" style="flex:1">💾 שמור שיבוץ</button>
+        <button class="m-btn ghost" onclick="document.getElementById('duty-roster-modal').classList.remove('open')" style="flex:0 0 auto">סגור</button>
       </div>
     </div>
   </div>
@@ -5490,6 +5511,7 @@ async function renderBoard(){
       <h3>העלאת לוח צוות חדש</h3>
       <p>לחץ להעלאת צילום מסך של לוח שבועי</p>
     </div>`;
+    html += `<button class="m-btn ghost" style="width:100%;margin-bottom:12px" onclick="openDutyRosterModal()">🗓️ שיבוץ תורנויות השבוע (להתראה יומית למפקדים)</button>`;
   }
   if(boards.length === 0){
     html += `<div class="empty-state">
@@ -5511,6 +5533,67 @@ async function renderBoard(){
     });
   }
   area.innerHTML = html;
+}
+
+/* ===== שיבוץ תורנויות שבועי (מתוך "לוח צוות שבועי") =====
+   נתון מובנה אחד (board_roster, גלובלי — לא לפי סככה, כי הלוח מערבב
+   שמות מכמה סככות) שממנו פונקציה מתוזמנת שולחת כל בוקר התראה למפקד
+   הרלוונטי בלבד, אחרי הצלבה מול רשימות הצוות האמיתיות של כל הסככות.
+   בכוונה לא ננסה לקרוא את השמות אוטומטית מתוך תמונת הלוח (זיהוי כתב
+   יד בעברית מתמונה לא אמין מספיק לרוץ בלי אישור אדם) — מי שמפרסם את
+   הלוח מזין את השיבוץ כטקסט, ורואה מיד אילו שמות לא זוהו באף סככה. */
+const WEEK_DAYS_HE = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
+async function getDutyRoster(){
+  const r = await sGetRaw("board_roster");
+  return (r && r.days) ? r : {weekKey:"", days:{}};
+}
+function parseDutyNames(text){
+  return (text||"").split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+}
+async function openDutyRosterModal(){
+  const roster = await getDutyRoster();
+  document.getElementById("duty-roster-days").innerHTML = WEEK_DAYS_HE.map(day=>{
+    const d = roster.days[day] || {duty:[], rest:[]};
+    return `<div class="duty-roster-day">
+      <b>${day}</b>
+      <label>🔵 צוות תורן</label>
+      <textarea class="m-input" id="duty-tp-${day}" rows="2" placeholder="שם מלא בכל שורה">${escapeHTML(d.duty.join("\n"))}</textarea>
+      <label>⚪ נח</label>
+      <textarea class="m-input" id="duty-rest-${day}" rows="2" placeholder="שם מלא בכל שורה">${escapeHTML(d.rest.join("\n"))}</textarea>
+    </div>`;
+  }).join("");
+  document.getElementById("duty-roster-preview").innerHTML = "";
+  document.getElementById("duty-roster-modal").classList.add("open");
+}
+async function saveDutyRoster(){
+  const days = {};
+  WEEK_DAYS_HE.forEach(day=>{
+    days[day] = {
+      duty: parseDutyNames(document.getElementById("duty-tp-"+day).value),
+      rest: parseDutyNames(document.getElementById("duty-rest-"+day).value),
+    };
+  });
+  await sSetRaw("board_roster", {weekKey: todayKey(), days});
+  toast("שיבוץ התורנויות נשמר ✓");
+  await renderDutyRosterPreview(days);
+}
+/* בדיקה מיידית — לאיזו סככה כל שם שהוזן שייך בפועל, כדי לתפוס טעויות
+   איות/שם כפול מיד ולא לחכות שההתראה של מחר "תיעלם" בשקט */
+async function renderDutyRosterPreview(days){
+  const box = document.getElementById("duty-roster-preview");
+  const allPersonnel = {};
+  await Promise.all(SHEDS.map(async s=>{ allPersonnel[s.id] = (await sGetIn(s.id,"cfg_personnel")) || []; }));
+  const unmatched = new Set();
+  const matchedCount = {};
+  Object.values(days).forEach(d=>{
+    [...d.duty, ...d.rest].forEach(name=>{
+      const matches = SHEDS.filter(s=>allPersonnel[s.id].some(p=>p.name===name));
+      if(matches.length!==1) unmatched.add(name);
+      else matchedCount[matches[0].id] = (matchedCount[matches[0].id]||0)+1;
+    });
+  });
+  const summary = SHEDS.filter(s=>matchedCount[s.id]).map(s=>`${escapeHTML(s.name)}: ${matchedCount[s.id]}`).join(" · ");
+  box.innerHTML = `${summary?`<div class="duty-roster-match">✓ זוהו: ${summary}</div>`:""}${unmatched.size?`<div class="duty-roster-unmatch">⚠️ לא זוהו באף סככה (בדוק איות): ${[...unmatched].map(escapeHTML).join(", ")}</div>`:""}`;
 }
 
 /* כפתור "העלאת לוח צוות חדש":
