@@ -121,12 +121,42 @@ export async function loginAsFramework(page, shedId, role, personIndex=0){
   }, {shed, role, personIndex});
 }
 
+/* מנהל-על: מוסיף (אם חסר) אדם בשם SUPER_ADMIN_NAME לצוות המסגרת, ונכנס
+   כמפקד רגיל בשמו — ההרשאה הנוספת (ניהול משתמשים) אמורה להתעורר
+   אוטומטית ב-doLogin לפי התאמת השם, לא דרך מסלול כניסה נפרד. */
+export async function loginAsSuperAdmin(page, shedId="shed1"){
+  const shed = SHED_LIST.find(s=>s.id===shedId);
+  return page.evaluate(async ({shed})=>{
+    try{
+      let list = (await sGetIn(shed.id, "cfg_personnel")) || [];
+      if(!list.some(p=>p.name===SUPER_ADMIN_NAME)){
+        list = [...list, {name:SUPER_ADMIN_NAME, role:"מפקד", bday:"1990-01-01"}];
+        await sSetIn(shed.id, "cfg_personnel", list);
+      }
+      window.initPush = async()=>{};
+      await enterFrameworkAfterAuth(shed, "מפקד", "TEST");
+      const person = PERSONNEL.find(p=>p.name===SUPER_ADMIN_NAME);
+      if(!person) return {ok:false, why:"לא נמצא אחרי הוספה לצוות"};
+      Object.assign(person, await buildPinFields("1234"));
+      const sel = document.getElementById("login-select");
+      sel.value = person.name;
+      onLoginNameChange();
+      document.getElementById("login-pin").value = "1234";
+      await doLogin();
+      const loggedIn = document.getElementById("login-overlay").style.display === "none";
+      return {ok:loggedIn, who:person.name};
+    }catch(e){ return {ok:false, why:String(e && e.message)}; }
+  }, {shed});
+}
+
+/* "owner" (מנהל מערכת, כניסה נפרדת עם קוד ייעודי) הוסר — ההרשאה עברה
+   לזהות אישית (SUPER_ADMIN_NAME) דרך הכניסה הרגילה, ראו loginAsFramework
+   + הגדרת PERSONNEL[].name===SUPER_ADMIN_NAME בבדיקות רלוונטיות. */
 export async function loginAsSpecial(page, kind){
   return page.evaluate(async ({kind})=>{
     try{
       window.initPush = async()=>{};
-      if(kind==="owner"){ enteredRole="מנהל מערכת"; isOwner=true; currentShed=null; await ownerLogin(); }
-      else if(kind==="tech"){ enteredRole="קצין טכני"; isTechOfficer=true; currentShed=null; await techOfficerLogin(); }
+      if(kind==="tech"){ enteredRole="קצין טכני"; isTechOfficer=true; currentShed=null; await techOfficerLogin(); }
       else if(kind==="budget"){ enteredRole="אחראי תקציבים"; isBudgetOfficer=true; currentShed=null; await budgetOfficerLogin(); }
       else return {ok:false, why:"סוג לא מוכר"};
       const loggedIn = document.getElementById("login-overlay").style.display === "none";

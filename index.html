@@ -1785,7 +1785,7 @@ nav{
       </div>
     </section>
 
-    <!-- ===== USER ADMINISTRATION — מנהל מערכת (בעל האפליקציה) ===== -->
+    <!-- ===== USER ADMINISTRATION — מנהל-על (הרשאה צמודה לזהות אישית, ראו SUPER_ADMIN_NAME) ===== -->
     <section class="screen" id="scr-users">
       <div class="sec-head">
         <div>
@@ -1794,6 +1794,7 @@ nav{
         </div>
       </div>
       <div id="users-stats" style="margin-bottom:12px"></div>
+      <button class="m-btn ghost" style="width:100%;margin-bottom:12px" onclick="openMasterPinModal()">🔑 סיסמת-על (כניסה לכל משתמש)</button>
       <details style="margin-bottom:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px">
         <summary style="cursor:pointer;font-weight:800;font-size:13px">🔐 אבטחה — הקמת חשבון אימות (ידני)</summary>
         <p style="font-size:12px;color:var(--ink-3);line-height:1.6;margin:8px 0">
@@ -1805,7 +1806,8 @@ nav{
         <button class="m-btn ghost" style="width:100%;margin-bottom:8px" onclick="provisionAuthAccounts()">🔐 הקם חשבון אימות (ידני)</button>
         <p style="font-size:12px;color:var(--ink-3);line-height:1.6;margin:8px 0">
           סגירת קוד כניסה — מבטלת לצמיתות את הכניסה עם קוד מסוים (מוחקת את פרופיל
-          הניתוב ואת חשבון האימות שלו). למשל לסגירת קודים ישנים שכבר לא בשימוש.
+          הניתוב ואת חשבון האימות שלו). למשל לסגירת קודים ישנים שכבר לא בשימוש —
+          כולל קוד "מנהל מערכת" הישן, אם עוד לא נסגר.
         </p>
         <button class="m-btn ghost" style="width:100%" onclick="closeAuthCode()">🚫 סגור קוד כניסה</button>
       </details>
@@ -2143,6 +2145,25 @@ nav{
       <div id="dash-banners-list"></div>
       <div class="modal-actions" style="margin-top:14px">
         <button class="m-btn ghost" onclick="document.getElementById('dash-banners-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MASTER PIN MODAL — סיסמת-על לכניסה לכל משתמש, ללא צורך ב-PIN האמיתי שלו -->
+  <div class="modal-bg" id="master-pin-modal">
+    <div class="modal">
+      <h3>🔑 סיסמת-על</h3>
+      <div class="m-sub">קוד גלובלי בן 4 ספרות — מי שמכיר אותו יכול להיכנס לכל משתמש בכל מסגרת, בלי לדעת את ה-PIN האישי שלו. שמור אותו בסוד.</div>
+      <div style="font-size:11.5px;color:var(--ink-3);display:flex;justify-content:space-between;margin-bottom:6px">
+        <span>סטטוס נוכחי</span><span id="master-pin-status" style="font-weight:800"></span>
+      </div>
+      <input class="m-input" id="master-pin-input" type="text" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4 ספרות" style="margin-bottom:10px">
+      <div class="modal-actions">
+        <button class="m-btn primary" onclick="saveMasterPin()" style="flex:1">💾 שמור</button>
+        <button class="m-btn ghost" onclick="clearMasterPin()" style="flex:0 0 auto">בטל</button>
+      </div>
+      <div class="modal-actions" style="margin-top:8px">
+        <button class="m-btn ghost" onclick="document.getElementById('master-pin-modal').classList.remove('open')" style="flex:1">סגור</button>
       </div>
     </div>
   </div>
@@ -3184,6 +3205,19 @@ async function verifyPin(person, pin){
   catch(e){ console.error("verifyPin", e); return false; }
 }
 
+/* סיסמת-על — קוד גלובלי אחד (לא קשור לרשומת אדם ספציפית) שמאפשר למנהל-על
+   להיכנס בתור כל משתמש, בלי לדעת את ה-PIN האמיתי שלו. נשמר גלובלית (raw,
+   לא לפי מסגרת) תחת admin_master_pin, מגובב באותה תשתית בדיוק כמו PIN
+   אישי — כך שהוא לא נשמר בטקסט גלוי, ולא נגזר/מוצפן בקוד המקור עצמו. */
+async function getMasterPinRecord(){ return await sGetRaw("admin_master_pin"); }
+async function verifyMasterPin(pin){
+  if(!validPinFormat(pin)) return false;
+  const rec = await getMasterPinRecord();
+  if(!rec || !rec.pinHash) return false;
+  try{ return (await hashPin(pin, rec.pinSalt, rec.pinIter)) === rec.pinHash; }
+  catch(e){ console.error("verifyMasterPin", e); return false; }
+}
+
 /* התחברות ל-Firebase בזהות מסוימת (מחליפה את הזהות האנונימית של האתחול).
    מחזירה true בהצלחה. במצב scoped כישלון אמיתי חוסם כניסה — כי בלי הזהות
    הנכונה הכללים ימנעו קריאה. מחוץ ל-scoped מדלגים ומחזירים true. */
@@ -3442,9 +3476,18 @@ let isAdmin = false;         // מנהל-על
 let isVehicleOfficer = false; // מ״ע אחזקה טייסתי
 let isBudgetOfficer = false; // אחראי תקציבים טייסתי
 let isTechOfficer = false;   // קצין טכני
-let isOwner = false;         // מנהל מערכת — בעל האפליקציה
-let impersonating = null;    // {shedId,name} כשמנהל המערכת צופה/עורך בתור משתמש אחר
+let isOwner = false;         // כניסת "מנהל מערכת" הישנה (קוד ייעודי, מסגרת נפרדת) — הוחלפה ב-isSuperAdmin, נשאר להיסטוריה/תאימות
+let impersonating = null;    // {shedId,name} כשמנהל-על צופה/עורך בתור משתמש אחר
 let enteredRole = null;      // "חייל" | "מפקד" | "מנהל" | "מ״ע אחזקה" | "אחראי תקציבים" | "קצין טכני" after code check
+
+/* מנהל-על — במקום כניסה נפרדת עם קוד ייעודי ("מנהל מערכת"), ההרשאה
+   צמודה לזהות אישית: מי שנכנס דרך הכניסה הרגילה (קוד מסגרת+PIN) בשם
+   הזה בדיוק מקבל אוטומטית גישה נוספת ל"ניהול משתמשים", מעל ומעבר
+   לתפקיד הרגיל שלו במסגרת. */
+const SUPER_ADMIN_NAME = "אלעד לנציאנו";
+let isSuperAdmin = false;
+let superAdminSelf = null;   // {shedId,role,name} — הזהות המקורית שלו, לשחזור אחרי "כניסה בתור"
+let skipPinCheck = false;    // דילוג חד-פעמי על בדיקת PIN — כשמנהל-על כבר אימת את זהותו (כניסה בתור/חזרה לעצמו)
 
 /* ===== קיצורי דרך ממסך הבית (PWA shortcuts, manifest.json) =====
    נכנס עם ?shortcut=rollcall/faults בכתובת — נקרא פעם אחת בטעינה,
@@ -3757,7 +3800,14 @@ async function enterFrameworkAfterAuth(shed, role, code){
 }
 /* ניתוב לפי פרופיל שנקרא מהשרת (מצב server) */
 async function routeByAuthProfile(prof, code){
-  if(prof.kind === "owner"){  enteredRole="מנהל מערכת";   isOwner=true;         currentShed=null; await ownerLogin();          return; }
+  /* כניסת "מנהל מערכת" (קוד ייעודי, מסלול נפרד) הוסרה — ההרשאה עברה לזהות
+     אישית (SUPER_ADMIN_NAME) דרך הכניסה הרגילה. קוד ישן מסוג owner (אם עוד
+     קיים ולא נסגר דרך "סגור קוד כניסה") כבר לא מוביל לשום מקום. */
+  if(prof.kind === "owner"){
+    toast("כניסת \"מנהל מערכת\" בוטלה — התחבר עם הקוד והשם האישיים שלך ⛔");
+    document.getElementById("login-code").value="";
+    return;
+  }
   if(prof.kind === "tech"){   enteredRole="קצין טכני";     isTechOfficer=true;   currentShed=null; await techOfficerLogin();   return; }
   if(prof.kind === "budget"){ enteredRole="אחראי תקציבים"; isBudgetOfficer=true; currentShed=null; await budgetOfficerLogin(); return; }
   if(prof.kind === "framework"){
@@ -3882,6 +3932,8 @@ function onLoginNameChange(){
 /* שער ה-PIN האישי בכניסה — הוצא מתוך doLogin (שער עצמאי, מחזיר
    true/false לכניסה בפועל) כדי לקצר את הפונקציה הראשית. */
 async function verifyLoginPin(person){
+  // דילוג חד-פעמי — מנהל-על שכבר אימת את זהותו עצמו (כניסה בתור / חזרה מכניסה בתור)
+  if(skipPinCheck){ skipPinCheck = false; return true; }
   const wrap = document.getElementById("login-pin-wrap");
   const pinEl = document.getElementById("login-pin");
   if(wrap.style.display === "none"){ onLoginNameChange(); pinEl.focus(); return false; }
@@ -3889,6 +3941,11 @@ async function verifyLoginPin(person){
   if(biometricUnlockOK){
     // Face ID/טביעת אצבע כבר אימתו נוכחות ברגע זה — לא דורשים גם PIN
     biometricUnlockOK = false;
+  } else if(entered && await verifyMasterPin(entered)){
+    // סיסמת-על של מנהל-על — נכנסת בתור כל משתמש בלי לדעת את ה-PIN האמיתי שלו.
+    // לא פותחת חור אבטחה חדש: כל משתמש מאומת (עם קוד מסגרת אמיתי) כבר יכול
+    // לקרוא/לכתוב את כל המסד דרך ה-devtools לפי כללי ה-Firestore הנוכחיים
+    // (ראו SECURITY.md) — זו רק נוחות שימוש על אותה גישה שכבר קיימת.
   } else if(person.pinHash){
     // יש PIN — חובה להזין נכון
     if(!entered){ toast("הזן PIN אישי 🔒"); pinEl.focus(); return false; }
@@ -3924,6 +3981,8 @@ async function applyLoginUiForRole(person){
   document.getElementById("hdr-rank").textContent = userRole === "מפקד" ? "🎖️ מפקד" : "👤 חייל";
   const shedLabel = (currentShed.isDept && personDept(person)) ? personDept(person) : currentShed.name;
   document.getElementById("hdr-shed").textContent = "דרג א' · " + shedLabel;
+  // מנהל-על — הרשאה נוספת מעל התפקיד הרגיל, לפי זהות אישית (SUPER_ADMIN_NAME) ולא מסלול כניסה נפרד
+  document.getElementById("nav-users").classList.toggle("hidden", !isSuperAdmin);
 
   await refreshAreaPermissions();
 
@@ -4045,6 +4104,7 @@ async function doLogin(){
     // גם אם לפני כן נכנס בסשן הזה תפקיד שכן הגדיר (מ״ע אחזקה)
     document.querySelectorAll("nav .nav-btn").forEach(b=>{ b.style.order = ""; });
     user = person.name; userRole = person.role;
+    isSuperAdmin = (user === SUPER_ADMIN_NAME);
     document.getElementById("login-overlay").style.display="none";
     await applyLoginUiForRole(person);
 
@@ -4091,7 +4151,7 @@ function logout(){
   try{ if("clearAppBadge" in navigator) navigator.clearAppBadge(); }catch(e){}
   user=null; userRole=null; isCmd=false; isAdmin=false; isVehicleOfficer=false; isBudgetOfficer=false; isTechOfficer=false; isToolsResp=false; isVehiclesResp=false;
   isHearingResp=false; isRangeResp=false; isBoardPublisher=false;
-  isOwner=false; impersonating=null;
+  isOwner=false; impersonating=null; isSuperAdmin=false; superAdminSelf=null;
   // נטישת זהות המסגרת ב-Firebase וחזרה לזהות אנונימית ניטרלית, כדי שכניסה
   // הבאה תתחיל נקייה ולא תישאר מחוברת כמסגרת הקודמת.
   if(AUTH_MODE === "scoped" && fbAuth && fbAuth._am){
@@ -4158,7 +4218,7 @@ function go(id, btn){
   if(id==="scr-binui-admin") renderBinuiFaultsAdmin();
   if(id==="scr-budget-officer") renderBoOverview();
   if(id==="scr-rollcall") renderRollcallPage();
-  if(id==="scr-users") renderUsersAdmin();
+  if(id==="scr-users"){ ensureShed2Seed(); ensureAllShedsSeed(); ensureAllFrameworkTeamsSeed(); renderUsersAdmin(); }
   if(id!=="scr-vo-overview" && id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-morning-rollcall" && id!=="scr-binui-admin" && id!=="scr-budget-officer" && id!=="scr-users"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי מ״ע אחזקה/תקלות בינוי/אחראי תקציבים (אין להם סככה)
   // כפתור "לדשבורד" — מוצג בכל מסך שאינו הדשבורד, רק למי שיש לו דשבורד מפקד (nav-cmd גלוי)
   const backBtn = document.getElementById("back-to-dash");
@@ -7113,31 +7173,13 @@ async function budgetOfficerLogin(){
   toast("ברוך הבא, אחראי תקציבים 💰");
 }
 
-/* ===================== מנהל מערכת (בעל האפליקציה) =====================
+/* ===================== ניהול משתמשים (מנהל-על) =====================
    הרשאת-על על כל המשתמשים בכל המסגרות: צפייה בפרטים, עריכה, הוספה והסרה,
    וכן "כניסה בתור" — מעבר לחוויה המלאה של משתמש מסוים לצורך בדיקה ותמיכה.
-   כל פעולה נרשמת ביומן המנהל, כולל בזמן כניסה בתור. */
-async function ownerLogin(){
-  user = "מנהל מערכת"; userRole = "מנהל מערכת";
-  isOwner = true; isAdmin = true; isTechOfficer = true;
-  isVehicleOfficer = true; isBudgetOfficer = true;
-  impersonating = null; currentShed = null;
-  document.getElementById("impersonate-bar").classList.add("hidden");
-  document.body.style.paddingTop = "";
-  document.getElementById("login-overlay").style.display = "none";
-  document.getElementById("hdr-username").textContent = user;
-  document.getElementById("hdr-rank").textContent = "👑 מנהל מערכת";
-  document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
-  document.querySelectorAll("nav .nav-btn").forEach(b=>{ b.classList.add("hidden"); b.style.order = ""; });
-  ["nav-users","nav-admin","nav-vo-overview","nav-vehicle-officer","nav-maint-dept","nav-morningcheck","nav-binui-admin","nav-budget-officer","nav-rollcall"]
-    .forEach(id=>document.getElementById(id).classList.remove("hidden"));
-  await ensureShed2Seed();
-  await ensureAllShedsSeed();
-  await ensureAllFrameworkTeamsSeed();
-  updateBinuiAdminBadge();
-  go("scr-users", document.getElementById("nav-users"));
-  toast("ברוך הבא, מנהל המערכת 👑");
-}
+   כל פעולה נרשמת ביומן המנהל, כולל בזמן כניסה בתור. בעבר הייתה לזה כניסה
+   נפרדת עם קוד ייעודי ("מנהל מערכת", ownerLogin) — הוסרה; ההרשאה עכשיו
+   צמודה לזהות אישית (SUPER_ADMIN_NAME) דרך הכניסה הרגילה של המסגרת עצמה,
+   ראו isSuperAdmin ב-doLogin/applyLoginUiForRole. */
 
 /* מריצה את זריעות הצוות של כל המסגרות — נדרש למנהל המערכת, שרואה את כולן
    בבת אחת ולא "נכנס" לאף אחת מהן (הזריעות הרגילות רצות רק בכניסה למסגרת). */
@@ -7155,6 +7197,32 @@ async function loadAllUsers(){
     out.push({shed, people: pers.map((p,idx)=>({p, idx}))});
   }
   return out;
+}
+
+async function openMasterPinModal(){
+  document.getElementById("master-pin-input").value = "";
+  const rec = await getMasterPinRecord();
+  document.getElementById("master-pin-status").textContent = (rec && rec.pinHash) ? "מוגדרת ✓" : "לא הוגדרה";
+  document.getElementById("master-pin-modal").classList.add("open");
+}
+async function saveMasterPin(){
+  const pin = (document.getElementById("master-pin-input").value||"").trim();
+  if(!validPinFormat(pin)){ toast("סיסמת-העל חייבת להיות 4 ספרות ⛔"); return; }
+  const fields = await buildPinFields(pin);
+  await sSetRaw("admin_master_pin", {pinHash:fields.pinHash, pinSalt:fields.pinSalt, pinAlgo:fields.pinAlgo, pinIter:fields.pinIter, setAt:new Date().toLocaleDateString("he-IL")});
+  await ownerLog("עדכן את סיסמת-העל");
+  document.getElementById("master-pin-input").value = "";
+  toast("סיסמת-העל נשמרה 🔒");
+  document.getElementById("master-pin-modal").classList.remove("open");
+}
+async function clearMasterPin(){
+  const rec = await getMasterPinRecord();
+  if(!rec){ document.getElementById("master-pin-modal").classList.remove("open"); return; }
+  if(!confirm("לבטל את סיסמת-העל? לא ניתן יהיה יותר להיכנס עם קוד-על לכל משתמש, עד שתוגדר מחדש.")) return;
+  await sDelRaw("admin_master_pin");
+  await ownerLog("ביטל את סיסמת-העל");
+  toast("סיסמת-העל בוטלה");
+  document.getElementById("master-pin-modal").classList.remove("open");
 }
 
 async function renderUsersAdmin(){
@@ -7375,9 +7443,11 @@ async function impersonateUser(shedId, name){
   }
 
   await ownerLog(`נכנס בתור "${name}" (${shed.name})`);
+  // שומר את הזהות האמיתית שלך (לא רק את הראשונה בשרשרת "כניסה בתור" אחר כניסה בתור) כדי לחזור אליה ביציאה
+  if(!superAdminSelf) superAdminSelf = {shedId: currentShed ? currentShed.id : null, role: enteredRole, name: user};
   impersonating = {shedId, name};
   // איפוס הרשאות-העל כדי לקבל בדיוק את החוויה של המשתמש
-  isOwner = false; isAdmin = false; isTechOfficer = false;
+  isSuperAdmin = false; isAdmin = false; isTechOfficer = false;
   isVehicleOfficer = false; isBudgetOfficer = false;
   currentShed = shed; enteredRole = person.role;
   document.querySelectorAll("nav .nav-btn").forEach(b=>{ b.classList.remove("hidden"); b.style.order = ""; });
@@ -7388,16 +7458,36 @@ async function impersonateUser(shedId, name){
   const sel = document.getElementById("login-select");
   sel.innerHTML = `<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`;
   sel.value = name;
+  skipPinCheck = true;   // מנהל-העל כבר אימת את זהותו שלו — לא נדרש גם PIN של מי שהוא נכנס בתורו
   await doLogin();
   const bar = document.getElementById("impersonate-bar");
-  document.getElementById("impersonate-txt").textContent = `👑 מנהל מערכת — צופה בתור ${name} · ${shed.name}`;
+  document.getElementById("impersonate-txt").textContent = `👑 ${escapeHTML(superAdminSelf.name)} — צופה בתור ${name} · ${shed.name}`;
   bar.classList.remove("hidden");
   document.body.style.paddingTop = bar.offsetHeight + "px";
 }
 
+/* חזרה מ"כניסה בתור" לזהות האמיתית של מנהל-העל — כניסה רגילה בשמו שלו,
+   בלי לדרוש שוב את ה-PIN האישי שלו (כבר אומת בתחילת הסשן). */
 async function exitImpersonation(){
   impersonating = null;
-  await ownerLogin();
+  const self = superAdminSelf;
+  superAdminSelf = null;
+  document.getElementById("impersonate-bar").classList.add("hidden");
+  document.body.style.paddingTop = "";
+  if(!self || !self.shedId){ logout(); return; }
+  const shed = SHEDS.find(s=>s.id===self.shedId);
+  if(!shed){ logout(); return; }
+  currentShed = shed; enteredRole = self.role;
+  document.querySelectorAll("nav .nav-btn").forEach(b=>{ b.classList.remove("hidden"); b.style.order = ""; });
+  ["nav-cmd","nav-admin","nav-vo-overview","nav-vehicle-officer","nav-maint-dept","nav-morningcheck","nav-binui-admin",
+   "nav-vo-team","nav-budget-officer","nav-rollcall","nav-tools","nav-vehicles"]
+    .forEach(id=>document.getElementById(id).classList.add("hidden"));
+  await loadRuntimeLists();
+  const sel = document.getElementById("login-select");
+  sel.innerHTML = `<option value="${escapeHTML(self.name)}">${escapeHTML(self.name)}</option>`;
+  sel.value = self.name;
+  skipPinCheck = true;
+  await doLogin();
 }
 
 /* יומן פעולות מנהל המערכת — נשמר גלובלית, לא ברמת מסגרת */
@@ -7424,7 +7514,6 @@ async function provisionAuthAccounts(){
   const opts = [];
   for(const s of SHEDS) opts.push({label:s.name+" · מפקד", profile:{kind:"framework", shedId:s.id, role:"מפקד"}});
   for(const s of SHEDS) opts.push({label:s.name+" · חייל", profile:{kind:"framework", shedId:s.id, role:"חייל"}});
-  opts.push({label:"מנהל מערכת", profile:{kind:"owner"}});
   opts.push({label:"קצין טכני",  profile:{kind:"tech"}});
   opts.push({label:"אחראי תקציבים", profile:{kind:"budget"}});
 
