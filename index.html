@@ -545,6 +545,21 @@ nav{
 .fault-item .f-status{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;flex-shrink:0;align-self:center}
 .fault-item .f-status.open{background:var(--gold-soft);color:var(--gold)}
 .fault-item .f-status.closed{background:var(--green-soft);color:var(--green)}
+/* ===== BINUI KANBAN (מ״ע אחזקה בלבד) ===== */
+.binui-kanban{display:flex;gap:9px;overflow-x:auto;padding-bottom:4px;margin:0 -16px;padding-inline:16px}
+.binui-kcol{flex:1 1 0;min-width:112px;background:var(--bg);border-radius:13px;padding:9px;border:1px solid var(--line)}
+.binui-kcol-head{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11.5px;font-weight:800;color:var(--ink-2);margin-bottom:9px;padding:0 2px}
+.binui-kcol-head .cnt{font-family:inherit;font-size:10.5px;font-weight:800;background:var(--card);border:1px solid var(--line);border-radius:99px;padding:1px 8px;color:var(--ink-3)}
+.binui-kcol.r .binui-kcol-head{color:var(--red)}
+.binui-kcol.y .binui-kcol-head{color:var(--gold)}
+.binui-kcol.g .binui-kcol-head{color:var(--green)}
+.binui-kcard{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:9px 10px;margin-bottom:7px;box-shadow:var(--shadow);cursor:pointer;transition:transform .15s}
+.binui-kcard:active{transform:scale(.97)}
+.binui-kcard:last-child{margin-bottom:0}
+.binui-kcard.done{opacity:.65}
+.binui-kcard b{font-size:12px;font-weight:700;display:block;line-height:1.35}
+.binui-kcard span{font-size:10.5px;color:var(--ink-3);display:block;margin-top:3px}
+.binui-kcol-empty{font-size:11px;color:var(--ink-3);text-align:center;padding:14px 4px}
 .fault-detail-img{width:100%;border-radius:13px;border:1px solid var(--line);margin:12px 0;display:block}
 .fault-detail-desc{background:#fdfafa;border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;line-height:1.7;color:var(--ink-2);margin:10px 0}
 /* ===== ADMIN GRID (commander) ===== */
@@ -6201,6 +6216,21 @@ async function updateBinuiAdminBadge(){
   setBadge("badge-binui-admin", faults.filter(f=>f.status==="פתוח").length);
 }
 /* תצוגת מ״ע אחזקה — כל התקלות מכל המסגרות, עם קביעת סטטוס */
+/* לוח קנבן לתקלות בינוי — עמודה לכל סטטוס מ-BINUI_STATUSES, בדיוק לפי
+   הסדר שלו (פתוח/בטיפול/טופל). לחיצה על כרטיס פותחת את אותו חלון פרטים
+   הקיים (openBinuiFaultDetail) — שינוי תצוגה בלבד, בלי לגעת בלוגיקת הסטטוס. */
+function renderBinuiKanbanHtml(faults){
+  const cols = BINUI_STATUSES.map(s => ({ key:s.key, cls:s.cls, items: faults.filter(f=>f.status===s.key) }));
+  return `<div class="binui-kanban">${cols.map(col => `
+    <div class="binui-kcol ${col.cls}">
+      <div class="binui-kcol-head"><span>${escapeHTML(col.key)}</span><span class="cnt">${col.items.length}</span></div>
+      ${col.items.length ? col.items.map(f=>`
+        <div class="binui-kcard${col.key==="טופל"?" done":""}" onclick="openBinuiFaultDetail('${f.id}')">
+          <b>${escapeHTML(f.title)}</b>
+          <span>${escapeHTML(f.shedName||'—')} · ${f.date}${f.img?' · 📷':''}</span>
+        </div>`).join("") : `<div class="binui-kcol-empty">אין</div>`}
+    </div>`).join("")}</div>`;
+}
 async function renderBinuiFaultsAdmin(){
   const box = document.getElementById("md-binui-list");
   if(!box) return;
@@ -6208,6 +6238,13 @@ async function renderBinuiFaultsAdmin(){
   const faults = await getBinuiFaults();
   if(faults.length===0){
     box.innerHTML = `<div class="empty-state"><div class="ic">🚧</div><h3>אין עדיין תקלות בינוי</h3><p>ידווחו ע"י מפקדי הסככות/מחלקות</p></div>`;
+    return;
+  }
+  /* מ״ע אחזקה רואה לוח קנבן (3 העמודות = 3 הסטטוסים הקיימים בדיוק, בלי
+     שינוי מודל נתונים) — קצין טכני וגורמים אחרים ממשיכים לראות את
+     הרשימה השטוחה הקיימת, ללא שינוי. */
+  if(currentShed && currentShed.isMaint){
+    box.innerHTML = renderBinuiKanbanHtml(faults);
     return;
   }
   const order = {"פתוח":0,"בטיפול":1,"טופל":2};
