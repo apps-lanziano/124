@@ -806,6 +806,11 @@ nav{
 .cd .cd-kic{font-size:15px}
 .cd .cd-kn{font-family:var(--cd-mono);font-size:22px;font-weight:800;margin-top:6px;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
 .cd .cd-kl{font-size:10.5px;color:var(--ink-3);margin-top:5px;font-weight:600}
+.cd .cd-kpi-empty{grid-column:1/-1;text-align:center;color:var(--ink-3);font-size:12px;padding:14px 0}
+.cd .cd-badge-btn{font-family:var(--cd-mono);font-size:11px;font-weight:700;color:var(--ink-2);background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:4px 11px;cursor:pointer}
+.dash-banner-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 4px;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer}
+.dash-banner-row:last-child{border-bottom:none}
+.dash-banner-row input{width:18px;height:18px;margin:0;accent-color:var(--red)}
 .cd .cd-alert{display:flex;align-items:center;gap:11px;background:var(--card);border:1px solid var(--line);border-inline-start:3px solid var(--red-2);border-radius:12px;padding:11px 12px;margin-bottom:7px;cursor:pointer;box-shadow:var(--shadow)}
 .cd .cd-alert.y{border-inline-start-color:var(--gold)}
 .cd .cd-aic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:17px;background:var(--red-soft);flex-shrink:0}
@@ -2121,6 +2126,18 @@ nav{
       </div>
       <div class="modal-actions" style="margin-top:14px">
         <button class="m-btn ghost" onclick="document.getElementById('custom-fields-tpl-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD BANNERS MODAL — בחירת המפקד אילו באנרים יופיעו ב"מדדים במבט אחד" -->
+  <div class="modal-bg" id="dash-banners-modal">
+    <div class="modal">
+      <h3>⚙️ ניהול באנרים</h3>
+      <div class="m-sub">בחר אילו באנרים יופיעו בדשבורד שלך תחת "מדדים במבט אחד".</div>
+      <div id="dash-banners-list"></div>
+      <div class="modal-actions" style="margin-top:14px">
+        <button class="m-btn ghost" onclick="document.getElementById('dash-banners-modal').classList.remove('open')" style="flex:1">סגור</button>
       </div>
     </div>
   </div>
@@ -9053,6 +9070,45 @@ function toggleDashSec(id){
   const el = document.getElementById(id);
   if(el) el.classList.toggle("open");
 }
+/* קטלוג הבאנרים ה"ישימים" לסוג המסגרת הנוכחית (מ״ע אחזקה/הדרכה — מסגרות
+   מצומצמות בלי מטלות/הסמכות/כלים/רכבים/נע"תים; מחלקות — בלי מעקב מבצעי) —
+   בדיוק אותה גדירה כמו בדשבורד עצמו, פשוט ללא ערכים חיים (led/n/go), כדי
+   שגם רשימת הבחירה במודל ניהול הבאנרים תדע איזה מפתחות בכלל רלוונטיים
+   להציע, בלי לחשב Promise.all מלא של computeTrendsData. */
+function dashBannerCatalog(){
+  const isDeptUnit = !!(currentShed && currentShed.isDept);
+  const isTrimmed = !!(currentShed && (currentShed.isMaint || currentShed.isTraining));
+  const list = [{key:"sigs", ic:"✍️", l:"חתימות"}];
+  if(!isDeptUnit && !isTrimmed) list.push({key:"morning", ic:"🧰", l:"מטלות בוקר"});
+  if(!isTrimmed) list.push({key:"certs", ic:"🎓", l:"הסמכות"});
+  if(!isDeptUnit && !isTrimmed) list.push({key:"vehicles", ic:"🚙", l:"רכבים"});
+  if(!isDeptUnit && !isTrimmed) list.push({key:"tools", ic:"🔧", l:"כלים בחדר"});
+  if(!isDeptUnit && !isTrimmed) list.push({key:"naatim", ic:"🗂️", l:"נע\"תים"});
+  if(medPeople().length) list.push({key:"med", ic:"🪖", l:"כשירות חיילים"});
+  return list;
+}
+async function openDashBannersModal(){
+  document.getElementById("dash-banners-modal").classList.add("open");
+  await renderDashBannersModal();
+}
+async function renderDashBannersModal(){
+  const catalog = dashBannerCatalog();
+  const pref = await sGet("dash_banners_pref");
+  const enabled = Array.isArray(pref) ? pref : catalog.map(c=>c.key);   // ברירת מחדל: כל הבאנרים הישימים מוצגים (=ההתנהגות המקורית)
+  document.getElementById("dash-banners-list").innerHTML = catalog.map(c=>`
+    <label class="dash-banner-row">
+      <span>${c.ic} ${escapeHTML(c.l)}</span>
+      <input type="checkbox" ${enabled.includes(c.key)?"checked":""} onchange="toggleDashBannerPref('${c.key}', this.checked)">
+    </label>`).join("");
+}
+async function toggleDashBannerPref(key, on){
+  const catalog = dashBannerCatalog();
+  const pref = await sGet("dash_banners_pref");
+  let enabled = Array.isArray(pref) ? [...pref] : catalog.map(c=>c.key);
+  enabled = on ? [...new Set([...enabled, key])] : enabled.filter(k=>k!==key);
+  await sSet("dash_banners_pref", enabled);
+  await renderTrends();   // ממתין בכוונה — בלי await, טוגלים מהירים ברצף (או renderTrends מקביל אחר) עלולים "לנצח" בסדר לא צפוי ולהשאיר תצוגה לא עדכנית
+}
 async function renderTrends(boxId){
   const box = document.getElementById(boxId || "trends-content");
   const isDeptUnit = !!(currentShed && currentShed.isDept);
@@ -9081,16 +9137,28 @@ async function renderTrends(boxId){
   const nowT = new Date().toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"});
   const dShort = new Date().toLocaleDateString("he-IL",{weekday:"short",day:"numeric",month:"numeric"});
 
-  // --- מדדים ---
-  const kpis = [];
-  kpis.push({led:(sigPct>=100?"g":sigPct>=70?"y":"r"), ic:"✍️", n:(maxSigs?sigPct+"%":"—"), l:"חתימות", go:"go('scr-safety',document.getElementById('nav-safety'))"});
-  if(showMorning) kpis.push({led:(mDone>=MORNING_TASKS.length?"g":(hh>=11?"r":"y")), ic:"🧰", n:mDone+"/"+MORNING_TASKS.length, l:"מטלות בוקר", go:"go('scr-morning',document.getElementById('nav-morning'))"});
-  if(showCerts) kpis.push({led:(certExpired?"r":certSoon?"y":"g"), ic:"🎓", n:certs.length, l:"הסמכות", go:"goCertsPage()"});
-  if(showVeh)   kpis.push({led:(vehExpired?"r":vehSoon?"y":"g"), ic:"🚙", n:vehicles.length, l:"רכבים", go:"go('scr-vehicles',document.getElementById('nav-vehicles'))"});
-  if(showTools) kpis.push({led:(toolExpired?"r":toolSoon?"y":"g"), ic:"🔧", n:tools.length, l:"כלים בחדר", go:"go('scr-tools',document.getElementById('nav-tools'))"});
-  if(showNaatim) kpis.push({led:(naatimOpen?"y":"g"), ic:"🗂️", n:naatim.length, l:"נע\"תים", go:"closeMoreAnd('scr-naatim')"});
-  if(medPeople().length) kpis.push({led:(medExpired?"r":medSoon?"y":"g"), ic:"🪖", n:medPeople().length, l:"כשירות חיילים", go:"closeMoreAnd('scr-medchecks')"});
-  const kpiHtml = kpis.map(k=>`<button class="cd-kpi" onclick="${k.go}"><span class="cd-led ${k.led}"></span><div class="cd-kic">${k.ic}</div><div class="cd-kn">${k.n}</div><div class="cd-kl">${escapeHTML(k.l)}</div></button>`).join("");
+  // --- מדדים — קטלוג הבאנרים הישימים לסוג המסגרת, מסונן לפי בחירת המפקד
+  // (dash_banners_pref). אין העדפה שמורה = כל הבאנרים הישימים מוצגים,
+  // בדיוק כמו ההתנהגות המקורית לפני הפיצ'ר — כדי לא לשנות התנהגות
+  // לאף מפקד שלא נגע בהגדרה. ---
+  const kpiLive = {
+    sigs:     {led:(sigPct>=100?"g":sigPct>=70?"y":"r"), n:(maxSigs?sigPct+"%":"—"), go:"go('scr-safety',document.getElementById('nav-safety'))"},
+    morning:  {led:(mDone>=MORNING_TASKS.length?"g":(hh>=11?"r":"y")), n:mDone+"/"+MORNING_TASKS.length, go:"go('scr-morning',document.getElementById('nav-morning'))"},
+    certs:    {led:(certExpired?"r":certSoon?"y":"g"), n:certs.length, go:"goCertsPage()"},
+    vehicles: {led:(vehExpired?"r":vehSoon?"y":"g"), n:vehicles.length, go:"go('scr-vehicles',document.getElementById('nav-vehicles'))"},
+    tools:    {led:(toolExpired?"r":toolSoon?"y":"g"), n:tools.length, go:"go('scr-tools',document.getElementById('nav-tools'))"},
+    naatim:   {led:(naatimOpen?"y":"g"), n:naatim.length, go:"closeMoreAnd('scr-naatim')"},
+    med:      {led:(medExpired?"r":medSoon?"y":"g"), n:medPeople().length, go:"closeMoreAnd('scr-medchecks')"},
+  };
+  const bannerCatalog = dashBannerCatalog();
+  const canCustomizeBanners = !!(currentShed && userRole==="מפקד");
+  const bannerPref = canCustomizeBanners ? await sGet("dash_banners_pref") : null;
+  const visibleCatalog = Array.isArray(bannerPref) ? bannerCatalog.filter(c=>bannerPref.includes(c.key)) : bannerCatalog;
+  const kpis = visibleCatalog.map(c=>({...c, ...kpiLive[c.key]}));
+  const kpiHtml = kpis.length
+    ? kpis.map(k=>`<button class="cd-kpi" onclick="${k.go}"><span class="cd-led ${k.led}"></span><div class="cd-kic">${k.ic}</div><div class="cd-kn">${k.n}</div><div class="cd-kl">${escapeHTML(k.l)}</div></button>`).join("")
+    : `<div class="cd-kpi-empty">אין באנרים מוצגים — נהל דרך ⚙️ ניהול באנרים</div>`;
+  const bannersBtnHtml = canCustomizeBanners ? `<button class="cd-badge-btn" onclick="openDashBannersModal()">⚙️ באנרים</button>` : `<span class="cd-badge">לחיצה = מסך מלא</span>`;
 
   // --- מיקוד יומי — רשימה מאוחדת של כל מה שדורש טיפול היום (המספר = מספר הפריטים) ---
   const focus = [];
@@ -9143,7 +9211,7 @@ async function renderTrends(boxId){
       </div>
 
       <div class="cd-sec">
-        <div class="cd-shead"><h3>מדדים במבט אחד</h3><span class="cd-badge">לחיצה = מסך מלא</span></div>
+        <div class="cd-shead"><h3>מדדים במבט אחד</h3>${bannersBtnHtml}</div>
         <div class="cd-kgrid">${kpiHtml}</div>
       </div>
 
