@@ -1142,8 +1142,6 @@ nav{
           <button class="add-btn hidden" id="add-event-btn" onclick="openAddEvent()">+ פריט</button>
         </div>
       </div>
-      <!-- חודש הסתגלות — גלוי רק לחייל עצמו ולחונך שלו (מפקדים רואים דרך ניהול צוות) -->
-      <div id="onboarding-card"></div>
       <!-- מפקד בלבד — סיכום חתימות לכלל הצוות. הועבר לכאן מלשונית "חתימות" בדשבורד
            המפקד, כדי שהתמונה המלאה תהיה במסך שבו קורים דברים (קרא-וחתום), לא בלשונית נפרדת -->
       <div id="safety-cmd-summary" class="hidden">
@@ -1216,6 +1214,34 @@ nav{
       <div class="cal-grid" id="cal-grid"></div>
       <div class="cal-legend" id="cal-legend"></div>
       <div id="cal-day-detail"></div>
+    </section>
+
+    <!-- ===== קליטת חייל חדש — לשונית מרוכזת: תבנית, רשימת קולטים, כרטיס אישי ===== -->
+    <section class="screen" id="scr-onboarding">
+      <div class="sec-head">
+        <div>
+          <h2>קליטת חייל חדש 🎓</h2>
+          <p>חודש הסתגלות: חונך, מטלות והסמכות נדרשות, וקאונטר PF — במקום אחד.</p>
+        </div>
+      </div>
+      <div id="onboarding-tpl-section" class="hidden">
+        <div class="cmd-section-title">✏️ תבנית "חודש הסתגלות" של המסגרת</div>
+        <div style="font-size:11.5px;font-weight:800;color:var(--ink-3);margin:10px 0 6px">מטלות</div>
+        <div id="onb-tasks-list"></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <input class="m-input" id="onb-new-task" type="text" placeholder="מטלה חדשה…" style="margin-bottom:0">
+          <button class="m-btn primary" style="flex:0 0 auto" onclick="addOnboardingTaskTpl()">+ הוסף</button>
+        </div>
+        <div style="font-size:11.5px;font-weight:800;color:var(--ink-3);margin:6px 0 6px">הסמכות נדרשות</div>
+        <div id="onb-certs-list"></div>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <input class="m-input" id="onb-new-cert" type="text" placeholder="שם הסמכה (למשל PF)…" style="margin-bottom:0">
+          <button class="m-btn primary" style="flex:0 0 auto" onclick="addOnboardingCertTpl()">+ הוסף</button>
+        </div>
+        <div class="cmd-section-title">👥 בקליטה עכשיו</div>
+      </div>
+      <div id="onboarding-roster"></div>
+      <div id="onboarding-card"></div>
     </section>
 
     <!-- ===== FAULTS (feature 10) ===== -->
@@ -1942,6 +1968,7 @@ nav{
       <div class="sheet-item" onclick="closeMoreAnd('scr-training')"><div class="s-ic">📚</div><div class="s-tx"><b>חומרי הדרכה</b><span>מהמנהל הטייסתי</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-medchecks" onclick="closeMoreAnd('scr-medchecks')"><div class="s-ic">🪖</div><div class="s-tx"><b>כשירות חיילים</b><span>שמיעה ומטווח — תוקף וחידוש</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-calendar" onclick="closeMoreAnd('scr-calendar')"><div class="s-ic">📅</div><div class="s-tx"><b>לוח שנה מאוחד</b><span>הסמכות, כיול כלים, טסט רכב ותורנויות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="sheet-onboarding" onclick="closeMoreAnd('scr-onboarding')"><div class="s-ic">🎓</div><div class="s-tx"><b>קליטת חייל חדש</b><span>חונך, מטלות והסמכות, קאונטר PF</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-team-item" onclick="closeMoreAndFn(openTeamMgmt)"><div class="s-ic">👥</div><div class="s-tx"><b>ניהול צוות</b><span>הוספה, עריכה, ימי הולדת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-tasks-item" onclick="closeMoreAndFn(openTaskMgmt)"><div class="s-ic">🧰</div><div class="s-tx"><b>עריכת מטלות בוקר</b><span>הוספה ושינוי מטלות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-faults-item" onclick="closeMoreAnd('scr-faults')"><div class="s-ic">🛠️</div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות</span></div><span class="s-chev">‹</span></div>
@@ -2022,7 +2049,6 @@ nav{
       <div id="team-mgmt-list" style="max-height:52vh;overflow-y:auto;margin-bottom:12px"></div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <button class="m-btn primary" id="tm-add-toggle" style="flex:1" onclick="tmOpenAddForm()">➕ הוסף איש צוות</button>
-        <button class="m-btn ghost" id="onb-tpl-btn" style="flex:0 0 auto" onclick="openOnboardingTplModal()">🎓 תבנית קליטה</button>
         <button class="m-btn ghost" style="flex:0 0 auto" onclick="openCustomFieldsTplModal()">🏷️ שדות מותאמים</button>
       </div>
       <div class="team-add-form" id="tm-add-form" style="display:none">
@@ -2078,28 +2104,6 @@ nav{
     </div>
   </div>
 
-  <!-- ONBOARDING TEMPLATE MODAL — עריכת תבנית הקליטה של הסככה -->
-  <div class="modal-bg" id="onboarding-tpl-modal">
-    <div class="modal">
-      <h3>🎓 תבנית "חודש הסתגלות"</h3>
-      <div class="m-sub">מטלות והסמכות הנדרשות מחייל חדש בסככה הזו, ב-30 הימים הראשונים.</div>
-      <div style="font-size:11.5px;font-weight:800;color:var(--ink-3);margin:10px 0 6px">מטלות</div>
-      <div id="onb-tasks-list"></div>
-      <div style="display:flex;gap:8px;margin-bottom:14px">
-        <input class="m-input" id="onb-new-task" type="text" placeholder="מטלה חדשה…" style="margin-bottom:0">
-        <button class="m-btn primary" style="flex:0 0 auto" onclick="addOnboardingTaskTpl()">+ הוסף</button>
-      </div>
-      <div style="font-size:11.5px;font-weight:800;color:var(--ink-3);margin:6px 0 6px">הסמכות נדרשות</div>
-      <div id="onb-certs-list"></div>
-      <div style="display:flex;gap:8px">
-        <input class="m-input" id="onb-new-cert" type="text" placeholder="שם הסמכה (למשל PF)…" style="margin-bottom:0">
-        <button class="m-btn primary" style="flex:0 0 auto" onclick="addOnboardingCertTpl()">+ הוסף</button>
-      </div>
-      <div class="modal-actions" style="margin-top:14px">
-        <button class="m-btn ghost" onclick="document.getElementById('onboarding-tpl-modal').classList.remove('open')" style="flex:1">סגור</button>
-      </div>
-    </div>
-  </div>
 
   <!-- CUSTOM FIELDS TEMPLATE MODAL — שדות/תגיות מותאמים אישית לכרטיס חייל, בנפרד לכל מסגרת -->
   <div class="modal-bg" id="custom-fields-tpl-modal">
@@ -3939,6 +3943,10 @@ async function applyLoginUiForRole(person){
   // יוזר "מחלקות" — מעקב מבצעי (מטלות/נע"תים/סגירת יום) לא רלוונטי לשני התפקידים;
   // הסמכות/חדר כלים/רכבים/עריכת מטלות בוקר מוסרים למפקד בלבד
   const isDeptUnit = !!(currentShed && currentShed.isDept);
+  // "קליטת חייל חדש" בתפריט "עוד" — מפקד רואה תמיד (ניהול תבנית + רשימת קולטים),
+  // חייל/חונך רואים רק אם רלוונטי אליהם אישית (בקליטה בעצמם, או חונכים מישהו שכן)
+  const onbRelevant = userRole==="מפקד" || isOnboarding(person) || PERSONNEL.some(p=>isOnboarding(p) && p.mentor===user);
+  document.getElementById("sheet-onboarding").classList.toggle("hidden", isDeptUnit || !onbRelevant);
   document.getElementById("nav-morning").classList.toggle("hidden", isDeptUnit);
   document.getElementById("sheet-naatim").classList.toggle("hidden", isDeptUnit);
   document.getElementById("sheet-closeday").classList.toggle("hidden", isDeptUnit);
@@ -4114,6 +4122,7 @@ function go(id, btn){
   if(id==="scr-admin") renderAdminDashboard();
   if(id==="scr-closeday") renderCloseDay();
   if(id==="scr-naatim") renderNaatim();
+  if(id==="scr-onboarding") renderOnboardingScreen();
   if(id==="scr-calendar") renderCalendarPage();
   if(id==="scr-certs") renderCertsPage();
   if(id==="scr-medchecks") renderMedChecks();
@@ -4192,7 +4201,6 @@ async function getEvents(){ return (await sGet("safety_events")) || []; }
 
 async function renderDocs(){
   if(isVehicleOfficer && !currentShed) return renderVoDocs();
-  renderOnboardingCard("onboarding-card");
   const events = await getEvents();
   const reads = await sGetSigs(user);
   const list = document.getElementById("docs-list");
@@ -6528,7 +6536,6 @@ function openTeamMgmt(){
   officerSel.style.display = isDeptUnit ? "" : "none";
   profSel.style.display = isDeptUnit ? "none" : "";
   if(!isDeptUnit) profSel.innerHTML = '<option value="">— ללא מקצוע —</option>' + PROFESSIONS.map(p=>`<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`).join("");
-  document.getElementById("onb-tpl-btn").style.display = isDeptUnit ? "none" : "";
   fillMentorSelect(null);
   document.getElementById("team-modal").classList.add("open");
   tmShowForm(false);   // ברירת מחדל: מציג את הצוות, הטופס מוסתר עד לחיצה על "הוסף"
@@ -9612,9 +9619,29 @@ function onboardingCardHtml(pIdx, p, tpl, certs){
     <div style="margin-top:10px">${taskRows}${certRows}</div>
   </div>`;
 }
-/* מציג בסך scr-safety את הכרטיסים הרלוונטיים למשתמש המחובר — הוא עצמו
-   בקליטה, או שהוא חונך של מישהו שכן. מפקדים רואים את זה דרך ניהול צוות
-   (renderTeamMgmt), לא כאן — כדי לא להציף את מסך קרא-וחתום שלהם. */
+/* מסך "קליטת חייל חדש" — מרוכז: מפקד רואה עורך תבנית + רשימת כל מי
+   שבקליטה כרגע (כרטיס מלא לכל אחד, כמו בעבר בגיליון הפרטני); חייל/חונך
+   רואים רק את הכרטיס(ים) הרלוונטיים אליהם אישית. */
+async function renderOnboardingScreen(){
+  const tplSection = document.getElementById("onboarding-tpl-section");
+  const rosterBox = document.getElementById("onboarding-roster");
+  const cardBox = document.getElementById("onboarding-card");
+  if(!currentShed || (currentShed.isDept)){
+    tplSection.classList.add("hidden"); rosterBox.innerHTML=""; cardBox.innerHTML="";
+    return;
+  }
+  if(userRole==="מפקד"){
+    tplSection.classList.remove("hidden");
+    cardBox.innerHTML = "";
+    await renderOnboardingTplSection();
+    await renderOnboardingRoster();
+  } else {
+    tplSection.classList.add("hidden");
+    rosterBox.innerHTML = "";
+    await renderOnboardingCard("onboarding-card");
+  }
+}
+/* גלוי רק לחייל עצמו ולחונך שלו — מפקדים רואים את כולם דרך renderOnboardingRoster */
 async function renderOnboardingCard(containerId){
   const box = document.getElementById(containerId);
   if(!box) return;
@@ -9623,7 +9650,23 @@ async function renderOnboardingCard(containerId){
     const p = PERSONNEL[i];
     return isOnboarding(p) && (user===p.name || (p.mentor && user===p.mentor));
   });
-  if(idxList.length===0){ box.innerHTML=""; return; }
+  if(idxList.length===0){
+    box.innerHTML = `<div class="empty-state"><div class="ic">🎓</div><h3>אין כרגע חודש הסתגלות פעיל</h3><p>הכרטיס יופיע כאן כשתהיה בקליטה, או כשתשויך כחונך למישהו שכן</p></div>`;
+    return;
+  }
+  const tpl = await getOnboardingTemplate();
+  const certs = await getCerts();
+  box.innerHTML = idxList.map(i=>onboardingCardHtml(i, PERSONNEL[i], tpl, certs)).join("");
+}
+/* רשימת כל אנשי הצוות שבחודש הסתגלות כרגע — מוצגת למפקד במסך "קליטת חייל חדש" */
+async function renderOnboardingRoster(){
+  const box = document.getElementById("onboarding-roster");
+  if(!box) return;
+  const idxList = PERSONNEL.map((p,i)=>i).filter(i=>isOnboarding(PERSONNEL[i]));
+  if(idxList.length===0){
+    box.innerHTML = `<div class="empty-state"><div class="ic">🎓</div><h3>אין כרגע אף אחד בחודש הסתגלות</h3><p>חייל חדש שהצטרף ב-30 הימים האחרונים יופיע כאן אוטומטית</p></div>`;
+    return;
+  }
   const tpl = await getOnboardingTemplate();
   const certs = await getCerts();
   box.innerHTML = idxList.map(i=>onboardingCardHtml(i, PERSONNEL[i], tpl, certs)).join("");
@@ -9641,12 +9684,13 @@ async function toggleOnboardingTask(pIdx, taskIdx){
     if(idx>=0) m.onboardingDone.splice(idx,1); else m.onboardingDone.push(task);
   });
   if(!saved){ toast("⚠️ העדכון לא נשמר — נסה שוב"); return; }
-  renderOnboardingCard("onboarding-card");
+  renderOnboardingScreen();
   renderOnboardingDetailSheet();
   renderTeamMgmt();
 }
 /* גיליון קליטה שמפקד פותח מתוך שורת איש הצוות בניהול צוות — אותו כרטיס
-   בדיוק שרואה החייל/החונך, רק שהמפקד מגיע אליו דרך מסך אחר */
+   בדיוק שרואה החייל/החונך, ושרואה גם ברשימת "קליטת חייל חדש" — קיצור
+   דרך נוסף אליו מתוך ניהול צוות, לא תחליף למסך המרוכז */
 let onboardingDetailIdx = -1;
 async function openOnboardingDetail(pIdx){
   onboardingDetailIdx = pIdx;
@@ -9666,11 +9710,7 @@ function closeOnboardingDetail(){
   onboardingDetailIdx = -1;
   document.getElementById("onboarding-detail-sheet").classList.remove("open");
 }
-async function openOnboardingTplModal(){
-  document.getElementById("onboarding-tpl-modal").classList.add("open");
-  await renderOnboardingTplModal();
-}
-async function renderOnboardingTplModal(){
+async function renderOnboardingTplSection(){
   const tpl = await getOnboardingTemplate();
   document.getElementById("onb-tasks-list").innerHTML = tpl.tasks.map((t,i)=>`
     <div class="mgmt-row"><div class="mr-body"><b>${escapeHTML(t)}</b></div><button class="mr-del" onclick="removeOnboardingTaskTpl(${i})">✕</button></div>`).join("")
@@ -9686,12 +9726,14 @@ async function addOnboardingTaskTpl(){
   const tpl = await getOnboardingTemplate();
   await sSet("onboarding_template", {tasks:[...tpl.tasks, v], certs:[...tpl.certs]});
   input.value = "";
-  renderOnboardingTplModal();
+  renderOnboardingTplSection();
+  renderOnboardingRoster();
 }
 async function removeOnboardingTaskTpl(i){
   const tpl = await getOnboardingTemplate();
   await sSet("onboarding_template", {tasks: tpl.tasks.filter((_,idx)=>idx!==i), certs:[...tpl.certs]});
-  renderOnboardingTplModal();
+  renderOnboardingTplSection();
+  renderOnboardingRoster();
 }
 async function addOnboardingCertTpl(){
   const input = document.getElementById("onb-new-cert");
@@ -9700,12 +9742,14 @@ async function addOnboardingCertTpl(){
   const tpl = await getOnboardingTemplate();
   await sSet("onboarding_template", {tasks:[...tpl.tasks], certs:[...tpl.certs, v]});
   input.value = "";
-  renderOnboardingTplModal();
+  renderOnboardingTplSection();
+  renderOnboardingRoster();
 }
 async function removeOnboardingCertTpl(i){
   const tpl = await getOnboardingTemplate();
   await sSet("onboarding_template", {tasks:[...tpl.tasks], certs: tpl.certs.filter((_,idx)=>idx!==i)});
-  renderOnboardingTplModal();
+  renderOnboardingTplSection();
+  renderOnboardingRoster();
 }
 
 /* ===== CUSTOM FIELDS (שדות ותגיות מותאמים אישית) =====
