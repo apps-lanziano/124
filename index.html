@@ -560,6 +560,10 @@ nav{
 .binui-kcard b{font-size:12px;font-weight:700;display:block;line-height:1.35}
 .binui-kcard span{font-size:10.5px;color:var(--ink-3);display:block;margin-top:3px}
 .binui-kcol-empty{font-size:11px;color:var(--ink-3);text-align:center;padding:14px 4px}
+/* ===== ONBOARDING (חודש הסתגלות) ===== */
+.onboarding-card{border:1.5px solid var(--gold);background:var(--gold-soft)}
+.onb-row{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:9px 11px;margin-bottom:7px}
+.onb-row:last-child{margin-bottom:0}
 .fault-detail-img{width:100%;border-radius:13px;border:1px solid var(--line);margin:12px 0;display:block}
 .fault-detail-desc{background:#fdfafa;border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;line-height:1.7;color:var(--ink-2);margin:10px 0}
 /* ===== ADMIN GRID (commander) ===== */
@@ -1109,6 +1113,8 @@ nav{
           <button class="add-btn hidden" id="add-event-btn" onclick="openAddEvent()">+ פריט</button>
         </div>
       </div>
+      <!-- חודש הסתגלות — גלוי רק לחייל עצמו ולחונך שלו (מפקדים רואים דרך ניהול צוות) -->
+      <div id="onboarding-card"></div>
       <!-- מפקד בלבד — סיכום חתימות לכלל הצוות. הועבר לכאן מלשונית "חתימות" בדשבורד
            המפקד, כדי שהתמונה המלאה תהיה במסך שבו קורים דברים (קרא-וחתום), לא בלשונית נפרדת -->
       <div id="safety-cmd-summary" class="hidden">
@@ -1966,7 +1972,10 @@ nav{
       <div class="m-sub">הוספה, עריכה והסרה של אנשי צוות. ניתן להגדיר תאריך שחרור.</div>
       <input class="m-input hidden" id="tm-search" type="text" placeholder="🔎 חיפוש לפי שם…" style="margin-bottom:8px" oninput="renderTeamMgmt()">
       <div id="team-mgmt-list" style="max-height:52vh;overflow-y:auto;margin-bottom:12px"></div>
-      <button class="m-btn primary" id="tm-add-toggle" style="width:100%;margin-bottom:10px" onclick="tmOpenAddForm()">➕ הוסף איש צוות</button>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="m-btn primary" id="tm-add-toggle" style="flex:1" onclick="tmOpenAddForm()">➕ הוסף איש צוות</button>
+        <button class="m-btn ghost" id="onb-tpl-btn" style="flex:0 0 auto" onclick="openOnboardingTplModal()">🎓 תבנית קליטה</button>
+      </div>
       <div class="team-add-form" id="tm-add-form" style="display:none">
         <div id="tm-form-title" style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:8px">➕ הוספת איש צוות</div>
         <input class="m-input" id="tm-name" type="text" placeholder="שם מלא" style="margin-bottom:8px">
@@ -1982,6 +1991,8 @@ nav{
         <datalist id="tm-dept-list"></datalist>
         <select class="m-input" id="tm-officer" style="margin-bottom:8px;display:none"><option value="">— רגיל (משויך למחלקה) —</option><option value="קצין">🎖️ קצין — משויך לצוות "קצינים"</option></select>
         <select class="m-input" id="tm-profession" style="margin-bottom:8px"><option value="">— ללא מקצוע —</option></select>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🧑‍🏫 חונך בחודש ההסתגלות (אופציונלי)</label>
+        <select class="m-input" id="tm-mentor" style="margin-bottom:8px"><option value="">— ללא חונך —</option></select>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך שחרור (אופציונלי — החייל יוסר אוטומטית ביום זה)</label>
         <input class="m-input" id="tm-release" type="date" style="margin-bottom:10px" title="תאריך שחרור">
         <div style="border-top:1px solid var(--line);padding-top:10px;margin-bottom:10px">
@@ -2001,6 +2012,41 @@ nav{
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('team-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONBOARDING DETAIL SHEET — מפקד פותח מתוך תג "🎓 קליטה" בניהול צוות -->
+  <div class="sheet-bg" id="onboarding-detail-sheet">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-top">
+        <b>חודש הסתגלות</b>
+        <button class="sheet-x" onclick="closeOnboardingDetail()">✕</button>
+      </div>
+      <div id="onboarding-detail-body"></div>
+    </div>
+  </div>
+
+  <!-- ONBOARDING TEMPLATE MODAL — עריכת תבנית הקליטה של הסככה -->
+  <div class="modal-bg" id="onboarding-tpl-modal">
+    <div class="modal">
+      <h3>🎓 תבנית "חודש הסתגלות"</h3>
+      <div class="m-sub">מטלות והסמכות הנדרשות מחייל חדש בסככה הזו, ב-30 הימים הראשונים.</div>
+      <div style="font-size:11.5px;font-weight:800;color:var(--ink-3);margin:10px 0 6px">מטלות</div>
+      <div id="onb-tasks-list"></div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input class="m-input" id="onb-new-task" type="text" placeholder="מטלה חדשה…" style="margin-bottom:0">
+        <button class="m-btn primary" style="flex:0 0 auto" onclick="addOnboardingTaskTpl()">+ הוסף</button>
+      </div>
+      <div style="font-size:11.5px;font-weight:800;color:var(--ink-3);margin:6px 0 6px">הסמכות נדרשות</div>
+      <div id="onb-certs-list"></div>
+      <div style="display:flex;gap:8px">
+        <input class="m-input" id="onb-new-cert" type="text" placeholder="שם הסמכה (למשל PF)…" style="margin-bottom:0">
+        <button class="m-btn primary" style="flex:0 0 auto" onclick="addOnboardingCertTpl()">+ הוסף</button>
+      </div>
+      <div class="modal-actions" style="margin-top:14px">
+        <button class="m-btn ghost" onclick="document.getElementById('onboarding-tpl-modal').classList.remove('open')" style="flex:1">סגור</button>
       </div>
     </div>
   </div>
@@ -4051,6 +4097,7 @@ async function getEvents(){ return (await sGet("safety_events")) || []; }
 
 async function renderDocs(){
   if(isVehicleOfficer && !currentShed) return renderVoDocs();
+  renderOnboardingCard("onboarding-card");
   const events = await getEvents();
   const reads = await sGetSigs(user);
   const list = document.getElementById("docs-list");
@@ -6280,6 +6327,8 @@ function openTeamMgmt(){
   officerSel.style.display = isDeptUnit ? "" : "none";
   profSel.style.display = isDeptUnit ? "none" : "";
   if(!isDeptUnit) profSel.innerHTML = '<option value="">— ללא מקצוע —</option>' + PROFESSIONS.map(p=>`<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`).join("");
+  document.getElementById("onb-tpl-btn").style.display = isDeptUnit ? "none" : "";
+  fillMentorSelect(null);
   document.getElementById("team-modal").classList.add("open");
   tmShowForm(false);   // ברירת מחדל: מציג את הצוות, הטופס מוסתר עד לחיצה על "הוסף"
   renderTeamMgmt();
@@ -6315,16 +6364,26 @@ async function renderTeamMgmt(){
     const profTag = p.profession ? `<span class="role-mini">${escapeHTML(p.profession)}</span>` : "";
     const pinTag = p.pinHash ? `<span class="role-mini" title="PIN מוגדר">🔒</span>` : "";
     const reserveTag = p.reserve ? `<span class="role-mini" style="background:var(--gold-soft);color:var(--gold);border-color:#f0dfa8">🎖️ מילואים</span>` : "";
+    const onbTag = isOnboarding(p) ? `<span class="pill y" style="font-size:9px;margin-right:4px;cursor:pointer" onclick="event.stopPropagation();openOnboardingDetail(${i})">🎓 קליטה</span>` : "";
     return `
     <div class="mgmt-row">
       <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
-      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini ${p.role==='חייל'?'sol':''}">${p.role}</span> ${reserveTag} ${deptTag} ${officerTag} ${profTag} ${pinTag} ${pfTag} ${st7Tag}</b>
+      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini ${p.role==='חייל'?'sol':''}">${p.role}</span> ${reserveTag} ${deptTag} ${officerTag} ${profTag} ${pinTag} ${pfTag} ${st7Tag} ${onbTag}</b>
         <span>${p.reserve ? ('🎖️ מילואים · 🗓️ רענון '+(p.refresh||'—')) : ('🎂 '+(p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—')+(rel?' · 🗓️ שחרור '+rel:''))}</span></div>
       <button class="mr-del" style="background:var(--sky-soft);border-color:#cfe0ff;color:var(--sky)" onclick="startEditMember(${i})">✏️</button>
       <button class="mr-del" onclick="removeTeamMember(${i})">🗑️</button>
     </div>`;}).join("");
 }
 
+/* רשימת חונכים אפשריים לבחירה — כל אנשי הצוות פרט למי שנערך כרגע (אי אפשר להיות חונך של עצמך) */
+function fillMentorSelect(excludeName){
+  const sel = document.getElementById("tm-mentor");
+  if(!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— ללא חונך —</option>' +
+    PERSONNEL.filter(p=>p.name!==excludeName).map(p=>`<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)}</option>`).join("");
+  sel.value = prev;
+}
 function startEditMember(i){
   editMemberIdx = i;
   const p = PERSONNEL[i];
@@ -6336,6 +6395,8 @@ function startEditMember(i){
     document.getElementById("tm-dept").value = p.dept || "";
     document.getElementById("tm-officer").value = p.officerTag || "";
   } else document.getElementById("tm-profession").value = p.profession || "";
+  fillMentorSelect(p.name);
+  document.getElementById("tm-mentor").value = p.mentor || "";
   document.getElementById("tm-pin").value = "";
   document.getElementById("tm-pin-remove").checked = false;
   const tps = document.getElementById("tm-pin-status");
@@ -6356,6 +6417,7 @@ function cancelEditMember(){
   document.getElementById("tm-dept").value="";
   document.getElementById("tm-officer").value="";
   document.getElementById("tm-profession").value="";
+  { const ms=document.getElementById("tm-mentor"); if(ms){ fillMentorSelect(null); ms.value=""; } }
   document.getElementById("tm-pin").value="";
   document.getElementById("tm-pin-remove").checked=false;
   { const tps=document.getElementById("tm-pin-status"); if(tps){ tps.textContent=""; } }
@@ -6436,6 +6498,7 @@ async function saveTeamMember(){
   const dept = isDeptUnit ? document.getElementById("tm-dept").value.trim() : "";
   const officerTag = isDeptUnit ? document.getElementById("tm-officer").value : "";
   const profession = isDeptUnit ? "" : document.getElementById("tm-profession").value;
+  const mentor = document.getElementById("tm-mentor").value;
   if(name.length<2){ toast("נא להזין שם"); return; }
   // duplicate check (ignore self when editing)
   const dup = PERSONNEL.some((p,idx)=>p.name===name && idx!==editMemberIdx);
@@ -6468,6 +6531,7 @@ async function saveTeamMember(){
       if(release) p.release=release; else delete p.release;
       if(isDeptUnit){ if(dept) p.dept=dept; else delete p.dept; if(officerTag) p.officerTag=officerTag; else delete p.officerTag; }
       else if(profession) p.profession=profession; else delete p.profession;
+      if(mentor) p.mentor=mentor; else delete p.mentor;
       if(reserve){ p.reserve=true; if(!p.refresh) p.refresh=todayISO(); } else { delete p.reserve; delete p.refresh; }
       applyPin(p);
     });
@@ -6480,6 +6544,7 @@ async function saveTeamMember(){
     if(reserve){ member.reserve=true; member.refresh=todayISO(); }
     if(isDeptUnit){ if(dept) member.dept=dept; if(officerTag) member.officerTag=officerTag; }
     else if(profession) member.profession=profession;
+    if(mentor) member.mentor=mentor;
     applyPin(member);
     const saved = await mutatePersonnel(list=>{
       if(list.some(x=>x.name===name)) return false;   // נוסף בינתיים ממכשיר אחר
@@ -9187,6 +9252,166 @@ function pfStatus(person, certs){
   if(daysLeft<0) return {tag:"⚠️ עברו "+Math.abs(daysLeft)+" ימים מהמועד ל-PF", cls:"r"};
   if(daysLeft<=10) return {tag:daysLeft+" ימים ל-PF", cls:"y"};
   return {tag:daysLeft+" ימים ל-PF", cls:"g"};
+}
+
+/* ===== חודש הסתגלות — צ'ק-ליסט קליטה לחייל חדש =====
+   תבנית (מטלות + שמות הסמכות נדרשות) נערכת לכל סככה בנפרד ונשמרת תחת
+   onboarding_template. התקדמות במטלות נשמרת ישירות על רשומת האיש
+   (p.onboardingDone) — סטטוס ההסמכות נבדק תמיד מול רשימת ההסמכות
+   האמיתית, לא נשמר בנפרד. חלון "עדיין בקליטה" הוא 30 יום מ-joined —
+   נפרד לגמרי מהיעד של 45 יום ל-PF (pfStatus למעלה), שממשיך לפעול
+   כרגיל גם אחרי שהכרטיס הזה נעלם. גלוי רק לשלושה: החייל עצמו, החונך
+   שהוקצה לו, והמפקדים. */
+const ONBOARDING_WINDOW_DAYS = 30;
+const ONBOARDING_TEMPLATE_DEFAULT = { tasks: ["הכרת המסגרת והצוות", "תדריך בטיחות ראשוני"], certs: ["PF"] };
+function daysSinceJoined(person){
+  if(!person.joined) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const joined = new Date(person.joined+"T00:00:00");
+  return Math.round((today-joined)/86400000);
+}
+function isOnboarding(person){
+  // כמו מסלול השלבים/PF — לא רלוונטי במחלקות, רק בסככות
+  if(currentShed && currentShed.isDept) return false;
+  if(!person || person.role!=="חייל" || person.reserve) return false;
+  const d = daysSinceJoined(person);
+  return d!==null && d>=0 && d<=ONBOARDING_WINDOW_DAYS;
+}
+async function getOnboardingTemplate(){
+  const t = await sGet("onboarding_template");
+  return (t && Array.isArray(t.tasks) && Array.isArray(t.certs)) ? t : ONBOARDING_TEMPLATE_DEFAULT;
+}
+/* אינדקסים אמיתיים לתוך PERSONNEL/tpl.tasks — לא שמות חופשיים בתוך onclick,
+   כדי לא להסתבך עם גרשיים בשמות אנשים/מטלות */
+function onboardingCardHtml(pIdx, p, tpl, certs){
+  const d = daysSinceJoined(p);
+  const done = Array.isArray(p.onboardingDone) ? p.onboardingDone : [];
+  const doneTasks = tpl.tasks.filter(t=>done.includes(t)).length;
+  const doneCerts = tpl.certs.filter(cName=>certs.some(c=>c.person===p.name && certCleanName(c.name)===cName)).length;
+  const total = tpl.tasks.length + tpl.certs.length;
+  const pct = total ? Math.round((doneTasks+doneCerts)/total*100) : 0;
+  const mentorRow = p.mentor ? `<div class="onb-row" style="margin-top:10px"><span style="font-size:14px">🧑‍🏫</span><span style="flex:1;font-size:12px;color:var(--ink-2)">חונך</span><b style="font-size:12px">${escapeHTML(p.mentor)}</b></div>` : "";
+  const taskRows = tpl.tasks.map((t,ti)=>{
+    const isDone = done.includes(t);
+    return `<div class="task-row ${isDone?'done':''}" onclick="toggleOnboardingTask(${pIdx},${ti})">
+      <div class="task-check">${isDone?'✓':''}</div>
+      <div class="task-info"><h3>${escapeHTML(t)}</h3></div>
+    </div>`;
+  }).join("");
+  const certRows = tpl.certs.map(cName=>{
+    if(cName==="PF"){
+      const st = pfStatus(p, certs);
+      return st
+        ? `<div class="onb-row"><span style="font-size:14px">🟡</span><span style="flex:1;font-size:12px;color:var(--ink-2)">הסמכת PF</span><span class="pill ${st.cls}">${escapeHTML(st.tag)}</span></div>`
+        : `<div class="onb-row"><span style="font-size:14px">🟢</span><span style="flex:1;font-size:12px;color:var(--ink-2)">הסמכת PF</span><span class="pill g">הושג ✓</span></div>`;
+    }
+    const has = certs.some(c=>c.person===p.name && certCleanName(c.name)===cName);
+    return `<div class="onb-row"><span style="font-size:14px">${has?'🟢':'⚪'}</span><span style="flex:1;font-size:12px;color:var(--ink-2)">${escapeHTML(cName)}</span><span class="pill ${has?'g':'y'}">${has?'הושג ✓':'טרם'}</span></div>`;
+  }).join("");
+  return `<div class="card onboarding-card">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="avatar">${initials(p.name)}</div>
+      <div style="flex:1;min-width:0"><b style="font-size:14px;font-weight:800;display:block">🎓 ${escapeHTML(p.name)} · חודש הסתגלות</b><span style="font-size:11px;color:var(--ink-3)">יום ${d} מתוך ${ONBOARDING_WINDOW_DAYS}</span></div>
+    </div>
+    <div class="progress-bar" style="margin-top:10px"><div class="progress-fill ${pct>=100?'full':''}" style="width:${pct}%"></div></div>
+    ${mentorRow}
+    <div style="margin-top:10px">${taskRows}${certRows}</div>
+  </div>`;
+}
+/* מציג בסך scr-safety את הכרטיסים הרלוונטיים למשתמש המחובר — הוא עצמו
+   בקליטה, או שהוא חונך של מישהו שכן. מפקדים רואים את זה דרך ניהול צוות
+   (renderTeamMgmt), לא כאן — כדי לא להציף את מסך קרא-וחתום שלהם. */
+async function renderOnboardingCard(containerId){
+  const box = document.getElementById(containerId);
+  if(!box) return;
+  if(!currentShed || userRole==="מפקד"){ box.innerHTML=""; return; }
+  const idxList = PERSONNEL.map((p,i)=>i).filter(i=>{
+    const p = PERSONNEL[i];
+    return isOnboarding(p) && (user===p.name || (p.mentor && user===p.mentor));
+  });
+  if(idxList.length===0){ box.innerHTML=""; return; }
+  const tpl = await getOnboardingTemplate();
+  const certs = await getCerts();
+  box.innerHTML = idxList.map(i=>onboardingCardHtml(i, PERSONNEL[i], tpl, certs)).join("");
+}
+async function toggleOnboardingTask(pIdx, taskIdx){
+  const tpl = await getOnboardingTemplate();
+  const task = tpl.tasks[taskIdx];
+  const p = PERSONNEL[pIdx];
+  if(task===undefined || !p) return;
+  const saved = await mutatePersonnel(list=>{
+    const m = list.find(x=>x.name===p.name);
+    if(!m) return false;
+    if(!Array.isArray(m.onboardingDone)) m.onboardingDone = [];
+    const idx = m.onboardingDone.indexOf(task);
+    if(idx>=0) m.onboardingDone.splice(idx,1); else m.onboardingDone.push(task);
+  });
+  if(!saved){ toast("⚠️ העדכון לא נשמר — נסה שוב"); return; }
+  renderOnboardingCard("onboarding-card");
+  renderOnboardingDetailSheet();
+  renderTeamMgmt();
+}
+/* גיליון קליטה שמפקד פותח מתוך שורת איש הצוות בניהול צוות — אותו כרטיס
+   בדיוק שרואה החייל/החונך, רק שהמפקד מגיע אליו דרך מסך אחר */
+let onboardingDetailIdx = -1;
+async function openOnboardingDetail(pIdx){
+  onboardingDetailIdx = pIdx;
+  await renderOnboardingDetailSheet();
+  document.getElementById("onboarding-detail-sheet").classList.add("open");
+}
+async function renderOnboardingDetailSheet(){
+  if(onboardingDetailIdx<0) return;
+  const p = PERSONNEL[onboardingDetailIdx];
+  const box = document.getElementById("onboarding-detail-body");
+  if(!p || !box) return;
+  const tpl = await getOnboardingTemplate();
+  const certs = await getCerts();
+  box.innerHTML = onboardingCardHtml(onboardingDetailIdx, p, tpl, certs);
+}
+function closeOnboardingDetail(){
+  onboardingDetailIdx = -1;
+  document.getElementById("onboarding-detail-sheet").classList.remove("open");
+}
+async function openOnboardingTplModal(){
+  document.getElementById("onboarding-tpl-modal").classList.add("open");
+  await renderOnboardingTplModal();
+}
+async function renderOnboardingTplModal(){
+  const tpl = await getOnboardingTemplate();
+  document.getElementById("onb-tasks-list").innerHTML = tpl.tasks.map((t,i)=>`
+    <div class="mgmt-row"><div class="mr-body"><b>${escapeHTML(t)}</b></div><button class="mr-del" onclick="removeOnboardingTaskTpl(${i})">✕</button></div>`).join("")
+    || `<div style="font-size:12px;color:var(--ink-3);padding:6px 0">אין מטלות עדיין</div>`;
+  document.getElementById("onb-certs-list").innerHTML = tpl.certs.map((c,i)=>`
+    <div class="mgmt-row"><div class="mr-body"><b>${escapeHTML(c)}</b></div><button class="mr-del" onclick="removeOnboardingCertTpl(${i})">✕</button></div>`).join("")
+    || `<div style="font-size:12px;color:var(--ink-3);padding:6px 0">אין הסמכות נדרשות עדיין</div>`;
+}
+async function addOnboardingTaskTpl(){
+  const input = document.getElementById("onb-new-task");
+  const v = input.value.trim();
+  if(!v) return;
+  const tpl = await getOnboardingTemplate();
+  await sSet("onboarding_template", {tasks:[...tpl.tasks, v], certs:[...tpl.certs]});
+  input.value = "";
+  renderOnboardingTplModal();
+}
+async function removeOnboardingTaskTpl(i){
+  const tpl = await getOnboardingTemplate();
+  await sSet("onboarding_template", {tasks: tpl.tasks.filter((_,idx)=>idx!==i), certs:[...tpl.certs]});
+  renderOnboardingTplModal();
+}
+async function addOnboardingCertTpl(){
+  const input = document.getElementById("onb-new-cert");
+  const v = input.value.trim();
+  if(!v) return;
+  const tpl = await getOnboardingTemplate();
+  await sSet("onboarding_template", {tasks:[...tpl.tasks], certs:[...tpl.certs, v]});
+  input.value = "";
+  renderOnboardingTplModal();
+}
+async function removeOnboardingCertTpl(i){
+  const tpl = await getOnboardingTemplate();
+  await sSet("onboarding_template", {tasks:[...tpl.tasks], certs: tpl.certs.filter((_,idx)=>idx!==i)});
+  renderOnboardingTplModal();
 }
 
 /* זיהוי רמת הסמכה לפי אימוג'י בתחילת השם */
