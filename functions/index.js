@@ -10,6 +10,7 @@
 const {onDocumentWritten} = require("firebase-functions/v2/firestore");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
+const {defineSecret} = require("firebase-functions/params");
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore} = require("firebase-admin/firestore");
 const {getMessaging} = require("firebase-admin/messaging");
@@ -21,12 +22,17 @@ const {findOverdueReserves} = require("./lib/reserve_refresh_reminders");
 const {findVoIssues} = require("./lib/vo_reminders");
 const {buildDailyDigests} = require("./lib/daily_digest");
 const {buildDutyRosterDigests} = require("./lib/duty_roster_digest");
+const {analyzeBoardImage: analyzeBoardImageCore} = require("./lib/board_ai_analyze");
 const {dumpCollection} = require("./lib/backup");
 const {decide, SHED_NAMES} = require("./lib/notify");
 const {shouldAuthorize} = require("./lib/authorize");
 
 initializeApp();
 const db = getFirestore();
+
+// מפתח ה-API של Claude — Secret של Firebase (לא בקוד, לא ב-env רגיל).
+// הגדרה חד-פעמית: firebase functions:secrets:set ANTHROPIC_API_KEY
+const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
 
 /* ===== markAuthorized — סוגר את פרצת האימות האנונימי =====
    אימות אנונימי (מופעל אוטומטית בטעינת כל דף, לפני הקלדת קוד) עומד
@@ -49,6 +55,35 @@ exports.markAuthorized = onCall(
     }
     await getAuth().setCustomUserClaims(request.auth.uid, {authorized: true});
     return {ok: true};
+  },
+);
+
+/* ===== analyzeBoardImage — הצעת שיבוץ תורנויות מתוך תמונת הלוח =====
+   נקראת מהלקוח מיד אחרי העלאת/צפייה בלוח, עם התמונה בקידוד base64.
+   לא כותבת שום דבר ל-Firestore — רק מחזירה הצעה. הלקוח ממלא איתה
+   מראש את עורך השיבוץ הקיים, ורק שמירה ידנית ע"י אדם (saveDutyRoster)
+   מכניסה את זה בפועל ל-board_roster שממנו dutyRosterDigest שולח
+   התראות חיות. אם ANTHROPIC_API_KEY לא הוגדר בשרת — נכשל בבירור
+   במקום להעמיד פנים שהניתוח הצליח. */
+exports.analyzeBoardImage = onCall(
+  {region: "me-west1", enforceAppCheck: true, secrets: [ANTHROPIC_API_KEY], memory: "256MiB", timeoutSeconds: 60},
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "נדרש להיות מחובר");
+    }
+    const imageDataUrl = request.data && request.data.image;
+    if (!imageDataUrl || typeof imageDataUrl !== "string") {
+      throw new HttpsError("invalid-argument", "חסרה תמונה לניתוח");
+    }
+    const apiKey = ANTHROPIC_API_KEY.value();
+    if (!apiKey) {
+      throw new HttpsError("failed-precondition", "מפתח ה-API של Claude לא מוגדר בשרת");
+    }
+    const result = await analyzeBoardImageCore(imageDataUrl, apiKey);
+    if (!result.ok) {
+      throw new HttpsError("internal", result.error || "ניתוח התמונה נכשל");
+    }
+    return {days: result.days};
   },
 );
 

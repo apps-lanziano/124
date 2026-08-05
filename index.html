@@ -5512,6 +5512,7 @@ async function renderBoard(){
       <p>לחץ להעלאת צילום מסך של לוח שבועי</p>
     </div>`;
     html += `<button class="m-btn ghost" style="width:100%;margin-bottom:12px" onclick="openDutyRosterModal()">🗓️ שיבוץ תורנויות השבוע (להתראה יומית למפקדים)</button>`;
+    if(boards.length) html += `<button class="m-btn ghost" style="width:100%;margin-bottom:12px" onclick="analyzeLatestBoardWithAI()">🤖 נתח את הלוח האחרון עם AI (הצעה בלבד — עדיין דורש אישור ידני)</button>`;
   }
   if(boards.length === 0){
     html += `<div class="empty-state">
@@ -5550,8 +5551,8 @@ async function getDutyRoster(){
 function parseDutyNames(text){
   return (text||"").split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
 }
-async function openDutyRosterModal(){
-  const roster = await getDutyRoster();
+async function openDutyRosterModal(aiDays){
+  const roster = aiDays ? {days: aiDays} : await getDutyRoster();
   document.getElementById("duty-roster-days").innerHTML = WEEK_DAYS_HE.map(day=>{
     const d = roster.days[day] || {duty:[], rest:[]};
     return `<div class="duty-roster-day">
@@ -5562,8 +5563,34 @@ async function openDutyRosterModal(){
       <textarea class="m-input" id="duty-rest-${day}" rows="2" placeholder="שם מלא בכל שורה">${escapeHTML(d.rest.join("\n"))}</textarea>
     </div>`;
   }).join("");
-  document.getElementById("duty-roster-preview").innerHTML = "";
+  // הצעת AI היא טיוטה בלבד — לא נשמרת עד שאדם בודק ולוחץ "שמור שיבוץ" בעצמו
+  document.getElementById("duty-roster-preview").innerHTML = aiDays
+    ? `<div class="duty-roster-match">🤖 זו הצעה של AI מתוך תמונת הלוח — בדוק ותקן לפני שמירה. רק לחיצה על "שמור שיבוץ" מפעילה את ההתראות.</div>`
+    : "";
   document.getElementById("duty-roster-modal").classList.add("open");
+}
+/* ניתוח לוח צוות שבועי ע"י AI (Claude Vision, functions/lib/board_ai_analyze.js).
+   שולח את התמונה המלאה של הלוח האחרון ומקבל הצעת שיבוץ — לא כותב שום
+   דבר בעצמו. ההצעה רק ממלאת מראש את אותו עורך שיבוץ ידני שכבר קיים
+   (openDutyRosterModal), כדי שמ"ע תורנויות יבדוק ויתקן לפני שמירה. */
+async function analyzeLatestBoardWithAI(){
+  const boards = await getBoards();
+  if(!boards.length){ toast("אין עדיין לוח להעלות לניתוח 📅"); return; }
+  const full = await sGet("board_img_"+boards[0].id);
+  if(!full){ toast("לא נמצאה תמונת הלוח לניתוח ⚠️"); return; }
+  toast("מנתח את הלוח עם AI… ⏳");
+  try{
+    const fnMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js");
+    const functions = fnMod.getFunctions(fbAuth.app, "me-west1");
+    const analyzeFn = fnMod.httpsCallable(functions, "analyzeBoardImage");
+    const res = await analyzeFn({image: full});
+    const days = (res.data && res.data.days) || {};
+    if(!Object.keys(days).length){ toast("ה-AI לא זיהה שיבוץ ברור בלוח הזה — אפשר למלא ידנית"); await openDutyRosterModal(); return; }
+    await openDutyRosterModal(days);
+  }catch(e){
+    console.error("analyzeLatestBoardWithAI", e);
+    toast("ניתוח ה-AI נכשל — אפשר למלא ידנית ⚠️");
+  }
 }
 async function saveDutyRoster(){
   const days = {};
