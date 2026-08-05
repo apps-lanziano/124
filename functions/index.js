@@ -19,6 +19,7 @@ const {findUnsignedReminders} = require("./lib/reminders");
 const {findExpiringCerts} = require("./lib/cert_expiry_reminders");
 const {findOverdueReserves} = require("./lib/reserve_refresh_reminders");
 const {findVoIssues} = require("./lib/vo_reminders");
+const {buildDailyDigests} = require("./lib/daily_digest");
 const {dumpCollection} = require("./lib/backup");
 const {decide, SHED_NAMES} = require("./lib/notify");
 const {shouldAuthorize} = require("./lib/authorize");
@@ -273,6 +274,53 @@ exports.remindVoIssuesDaily = onSchedule(
       },
     });
     console.log(`תזכורת מ״ע אחזקה: ${summary.totalCount} פריטים דורשים תשומת לב`);
+  },
+);
+
+/* ===== תקציר יומי =====
+   פוש אחד מרוכז לכל מפקד ב-08:00, בנוסף (לא במקום) לתזכורות הנקודתיות
+   למעלה — כדי שלא יצטרך "לרדוף" אחרי כמה פינגים נפרדים כדי להבין את
+   תמונת המצב של הבוקר. ריצה יומית קבועה, בלי תלות בלוג cooldown של אף
+   תזכורת אחרת (ראו lib/daily_digest.js). */
+exports.dailyDigest = onSchedule(
+  {
+    schedule: "0 8 * * *",
+    timeZone: "Asia/Jerusalem",
+    region: "me-west1",
+    memory: "256MiB",
+    timeoutSeconds: 120,
+  },
+  async () => {
+    const digests = await buildDailyDigests(db);
+    if (!digests.length) return;
+
+    let sentCount = 0;
+    for (const d of digests) {
+      const tokRef = db.doc("sq124/push_tokens_" + d.shedId);
+      const tokSnap = await tokRef.get();
+      const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
+      const cmdTokens = Object.entries(tokMap)
+        .filter(([, m]) => m && m.role === "מפקד")
+        .map(([t]) => t);
+      if (!cmdTokens.length) continue;
+
+      const shedName = SHED_NAMES[d.shedId] || d.shedId;
+      const parts = [];
+      if (d.unsignedCount) parts.push(`${d.unsignedCount} חתימות חסרות`);
+      if (d.openFaults) parts.push(`${d.openFaults} תקלות פתוחות`);
+      if (d.certsSoon) parts.push(`${d.certsSoon} הסמכות פגות השבוע`);
+      await getMessaging().sendEachForMulticast({
+        tokens: cmdTokens,
+        data: {
+          title: "📋 תקציר בוקר · " + shedName,
+          body: parts.join(" · "),
+          kind: "daily_digest",
+          n: String(d.totalCount),
+        },
+      });
+      sentCount++;
+    }
+    console.log(`תקציר יומי: ${digests.length} מסגרות עם ממצאים, ${sentCount} נשלחו בפועל`);
   },
 );
 
