@@ -585,8 +585,18 @@ nav{
 .binui-kcard span{font-size:10.5px;color:var(--ink-3);display:block;margin-top:3px}
 .binui-kcol-empty{font-size:11px;color:var(--ink-3);text-align:center;padding:14px 4px}
 /* ===== ONBOARDING (חודש הסתגלות) ===== */
-.onboarding-card{border:1.5px solid var(--gold);background:var(--gold-soft)}
+.onboarding-card{border-inline-start:3px solid var(--gold)}
 .onb-row{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:9px 11px;margin-bottom:7px}
+.onb-pf{display:flex;align-items:center;gap:12px;background:var(--gold-soft);border:1.5px solid var(--gold);border-radius:14px;padding:12px 14px;margin:10px 0}
+.onb-pf.g{background:var(--green-soft);border-color:var(--green)}
+.onb-pf.r{background:var(--red-soft);border-color:var(--red-line)}
+.onb-pf-ic{font-size:22px}
+.onb-pf-txt b{display:block;font-size:11.5px;font-weight:800;color:var(--ink-2)}
+.onb-pf-txt span{font-size:15px;font-weight:800;color:var(--gold)}
+.onb-pf.g .onb-pf-txt span{color:var(--green)}
+.onb-pf.r .onb-pf-txt span{color:var(--red)}
+.onb-item-btn{background:none;border:none;font-size:13px;padding:4px 6px;cursor:pointer;flex-shrink:0}
+.onb-add-row{display:flex;gap:8px;margin-top:10px}
 .onb-row:last-child{margin-bottom:0}
 .fault-detail-img{width:100%;border-radius:13px;border:1px solid var(--line);margin:12px 0;display:block}
 .fault-detail-desc{background:#fdfafa;border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;line-height:1.7;color:var(--ink-2);margin:10px 0}
@@ -1223,28 +1233,6 @@ nav{
 
     <!-- ===== קליטת חייל חדש — לשונית מרוכזת: תבנית, רשימת קולטים, כרטיס אישי ===== -->
     <section class="screen" id="scr-onboarding">
-      <div class="sec-head">
-        <div>
-          <h2>קליטת חייל חדש 🎓</h2>
-          <p>חודש הסתגלות: חונך, מטלות והסמכות נדרשות, וקאונטר PF — במקום אחד.</p>
-        </div>
-      </div>
-      <div id="onboarding-tpl-section" class="hidden">
-        <div class="cmd-section-title">✏️ תבנית "חודש הסתגלות" של המסגרת</div>
-        <div style="font-size:11.5px;font-weight:800;color:var(--ink-3);margin:10px 0 6px">מטלות</div>
-        <div id="onb-tasks-list"></div>
-        <div style="display:flex;gap:8px;margin-bottom:14px">
-          <input class="m-input" id="onb-new-task" type="text" placeholder="מטלה חדשה…" style="margin-bottom:0">
-          <button class="m-btn primary" style="flex:0 0 auto" onclick="addOnboardingTaskTpl()">+ הוסף</button>
-        </div>
-        <div style="font-size:11.5px;font-weight:800;color:var(--ink-3);margin:6px 0 6px">הסמכות נדרשות</div>
-        <div id="onb-certs-list"></div>
-        <div style="display:flex;gap:8px;margin-bottom:16px">
-          <input class="m-input" id="onb-new-cert" type="text" placeholder="שם הסמכה (למשל PF)…" style="margin-bottom:0">
-          <button class="m-btn primary" style="flex:0 0 auto" onclick="addOnboardingCertTpl()">+ הוסף</button>
-        </div>
-        <div class="cmd-section-title">👥 בקליטה עכשיו</div>
-      </div>
       <div id="onboarding-roster"></div>
       <div id="onboarding-card"></div>
     </section>
@@ -2106,6 +2094,18 @@ nav{
         <button class="sheet-x" onclick="closeOnboardingDetail()">✕</button>
       </div>
       <div id="onboarding-detail-body"></div>
+    </div>
+  </div>
+
+  <!-- ONBOARDING ITEM EDIT MODAL — שינוי שם מטלה/הסמכה קיימת בתבנית -->
+  <div class="modal-bg" id="onboarding-item-edit-modal">
+    <div class="modal">
+      <h3>✏️ עריכת פריט</h3>
+      <input class="m-input" id="onb-item-edit-input" type="text" placeholder="שם המטלה/הסמכה" style="margin-bottom:10px">
+      <div class="modal-actions">
+        <button class="m-btn primary" onclick="saveOnboardingItemEdit()" style="flex:1">💾 שמור</button>
+        <button class="m-btn ghost" onclick="document.getElementById('onboarding-item-edit-modal').classList.remove('open')" style="flex:0 0 auto">ביטול</button>
+      </div>
     </div>
   </div>
 
@@ -9624,15 +9624,17 @@ function pfStatus(person, certs){
 }
 
 /* ===== חודש הסתגלות — צ'ק-ליסט קליטה לחייל חדש =====
-   תבנית (מטלות + שמות הסמכות נדרשות) נערכת לכל סככה בנפרד ונשמרת תחת
-   onboarding_template. התקדמות במטלות נשמרת ישירות על רשומת האיש
-   (p.onboardingDone) — סטטוס ההסמכות נבדק תמיד מול רשימת ההסמכות
-   האמיתית, לא נשמר בנפרד. חלון "עדיין בקליטה" הוא 30 יום מ-joined —
-   נפרד לגמרי מהיעד של 45 יום ל-PF (pfStatus למעלה), שממשיך לפעול
-   כרגיל גם אחרי שהכרטיס הזה נעלם. גלוי רק לשלושה: החייל עצמו, החונך
-   שהוקצה לו, והמפקדים. */
+   תבנית (רשימת מטלות/הסמכות מאוחדת, טקסט חופשי) נערכת לכל סככה בנפרד
+   ונשמרת תחת onboarding_template כ-{items:[...]}. כל הפריטים ברשימה
+   מסומנים ידנית ע"י המשתמש (p.onboardingDone) — בלי חיפוש אוטומטי מול
+   רשימת ההסמכות האמיתית. הסמכת PF היא היוצאת מן הכלל: יש לה קאונטר
+   קבוע ונפרד בראש הכרטיס, מבוסס תמיד על הנתונים האמיתיים (pfStatus),
+   ולא חלק מהרשימה הניתנת לעריכה. חלון "עדיין בקליטה" הוא 30 יום
+   מ-joined — נפרד לגמרי מהיעד של 45 יום ל-PF, שממשיך לפעול כרגיל גם
+   אחרי שהכרטיס הזה נעלם. גלוי רק לשלושה: החייל עצמו, החונך שהוקצה
+   לו, והמפקדים (שיכולים גם לערוך את הרשימה). */
 const ONBOARDING_WINDOW_DAYS = 30;
-const ONBOARDING_TEMPLATE_DEFAULT = { tasks: ["הכרת המסגרת והצוות", "תדריך בטיחות ראשוני"], certs: ["PF"] };
+const ONBOARDING_TEMPLATE_DEFAULT = { items: ["הכרת המסגרת והצוות", "תדריך בטיחות ראשוני"] };
 function daysSinceJoined(person){
   if(!person.joined) return null;
   const today = new Date(); today.setHours(0,0,0,0);
@@ -9648,63 +9650,60 @@ function isOnboarding(person){
 }
 async function getOnboardingTemplate(){
   const t = await sGet("onboarding_template");
-  return (t && Array.isArray(t.tasks) && Array.isArray(t.certs)) ? t : ONBOARDING_TEMPLATE_DEFAULT;
+  if(t && Array.isArray(t.items)) return t;
+  // מיגרציה מהמבנה הישן (tasks+certs נפרדים) — PF הוסר מהרשימה (הפך לקאונטר קבוע), שאר ההסמכות מצטרפות למטלות לרשימה אחת
+  if(t && Array.isArray(t.tasks)) return {items: [...t.tasks, ...(Array.isArray(t.certs)?t.certs:[]).filter(c=>c!=="PF")]};
+  return ONBOARDING_TEMPLATE_DEFAULT;
 }
-/* אינדקסים אמיתיים לתוך PERSONNEL/tpl.tasks — לא שמות חופשיים בתוך onclick,
-   כדי לא להסתבך עם גרשיים בשמות אנשים/מטלות */
-function onboardingCardHtml(pIdx, p, tpl, certs){
+/* אינדקסים אמיתיים לתוך tpl.items — לא שמות חופשיים בתוך onclick, כדי
+   לא להסתבך עם גרשיים בשמות מטלות/הסמכות. editable=true (מפקד) מוסיף
+   כפתורי עריכה/הסרה לכל שורה, ובאנר הזנה חופשית בתחתית הרשימה. */
+function onboardingCardHtml(pIdx, p, tpl, certs, editable){
   const d = daysSinceJoined(p);
   const done = Array.isArray(p.onboardingDone) ? p.onboardingDone : [];
-  const doneTasks = tpl.tasks.filter(t=>done.includes(t)).length;
-  const doneCerts = tpl.certs.filter(cName=>certs.some(c=>c.person===p.name && certCleanName(c.name)===cName)).length;
-  const total = tpl.tasks.length + tpl.certs.length;
-  const pct = total ? Math.round((doneTasks+doneCerts)/total*100) : 0;
-  const mentorRow = p.mentor ? `<div class="onb-row" style="margin-top:10px"><span style="font-size:14px">🧑‍🏫</span><span style="flex:1;font-size:12px;color:var(--ink-2)">חונך</span><b style="font-size:12px">${escapeHTML(p.mentor)}</b></div>` : "";
-  const taskRows = tpl.tasks.map((t,ti)=>{
+  const doneCount = tpl.items.filter(t=>done.includes(t)).length;
+  const pct = tpl.items.length ? Math.round(doneCount/tpl.items.length*100) : 0;
+  const pf = pfStatus(p, certs);
+  const pfHtml = pf
+    ? `<div class="onb-pf ${pf.cls}"><span class="onb-pf-ic">🟡</span><div class="onb-pf-txt"><b>הסמכת PF</b><span>${escapeHTML(pf.tag)}</span></div></div>`
+    : `<div class="onb-pf g"><span class="onb-pf-ic">🟢</span><div class="onb-pf-txt"><b>הסמכת PF</b><span>הושג ✓</span></div></div>`;
+  const mentorRow = p.mentor ? `<div class="onb-row"><span style="font-size:14px">🧑‍🏫</span><span style="flex:1;font-size:12px;color:var(--ink-2)">חונך</span><b style="font-size:12px">${escapeHTML(p.mentor)}</b></div>` : "";
+  const itemRows = tpl.items.map((t,ti)=>{
     const isDone = done.includes(t);
-    return `<div class="task-row ${isDone?'done':''}" onclick="toggleOnboardingTask(${pIdx},${ti})">
-      <div class="task-check">${isDone?'✓':''}</div>
-      <div class="task-info"><h3>${escapeHTML(t)}</h3></div>
+    const editBtns = editable ? `<button class="onb-item-btn" onclick="event.stopPropagation();startEditOnboardingItem(${ti})" title="עריכה">✏️</button><button class="onb-item-btn" onclick="event.stopPropagation();removeOnboardingItemTpl(${ti})" title="הסרה">✕</button>` : "";
+    return `<div class="task-row ${isDone?'done':''}">
+      <div class="task-check" onclick="toggleOnboardingTask(${pIdx},${ti})">${isDone?'✓':''}</div>
+      <div class="task-info" onclick="toggleOnboardingTask(${pIdx},${ti})"><h3>${escapeHTML(t)}</h3></div>
+      ${editBtns}
     </div>`;
-  }).join("");
-  const certRows = tpl.certs.map(cName=>{
-    if(cName==="PF"){
-      const st = pfStatus(p, certs);
-      return st
-        ? `<div class="onb-row"><span style="font-size:14px">🟡</span><span style="flex:1;font-size:12px;color:var(--ink-2)">הסמכת PF</span><span class="pill ${st.cls}">${escapeHTML(st.tag)}</span></div>`
-        : `<div class="onb-row"><span style="font-size:14px">🟢</span><span style="flex:1;font-size:12px;color:var(--ink-2)">הסמכת PF</span><span class="pill g">הושג ✓</span></div>`;
-    }
-    const has = certs.some(c=>c.person===p.name && certCleanName(c.name)===cName);
-    return `<div class="onb-row"><span style="font-size:14px">${has?'🟢':'⚪'}</span><span style="flex:1;font-size:12px;color:var(--ink-2)">${escapeHTML(cName)}</span><span class="pill ${has?'g':'y'}">${has?'הושג ✓':'טרם'}</span></div>`;
-  }).join("");
+  }).join("") || `<div style="font-size:12px;color:var(--ink-3);padding:8px 0">אין עדיין מטלות/הסמכות בתבנית</div>`;
+  const addRow = editable ? `<div class="onb-add-row">
+      <input class="m-input" id="onb-new-item-${pIdx}" type="text" placeholder="מטלה/הסמכה חדשה…" style="margin-bottom:0">
+      <button class="m-btn primary" style="flex:0 0 auto" onclick="addOnboardingItemTpl(${pIdx})">+ הוסף</button>
+    </div>` : "";
   return `<div class="card onboarding-card">
     <div style="display:flex;align-items:center;gap:10px">
       <div class="avatar">${initials(p.name)}</div>
-      <div style="flex:1;min-width:0"><b style="font-size:14px;font-weight:800;display:block">🎓 ${escapeHTML(p.name)} · חודש הסתגלות</b><span style="font-size:11px;color:var(--ink-3)">יום ${d} מתוך ${ONBOARDING_WINDOW_DAYS}</span></div>
+      <div style="flex:1;min-width:0"><b style="font-size:14px;font-weight:800;display:block">${escapeHTML(p.name)}</b><span style="font-size:11px;color:var(--ink-3)">יום ${d} מתוך ${ONBOARDING_WINDOW_DAYS}</span></div>
     </div>
-    <div class="progress-bar" style="margin-top:10px"><div class="progress-fill ${pct>=100?'full':''}" style="width:${pct}%"></div></div>
+    ${pfHtml}
     ${mentorRow}
-    <div style="margin-top:10px">${taskRows}${certRows}</div>
+    <div class="progress-bar" style="margin-top:10px"><div class="progress-fill ${pct>=100?'full':''}" style="width:${pct}%"></div></div>
+    <div style="margin-top:10px">${itemRows}</div>
+    ${addRow}
   </div>`;
 }
-/* מסך "קליטת חייל חדש" — מרוכז: מפקד רואה עורך תבנית + רשימת כל מי
-   שבקליטה כרגע (כרטיס מלא לכל אחד, כמו בעבר בגיליון הפרטני); חייל/חונך
-   רואים רק את הכרטיס(ים) הרלוונטיים אליהם אישית. */
+/* מסך "קליטת חייל חדש" — מרוכז: מפקד רואה כרטיס מלא (וניתן לעריכה)
+   לכל מי שבקליטה כרגע; חייל/חונך רואים רק את הכרטיס(ים) הרלוונטיים
+   אליהם אישית, לקריאה/סימון בלבד. */
 async function renderOnboardingScreen(){
-  const tplSection = document.getElementById("onboarding-tpl-section");
   const rosterBox = document.getElementById("onboarding-roster");
   const cardBox = document.getElementById("onboarding-card");
-  if(!currentShed || (currentShed.isDept)){
-    tplSection.classList.add("hidden"); rosterBox.innerHTML=""; cardBox.innerHTML="";
-    return;
-  }
+  if(!currentShed || currentShed.isDept){ rosterBox.innerHTML=""; cardBox.innerHTML=""; return; }
   if(userRole==="מפקד"){
-    tplSection.classList.remove("hidden");
     cardBox.innerHTML = "";
-    await renderOnboardingTplSection();
     await renderOnboardingRoster();
   } else {
-    tplSection.classList.add("hidden");
     rosterBox.innerHTML = "";
     await renderOnboardingCard("onboarding-card");
   }
@@ -9724,9 +9723,9 @@ async function renderOnboardingCard(containerId){
   }
   const tpl = await getOnboardingTemplate();
   const certs = await getCerts();
-  box.innerHTML = idxList.map(i=>onboardingCardHtml(i, PERSONNEL[i], tpl, certs)).join("");
+  box.innerHTML = idxList.map(i=>onboardingCardHtml(i, PERSONNEL[i], tpl, certs, false)).join("");
 }
-/* רשימת כל אנשי הצוות שבחודש הסתגלות כרגע — מוצגת למפקד במסך "קליטת חייל חדש" */
+/* רשימת כל אנשי הצוות שבחודש הסתגלות כרגע — מוצגת למפקד במסך "קליטת חייל חדש", ניתנת לעריכה */
 async function renderOnboardingRoster(){
   const box = document.getElementById("onboarding-roster");
   if(!box) return;
@@ -9737,19 +9736,19 @@ async function renderOnboardingRoster(){
   }
   const tpl = await getOnboardingTemplate();
   const certs = await getCerts();
-  box.innerHTML = idxList.map(i=>onboardingCardHtml(i, PERSONNEL[i], tpl, certs)).join("");
+  box.innerHTML = idxList.map(i=>onboardingCardHtml(i, PERSONNEL[i], tpl, certs, true)).join("");
 }
-async function toggleOnboardingTask(pIdx, taskIdx){
+async function toggleOnboardingTask(pIdx, itemIdx){
   const tpl = await getOnboardingTemplate();
-  const task = tpl.tasks[taskIdx];
+  const item = tpl.items[itemIdx];
   const p = PERSONNEL[pIdx];
-  if(task===undefined || !p) return;
+  if(item===undefined || !p) return;
   const saved = await mutatePersonnel(list=>{
     const m = list.find(x=>x.name===p.name);
     if(!m) return false;
     if(!Array.isArray(m.onboardingDone)) m.onboardingDone = [];
-    const idx = m.onboardingDone.indexOf(task);
-    if(idx>=0) m.onboardingDone.splice(idx,1); else m.onboardingDone.push(task);
+    const idx = m.onboardingDone.indexOf(item);
+    if(idx>=0) m.onboardingDone.splice(idx,1); else m.onboardingDone.push(item);
   });
   if(!saved){ toast("⚠️ העדכון לא נשמר — נסה שוב"); return; }
   renderOnboardingScreen();
@@ -9772,52 +9771,68 @@ async function renderOnboardingDetailSheet(){
   if(!p || !box) return;
   const tpl = await getOnboardingTemplate();
   const certs = await getCerts();
-  box.innerHTML = onboardingCardHtml(onboardingDetailIdx, p, tpl, certs);
+  box.innerHTML = onboardingCardHtml(onboardingDetailIdx, p, tpl, certs, true);
 }
 function closeOnboardingDetail(){
   onboardingDetailIdx = -1;
   document.getElementById("onboarding-detail-sheet").classList.remove("open");
 }
-async function renderOnboardingTplSection(){
-  const tpl = await getOnboardingTemplate();
-  document.getElementById("onb-tasks-list").innerHTML = tpl.tasks.map((t,i)=>`
-    <div class="mgmt-row"><div class="mr-body"><b>${escapeHTML(t)}</b></div><button class="mr-del" onclick="removeOnboardingTaskTpl(${i})">✕</button></div>`).join("")
-    || `<div style="font-size:12px;color:var(--ink-3);padding:6px 0">אין מטלות עדיין</div>`;
-  document.getElementById("onb-certs-list").innerHTML = tpl.certs.map((c,i)=>`
-    <div class="mgmt-row"><div class="mr-body"><b>${escapeHTML(c)}</b></div><button class="mr-del" onclick="removeOnboardingCertTpl(${i})">✕</button></div>`).join("")
-    || `<div style="font-size:12px;color:var(--ink-3);padding:6px 0">אין הסמכות נדרשות עדיין</div>`;
-}
-async function addOnboardingTaskTpl(){
-  const input = document.getElementById("onb-new-task");
+async function addOnboardingItemTpl(pIdx){
+  const input = document.getElementById("onb-new-item-"+pIdx);
+  if(!input) return;
   const v = input.value.trim();
   if(!v) return;
   const tpl = await getOnboardingTemplate();
-  await sSet("onboarding_template", {tasks:[...tpl.tasks, v], certs:[...tpl.certs]});
-  input.value = "";
-  renderOnboardingTplSection();
-  renderOnboardingRoster();
+  if(tpl.items.includes(v)){ toast("פריט בשם הזה כבר קיים ⛔"); return; }
+  await sSet("onboarding_template", {items:[...tpl.items, v]});
+  renderOnboardingScreen();
+  renderOnboardingDetailSheet();
 }
-async function removeOnboardingTaskTpl(i){
+async function removeOnboardingItemTpl(idx){
   const tpl = await getOnboardingTemplate();
-  await sSet("onboarding_template", {tasks: tpl.tasks.filter((_,idx)=>idx!==i), certs:[...tpl.certs]});
-  renderOnboardingTplSection();
-  renderOnboardingRoster();
+  if(!tpl.items[idx]) return;
+  if(!confirm(`להסיר את "${tpl.items[idx]}" מהתבנית?`)) return;
+  await sSet("onboarding_template", {items: tpl.items.filter((_,i)=>i!==idx)});
+  renderOnboardingScreen();
+  renderOnboardingDetailSheet();
 }
-async function addOnboardingCertTpl(){
-  const input = document.getElementById("onb-new-cert");
-  const v = input.value.trim();
-  if(!v) return;
+let onboardingEditItemIdx = -1;
+async function startEditOnboardingItem(idx){
   const tpl = await getOnboardingTemplate();
-  await sSet("onboarding_template", {tasks:[...tpl.tasks], certs:[...tpl.certs, v]});
-  input.value = "";
-  renderOnboardingTplSection();
-  renderOnboardingRoster();
+  if(!tpl.items[idx]) return;
+  onboardingEditItemIdx = idx;
+  document.getElementById("onb-item-edit-input").value = tpl.items[idx];
+  document.getElementById("onboarding-item-edit-modal").classList.add("open");
 }
-async function removeOnboardingCertTpl(i){
+/* שינוי שם פריט בתבנית לא ימחק בטעות סימוני "בוצע" קיימים של אנשי צוות שכבר סימנו אותו — מהגר אותם לשם החדש */
+async function renameOnboardingItemEverywhere(oldText, newText){
+  await mutatePersonnel(list=>{
+    let changed = false;
+    list.forEach(p=>{
+      if(Array.isArray(p.onboardingDone) && p.onboardingDone.includes(oldText)){
+        p.onboardingDone = p.onboardingDone.map(t=>t===oldText?newText:t);
+        changed = true;
+      }
+    });
+    if(!changed) return false;
+  });
+}
+async function saveOnboardingItemEdit(){
+  const v = document.getElementById("onb-item-edit-input").value.trim();
+  if(!v || onboardingEditItemIdx<0) return;
   const tpl = await getOnboardingTemplate();
-  await sSet("onboarding_template", {tasks:[...tpl.tasks], certs: tpl.certs.filter((_,idx)=>idx!==i)});
-  renderOnboardingTplSection();
-  renderOnboardingRoster();
+  const oldText = tpl.items[onboardingEditItemIdx];
+  if(oldText === v){ document.getElementById("onboarding-item-edit-modal").classList.remove("open"); return; }
+  if(tpl.items.includes(v)){ toast("פריט בשם הזה כבר קיים ⛔"); return; }
+  const items = [...tpl.items];
+  items[onboardingEditItemIdx] = v;
+  await sSet("onboarding_template", {items});
+  await renameOnboardingItemEverywhere(oldText, v);
+  onboardingEditItemIdx = -1;
+  document.getElementById("onboarding-item-edit-modal").classList.remove("open");
+  renderOnboardingScreen();
+  renderOnboardingDetailSheet();
+  renderTeamMgmt();
 }
 
 /* ===== CUSTOM FIELDS (שדות ותגיות מותאמים אישית) =====
