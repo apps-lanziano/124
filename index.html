@@ -4916,17 +4916,20 @@ async function saveDuty(name, field, value){
 }
 
 /* ===== לוח שנה מאוחד (feature: לוח שנה מאוחד) =====
-   מסך תצוגה בלבד שמרכז ארבעה מקורות נתונים קיימים — הסמכות (certs_list),
-   כיול כלים (tools_list), טסט רכב (vehicles_list.testDate) ותורנויות
-   (duty_table) — לנקודות צבעוניות על גבי לוח חודשי אחד. לא מסך ניווט
-   קבוע (נגיש מתפריט "עוד" בלבד), וללא מודל נתונים חדש: קורא מהמקורות
-   הקיימים בדיוק כמו מסכיהם, בלי לשכפל לוגיקה. כלים/רכבים לא רלוונטיים
-   ליוזר מחלקות — אותה גדירה בדיוק כמו ביתר הדשבורד (computeTrendsData). */
+   מסך תצוגה בלבד שמרכז חמישה מקורות נתונים קיימים — הסמכות (certs_list),
+   כיול כלים (tools_list), טסט רכב (vehicles_list.testDate), תורנויות
+   (duty_table) וימי הולדת (PERSONNEL[].bday) — לנקודות צבעוניות על גבי
+   לוח חודשי אחד. לא מסך ניווט קבוע (נגיש מתפריט "עוד" בלבד), וללא מודל
+   נתונים חדש: קורא מהמקורות הקיימים בדיוק כמו מסכיהם, בלי לשכפל לוגיקה.
+   כלים/רכבים לא רלוונטיים ליוזר מחלקות — אותה גדירה בדיוק כמו ביתר
+   הדשבורד (computeTrendsData). ימי הולדת חוזרים כל שנה לפי חודש/יום
+   בלבד — מוצגים בשנה המוצגת כרגע בלוח (calYear), לא בשנת הלידה עצמה. */
 const CAL_TYPES = {
-  cert:    {label:"הסמכה",    color:"#7c3aed"},
-  tool:    {label:"כיול כלי", color:"#b98900"},
-  vehicle: {label:"טסט רכב",  color:"#2563eb"},
-  duty:    {label:"תורנות",   color:"var(--red)"},
+  cert:    {label:"הסמכה",       color:"#7c3aed"},
+  tool:    {label:"כיול כלי",    color:"#b98900"},
+  vehicle: {label:"טסט רכב",     color:"#2563eb"},
+  duty:    {label:"תורנות",      color:"var(--red)"},
+  bday:    {label:"יום הולדת",   color:"#db2777"},
 };
 let calYear, calMonth, calSelectedDate = null;
 function calInit(){
@@ -4954,6 +4957,11 @@ async function getCalendarEvents(){
   tools.forEach(t=>{ if(t.expiry && !t.inRepair) events.push({date:t.expiry, type:"tool", label:t.name+(t.serial?` — מספר ${t.serial}`:"")}); });
   vehicles.forEach(v=>{ if(v.testDate) events.push({date:v.testDate, type:"vehicle", label:v.name+(v.number?` — מס' ${v.number}`:"")}); });
   Object.entries(dutyTable || {}).forEach(([name,row])=>{ if(row && row.date && row.duty) events.push({date:row.date, type:"duty", label:`${name} — ${row.duty}`}); });
+  PERSONNEL.forEach(p=>{
+    if(!p.bday || p.bday==="2000-01-01") return;
+    const [, mm, dd] = p.bday.split("-");
+    events.push({date:`${calYear}-${mm}-${dd}`, type:"bday", label:`${p.name} — יום הולדת`});
+  });
   return events;
 }
 async function renderCalendarPage(){
