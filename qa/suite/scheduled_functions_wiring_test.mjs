@@ -45,11 +45,22 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
     hasSchedule && usesLib && importsLib, JSON.stringify({hasSchedule, usesLib, importsLib}));
 }
 
-// 5. תזכורות + מסדר בוקר + סקירת מ״ע אחזקה מסננים טוקנים למפקדים בלבד (אותה תבנית כמו remindUnsignedDaily)
+// 5. תזכורות + מסדר בוקר + סקירת מ״ע אחזקה + תקציר יומי מסננים טוקנים למפקדים בלבד (אותה תבנית כמו remindUnsignedDaily)
 {
   const filterCount = (fn.match(/filter\(\(\[, m\]\)\s*=>\s*m\s*&&\s*m\.role\s*===\s*"מפקד"\)/g) || []).length;
-  record("סה״כ 5 מקומות מסננים למפקד בלבד (חתימות, הסמכות, מילואים, מסדר בוקר, סקירת מ״ע אחזקה)",
-    filterCount===5, String(filterCount));
+  record("סה״כ 6 מקומות מסננים למפקד בלבד (חתימות, הסמכות, מילואים, מסדר בוקר, סקירת מ״ע אחזקה, תקציר יומי)",
+    filterCount===6, String(filterCount));
+}
+
+// 5ג. תקציר יומי — מתוזמן ל-08:00, בטיימזון ישראל, מחובר ל-lib/daily_digest, ואינו תלוי בלוג cooldown כלשהו
+{
+  const hasSchedule = /dailyDigest\s*=\s*onSchedule/.test(fn);
+  const hasCorrectTime = /schedule:\s*"0 8 \* \* \*"/.test(fn);
+  const usesLib = /buildDailyDigests\(db\)/.test(fn);
+  const importsLib = /require\("\.\/lib\/daily_digest"\)/.test(fn);
+  record("תקציר יומי: מתוזמן ל-08:00 (Asia/Jerusalem), ומשתמש בלוגיקה מ-lib/daily_digest",
+    hasSchedule && hasCorrectTime && usesLib && importsLib,
+    JSON.stringify({hasSchedule, hasCorrectTime, usesLib, importsLib}));
 }
 
 // 5ב. תזכורת סקירת מ״ע אחזקה יומית — מתוזמנת, מחוברת ללוגיקה הטהורה, שולחת רק ל-push_tokens_maint
