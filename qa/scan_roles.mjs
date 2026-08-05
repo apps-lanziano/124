@@ -8,7 +8,7 @@
 
    זה מחליף את "נכנס בעצמי לכל יוזר ובודק אם הדברים עוברים".
    ============================================================ */
-import { newPage, loginAsFramework, loginAsSpecial, visibleScreens, visitScreen,
+import { newPage, loginAsFramework, loginAsSpecial, loginAsSuperAdmin, visibleScreens, visitScreen,
          SHED_LIST, closeBrowser } from './lib/harness.mjs';
 
 const findings = [];
@@ -72,9 +72,11 @@ export async function run(){
       await scanIdentity(`${shed.name} · ${role}`, p=>loginAsFramework(p, shed.id, role));
     }
   }
-  for(const [kind,label] of [["owner","מנהל מערכת"],["tech","קצין טכני"],["budget","אחראי תקציבים"]]){
+  for(const [kind,label] of [["tech","קצין טכני"],["budget","אחראי תקציבים"]]){
     await scanIdentity(label, p=>loginAsSpecial(p, kind));
   }
+  // "מנהל מערכת" (כניסה נפרדת עם קוד ייעודי) הוסר — נבדק עכשיו כזהות אישית (מנהל-על)
+  await scanIdentity("מנהל-על (זהות אישית)", p=>loginAsSuperAdmin(p));
   return { name:"סריקת זהויות ומסכים", summary, findings };
 }
 
