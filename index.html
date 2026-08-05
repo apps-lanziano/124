@@ -1845,7 +1845,6 @@ nav{
     <button class="nav-btn hidden" id="nav-vo-team" onclick="openVoTeamMgmt()"><span class="ic">👥</span><span>צוות</span></button>
     <button class="nav-btn hidden" id="nav-budget-officer" data-scr="scr-budget-officer" onclick="go('scr-budget-officer',this)"><span class="ic">💰</span><span>תקציבים</span></button>
     <button class="nav-btn hidden" id="nav-rollcall" data-scr="scr-rollcall" onclick="go('scr-rollcall',this)"><span class="ic">🛡️</span><span>נכס</span><span class="nav-badge hidden" id="badge-rollcall">0</span></button>
-    <button class="nav-btn hidden" id="nav-users" data-scr="scr-users" onclick="go('scr-users',this)"><span class="ic">👑</span><span>משתמשים</span></button>
   </nav>
 
   <!-- DOC READER -->
@@ -1969,6 +1968,7 @@ nav{
       <div class="sheet-item" id="sheet-medchecks" onclick="closeMoreAnd('scr-medchecks')"><div class="s-ic">🪖</div><div class="s-tx"><b>כשירות חיילים</b><span>שמיעה ומטווח — תוקף וחידוש</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-calendar" onclick="closeMoreAnd('scr-calendar')"><div class="s-ic">📅</div><div class="s-tx"><b>לוח שנה מאוחד</b><span>הסמכות, כיול כלים, טסט רכב ותורנויות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="sheet-onboarding" onclick="closeMoreAnd('scr-onboarding')"><div class="s-ic">🎓</div><div class="s-tx"><b>קליטת חייל חדש</b><span>חונך, מטלות והסמכות, קאונטר PF</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="sheet-users" onclick="closeMoreAnd('scr-users')"><div class="s-ic">👑</div><div class="s-tx"><b>משתמשים</b><span>כל המשתמשים בכל המסגרות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-team-item" onclick="closeMoreAndFn(openTeamMgmt)"><div class="s-ic">👥</div><div class="s-tx"><b>ניהול צוות</b><span>הוספה, עריכה, ימי הולדת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-tasks-item" onclick="closeMoreAndFn(openTaskMgmt)"><div class="s-ic">🧰</div><div class="s-tx"><b>עריכת מטלות בוקר</b><span>הוספה ושינוי מטלות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-faults-item" onclick="closeMoreAnd('scr-faults')"><div class="s-ic">🛠️</div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות</span></div><span class="s-chev">‹</span></div>
@@ -3981,8 +3981,8 @@ async function applyLoginUiForRole(person){
   document.getElementById("hdr-rank").textContent = userRole === "מפקד" ? "🎖️ מפקד" : "👤 חייל";
   const shedLabel = (currentShed.isDept && personDept(person)) ? personDept(person) : currentShed.name;
   document.getElementById("hdr-shed").textContent = "דרג א' · " + shedLabel;
-  // מנהל-על — הרשאה נוספת מעל התפקיד הרגיל, לפי זהות אישית (SUPER_ADMIN_NAME) ולא מסלול כניסה נפרד
-  document.getElementById("nav-users").classList.toggle("hidden", !isSuperAdmin);
+  // מנהל-על — הרשאה נוספת מעל התפקיד הרגיל, לפי זהות אישית (SUPER_ADMIN_NAME) ולא מסלול כניסה נפרד. נגיש מתפריט "עוד" (לא סרגל קבוע) — שימוש נדיר.
+  document.getElementById("sheet-users").classList.toggle("hidden", !isSuperAdmin);
 
   await refreshAreaPermissions();
 
@@ -4172,7 +4172,7 @@ function logout(){
   document.getElementById("nav-vo-team").classList.add("hidden");
   document.getElementById("nav-budget-officer").classList.add("hidden");
   document.getElementById("nav-rollcall").classList.add("hidden");
-  document.getElementById("nav-users").classList.add("hidden");
+  document.getElementById("sheet-users").classList.add("hidden");
   document.getElementById("nav-tools").classList.add("hidden");
   document.getElementById("nav-vehicles").classList.add("hidden");
   document.getElementById("add-event-btn").classList.add("hidden");
@@ -7452,7 +7452,7 @@ async function impersonateUser(shedId, name){
   currentShed = shed; enteredRole = person.role;
   document.querySelectorAll("nav .nav-btn").forEach(b=>{ b.classList.remove("hidden"); b.style.order = ""; });
   ["nav-cmd","nav-admin","nav-vo-overview","nav-vehicle-officer","nav-maint-dept","nav-morningcheck","nav-binui-admin",
-   "nav-vo-team","nav-budget-officer","nav-rollcall","nav-users","nav-tools","nav-vehicles"]
+   "nav-vo-team","nav-budget-officer","nav-rollcall","nav-tools","nav-vehicles"]
     .forEach(id=>document.getElementById(id).classList.add("hidden"));
   await loadRuntimeLists();
   const sel = document.getElementById("login-select");
