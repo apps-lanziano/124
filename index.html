@@ -596,6 +596,11 @@ nav{
 .alert-row.mid{background:var(--gold-soft);border-color:#ffe7a8}
 .alert-row .al-ic{font-size:19px;flex-shrink:0}
 .alert-row .al-tx{font-size:13.5px;font-weight:600;line-height:1.4}
+/* תזכורת אישית */
+.reminder-chip-row{display:flex;gap:8px;margin-bottom:12px}
+.reminder-chip{flex:1;padding:10px 6px;border-radius:11px;border:1.5px solid var(--line);background:#fff;color:var(--ink-2);font-family:'Assistant';font-weight:700;font-size:12.5px;cursor:pointer;transition:all .2s}
+.reminder-chip:active{transform:scale(.96)}
+.reminder-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink-2);cursor:pointer;font-size:14px;flex-shrink:0;display:grid;place-items:center}
 /* trends dashboard */
 .trend-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
 .trend-kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 8px;text-align:center;box-shadow:var(--shadow)}
@@ -2136,8 +2141,32 @@ nav{
     <div class="modal">
       <h3>🔔 מרכז התראות</h3>
       <div class="m-sub">כל מה שדורש תשומת לב במסגרת שלך</div>
+      <div class="cmd-tabs" id="alerts-tabs" style="margin-bottom:10px">
+        <button class="cmd-tab active" onclick="switchAlertsTab('all',this)">הכול</button>
+        <button class="cmd-tab" onclick="switchAlertsTab('mine',this)">🔔 התזכורות שלי</button>
+      </div>
       <div id="alerts-body" style="max-height:56vh;overflow-y:auto;margin-bottom:12px"></div>
       <button class="m-btn ghost" onclick="document.getElementById('alerts-modal').classList.remove('open')" style="width:100%">סגור</button>
+    </div>
+  </div>
+
+  <!-- REMINDER MODAL — "תזכיר לי" גנרי, נפתח מכלים/תקלות/הסמכות -->
+  <div class="modal-bg" id="reminder-modal">
+    <div class="modal">
+      <h3>🔔 קביעת תזכורת</h3>
+      <div class="m-sub" id="reminder-item-label"></div>
+      <div class="reminder-chip-row">
+        <button class="reminder-chip" onclick="pickReminderDate(1)">מחר</button>
+        <button class="reminder-chip" onclick="pickReminderDate(7)">בעוד שבוע</button>
+        <button class="reminder-chip" onclick="document.getElementById('reminder-custom-wrap').style.display='block'">תאריך אחר</button>
+      </div>
+      <div id="reminder-custom-wrap" style="display:none">
+        <input class="m-input" id="reminder-custom-date" type="date">
+        <button class="m-btn primary" style="width:100%" onclick="confirmCustomReminderDate()">קביעת תזכורת לתאריך זה</button>
+      </div>
+      <div class="modal-actions" style="margin-top:10px">
+        <button class="m-btn ghost" onclick="document.getElementById('reminder-modal').classList.remove('open')" style="flex:1">ביטול</button>
+      </div>
     </div>
   </div>
 
@@ -6078,8 +6107,15 @@ async function openFaultDetail(id){
         ? `<button class="m-btn ghost" onclick="reopenFault('${id}')" style="flex:1">↩️ פתח מחדש</button>`
         : `<button class="m-btn primary" onclick="closeFault('${id}')" style="flex:1.4">✅ סמן כטופל</button>`) : ""}
     </div>
+    ${isCmdr && !closed?`<button class="m-btn ghost" onclick="openFaultReminder('${id}')" style="width:100%;margin-top:8px">🔔 קביעת תזכורת מעקב</button>`:""}
     ${isCmdr?`<button class="m-btn" onclick="deleteFault('${id}')" style="width:100%;margin-top:8px;background:var(--red-soft);color:var(--red);border:1px solid var(--red-line)">🗑️ מחק תקלה לצמיתות</button>`:""}`;
   document.getElementById("faultdetail-modal").classList.add("open");
+}
+async function openFaultReminder(id){
+  const faults = await getFaults();
+  const f = faults.find(x=>x.id===id);
+  if(!f) return;
+  openReminderSheet("🔧 " + f.title);
 }
 async function closeFault(id){
   const faults=await getFaults();
@@ -6232,8 +6268,15 @@ async function openBinuiFaultDetail(id){
     <div class="modal-actions" style="margin-top:14px">
       <button class="m-btn ghost" onclick="document.getElementById('binuifaultdetail-modal').classList.remove('open')" style="flex:1">סגור חלון</button>
     </div>
+    ${canManage && f.status!=="טופל"?`<button class="m-btn ghost" onclick="openBinuiFaultReminder('${id}')" style="width:100%;margin-top:8px">🔔 קביעת תזכורת מעקב</button>`:""}
     ${canDelete?`<button class="m-btn" onclick="deleteBinuiFault('${id}')" style="width:100%;margin-top:8px;background:var(--red-soft);color:var(--red);border:1px solid var(--red-line)">🗑️ מחק תקלה לצמיתות</button>`:""}`;
   document.getElementById("binuifaultdetail-modal").classList.add("open");
+}
+async function openBinuiFaultReminder(id){
+  const faults = await getBinuiFaults();
+  const f = faults.find(x=>x.id===id);
+  if(!f) return;
+  openReminderSheet("🚧 " + f.title + (f.shedName?(" · "+f.shedName):""));
 }
 async function setBinuiFaultStatus(id, status){
   const faults = await getBinuiFaults();
@@ -9019,22 +9062,46 @@ async function computeAlerts(){
   }
   return alerts;
 }
+let alertsTab = "all";
+function switchAlertsTab(tab, btn){
+  alertsTab = tab;
+  document.querySelectorAll("#alerts-tabs .cmd-tab").forEach(b=>b.classList.remove("active"));
+  if(btn) btn.classList.add("active");
+  renderAlertsBody();
+}
 async function openAlerts(){
-  const body = document.getElementById("alerts-body");
-  // פותחים מיד עם מצב טעינה — כדי שלחיצה על הפעמון תמיד תגיב, גם אם החישוב איטי
-  body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען…</div>';
+  alertsTab = "all";
+  document.querySelectorAll("#alerts-tabs .cmd-tab").forEach((b,i)=>b.classList.toggle("active", i===0));
   document.getElementById("alerts-modal").classList.add("open");
+  await renderAlertsBody();
+}
+async function renderAlertsBody(){
+  const body = document.getElementById("alerts-body");
+  // פותחים מיד עם מצב טעינה — כדי שלחיצה על הפעמון/לשונית תמיד תגיב, גם אם החישוב איטי
+  body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען…</div>';
   try{
-    const alerts = await computeAlerts();
-    if(alerts.length===0){
-      body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)"><div style="font-size:40px;margin-bottom:8px">✅</div><b style="font-size:15px;color:var(--green)">אין התראות פתוחות</b><p style="font-size:13px;margin-top:4px">הכל תחת שליטה</p></div>`;
+    if(alertsTab==="mine"){
+      const list = await getMyReminders();
+      if(list.length===0){
+        body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)"><div style="font-size:40px;margin-bottom:8px">🔔</div><b style="font-size:15px">אין תזכורות פתוחות</b><p style="font-size:13px;margin-top:4px">תזכורת שתקבע על כלי, תקלה או הסמכה תופיע כאן</p></div>`;
+      } else {
+        const today = todayKey();
+        body.innerHTML = list.map(r=>`<div class="alert-row ${r.due<=today?'high':'mid'}" style="cursor:pointer" onclick="deleteReminder('${r.id}')">
+          <span class="al-ic">⏰</span><span class="al-tx">${escapeHTML(r.label)}<br><small style="font-weight:400;color:var(--ink-3)">${fmtReminderDate(r.due)} · הקשה למחיקה</small></span>
+        </div>`).join("");
+      }
     } else {
-      body.innerHTML = alerts.map(a=>`<div class="alert-row ${a.level}"><span class="al-ic">${a.icon}</span><span class="al-tx">${escapeHTML(a.text)}</span></div>`).join("");
+      const alerts = await computeAlerts();
+      if(alerts.length===0){
+        body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)"><div style="font-size:40px;margin-bottom:8px">✅</div><b style="font-size:15px;color:var(--green)">אין התראות פתוחות</b><p style="font-size:13px;margin-top:4px">הכל תחת שליטה</p></div>`;
+      } else {
+        body.innerHTML = alerts.map(a=>`<div class="alert-row ${a.level}"><span class="al-ic">${a.icon}</span><span class="al-tx">${escapeHTML(a.text)}</span></div>`).join("");
+      }
+      updateAlertBell(alerts);
     }
-    updateAlertBell(alerts);
   }catch(e){
-    console.error("openAlerts failed", e);
-    body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)">⚠️ שגיאה בטעינת ההתראות — נסה שוב</div>`;
+    console.error("renderAlertsBody failed", e);
+    body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)">⚠️ שגיאה בטעינה — נסה שוב</div>`;
   }
 }
 async function updateAlertBell(precomputed){
@@ -9045,13 +9112,68 @@ async function updateAlertBell(precomputed){
   const badge = document.getElementById("alert-bell-count");
   try{
     const alerts = precomputed || await computeAlerts();
+    const dueReminders = (await getMyReminders()).filter(r=>r.due<=todayKey()).length;
+    const total = alerts.length + dueReminders;
     const high = alerts.filter(a=>a.level==="high").length;
-    if(alerts.length>0){ badge.textContent = alerts.length>9?"9+":alerts.length; badge.classList.remove("hidden"); badge.classList.toggle("high", high>0); }
+    if(total>0){ badge.textContent = total>9?"9+":total; badge.classList.remove("hidden"); badge.classList.toggle("high", high>0); }
     else badge.classList.add("hidden");
   }catch(e){
     console.error("updateAlertBell failed", e);
     badge.classList.add("hidden");
   }
+}
+
+/* ===== תזכורת אישית לכל פריט =====
+   נשמרות תחת personal_reminders (מפתח מוגבל-לסככה) — כל תזכורת מתויגת
+   ב-owner (השם של המפקד שקבע אותה), כך שכמה מפקדים לא רואים תזכורות
+   זה של זה. חלון "קביעת תזכורת" גנרי — נפתח מכל פריט (כלי/תקלה/הסמכה)
+   ולא יודע כלום על סוג הפריט חוץ מתווית תיאורית. */
+let reminderContext = null;
+function openReminderSheet(label){
+  reminderContext = { label };
+  document.getElementById("reminder-item-label").textContent = label;
+  document.getElementById("reminder-custom-wrap").style.display = "none";
+  document.getElementById("reminder-custom-date").value = "";
+  document.getElementById("reminder-modal").classList.add("open");
+}
+function pickReminderDate(daysAhead){
+  const d = new Date(); d.setDate(d.getDate()+daysAhead);
+  saveReminderWithDate(d.toISOString().slice(0,10));
+}
+async function confirmCustomReminderDate(){
+  const v = document.getElementById("reminder-custom-date").value;
+  if(!v){ toast("בחר תאריך"); return; }
+  await saveReminderWithDate(v);
+}
+async function saveReminderWithDate(dueDate){
+  if(!reminderContext) return;
+  const list = (await sGet("personal_reminders")) || [];
+  list.push({id:"rem"+Date.now()+Math.random().toString(36).slice(2,6), owner:user, label:reminderContext.label, due:dueDate});
+  const ok = await sSet("personal_reminders", list);
+  if(!ok){ toast("⚠️ התזכורת לא נשמרה — נסה שוב"); return; }
+  document.getElementById("reminder-modal").classList.remove("open");
+  reminderContext = null;
+  toast("התזכורת נקבעה 🔔");
+  updateAlertBell();
+}
+async function getMyReminders(){
+  const list = (await sGet("personal_reminders")) || [];
+  return list.filter(r=>r.owner===user).sort((a,b)=>a.due.localeCompare(b.due));
+}
+async function deleteReminder(id){
+  if(!confirm("למחוק את התזכורת?")) return;
+  const list = (await sGet("personal_reminders")) || [];
+  const ok = await sSet("personal_reminders", list.filter(r=>r.id!==id));
+  if(!ok){ toast("⚠️ המחיקה לא נשמרה — נסה שוב"); return; }
+  renderAlertsBody();
+  updateAlertBell();
+}
+function fmtReminderDate(iso){
+  const today = todayKey();
+  if(iso===today) return "היום";
+  const d = new Date(iso+"T00:00:00");
+  const label = d.toLocaleDateString("he-IL",{day:"numeric",month:"long"});
+  return iso<today ? `⚠️ עבר המועד — ${label}` : label;
 }
 
 /* ===== TRAINING MATERIALS (shed users view) ===== */
@@ -9782,10 +9904,16 @@ async function renderToolsPage(){
         <div class="avatar" style="width:40px;height:40px;font-size:18px">🧰</div>
         <div class="cert-sum-name"><b>${escapeHTML(t.name)}</b><span>${t.serial?("מספר סידורי: "+escapeHTML(t.serial)):"ללא מספר סידורי"}</span></div>
         <span class="pill ${t.st.cls}" style="font-size:10px;white-space:nowrap">${t.st.tag}</span>
-        ${isCmdr?`<button class="cert-chip-edit" onclick="toggleToolInRepair('${t.id}')" title="${t.inRepair?'החזר למעקב תוקף':'סמן כבתיקון'}">${t.inRepair?'↩️':'🔧'}</button><button class="cert-chip-edit" onclick="openToolEdit('${t.id}')">✏️</button><button class="cert-chip-del" onclick="removeToolById('${t.id}')">✕</button>`:''}
+        ${isCmdr?`<button class="reminder-btn" onclick="openToolReminder('${t.id}')" title="קביעת תזכורת">🔔</button><button class="cert-chip-edit" onclick="toggleToolInRepair('${t.id}')" title="${t.inRepair?'החזר למעקב תוקף':'סמן כבתיקון'}">${t.inRepair?'↩️':'🔧'}</button><button class="cert-chip-edit" onclick="openToolEdit('${t.id}')">✏️</button><button class="cert-chip-del" onclick="removeToolById('${t.id}')">✕</button>`:''}
       </div>
     </div>`).join("");
   box.innerHTML = banner + cards;
+}
+async function openToolReminder(id){
+  const tools = await getTools();
+  const t = tools.find(x=>x.id===id);
+  if(!t) return;
+  openReminderSheet("🔧 " + t.name + (t.serial?(" · מספר "+t.serial):""));
 }
 
 /* ===== VEHICLE TRACKING (מעקב רכבים) — v25 =====
