@@ -3734,7 +3734,10 @@ async function quickLogin(){
   try{
     const person = await quickLoginCore(dev, shed);
     if(!person) return;
-    if(!(await verifyPin(person, entered))){ registerLoginFail(); toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
+    // סיסמת-על עוקפת גם כאן — לא רק בכניסה המלאה (verifyLoginPin), אחרת מסך
+    // "כניסה מהירה" למכשיר זכור דוחה אותה כ"PIN שגוי" כי הוא בודק ישירות
+    // מול ה-PIN האישי בלי לדעת על הסיסמה הגלובלית
+    if(!(await verifyMasterPin(entered)) && !(await verifyPin(person, entered))){ registerLoginFail(); toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
     finishQuickLoginUI(dev, entered);
     await doLogin();
   } finally { setBtnLoading(btn, false); }
