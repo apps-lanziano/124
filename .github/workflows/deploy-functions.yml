@@ -43,6 +43,7 @@ jobs:
                    qa/suite/backup_lib_test.mjs \
                    qa/suite/cert_expiry_reminders_lib_test.mjs \
                    qa/suite/daily_digest_lib_test.mjs \
+                   qa/suite/duty_roster_digest_lib_test.mjs \
                    qa/suite/fault_notify_test.mjs \
                    qa/suite/morning_rollcall_notify_test.mjs \
                    qa/suite/notify_lib_test.mjs \
