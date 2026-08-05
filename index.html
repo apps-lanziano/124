@@ -1103,15 +1103,19 @@ nav{
           <div class="kpi bad"><b id="kpi-pending">—</b><span>חתימות חסרות</span></div>
           <div class="kpi warn"><b id="kpi-fullsign">—</b><span>חתמו על כל הפריטים</span></div>
         </div>
-        <div class="cmd-section-title">👥 סטטוס חתימה לפי איש צוות</div>
-        <div class="cmd-table" id="cmd-reads"></div>
-        <div class="cmd-section-title">📋 פריטים</div>
       </div>
       <div class="search-box" id="safety-search-box" style="display:none">
         <span class="search-ic">🔍</span>
         <input type="text" id="safety-search" placeholder="חיפוש לפי כותרת או תאריך…" oninput="renderDocs()">
       </div>
+      <!-- הרשימה עצמה (פריטים לקריאה וחתימה) עולה מעל טבלת סטטוס-החתימה
+           הארוכה, כדי שהתוכן שדורש פעולה בפועל לא יהיה קבור מתחתיה -->
+      <div class="cmd-section-title hidden" id="safety-items-title">📋 פריטים</div>
       <div id="docs-list"><div class="skel-card"><div class="skel-line w60"></div><div class="skel-line w90"></div></div><div class="skel-card"><div class="skel-line w40"></div><div class="skel-line w90"></div></div></div>
+      <div id="safety-signstatus" class="hidden">
+        <div class="cmd-section-title">👥 סטטוס חתימה לפי איש צוות</div>
+        <div class="cmd-table" id="cmd-reads"></div>
+      </div>
     </section>
 
     <!-- ===== MORNING ===== -->
@@ -4052,6 +4056,8 @@ async function renderDocs(){
   /* סיכום חתימות למפקד — הועבר ממסך הדשבורד לכאן. תמיד לפי כל הפריטים
      (לא מושפע מסינון החיפוש), כי זו תמונת מצב כללית ולא רשימת התוצאות. */
   const summaryBox = document.getElementById("safety-cmd-summary");
+  const itemsTitle = document.getElementById("safety-items-title");
+  const signStatusBox = document.getElementById("safety-signstatus");
   if(sigMap && events.length>0){
     let totalSigs = 0, fullSign = 0;
     const readsRows = [];
@@ -4071,8 +4077,12 @@ async function renderDocs(){
     document.getElementById("kpi-fullsign").textContent = fullSign + "/" + PERSONNEL.length;
     document.getElementById("cmd-reads").innerHTML = readsRows.join("");
     summaryBox.classList.remove("hidden");
+    itemsTitle.classList.remove("hidden");
+    signStatusBox.classList.remove("hidden");
   } else {
     summaryBox.classList.add("hidden");
+    itemsTitle.classList.add("hidden");
+    signStatusBox.classList.add("hidden");
   }
 
   if(events.length === 0){
