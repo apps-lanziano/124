@@ -299,6 +299,7 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
 .bday-count span{font-size:10.5px;color:var(--ink-3);font-weight:500}
 .role-mini{font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;background:var(--gold-soft);color:var(--gold);display:inline-block;margin-right:6px;vertical-align:2px}
 .role-mini.sol{background:var(--red-soft);color:var(--red)}
+.tag-pill{font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;background:#f3e8ff;color:#7c3aed;display:inline-block;margin-right:6px;margin-top:3px}
 
 /* ---------- BOARD ---------- */
 .board-empty{
@@ -1980,6 +1981,7 @@ nav{
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <button class="m-btn primary" id="tm-add-toggle" style="flex:1" onclick="tmOpenAddForm()">➕ הוסף איש צוות</button>
         <button class="m-btn ghost" id="onb-tpl-btn" style="flex:0 0 auto" onclick="openOnboardingTplModal()">🎓 תבנית קליטה</button>
+        <button class="m-btn ghost" style="flex:0 0 auto" onclick="openCustomFieldsTplModal()">🏷️ שדות מותאמים</button>
       </div>
       <div class="team-add-form" id="tm-add-form" style="display:none">
         <div id="tm-form-title" style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:8px">➕ הוספת איש צוות</div>
@@ -2000,6 +2002,7 @@ nav{
         <select class="m-input" id="tm-mentor" style="margin-bottom:8px"><option value="">— ללא חונך —</option></select>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך שחרור (אופציונלי — החייל יוסר אוטומטית ביום זה)</label>
         <input class="m-input" id="tm-release" type="date" style="margin-bottom:10px" title="תאריך שחרור">
+        <div id="tm-custom-fields"></div>
         <div style="border-top:1px solid var(--line);padding-top:10px;margin-bottom:10px">
           <label style="font-size:11.5px;color:var(--ink-3);display:flex;justify-content:space-between;margin-bottom:3px">
             <span>🔒 PIN אישי (4 ספרות)</span><span id="tm-pin-status" style="font-weight:800"></span>
@@ -2052,6 +2055,26 @@ nav{
       </div>
       <div class="modal-actions" style="margin-top:14px">
         <button class="m-btn ghost" onclick="document.getElementById('onboarding-tpl-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CUSTOM FIELDS TEMPLATE MODAL — שדות/תגיות מותאמים אישית לכרטיס חייל, בנפרד לכל מסגרת -->
+  <div class="modal-bg" id="custom-fields-tpl-modal">
+    <div class="modal">
+      <h3>🏷️ שדות מותאמים אישית</h3>
+      <div class="m-sub">שדה טקסט חופשי או תגית, לכל מה שאין לו מקום קבוע בכרטיס איש הצוות (למשל קבוצת דם, התמחות משנית).</div>
+      <div id="cf-tpl-list"></div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <input class="m-input" id="cf-new-label" type="text" placeholder="שם השדה…" style="margin-bottom:0;flex:1">
+        <select class="m-input" id="cf-new-type" style="margin-bottom:0;flex:0 0 auto;width:auto">
+          <option value="text">📝 טקסט</option>
+          <option value="tag">🏷️ תגית</option>
+        </select>
+        <button class="m-btn primary" style="flex:0 0 auto" onclick="addCustomFieldTpl()">+ הוסף</button>
+      </div>
+      <div class="modal-actions" style="margin-top:14px">
+        <button class="m-btn ghost" onclick="document.getElementById('custom-fields-tpl-modal').classList.remove('open')" style="flex:1">סגור</button>
       </div>
     </div>
   </div>
@@ -6396,6 +6419,7 @@ async function renderTeamMgmt(){
     return;
   }
   const certs = isDeptUnit ? [] : await getCerts();
+  const cfTpl = await getCustomFieldsTpl();
   box.innerHTML = visible.map(({p,i})=>{
     const rel = p.release ? new Date(p.release+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'numeric',year:'2-digit'}) : null;
     const pf = (!isDeptUnit && p.role==="חייל" && !p.reserve) ? pfStatus(p, certs) : null;
@@ -6408,11 +6432,19 @@ async function renderTeamMgmt(){
     const pinTag = p.pinHash ? `<span class="role-mini" title="PIN מוגדר">🔒</span>` : "";
     const reserveTag = p.reserve ? `<span class="role-mini" style="background:var(--gold-soft);color:var(--gold);border-color:#f0dfa8">🎖️ מילואים</span>` : "";
     const onbTag = isOnboarding(p) ? `<span class="pill y" style="font-size:9px;margin-right:4px;cursor:pointer" onclick="event.stopPropagation();openOnboardingDetail(${i})">🎓 קליטה</span>` : "";
+    const cfTags = cfTpl.map(f=>{
+      const v = p.customFields && p.customFields[f.id];
+      if(!v) return "";
+      return f.type==="tag"
+        ? `<span class="tag-pill">${escapeHTML(f.label)}: ${escapeHTML(v)}</span>`
+        : `<span class="role-mini">${escapeHTML(f.label)}: ${escapeHTML(v)}</span>`;
+    }).join("");
     return `
     <div class="mgmt-row">
       <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
       <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini ${p.role==='חייל'?'sol':''}">${p.role}</span> ${reserveTag} ${deptTag} ${officerTag} ${profTag} ${pinTag} ${pfTag} ${st7Tag} ${onbTag}</b>
-        <span>${p.reserve ? ('🎖️ מילואים · 🗓️ רענון '+(p.refresh||'—')) : ('🎂 '+(p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—')+(rel?' · 🗓️ שחרור '+rel:''))}</span></div>
+        <span>${p.reserve ? ('🎖️ מילואים · 🗓️ רענון '+(p.refresh||'—')) : ('🎂 '+(p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—')+(rel?' · 🗓️ שחרור '+rel:''))}</span>
+        ${cfTags ? `<div>${cfTags}</div>` : ""}</div>
       <button class="mr-del" style="background:var(--sky-soft);border-color:#cfe0ff;color:var(--sky)" onclick="startEditMember(${i})">✏️</button>
       <button class="mr-del" onclick="removeTeamMember(${i})">🗑️</button>
     </div>`;}).join("");
@@ -6440,6 +6472,7 @@ function startEditMember(i){
   } else document.getElementById("tm-profession").value = p.profession || "";
   fillMentorSelect(p.name);
   document.getElementById("tm-mentor").value = p.mentor || "";
+  renderCustomFieldInputs(p.customFields || {});
   document.getElementById("tm-pin").value = "";
   document.getElementById("tm-pin-remove").checked = false;
   const tps = document.getElementById("tm-pin-status");
@@ -6461,6 +6494,7 @@ function cancelEditMember(){
   document.getElementById("tm-officer").value="";
   document.getElementById("tm-profession").value="";
   { const ms=document.getElementById("tm-mentor"); if(ms){ fillMentorSelect(null); ms.value=""; } }
+  renderCustomFieldInputs(null);
   document.getElementById("tm-pin").value="";
   document.getElementById("tm-pin-remove").checked=false;
   { const tps=document.getElementById("tm-pin-status"); if(tps){ tps.textContent=""; } }
@@ -6542,6 +6576,7 @@ async function saveTeamMember(){
   const officerTag = isDeptUnit ? document.getElementById("tm-officer").value : "";
   const profession = isDeptUnit ? "" : document.getElementById("tm-profession").value;
   const mentor = document.getElementById("tm-mentor").value;
+  const customFields = collectCustomFieldValues();
   if(name.length<2){ toast("נא להזין שם"); return; }
   // duplicate check (ignore self when editing)
   const dup = PERSONNEL.some((p,idx)=>p.name===name && idx!==editMemberIdx);
@@ -6575,6 +6610,7 @@ async function saveTeamMember(){
       if(isDeptUnit){ if(dept) p.dept=dept; else delete p.dept; if(officerTag) p.officerTag=officerTag; else delete p.officerTag; }
       else if(profession) p.profession=profession; else delete p.profession;
       if(mentor) p.mentor=mentor; else delete p.mentor;
+      if(Object.keys(customFields).length) p.customFields=customFields; else delete p.customFields;
       if(reserve){ p.reserve=true; if(!p.refresh) p.refresh=todayISO(); } else { delete p.reserve; delete p.refresh; }
       applyPin(p);
     });
@@ -6588,6 +6624,7 @@ async function saveTeamMember(){
     if(isDeptUnit){ if(dept) member.dept=dept; if(officerTag) member.officerTag=officerTag; }
     else if(profession) member.profession=profession;
     if(mentor) member.mentor=mentor;
+    if(Object.keys(customFields).length) member.customFields=customFields;
     applyPin(member);
     const saved = await mutatePersonnel(list=>{
       if(list.some(x=>x.name===name)) return false;   // נוסף בינתיים ממכשיר אחר
@@ -9534,6 +9571,67 @@ async function removeOnboardingCertTpl(i){
   const tpl = await getOnboardingTemplate();
   await sSet("onboarding_template", {tasks:[...tpl.tasks], certs: tpl.certs.filter((_,idx)=>idx!==i)});
   renderOnboardingTplModal();
+}
+
+/* ===== CUSTOM FIELDS (שדות ותגיות מותאמים אישית) =====
+   תבנית השדות נערכת בנפרד לכל סככה/מחלקה ונשמרת תחת custom_fields_tpl
+   ({id,label,type}, type="text"|"tag"). הערכים עצמם נשמרים על רשומת
+   האיש (p.customFields, ממופה לפי מזהה השדה ולא לפי שם) — כדי ששינוי
+   שם שדה בתבנית לא "ינתק" ערכים קיימים של אנשי הצוות. שדה "תגית"
+   מוצג ככרטיסיית תג על גבי שורת איש הצוות; שדה "טקסט" מוצג כתג רגיל. */
+async function getCustomFieldsTpl(){
+  const t = await sGet("custom_fields_tpl");
+  return Array.isArray(t) ? t : [];
+}
+async function renderCustomFieldInputs(values){
+  const box = document.getElementById("tm-custom-fields");
+  if(!box) return;
+  const tpl = await getCustomFieldsTpl();
+  box.innerHTML = tpl.map(f=>`
+    <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">${f.type==="tag"?"🏷️":"📝"} ${escapeHTML(f.label)} (אופציונלי)</label>
+    <input class="m-input" id="tm-cf-${f.id}" type="text" placeholder="${f.type==="tag"?"תגית…":"טקסט חופשי…"}" style="margin-bottom:8px" value="${escapeHTML((values&&values[f.id])||"")}">`).join("");
+}
+function collectCustomFieldValues(){
+  const box = document.getElementById("tm-custom-fields");
+  const out = {};
+  if(!box) return out;
+  box.querySelectorAll("input[id^='tm-cf-']").forEach(el=>{
+    const id = el.id.slice("tm-cf-".length);
+    if(el.value.trim()) out[id] = el.value.trim();
+  });
+  return out;
+}
+async function openCustomFieldsTplModal(){
+  document.getElementById("custom-fields-tpl-modal").classList.add("open");
+  await renderCustomFieldsTplModal();
+}
+async function renderCustomFieldsTplModal(){
+  const tpl = await getCustomFieldsTpl();
+  document.getElementById("cf-tpl-list").innerHTML = tpl.map((f,i)=>`
+    <div class="mgmt-row"><div class="mr-body"><b>${escapeHTML(f.label)}</b> <span class="role-mini">${f.type==="tag"?"🏷️ תגית":"📝 טקסט"}</span></div><button class="mr-del" onclick="removeCustomFieldTpl(${i})">✕</button></div>`).join("")
+    || `<div style="font-size:12px;color:var(--ink-3);padding:6px 0">אין שדות מותאמים עדיין</div>`;
+}
+async function addCustomFieldTpl(){
+  const input = document.getElementById("cf-new-label");
+  const label = input.value.trim();
+  if(!label) return;
+  const type = document.getElementById("cf-new-type").value;
+  const tpl = await getCustomFieldsTpl();
+  if(tpl.some(f=>f.label===label)){ toast("שדה בשם הזה כבר קיים"); return; }
+  const id = "cf"+Date.now()+Math.random().toString(36).slice(2,6);
+  await sSet("custom_fields_tpl", [...tpl, {id, label, type}]);
+  input.value = "";
+  renderCustomFieldsTplModal();
+  renderCustomFieldInputs(editMemberIdx>=0 ? (PERSONNEL[editMemberIdx]?.customFields||{}) : null);
+}
+async function removeCustomFieldTpl(i){
+  const tpl = await getCustomFieldsTpl();
+  if(!tpl[i]) return;
+  if(!confirm(`להסיר את השדה "${tpl[i].label}"? הוא לא יוצג יותר בכרטיסי אנשי הצוות.`)) return;
+  await sSet("custom_fields_tpl", tpl.filter((_,idx)=>idx!==i));
+  renderCustomFieldsTplModal();
+  renderCustomFieldInputs(editMemberIdx>=0 ? (PERSONNEL[editMemberIdx]?.customFields||{}) : null);
+  renderTeamMgmt();
 }
 
 /* זיהוי רמת הסמכה לפי אימוג'י בתחילת השם */
