@@ -718,6 +718,11 @@ nav{
 .cd .cd-badge.cd-alertbadge{color:var(--red);background:var(--red-soft);border:1px solid var(--red-line);border-radius:99px;padding:1px 9px}
 .cd .cd-focus-sum{font-size:12.5px;font-weight:700;color:var(--ink-2);margin:-2px 0 11px;padding-inline-start:2px}
 .cd .cd-focus-sum.has{color:var(--red)}
+.cd .cd-focus-sum.clickable{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;-webkit-tap-highlight-color:transparent}
+.cd .cd-focus-chev{color:var(--ink-3);font-size:12px;transition:transform .3s;flex-shrink:0}
+.cd .cd-sec.open .cd-focus-chev{transform:rotate(-90deg)}
+.cd .cd-focus-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.cd .cd-sec.open .cd-focus-body{max-height:2000px}
 .cd .cd-tl{position:relative;padding-inline-start:22px}
 .cd .cd-tl::before{content:"";position:absolute;inset-inline-start:6px;top:8px;bottom:8px;width:2px;background:var(--line)}
 .cd .cd-ev{position:relative;padding-bottom:8px}
@@ -1289,6 +1294,10 @@ nav{
           <p>כלים בעלי תוקף כיול · התראה שבוע לפני פקיעה.</p>
         </div>
         <button class="add-btn hidden" id="tools-add-btn" onclick="openToolAdd()">+ כלי</button>
+      </div>
+      <div class="search-box" id="tools-search-box" style="display:none">
+        <span class="search-ic">🔍</span>
+        <input type="text" id="tools-search" placeholder="חיפוש לפי שם הכלי או מספר סידורי…" oninput="renderToolsPage()">
       </div>
       <div id="tools-page-list"></div>
     </section>
@@ -3742,6 +3751,7 @@ async function applyLoginUiForRole(person){
     if(repBtn) repBtn.classList.add("hidden");
   }
   document.getElementById("safety-search").value = "";
+  document.getElementById("tools-search").value = "";
   document.getElementById("nav-tools").classList.toggle("hidden", !isToolsResp);
   document.getElementById("nav-vehicles").classList.toggle("hidden", !isVehiclesResp);
   document.getElementById("tools-add-btn").classList.toggle("hidden", !isToolsResp);
@@ -8649,6 +8659,12 @@ async function computeTrendsData(isDeptUnit){
     priorityFeed,
   };
 }
+/* מקפל/פורס אזור בקונסולת המפקד (למשל רשימת "מיקוד יומי") — קלף
+   הכותרת נשאר גלוי תמיד, רק תוכן הפירוט מתחת נפתח/נסגר. */
+function toggleDashSec(id){
+  const el = document.getElementById(id);
+  if(el) el.classList.toggle("open");
+}
 async function renderTrends(boxId){
   const box = document.getElementById(boxId || "trends-content");
   const isDeptUnit = !!(currentShed && currentShed.isDept);
@@ -8730,10 +8746,12 @@ async function renderTrends(boxId){
         <div class="cd-live" id="cd-live">LIVE</div>
       </div>
 
-      <div class="cd-sec">
+      <div class="cd-sec" id="cd-focus-sec">
         <div class="cd-shead"><h3>מיקוד יומי</h3><span class="cd-badge">${escapeHTML(dShort)}</span></div>
-        <div class="cd-focus-sum ${focusCount?'has':''}">${escapeHTML(focusSum)}</div>
-        ${focusHtml}
+        ${focusCount
+          ? `<div class="cd-focus-sum has clickable" onclick="toggleDashSec('cd-focus-sec')"><span>${escapeHTML(focusSum)}</span><span class="cd-focus-chev">▾</span></div>
+             <div class="cd-focus-body">${focusHtml}</div>`
+          : `<div class="cd-focus-sum">${escapeHTML(focusSum)}</div>${focusHtml}`}
       </div>
 
       <div class="cd-sec">
@@ -9409,9 +9427,12 @@ async function renderToolsPage(){
   const tools = await getTools();
   const isCmdr = isToolsResp;
   if(tools.length===0){
+    document.getElementById("tools-search-box").style.display = "none";
     box.innerHTML = `<div class="empty-state"><div class="ic">🧰</div><h3>אין עדיין כלים בחדר הכלים</h3><p>${isCmdr?'הוסף כלי באמצעות "+ כלי"':'המפקד או אחראי חדר הכלים טרם הזין כלים'}</p></div>`;
     return;
   }
+  document.getElementById("tools-search-box").style.display = tools.length>=4 ? "flex" : "none";
+  const q = (document.getElementById("tools-search")?.value || "").trim().toLowerCase();
   const withStatus = tools.map(t=>({...t, st: toolStatus(t)}));
   const urgent = withStatus.filter(t=>t.st.cls==="r" || t.st.cls==="y");
   let banner = "";
@@ -9424,7 +9445,12 @@ async function renderToolsPage(){
   // מיון: פג תוקף → קרוב לפוג → בתיקון → בתוקף
   const order = {r:0, y:1, n:2, g:3};
   withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
-  const cards = withStatus.map(t=>`
+  const filtered = q ? withStatus.filter(t=>(t.name||"").toLowerCase().includes(q) || (t.serial||"").toLowerCase().includes(q)) : withStatus;
+  if(filtered.length===0){
+    box.innerHTML = banner + `<div class="empty-state"><div class="ic">🔍</div><h3>לא נמצאו כלים</h3><p>נסה חיפוש אחר לפי שם הכלי או המספר הסידורי.</p></div>`;
+    return;
+  }
+  const cards = filtered.map(t=>`
     <div class="cert-sum-card" style="cursor:default">
       <div class="cert-sum-head">
         <div class="avatar" style="width:40px;height:40px;font-size:18px">🧰</div>
