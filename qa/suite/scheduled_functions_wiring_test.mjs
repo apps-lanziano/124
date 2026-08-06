@@ -45,23 +45,19 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
     hasSchedule && usesLib && importsLib, JSON.stringify({hasSchedule, usesLib, importsLib}));
 }
 
-// 5. תזכורות + מסדר בוקר + סקירת מ״ע אחזקה + תקציר יומי + שיבוץ תורנויות + רישיונות מסננים טוקנים למפקדים בלבד (אותה תבנית כמו remindUnsignedDaily)
+// 5. תזכורות + מסדר בוקר + סקירת מ״ע אחזקה + תקציר יומי + שיבוץ תורנויות מסננים טוקנים למפקדים בלבד (אותה תבנית כמו remindUnsignedDaily)
 {
   const filterCount = (fn.match(/filter\(\(\[, m\]\)\s*=>\s*m\s*&&\s*m\.role\s*===\s*"מפקד"\)/g) || []).length;
-  record("סה״כ 8 מקומות מסננים למפקד בלבד (חתימות, הסמכות, מילואים, מסדר בוקר, סקירת מ״ע אחזקה, תקציר יומי, שיבוץ תורנויות, רישיונות)",
-    filterCount===8, String(filterCount));
+  record("סה״כ 7 מקומות מסננים למפקד בלבד (חתימות, הסמכות, מילואים, מסדר בוקר, סקירת מ״ע אחזקה, תקציר יומי, שיבוץ תורנויות)",
+    filterCount===7, String(filterCount));
 }
 
-// 5ה. תזכורת רישיונות — מתוזמנת ל-08:00, לכל מפקד לפי shedId (לא רק מ״ע אחזקה), מחוברת ל-lib/vo_reminders
+// 5ו. רישיונות עומדים לפוג ממשיכים להתדווח רק במסגרת סקירת מ״ע אחזקה
+// המרוכזת (findVoIssues) — לא כתזכורת נפרדת לכל סככה. החלטת מוצר מכוונת.
 {
-  const hasSchedule = /remindLicenseExpiryDaily\s*=\s*onSchedule/.test(fn);
-  const hasCorrectTime = /remindLicenseExpiryDaily[\s\S]{0,150}schedule:\s*"0 8 \* \* \*"/.test(fn);
-  const usesLib = /findExpiringLicensesByShed\(db\)/.test(fn);
-  const importsLib = /findExpiringLicensesByShed\}\s*=\s*require\("\.\/lib\/vo_reminders"\)/.test(fn);
-  const targetsPerShed = /remindLicenseExpiryDaily[\s\S]{0,900}db\.doc\("sq124\/push_tokens_" \+ group\.shedId\)/.test(fn);
-  record("תזכורת רישיונות: מתוזמנת ל-08:00, שולחת לכל מפקד לפי shedId (לא רק מ״ע אחזקה), ומשתמשת ב-lib/vo_reminders",
-    hasSchedule && hasCorrectTime && usesLib && importsLib && targetsPerShed,
-    JSON.stringify({hasSchedule, hasCorrectTime, usesLib, importsLib, targetsPerShed}));
+  const noPerShedLicenseReminder = !/remindLicenseExpiryDaily/.test(fn) && !/findExpiringLicensesByShed/.test(fn);
+  record("אין תזכורת רישיונות נפרדת לכל מסגרת — רק הסיכום המרוכז למ״ע אחזקה",
+    noPerShedLicenseReminder, String(noPerShedLicenseReminder));
 }
 
 // 5ג. תקציר יומי — מתוזמן ל-08:00, בטיימזון ישראל, מחובר ל-lib/daily_digest, ואינו תלוי בלוג cooldown כלשהו
