@@ -1,7 +1,7 @@
 /* תזכורת אוטומטית — סקירת מ״ע אחזקה יומית (רכבים/טסטים/רישיונות/הזמנות
    חומרים/כלים מוטוריים). עד עכשיו תחומים אלה לא היה להם שום מנגנון תזכורת;
    בודק את functions/lib/vo_reminders.js — לוגיקה טהורה, בלי emulator. */
-import { findVoIssues, vehicleNeedsAttention, daysUntil } from '../../functions/lib/vo_reminders.js';
+import { findVoIssues, vehicleNeedsAttention, daysUntil, findExpiringLicensesByShed } from '../../functions/lib/vo_reminders.js';
 
 const results = [];
 function record(name, pass, detail){ results.push({name, pass, detail}); }
@@ -73,6 +73,44 @@ function fakeDb(docs){
   const db = fakeDb({});
   const summary = await findVoIssues(db, { shedIds: ["shed1"] });
   record("אין נתונים בכלל -> totalCount=0", summary.totalCount===0, JSON.stringify(summary));
+}
+
+// 7. findExpiringLicensesByShed: מקבצת נכון לפי shedId (לא רק סיכום למ״ע אחזקה)
+{
+  const db = fakeDb({
+    "sq124/vo_licenses_list": [
+      { id:"lic1", shedId:"shed1", person:"דני כהן", type:"פ.ת", expiry:"2000-01-01" },   // פג תוקף
+      { id:"lic2", shedId:"shed2", person:"רותם לוי", type:"ס.ף", expiry:"2099-01-01" },  // בתוקף, לא נכלל
+      { id:"lic3", shedId:"shed1", person:"יוסי מזרחי", type:"רישיון צבאי", expiry:"2000-02-01" }, // פג תוקף, אותה מסגרת כמו lic1
+    ],
+  });
+  const {toSend} = await findExpiringLicensesByShed(db, { now: Date.now() });
+  const shed1 = toSend.find(g=>g.shedId==="shed1");
+  const shed2 = toSend.find(g=>g.shedId==="shed2");
+  record("סככה 1 מקבלת רק את שני הרישיונות שלה שפגי תוקף, מקובצים יחד", !!shed1 && shed1.items.length===2, JSON.stringify(shed1));
+  record("סככה 2 (רישיון בתוקף) לא נכללת כלל בתקצירים", !shed2, JSON.stringify(toSend));
+}
+
+// 8. findExpiringLicensesByShed: cooldown — לא מזכירים פעמיים תוך התקופה, אבל כן ממשיכים אחריה
+{
+  const now = Date.now();
+  const db = fakeDb({
+    "sq124/vo_licenses_list": [{ id:"lic9", shedId:"shed3", person:"דנה שני", type:"פ.ת", expiry:"2000-01-01" }],
+    "sq124/_license_reminder_log": { lic9: now - 2*86400000 },   // הוזכר לפני יומיים
+  });
+  const within = await findExpiringLicensesByShed(db, { now, cooldownDays: 7 });
+  record("תוך תקופת ה-cooldown לא נשלחת תזכורת שוב על אותו רישיון", within.toSend.length===0, JSON.stringify(within.toSend));
+  const after = await findExpiringLicensesByShed(db, { now, cooldownDays: 1 });
+  record("אחרי שחלף ה-cooldown, התזכורת חוזרת", after.toSend.length===1, JSON.stringify(after.toSend));
+}
+
+// 9. findExpiringLicensesByShed: רישיון בלי shedId (נתונים ישנים/חסרים) מדולג בלי קריסה
+{
+  const db = fakeDb({
+    "sq124/vo_licenses_list": [{ id:"lic7", person:"עלום", type:"פ.ת", expiry:"2000-01-01" }],
+  });
+  const {toSend} = await findExpiringLicensesByShed(db, { now: Date.now() });
+  record("רישיון בלי shedId מדולג בלי לקרוס ובלי להיכנס לאף תקציר", toSend.length===0, JSON.stringify(toSend));
 }
 
 console.log("\n=== SUMMARY ===");
