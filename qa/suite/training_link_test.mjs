@@ -93,7 +93,8 @@ async function page(){
     document.getElementById('scr-training').classList.add('active');
     isAdmin = false; userRole = "מפקד";
     await renderTrainingView();
-    const html = document.getElementById("training-view-list").innerHTML;
+    // שני הפריטים בלי שדה category -> נופלים לברירת המחדל "מצגות"
+    const html = document.getElementById("training-view-list-presentations").innerHTML;
     return {
       hasDeleteForOwn: html.includes("removeLocalTrainingLink('trainlink_1')"),
       hasDeleteForAdmin: html.includes("removeLocalTrainingLink('trainlink_2')"),
@@ -149,6 +150,76 @@ async function page(){
   record("בלי כותרת: טוסט שגיאה, לא נשמר", out.noTitleErr===true, JSON.stringify(out));
   record("URL לא תקין: טוסט שגיאה, לא נשמר", out.badUrlErr===true, JSON.stringify(out));
   console.log("errs5",errs); await p.close();
+}
+
+// 6. שתי קטגוריות (מצגות/הדרכות מצולמות): כל אחת נשמרת ומוצגת בקונטיינר שלה בלבד
+{
+  const {p, errs} = await page();
+  const out = await p.evaluate(async ()=>{
+    const store = {};
+    window.sGetRaw = async k => store[k] ?? null;
+    window.sSetRaw = async (k,v) => { store[k]=v; return true; };
+    window.sGetIn = async (shed,k) => store[shed+"_"+k] ?? null;
+    window.sSetIn = async (shed,k,v) => { store[shed+"_"+k]=v; return true; };
+    window.sGet = async (k) => store[(currentShed?currentShed.id:"")+"_"+k] ?? null;
+    window.sSet = async (k,v) => { store[(currentShed?currentShed.id:"")+"_"+k]=v; return true; };
+    window.logAdminAction = async ()=>{};
+    window.renderAdminTraining = ()=>{};
+    window.renderTrainingView = ()=>{};
+    isAdmin = true; currentShed = {id:"training", isTraining:true};
+
+    openTrainingLinkAdd("recorded");
+    const labelAfterOpen = document.getElementById("tl-category-label").textContent;
+    document.getElementById("tl-title").value = "הדרכה מצולמת ראשונה";
+    document.getElementById("tl-url").value = "https://example.com/rec1";
+    await saveTrainingLink();
+
+    openTrainingLinkAdd(); // בלי פרמטר -> ברירת מחדל "מצגות"
+    document.getElementById("tl-title").value = "מצגת שנייה";
+    document.getElementById("tl-url").value = "https://example.com/deck2";
+    await saveTrainingLink();
+
+    const list = store["admin_training"];
+    return {
+      labelAfterOpen,
+      recordedItem: list.find(t=>t.title==="הדרכה מצולמת ראשונה"),
+      presentationItem: list.find(t=>t.title==="מצגת שנייה"),
+    };
+  });
+  record("openTrainingLinkAdd('recorded') מציג תווית הקטגוריה הנכונה",
+    out.labelAfterOpen.includes("הדרכות מצולמות"), JSON.stringify(out.labelAfterOpen));
+  record("קישור שנוסף עם קטגוריית 'recorded' נשמר עם category=recorded",
+    out.recordedItem && out.recordedItem.category==="recorded", JSON.stringify(out.recordedItem));
+  record("קישור שנוסף בלי קטגוריה (ברירת מחדל) נשמר כ-presentations",
+    out.presentationItem && out.presentationItem.category==="presentations", JSON.stringify(out.presentationItem));
+  console.log("errs6",errs); await p.close();
+}
+
+// 7. renderTrainingView/renderAdminTraining ממיינים כל פריט לקונטיינר הנכון לפי קטגוריה
+{
+  const {p, errs} = await page();
+  const out = await p.evaluate(async ()=>{
+    window.sGet = async (k)=> k==="training_list" ? [
+      {id:"t1", title:"מצגת ישנה (בלי category)", ftype:"link", url:"https://a.com", by:"אחראי הדרכה", date:"1/1"},
+      {id:"t2", title:"סרטון הדרכה", ftype:"link", url:"https://b.com", category:"recorded", by:"אחראי הדרכה", date:"1/1"},
+    ] : null;
+    window.getTrainingList = async ()=> await window.sGet("training_list");
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('scr-training').classList.add('active');
+    isAdmin = false; userRole = "מפקד";
+    await renderTrainingView();
+    return {
+      presentationsHtml: document.getElementById("training-view-list-presentations").innerHTML,
+      recordedHtml: document.getElementById("training-view-list-recorded").innerHTML,
+    };
+  });
+  record("פריט ישן בלי category מוצג תחת 'מצגות'",
+    out.presentationsHtml.includes("מצגת ישנה"), JSON.stringify(out.presentationsHtml.slice(0,200)));
+  record("פריט עם category=recorded לא מוצג תחת 'מצגות'",
+    !out.presentationsHtml.includes("סרטון הדרכה"), JSON.stringify(out.presentationsHtml.slice(0,200)));
+  record("פריט עם category=recorded מוצג תחת 'הדרכות מצולמות'",
+    out.recordedHtml.includes("סרטון הדרכה"), JSON.stringify(out.recordedHtml.slice(0,200)));
+  console.log("errs7",errs); await p.close();
 }
 
 console.log("\n=== SUMMARY ===");

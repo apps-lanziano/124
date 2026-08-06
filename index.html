@@ -1446,7 +1446,10 @@ nav{
           <p>חומרים שפורסמו ע"י אחראי ההדרכה הטייסתי.</p>
         </div>
       </div>
-      <div id="training-view-list"></div>
+      <div class="cmd-section-title">🎞️ מצגות</div>
+      <div id="training-view-list-presentations"></div>
+      <div class="cmd-section-title" style="margin-top:18px">🎥 הדרכות מצולמות</div>
+      <div id="training-view-list-recorded"></div>
     </section>
 
     <!-- ===== COMMANDER ===== -->
@@ -1579,12 +1582,18 @@ nav{
 
       <!-- PANE: TRAINING -->
       <div class="admin-pane" id="apane-training">
+        <div class="cmd-section-title">🎞️ מצגות</div>
         <div class="admin-actions-row">
-          <button class="admin-card" onclick="openTrainingUpload()" style="grid-column:1/-1"><span class="a-ic">📚</span><b>פרסום חומר הדרכה</b><span>מצגת / מסמך לכל המסגרות</span></button>
-          <button class="admin-card" onclick="openTrainingLinkAdd()" style="grid-column:1/-1"><span class="a-ic">🔗</span><b>הוספת קישור</b><span>קישור חיצוני לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openTrainingUpload()" style="grid-column:1/-1"><span class="a-ic">📚</span><b>פרסום מצגת/מסמך</b><span>קובץ לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openTrainingLinkAdd('presentations')" style="grid-column:1/-1"><span class="a-ic">🔗</span><b>הוספת קישור למצגת</b><span>קישור חיצוני לכל המסגרות</span></button>
         </div>
-        <div class="cmd-section-title">📚 חומרי הדרכה שפורסמו</div>
-        <div id="admin-training-list"></div>
+        <div id="admin-training-list-presentations"></div>
+
+        <div class="cmd-section-title" style="margin-top:18px">🎥 הדרכות מצולמות</div>
+        <div class="admin-actions-row">
+          <button class="admin-card" onclick="openTrainingLinkAdd('recorded')" style="grid-column:1/-1"><span class="a-ic">🔗</span><b>הוספת קישור להדרכה מצולמת</b><span>קישור חיצוני לכל המסגרות</span></button>
+        </div>
+        <div id="admin-training-list-recorded"></div>
       </div>
 
       <!-- PANE: RESERVES -->
@@ -2068,8 +2077,14 @@ nav{
         <div id="tm-form-title" style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:8px">➕ הוספת איש צוות</div>
         <input class="m-input" id="tm-name" type="text" placeholder="שם מלא" style="margin-bottom:8px">
         <div style="display:flex;gap:8px;margin-bottom:8px">
-          <select class="m-input" id="tm-role" style="margin-bottom:0;flex:1"><option value="חייל">חייל</option><option value="מפקד">מפקד</option></select>
-          <input class="m-input" id="tm-bday" type="date" style="margin-bottom:0;flex:1" title="תאריך לידה">
+          <div style="flex:1">
+            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">תפקיד</label>
+            <select class="m-input" id="tm-role" style="margin-bottom:0;width:100%"><option value="חייל">חייל</option><option value="מפקד">מפקד</option></select>
+          </div>
+          <div style="flex:1">
+            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🎂 תאריך לידה</label>
+            <input class="m-input" id="tm-bday" type="date" style="margin-bottom:0;width:100%" title="תאריך לידה">
+          </div>
         </div>
         <label style="font-size:12px;color:var(--ink-2);display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;background:var(--gold-soft);border:1px solid #f0dfa8;border-radius:10px;padding:9px 11px">
           <input type="checkbox" id="tm-reserve" style="width:auto;margin:0" onchange="onReserveToggle()">
@@ -2732,6 +2747,7 @@ nav{
     <div class="modal">
       <h3>🔗 הוספת קישור לחומר הדרכה</h3>
       <div class="m-sub">קישור חיצוני (מצגת, סרטון, מסמך) — לא קובץ שמועלה לאפליקציה.</div>
+      <div id="tl-category-label" class="pill g hidden" style="margin-bottom:10px"></div>
       <input class="m-input" id="tl-title" type="text" placeholder="כותרת" style="margin-bottom:8px">
       <input class="m-input" id="tl-url" type="text" placeholder="https://…" style="margin-bottom:10px">
       <button class="m-btn primary" onclick="saveTrainingLink()" style="width:100%">➕ הוסף קישור</button>
@@ -8835,12 +8851,12 @@ function onTrainingFile(e){
 async function publishTrainingToAllSheds(id, title, ftype, fileData, thumb){
   const meta = FTYPE[ftype] || FTYPE.other;
   const adminList = await getTrainingList();
-  adminList.unshift({id, title, ftype, fname:title, date:new Date().toLocaleDateString("he-IL")});
+  adminList.unshift({id, title, ftype, fname:title, category:"presentations", date:new Date().toLocaleDateString("he-IL")});
   let allOk = await sSetRaw("admin_training", adminList);
   if(!(await sSetRaw("admin_training_file_"+id, fileData))) allOk = false;
   const results = await Promise.all(SHEDS.map(async shed=>{
     const list = (await sGetIn(shed.id, "training_list")) || [];
-    list.unshift({id, title, ftype, fname:title, thumb, by:"אחראי הדרכה", date:new Date().toLocaleDateString("he-IL")});
+    list.unshift({id, title, ftype, fname:title, thumb, category:"presentations", by:"אחראי הדרכה", date:new Date().toLocaleDateString("he-IL")});
     const okList = await sSetIn(shed.id, "training_list", list);
     const okFile = await sSetIn(shed.id, "training_file_"+id, fileData);
     return okList && okFile;
@@ -8854,9 +8870,23 @@ async function publishTrainingToAllSheds(id, title, ftype, fileData, thumb){
    אבל בלי קובץ), ומפקד מסגרת רגילה מוסיף קישור מקומי לצוות שלו בלבד —
    אותה כפילות מקומי/כלל-טייסתי שכבר קיימת בפרסום פריטי קרא-וחתום. אין
    כאן קובץ מועלה בכלל, ולכן אין training_file_<id> להוסיף/למחוק. */
-function openTrainingLinkAdd(){
+/* שתי קטגוריות חומרי הדרכה — מצגות (ברירת מחדל, כולל כל קובץ שמועלה)
+   והדרכות מצולמות (קישורים בלבד — סרטונים חיצוניים, לא קבצים שמועלים
+   לאפליקציה). פריטים ישנים בלי שדה category מוצגים כ"מצגות" כברירת מחדל. */
+const TRAINING_CATEGORIES = {
+  presentations: {ic:"🎞️", label:"מצגות"},
+  recorded: {ic:"🎥", label:"הדרכות מצולמות"},
+};
+function trainingCategoryOf(t){ return TRAINING_CATEGORIES[t.category] ? t.category : "presentations"; }
+let _trainingLinkCategory = "presentations";
+function openTrainingLinkAdd(category){
+  _trainingLinkCategory = TRAINING_CATEGORIES[category] ? category : "presentations";
   document.getElementById("tl-title").value = "";
   document.getElementById("tl-url").value = "";
+  const cat = TRAINING_CATEGORIES[_trainingLinkCategory];
+  const label = document.getElementById("tl-category-label");
+  label.textContent = cat.ic + " נוסף אל: " + cat.label;
+  label.classList.remove("hidden");
   document.getElementById("training-link-modal").classList.add("open");
 }
 async function saveTrainingLink(){
@@ -8868,9 +8898,10 @@ async function saveTrainingLink(){
   try{ new URL(url); }catch(e){ toast("הקישור לא תקין ⛔"); return; }
 
   const id = "trainlink_" + Date.now();
+  const category = _trainingLinkCategory;
   const ok = isAdmin
-    ? await publishTrainingLinkToAllSheds(id, title, url)
-    : await addLocalTrainingLink(id, title, url);
+    ? await publishTrainingLinkToAllSheds(id, title, url, category)
+    : await addLocalTrainingLink(id, title, url, category);
   if(!ok){ toast("⚠️ ההוספה נכשלה — בדוק חיבור רשת ונסה שוב"); return; }
 
   document.getElementById("training-link-modal").classList.remove("open");
@@ -8878,22 +8909,22 @@ async function saveTrainingLink(){
   if(isAdmin){ await logAdminAction("פרסום קישור הדרכה לכל המסגרות", title); if(typeof renderAdminTraining==="function") renderAdminTraining(); }
   if(typeof renderTrainingView==="function") renderTrainingView();
 }
-async function publishTrainingLinkToAllSheds(id, title, url){
+async function publishTrainingLinkToAllSheds(id, title, url, category){
   const adminList = await getTrainingList();
-  adminList.unshift({id, title, ftype:"link", url, date:new Date().toLocaleDateString("he-IL")});
+  adminList.unshift({id, title, ftype:"link", url, category, date:new Date().toLocaleDateString("he-IL")});
   let allOk = await sSetRaw("admin_training", adminList);
   const results = await Promise.all(SHEDS.map(async shed=>{
     const list = (await sGetIn(shed.id, "training_list")) || [];
-    list.unshift({id, title, ftype:"link", url, by:"אחראי הדרכה", date:new Date().toLocaleDateString("he-IL")});
+    list.unshift({id, title, ftype:"link", url, category, by:"אחראי הדרכה", date:new Date().toLocaleDateString("he-IL")});
     return sSetIn(shed.id, "training_list", list);
   }));
   if(!results.every(Boolean)) allOk = false;
   return allOk;
 }
 /* קישור מקומי בלבד — לא נוגע ב-admin_training ולא במסגרות אחרות */
-async function addLocalTrainingLink(id, title, url){
+async function addLocalTrainingLink(id, title, url, category){
   const list = (await sGet("training_list")) || [];
-  list.unshift({id, title, ftype:"link", url, by:user||"מפקד", date:new Date().toLocaleDateString("he-IL")});
+  list.unshift({id, title, ftype:"link", url, category, by:user||"מפקד", date:new Date().toLocaleDateString("he-IL")});
   return sSet("training_list", list);
 }
 /* הסרת קישור מקומי שהמפקד עצמו הוסיף — לא מוחקת חומר שפורסם ע"י אחראי ההדרכה */
@@ -9067,18 +9098,26 @@ async function renderReserves(){
     </div>`).join("");
 }
 
+function trainingCardHtml(t){
+  const ft = FTYPE[t.ftype] || FTYPE.image;
+  return `<div class="train-card">
+    <div class="tc-ic">${ft.emoji}</div>
+    <div class="tc-body"><b>${escapeHTML(t.title)}</b><span>${ft.label} · ${t.date}</span></div>
+    <button class="mr-del" onclick="deleteTraining('${t.id}')">🗑️</button>
+  </div>`;
+}
 async function renderAdminTraining(){
-  const box = document.getElementById("admin-training-list");
+  const boxes = {
+    presentations: document.getElementById("admin-training-list-presentations"),
+    recorded: document.getElementById("admin-training-list-recorded"),
+  };
   const list = await getTrainingList();
-  if(list.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">📚</div><h3>אין עדיין חומרי הדרכה</h3><p>העלה מצגת או מסמך שיופיע לכל המסגרות</p></div>'; return; }
-  box.innerHTML = list.map(t=>{
-    const ft = FTYPE[t.ftype] || FTYPE.image;
-    return `<div class="train-card">
-      <div class="tc-ic">${ft.emoji}</div>
-      <div class="tc-body"><b>${escapeHTML(t.title)}</b><span>${ft.label} · ${t.date}</span></div>
-      <button class="mr-del" onclick="deleteTraining('${t.id}')">🗑️</button>
-    </div>`;
-  }).join("");
+  for(const cat of Object.keys(TRAINING_CATEGORIES)){
+    const items = list.filter(t=>trainingCategoryOf(t)===cat);
+    boxes[cat].innerHTML = items.length
+      ? items.map(trainingCardHtml).join("")
+      : `<div class="empty-state" style="padding:14px"><p>אין עדיין ${escapeHTML(TRAINING_CATEGORIES[cat].label)}</p></div>`;
+  }
 }
 async function deleteTraining(id){
   if(!confirm("למחוק את חומר ההדרכה מכל המסגרות?")) return;
@@ -9742,28 +9781,36 @@ function fmtReminderDate(iso){
 }
 
 /* ===== TRAINING MATERIALS (shed users view) ===== */
+function trainingViewCardHtml(t, canRemoveOwnLinks){
+  const ft = FTYPE[t.ftype] || FTYPE.image;
+  const visual = (t.ftype==="image" && t.thumb)
+    ? `<img class="doc-thumb" src="${t.thumb}" alt="">`
+    : `<div class="doc-thumb file-badge ${ft.badge}"><span class="doc-fileicon">${ft.emoji}</span></div>`;
+  const delBtn = (canRemoveOwnLinks && t.ftype==="link" && t.by!=="אחראי הדרכה")
+    ? `<button class="cert-chip-del" onclick="event.stopPropagation();removeLocalTrainingLink('${jsStr(t.id)}')">✕</button>` : "";
+  return `<div class="card doc-item" onclick="openTrainingItem('${t.id}')">
+    ${visual}
+    <div class="doc-body"><h3>${escapeHTML(t.title)}</h3><div class="meta">${ft.label} · ${t.date}</div></div>
+    ${delBtn}
+    <div class="doc-state read">📚</div>
+  </div>`;
+}
 async function renderTrainingView(){
-  const box = document.getElementById("training-view-list");
-  if(!box) return;
+  const boxes = {
+    presentations: document.getElementById("training-view-list-presentations"),
+    recorded: document.getElementById("training-view-list-recorded"),
+  };
+  if(!boxes.presentations || !boxes.recorded) return;
   const list = (await sGet("training_list")) || [];
-  if(list.length===0){ box.innerHTML='<div class="empty-state"><div class="ic">📚</div><h3>אין עדיין חומרי הדרכה</h3><p>חומרים שיפרסם אחראי ההדרכה יופיעו כאן</p></div>'; return; }
   // מפקד מסגרת רגילה יכול להסיר קישור מקומי שהוא עצמו הוסיף (לא חומר שפורסם
   // ע"י אחראי ההדרכה — לזה אין "מחיקה חלקית", רק דרך deleteTraining הכלל-טייסתי)
   const canRemoveOwnLinks = userRole==="מפקד" && !isAdmin;
-  box.innerHTML = list.map(t=>{
-    const ft = FTYPE[t.ftype] || FTYPE.image;
-    const visual = (t.ftype==="image" && t.thumb)
-      ? `<img class="doc-thumb" src="${t.thumb}" alt="">`
-      : `<div class="doc-thumb file-badge ${ft.badge}"><span class="doc-fileicon">${ft.emoji}</span></div>`;
-    const delBtn = (canRemoveOwnLinks && t.ftype==="link" && t.by!=="אחראי הדרכה")
-      ? `<button class="cert-chip-del" onclick="event.stopPropagation();removeLocalTrainingLink('${jsStr(t.id)}')">✕</button>` : "";
-    return `<div class="card doc-item" onclick="openTrainingItem('${t.id}')">
-      ${visual}
-      <div class="doc-body"><h3>${escapeHTML(t.title)}</h3><div class="meta">${ft.label} · ${t.date}</div></div>
-      ${delBtn}
-      <div class="doc-state read">📚</div>
-    </div>`;
-  }).join("");
+  for(const cat of Object.keys(TRAINING_CATEGORIES)){
+    const items = list.filter(t=>trainingCategoryOf(t)===cat);
+    boxes[cat].innerHTML = items.length
+      ? items.map(t=>trainingViewCardHtml(t, canRemoveOwnLinks)).join("")
+      : `<div class="empty-state"><p>אין עדיין ${escapeHTML(TRAINING_CATEGORIES[cat].label)}</p></div>`;
+  }
 }
 async function openTrainingItem(id){
   const list = (await sGet("training_list")) || [];
