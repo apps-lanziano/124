@@ -19,7 +19,7 @@ const {getAuth} = require("firebase-admin/auth");
 const {findUnsignedReminders} = require("./lib/reminders");
 const {findExpiringCerts} = require("./lib/cert_expiry_reminders");
 const {findOverdueReserves} = require("./lib/reserve_refresh_reminders");
-const {findVoIssues} = require("./lib/vo_reminders");
+const {findVoIssues, findExpiringLicensesByShed} = require("./lib/vo_reminders");
 const {buildDailyDigests} = require("./lib/daily_digest");
 const {buildDutyRosterDigests} = require("./lib/duty_roster_digest");
 const {analyzeBoardImage: analyzeBoardImageCore} = require("./lib/board_ai_analyze");
@@ -313,6 +313,58 @@ exports.remindVoIssuesDaily = onSchedule(
   },
 );
 
+/* ===== תזכורת רישיונות — לכל מפקד על החיילים שלו =====
+   עד עכשיו רק מ״ע אחזקה קיבל התראה על רישיונות עומדים לפוג (בסיכום
+   המרוכז למעלה) — מפקד המסגרת של בעל הרישיון לא ידע בלי להיכנס
+   בעצמו למסך הרישיונות. זו תוספת, לא תחליף: מ״ע אחזקה ממשיך לקבל את
+   הסיכום המרוכז כרגיל, וכעת כל מפקד מקבל גם תזכורת ממוקדת רק על
+   החיילים של המסגרת שלו. */
+exports.remindLicenseExpiryDaily = onSchedule(
+  {
+    schedule: "0 8 * * *",
+    timeZone: "Asia/Jerusalem",
+    region: "me-west1",
+    memory: "256MiB",
+    timeoutSeconds: 120,
+  },
+  async () => {
+    const {toSend, updatedLog} = await findExpiringLicensesByShed(db);
+    if (!toSend.length) {
+      await db.doc("sq124/_license_reminder_log").set({v: updatedLog, updated: Date.now()}, {merge: true});
+      return;
+    }
+
+    let sentCount = 0;
+    for (const group of toSend) {
+      const tokRef = db.doc("sq124/push_tokens_" + group.shedId);
+      const tokSnap = await tokRef.get();
+      const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
+      const cmdTokens = Object.entries(tokMap)
+        .filter(([, m]) => m && m.role === "מפקד")
+        .map(([t]) => t);
+      if (!cmdTokens.length) continue;
+
+      const shedName = SHED_NAMES[group.shedId] || group.shedId;
+      const expiredCount = group.items.filter((i) => i.daysLeft < 0).length;
+      const body = expiredCount
+        ? `${expiredCount} רישיונות פג תוקפם, ${group.items.length - expiredCount} עומדים לפוג בקרוב`
+        : `${group.items.length} רישיונות עומדים לפוג בקרוב`;
+      await getMessaging().sendEachForMulticast({
+        tokens: cmdTokens,
+        data: {
+          title: "🪪 רישיונות דורשים תשומת לב · " + shedName,
+          body,
+          kind: "license_reminder",
+          n: String(group.items.length),
+        },
+      });
+      sentCount++;
+    }
+    await db.doc("sq124/_license_reminder_log").set({v: updatedLog, updated: Date.now()}, {merge: true});
+    console.log(`תזכורות רישיונות: ${toSend.length} מסגרות דורשות תשומת לב, ${sentCount} נשלחו בפועל`);
+  },
+);
+
 /* ===== תקציר יומי =====
    פוש אחד מרוכז לכל מפקד ב-08:00, בנוסף (לא במקום) לתזכורות הנקודתיות
    למעלה — כדי שלא יצטרך "לרדוף" אחרי כמה פינגים נפרדים כדי להבין את
@@ -348,7 +400,7 @@ exports.dailyDigest = onSchedule(
       await getMessaging().sendEachForMulticast({
         tokens: cmdTokens,
         data: {
-          title: "📋 תקציר בוקר · " + shedName,
+          title: "📋 סקירה יומית למפקד · " + shedName,
           body: parts.join(" · "),
           kind: "daily_digest",
           n: String(d.totalCount),

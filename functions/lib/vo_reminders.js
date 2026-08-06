@@ -76,4 +76,39 @@ async function findVoIssues(db, opts = {}) {
   };
 }
 
-module.exports = { SHED_IDS, daysUntil, vehicleNeedsAttention, findVoIssues };
+/* עד עכשיו רישיונות עומדים לפוג דיווחו רק במספר המרוכז ל-מ״ע אחזקה
+   (findVoIssues, למעלה) — מפקד המסגרת של בעל הרישיון עצמו לא קיבל שום
+   התראה, אף שהוא זה שצריך לדאוג שהחייל שלו יחדש. הפונקציה הזו מקבצת
+   את אותה רשימת רישיונות גלובלית (vo_licenses_list) לפי שדה shedId על
+   כל פריט, כדי לשלוח לכל מפקד תזכורת רק על החיילים שלו — בנוסף לסיכום
+   המרוכז שמ״ע אחזקה ממשיך לקבל כרגיל, לא במקומו. משתמשת ב-cooldown
+   (כמו findExpiringCerts) כדי לא להטריד כל יום על אותו רישיון בדיוק. */
+async function findExpiringLicensesByShed(db, opts = {}) {
+  const now = opts.now ?? Date.now();
+  const remindWithinDays = opts.remindWithinDays ?? LICENSE_ALERT_DAYS;
+  const cooldownDays = opts.cooldownDays ?? 7;
+
+  const logSnap = await db.doc("sq124/_license_reminder_log").get();
+  const remindedAt = logSnap.exists ? (logSnap.data().v || {}) : {};
+  const updatedLog = { ...remindedAt };
+
+  const licSnap = await db.doc("sq124/vo_licenses_list").get();
+  const licenses = licSnap.exists ? (licSnap.data().v || []) : [];
+
+  const byShed = {};
+  for (const l of licenses) {
+    if (!l || !l.id || !l.expiry || !l.shedId) continue;
+    const daysLeft = daysUntil(l.expiry, now);
+    if (daysLeft > remindWithinDays) continue;
+
+    if (remindedAt[l.id] && (now - remindedAt[l.id]) < cooldownDays * 86400000) continue;
+
+    if (!byShed[l.shedId]) byShed[l.shedId] = [];
+    byShed[l.shedId].push({ person: l.person, type: l.type, daysLeft });
+    updatedLog[l.id] = now;
+  }
+  const toSend = Object.entries(byShed).map(([shedId, items]) => ({ shedId, items }));
+  return { toSend, updatedLog };
+}
+
+module.exports = { SHED_IDS, daysUntil, vehicleNeedsAttention, findVoIssues, findExpiringLicensesByShed };
