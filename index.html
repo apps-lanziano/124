@@ -4177,7 +4177,10 @@ async function doLogin(){
       maybeOfferBiometricEnroll(devRec);   // לא ממתינים — לא חוסם את מסך הכניסה
     }
     toast("ברוך הבא, " + user.split(" ")[0] + " 👋");
-    ensureBadgePermission();   // בקשת אישור התראות (חד-פעמי) כדי שה-badge על הסמל יעבוד
+    // בזמן "כניסה בתור" לא נוגעים בטוקן ה-push בכלל — זו צפייה זמנית לצורכי
+    // תמיכה, לא חברות בפועל במסגרת הזו, ולא צריך שהמכשיר יתחיל לקבל ממנה
+    // התראות. ברגע שיוצאים מהתחזות, doLogin חוזר לרוץ עם הזהות האמיתית.
+    if(!impersonating) ensureBadgePermission();
   } finally {
     setBtnLoading(btn, false);
   }
@@ -6262,9 +6265,17 @@ async function initPush(){
     });
   }catch(e){ console.error("initPush", e); }
 }
-/* שמירת ה-token של המכשיר תחת המסגרת, כדי שה-Function תדע לאן לשלוח */
+/* שמירת ה-token של המכשיר תחת המסגרת, כדי שה-Function תדע לאן לשלוח.
+   מנקה את אותו הטוקן מכל שאר המסגרות לפני הרישום — בלי זה, מכשיר
+   שהתחבר בעבר למסגרת אחרת (כולל "כניסה בתור" של מנהל-על) ממשיך
+   לקבל התראות ממנה לנצח, כי הרישום הישן אף פעם לא מתנקה מעצמו. */
 async function savePushToken(token){
   try{
+    await Promise.all(SHEDS.filter(s=>s.id!==currentShed.id).map(async s=>{
+      const otherKey = "push_tokens_" + s.id;
+      const otherMap = await sGetRaw(otherKey);
+      if(otherMap && otherMap[token]){ delete otherMap[token]; await sSetRaw(otherKey, otherMap); }
+    }));
     const key = "push_tokens_" + currentShed.id;
     const map = (await sGetRaw(key)) || {};
     map[token] = { name:user, role:enteredRole, ts:Date.now() };
