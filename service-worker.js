@@ -1,10 +1,12 @@
-const CACHE_NAME = "tayeset124-v7";
+const CACHE_NAME = "tayeset124-v8";
 const APP_SHELL = [
   "./index.html",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
-  "./icons/icon-maskable-512.png"
+  "./icons/icon-maskable-512.png",
+  "./icons/emblem-124.png",
+  "./icons/wing-badge.png"
 ];
 
 self.addEventListener("install", event => {
