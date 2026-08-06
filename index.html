@@ -7045,6 +7045,11 @@ async function saveTeamMember(){
     }
     toast("איש הצוות נוסף ✓");
   }
+  // פקיד כלים לא עובר מסלול הסמכות בכלל — אם הוגדר ככזה עכשיו (גם על
+  // ידי עריכת חייל קיים שכבר צבר הסמכות, לא רק בהוספה חדשה) מסירים
+  // כל הסמכה שכבר קיימת לו, כדי שלא ימשיך להופיע בפעמון ההתראות
+  // ובתזכורות ההסמכות של השרת.
+  if(!isDeptUnit && profession==="פקיד כלים") await removePersonCerts(name);
   cancelEditMember();
   tmShowForm(false);   // אחרי שמירה — חוזרים לרשימת הצוות
   renderTeamMgmt(); populateLogin(); renderBdays();
@@ -8232,11 +8237,36 @@ async function cleanupPfForToolsClerk(){
   await sSetRaw(flagKey, true);
   console.log("✅ רשומות PF שגויות לפקידי כלים נוקו");
 }
+/* ניקוי חד-פעמי נוסף: פקיד כלים לא עובר מסלול הסמכות בכלל (לא רק PF —
+   גם שלב 7/10/12/13 וכל שאר ההסמכות), אבל מי שהוגדר פקיד כלים אחרי
+   שכבר צבר הסמכות (למשל הועבר מתפקיד חייל רגיל) נשאר איתן ברשומות —
+   מה שממשיך להפעיל גם את פעמון ההתראות בלקוח וגם את תזכורת ההסמכות
+   של השרת (remindCertExpiryDaily/תקציר יומי), ששניהם קוראים מ-certs_list
+   בלי לבדוק מקצוע בכלל. מסיר את כל ההסמכות (לא רק PF) של פקיד כלים —
+   התיקון בפרויקציה (saveTeamMember) מונע הישנות מכאן והלאה. */
+async function cleanupAllCertsForToolsClerk(){
+  const flagKey = "certs_toolsclerk_full_cleanup_v1";
+  const flagState = await onceFlagDone(flagKey);
+  if(flagState.done || flagState.failed) return;
+  await Promise.all(SHEDS.map(async shed=>{
+    try{
+      const pers = (await sGetIn(shed.id,"cfg_personnel")) || [];
+      const clerkNames = new Set(pers.filter(p=>p.profession==="פקיד כלים").map(p=>p.name));
+      if(!clerkNames.size) return;
+      const certs = (await sGetIn(shed.id,"certs_list")) || [];
+      const filtered = certs.filter(c=> !clerkNames.has(c.person));
+      if(filtered.length !== certs.length) await sSetIn(shed.id,"certs_list", filtered);
+    }catch(e){ console.error("cleanupAllCertsForToolsClerk "+shed.id, e); }
+  }));
+  await sSetRaw(flagKey, true);
+  console.log("✅ כל רשומות ההסמכות של פקידי כלים נוקו");
+}
 
 async function ensureExtraCertsSeed(scopeShedId){
   await selfHealShedCertsAndRoster(scopeShedId);
   await ensurePfBackfill();
   await cleanupPfForToolsClerk();
+  await cleanupAllCertsForToolsClerk();
 
   const flagKey = "extra_certs_seed_v2";
   const flagState = await onceFlagDone(flagKey);
