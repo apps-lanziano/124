@@ -23,6 +23,7 @@ const {findVoIssues} = require("./lib/vo_reminders");
 const {buildDailyDigests} = require("./lib/daily_digest");
 const {buildDutyRosterDigests} = require("./lib/duty_roster_digest");
 const {analyzeBoardImage: analyzeBoardImageCore} = require("./lib/board_ai_analyze");
+const {isQuietDay} = require("./lib/quiet_days");
 const {dumpCollection} = require("./lib/backup");
 const {decide, SHED_NAMES} = require("./lib/notify");
 const {shouldAuthorize} = require("./lib/authorize");
@@ -151,6 +152,7 @@ exports.remindUnsignedDaily = onSchedule(
     timeoutSeconds: 120,
   },
   async () => {
+    if (isQuietDay(Date.now())) { console.log("תזכורות חתימות: יום שקט (שישי/שבת) — מדלג"); return; }
     const {toSend, updatedLog} = await findUnsignedReminders(db);
     if (!toSend.length) return;
 
@@ -194,6 +196,7 @@ exports.remindCertExpiryDaily = onSchedule(
     timeoutSeconds: 120,
   },
   async () => {
+    if (isQuietDay(Date.now())) { console.log("תזכורות הסמכות: יום שקט (שישי/שבת) — מדלג"); return; }
     const {toSend, updatedLog} = await findExpiringCerts(db);
     if (!toSend.length) return;
 
@@ -239,6 +242,7 @@ exports.remindReserveRefreshDaily = onSchedule(
     timeoutSeconds: 120,
   },
   async () => {
+    if (isQuietDay(Date.now())) { console.log("תזכורות מילואים: יום שקט (שישי/שבת) — מדלג"); return; }
     const {toSend, updatedLog} = await findOverdueReserves(db);
     if (!toSend.length) return;
 
@@ -284,6 +288,7 @@ exports.remindVoIssuesDaily = onSchedule(
     timeoutSeconds: 120,
   },
   async () => {
+    if (isQuietDay(Date.now())) { console.log("תזכורת מ״ע אחזקה: יום שקט (שישי/שבת) — מדלג"); return; }
     const summary = await findVoIssues(db);
     if (!summary.totalCount) return;
 
@@ -327,6 +332,7 @@ exports.dailyDigest = onSchedule(
     timeoutSeconds: 120,
   },
   async () => {
+    if (isQuietDay(Date.now())) { console.log("תקציר יומי: יום שקט (שישי/שבת) — מדלג"); return; }
     const digests = await buildDailyDigests(db);
     if (!digests.length) return;
 
@@ -374,6 +380,7 @@ exports.dutyRosterDigest = onSchedule(
     timeoutSeconds: 120,
   },
   async () => {
+    if (isQuietDay(Date.now())) { console.log("שיבוץ תורנויות: יום שקט (שישי/שבת) — מדלג"); return; }
     const {dayName, digests, unmatched} = await buildDutyRosterDigests(db);
     if (unmatched.length) {
       console.warn(`שיבוץ תורנויות (${dayName}): ${unmatched.length} שמות לא זוהו באף סככה: ${unmatched.join(", ")}`);
