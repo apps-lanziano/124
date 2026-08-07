@@ -49,6 +49,7 @@ jobs:
                    qa/suite/fault_notify_test.mjs \
                    qa/suite/morning_rollcall_notify_test.mjs \
                    qa/suite/notify_lib_test.mjs \
+                   qa/suite/quiet_days_lib_test.mjs \
                    qa/suite/reminders_lib_test.mjs \
                    qa/suite/reserve_refresh_reminders_lib_test.mjs \
                    qa/suite/scheduled_functions_wiring_test.mjs \

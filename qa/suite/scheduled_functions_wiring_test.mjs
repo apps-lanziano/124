@@ -105,6 +105,46 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
     JSON.stringify({hasSchedule, hasTZ, usesLib, writesToBackupsPath, usesStorage}));
 }
 
+// 6ב. "ימים שקטים" (שישי/שבת) — מדיניות טייסתית: כל תזכורת מתוזמנת מדלגת
+// בימים האלה. לא חל על notifyOnPublish (זמן אמת) ולא על weeklyBackup (לא התראה).
+{
+  const importsQuietDays = /require\("\.\/lib\/quiet_days"\)/.test(fn);
+  const scheduledFns = [
+    ["remindUnsignedDaily", "תזכורות חתימות"],
+    ["remindCertExpiryDaily", "תזכורות הסמכות"],
+    ["remindReserveRefreshDaily", "תזכורות מילואים"],
+    ["remindVoIssuesDaily", "תזכורת מ״ע אחזקה"],
+    ["dailyDigest", "תקציר יומי"],
+    ["dutyRosterDigest", "שיבוץ תורנויות"],
+  ];
+  const missing = [];
+  for (const [name] of scheduledFns) {
+    const fnStart = fn.indexOf(`exports.${name} = onSchedule(`);
+    const fnBody = fnStart >= 0 ? fn.slice(fnStart, fnStart + 1200) : "";
+    if (!/if \(isQuietDay\(Date\.now\(\)\)\)/.test(fnBody)) missing.push(name);
+  }
+  record("כל שש התזכורות המתוזמנות בודקות isQuietDay בתחילת הריצה ומדלגות בשישי/שבת",
+    importsQuietDays && missing.length === 0,
+    JSON.stringify({importsQuietDays, missing}));
+
+  const backupHasNoQuietCheck = (() => {
+    const start = fn.indexOf("exports.weeklyBackup = onSchedule(");
+    const body = start >= 0 ? fn.slice(start, start + 1200) : "";
+    return !/isQuietDay/.test(body);
+  })();
+  record("גיבוי שבועי (לא התראה למשתמש) לא מושפע מ-isQuietDay",
+    backupHasNoQuietCheck, String(backupHasNoQuietCheck));
+
+  const notifyOnPublishHasNoQuietCheck = (() => {
+    const start = fn.indexOf("exports.notifyOnPublish = onDocumentWritten(");
+    const end = fn.indexOf("exports.remindUnsignedDaily");
+    const body = start >= 0 && end > start ? fn.slice(start, end) : "";
+    return !/isQuietDay/.test(body);
+  })();
+  record("התראות בזמן אמת (notifyOnPublish) לא מושפעות מ-isQuietDay — רק תזכורות מתוזמנות",
+    notifyOnPublishHasNoQuietCheck, String(notifyOnPublishHasNoQuietCheck));
+}
+
 // 7. notifyOnPublish: מסדר בוקר (commandersOnly) מסונן למפקדים בזמן אמת, לא רק תזכורות מתוזמנות
 {
   const destructuresFlag = /const\s*\{kind,\s*shedId,\s*title,\s*body,\s*count,\s*commandersOnly\}\s*=\s*decision/.test(fn);
