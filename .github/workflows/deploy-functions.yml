@@ -59,9 +59,14 @@ jobs:
             echo "::endgroup::"
           done
 
+      # --force נדרש כדי שהפריסה תוכל למחוק פונקציות שהוסרו מהקוד (למשל
+      # remindLicenseExpiryDaily שהוסרה בעבר) גם במצב לא-אינטראקטיבי.
+      # בלי זה, firebase deploy עוצר את כל הפריסה (הכל-או-כלום) ברגע
+      # שהוא מוצא פונקציה שקיימת בייצור אך לא בקוד המקומי — מה שגרם
+      # לשתי פריסות רצופות להיכשל בשקט ולהשאיר את הייצור תקוע בגרסה ישנה.
       - name: פריסה ל-Firebase (Cloud Functions)
         if: ${{ env.FIREBASE_TOKEN != '' }}
-        run: npx firebase-tools@13 deploy --only functions --project squadron124-96357 --token "$FIREBASE_TOKEN" --non-interactive
+        run: npx firebase-tools@13 deploy --only functions --project squadron124-96357 --token "$FIREBASE_TOKEN" --non-interactive --force
 
       - name: אזהרה אם אין טוקן פריסה מוגדר
         if: ${{ env.FIREBASE_TOKEN == '' }}
