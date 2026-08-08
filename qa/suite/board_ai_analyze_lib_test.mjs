@@ -35,6 +35,30 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
   record("הפרומפט מבהיר ששמות עשויים להיות חלקיים (פרטי/משפחה בלבד)", mentionsPartialNames, String(mentionsPartialNames));
 }
 
+// --- 2ב. buildAnalysisPrompt: מבהיר שזה גיליון Excel מצולם, לא כתב יד ---
+{
+  const p = buildAnalysisPrompt();
+  const mentionsExcel = p.includes("Excel");
+  const explicitlyNotHandwriting = p.includes("לא כתב יד");
+  record("הפרומפט מבהיר שהתמונה היא גיליון Excel מצולם", mentionsExcel, String(mentionsExcel));
+  record("הפרומפט שולל במפורש זיהוי כתב יד", explicitlyNotHandwriting, String(explicitlyNotHandwriting));
+}
+
+// --- 2ג. buildAnalysisPrompt(rosterNames): כוללת את הרשימה כעזר-קריאה בלבד ---
+{
+  const withRoster = buildAnalysisPrompt(["דני כהן", "רותם לוי"]);
+  const includesNames = withRoster.includes("דני כהן") && withRoster.includes("רותם לוי");
+  const notSourceOfTruth = withRoster.includes("עזר קריאה");
+  const stillAllowsRawFallback = withRoster.includes("כתוב בדיוק את") || withRoster.includes("הטקסט כפי שהוא נראה בתא");
+  record("עם רשימת שמות: הרשימה עצמה מופיעה בפרומפט", includesNames, String(includesNames));
+  record("עם רשימת שמות: מובהר שזה עזר-קריאה, לא מקור אמת יחיד", notSourceOfTruth, String(notSourceOfTruth));
+  record("עם רשימת שמות: עדיין מותר להחזיר טקסט גולמי כשאין התאמה ודאית", stillAllowsRawFallback, String(stillAllowsRawFallback));
+
+  const withoutRoster = buildAnalysisPrompt([]);
+  const noRosterSection = !withoutRoster.includes("להלן רשימת השמות");
+  record("מערך שמות ריק מתנהג כמו בלי רשימה בכלל (לא נספח קטע ריק)", noRosterSection, String(noRosterSection));
+}
+
 // --- 3. parseRosterResponse: JSON תקין ישיר ---
 {
   const text = JSON.stringify({days: {"ראשון": {duty:["דני כהן"], rest:["רותם לוי"]}}});
@@ -97,6 +121,20 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
   const imgBlock = body.messages[0].content.find(c=>c.type==="image");
   record("גוף הבקשה כולל את התמונה בקידוד base64 הנכון", !!imgBlock && imgBlock.source.data==="QUJD" && imgBlock.source.media_type==="image/jpeg", JSON.stringify(imgBlock));
   record("המפתח נשלח בכותרת x-api-key ולא בגוף הבקשה", capturedOpts.headers["x-api-key"]==="fake-key" && !JSON.stringify(body).includes("fake-key"), JSON.stringify(capturedOpts.headers));
+}
+
+// --- 9ב. analyzeBoardImage: rosterNames מ-opts מגיעה בפועל לפרומפט שנשלח ---
+{
+  let capturedOpts = null;
+  const fakeFetch = async (url, opts) => {
+    capturedOpts = opts;
+    return {ok: true, json: async () => ({content: [{type:"text", text: JSON.stringify({days:{}})}]})};
+  };
+  await analyzeBoardImage("data:image/jpeg;base64,QUJD", "fake-key", {fetchImpl: fakeFetch, rosterNames: ["דני כהן"]});
+  const body = JSON.parse(capturedOpts.body);
+  const textBlock = body.messages[0].content.find(c=>c.type==="text");
+  record("rosterNames מ-opts מגיעה לטקסט הפרומפט שנשלח בפועל ל-API",
+    !!textBlock && textBlock.text.includes("דני כהן"), JSON.stringify({included: textBlock && textBlock.text.includes("דני כהן")}));
 }
 
 // --- 10. analyzeBoardImage: תמונה לא תקינה — נכשל בלי לפנות לרשת בכלל ---

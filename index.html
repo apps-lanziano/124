@@ -5675,10 +5675,19 @@ async function analyzeLatestBoardWithAI(){
   if(!full){ toast("לא נמצאה תמונת הלוח לניתוח ⚠️"); return; }
   toast("מנתח את הלוח עם AI… ⏳");
   try{
+    // שולחים ל-AI גם את רשימת השמות המלאים והמדויקים של כל אנשי הטייסת —
+    // עזר-קריאה שהופך את המשימה מ"לנחש איות" ל"להתאים לרשימה סגורה"
+    // (ראו lib/board_ai_analyze.buildAnalysisPrompt). מי ששוחרר מוחרג.
+    const allPersonnel = await fetchAllPersonnelByShed();
+    const rosterNames = [...new Set(
+      SHEDS.flatMap(s => (allPersonnel[s.id]||[])
+        .filter(p => p && p.name && !(p.release && p.release <= todayKey()))
+        .map(p => p.name))
+    )].sort((a,b)=>a.localeCompare(b,"he"));
     const fnMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js");
     const functions = fnMod.getFunctions(fbAuth.app, "me-west1");
     const analyzeFn = fnMod.httpsCallable(functions, "analyzeBoardImage");
-    const res = await analyzeFn({image: full});
+    const res = await analyzeFn({image: full, rosterNames});
     const days = (res.data && res.data.days) || {};
     if(!Object.keys(days).length){ toast("ה-AI לא זיהה שיבוץ ברור בלוח הזה — אפשר למלא ידנית"); await openDutyRosterModal(); return; }
     await openDutyRosterModal(days);
@@ -5737,14 +5746,20 @@ function onBoardFile(e){
   reader.onload = ev => {
     const img = new Image();
     img.onload = async () => {
-      const maxW = 1000;
+      // 1568px = הרוחב המקסימלי שמומלץ ל-Claude Vision (תמונות גדולות
+      // יותר ממילא מוקטנות שרת-צד) — לוח צוות הוא גיליון Excel מצולם עם
+      // טקסט מודפס קטן בתאים, ורזולוציה נמוכה יותר פוגעת בדיוק הניתוח
+      // (ניתוח AI, ראו analyzeLatestBoardWithAI) הרבה יותר מדחיסת JPEG.
+      const maxW = 1568;
       const scale = Math.min(1, maxW / img.width);
       const c = document.createElement("canvas");
       c.width = img.width*scale; c.height = img.height*scale;
       const bctx = c.getContext("2d"); bctx.fillStyle="#fff"; bctx.fillRect(0,0,c.width,c.height);
       bctx.drawImage(img,0,0,c.width,c.height);
       let bq=.8, data=c.toDataURL("image/jpeg",bq), bt=0;
-      while(data.length>720_000 && bt<7){ bq-=.1; data=c.toDataURL("image/jpeg",Math.max(.28,bq)); bt++; }
+      // 900KB (במקום 720KB) — עדיין בטוח מתחת למגבלת המסמך של Firestore
+      // (1MB), עם יותר מרחב לרזולוציה/איכות גבוהה יותר.
+      while(data.length>900_000 && bt<7){ bq-=.1; data=c.toDataURL("image/jpeg",Math.max(.28,bq)); bt++; }
       // thumbnail
       const tc = document.createElement("canvas");
       tc.width = 128; tc.height = 96;

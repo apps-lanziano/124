@@ -80,7 +80,13 @@ exports.analyzeBoardImage = onCall(
     if (!apiKey) {
       throw new HttpsError("failed-precondition", "מפתח ה-API של Claude לא מוגדר בשרת");
     }
-    const result = await analyzeBoardImageCore(imageDataUrl, apiKey);
+    // רשימת שמות הצוות — עזר-קריאה ל-AI (ראו lib/board_ai_analyze), לא
+    // מקור אמת. מסוננת ומוגבלת כאן כדי לא לתת ללקוח לנפח את הבקשה.
+    const rawRoster = request.data && request.data.rosterNames;
+    const rosterNames = Array.isArray(rawRoster)
+      ? rawRoster.filter((n) => typeof n === "string" && n.trim()).slice(0, 300).map((n) => n.trim().slice(0, 60))
+      : [];
+    const result = await analyzeBoardImageCore(imageDataUrl, apiKey, {rosterNames});
     if (!result.ok) {
       throw new HttpsError("internal", result.error || "ניתוח התמונה נכשל");
     }
