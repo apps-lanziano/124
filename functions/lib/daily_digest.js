@@ -13,6 +13,35 @@
 const { SHED_IDS, findUnsignedReminders } = require("./reminders");
 const { findExpiringCerts } = require("./cert_expiry_reminders");
 
+/* רשימה סגורה, לפי שם, של מי שרשאי לקבל את הסקירה היומית הכללית —
+   החלטת מוצר מפורשת של המשתמש: לא כל מי שיש לו תפקיד "מפקד" (יש עוד
+   כאלה במסגרות תפקידיות/ניהוליות), רק המפקדים בפועל של הסככות. מ״ע
+   אחזקה ואחראי הדרכה ממשיכים לקבל רק את הסיכום הספציפי לתחום האחריות
+   שלהם (remindVoIssuesDaily וכו') — לא את הסקירה הכללית הזו, גם אם
+   יש להם טוקן רשום עם role:"מפקד". עדכון שם ברשימה דורש עדכון קוד + פריסה.
+   ההשוואה עצמה עדיין קורית לכל סככה בנפרד (push_tokens_<shedId>),
+   כך שמפקד ממשיך לקבל נתונים על הצוות שלו בלבד — הרשימה הזו רק מצמצמת
+   *למי* בכלל נשלחת ההתראה, לא משנה *מה* נכלל בתוכנה. */
+const DAILY_DIGEST_ALLOWED_NAMES = new Set([
+  "נאור ישראל",
+  "סטס אולייניקוב",
+  "אלעד לנציאנו",
+  "דניאל זאורוב",
+  "אריאל אלמליח",
+  "ג'וני גריגורביץ",
+  "סמי אורסו",
+]);
+
+const normalizeName = (n) => (n || "").trim().replace(/\s+/g, " ");
+
+/* מסננת מפת טוקנים (push_tokens_<shedId>) לרשימת הטוקנים שמותר לשלוח
+   אליהם את הסקירה היומית — תפקיד מפקד וגם שם ברשימת ההרשאה. */
+function filterDailyDigestTokens(tokMap) {
+  return Object.entries(tokMap || {})
+    .filter(([, m]) => m && m.role === "מפקד" && DAILY_DIGEST_ALLOWED_NAMES.has(normalizeName(m.name)))
+    .map(([t]) => t);
+}
+
 /* מחזיר תקציר לכל מסגרת שיש בה משהו לדווח (חתימות חסרות/תקלות פתוחות/
    הסמכות שפגות תוך שבוע) — מסגרת "נקייה" לא מקבלת תקציר ריק. */
 async function buildDailyDigests(db, opts = {}) {
@@ -51,4 +80,4 @@ async function buildDailyDigests(db, opts = {}) {
   return digests;
 }
 
-module.exports = {SHED_IDS, buildDailyDigests};
+module.exports = {SHED_IDS, buildDailyDigests, DAILY_DIGEST_ALLOWED_NAMES, filterDailyDigestTokens};
