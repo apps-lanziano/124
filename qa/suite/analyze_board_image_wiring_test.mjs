@@ -34,12 +34,22 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
 
 {
   const importsLib = /require\("\.\/lib\/board_ai_analyze"\)/.test(fn);
-  const usesCore = /analyzeBoardImageCore\(imageDataUrl, apiKey\)/.test(fn);
+  const usesCore = /analyzeBoardImageCore\(imageDataUrl, apiKey, \{rosterNames\}\)/.test(fn);
   const throwsOnFailure = /if \(!result\.ok\) \{\s*throw new HttpsError\("internal"/.test(fn);
   const doesNotWriteFirestore = !/exports\.analyzeBoardImage[\s\S]{0,900}db\.doc\(/.test(fn.slice(0, fn.indexOf("exports.notifyOnPublish")));
   record("משתמשת בלוגיקה הטהורה מ-lib/board_ai_analyze, נכשלת בבירור בכשל, ולא כותבת ל-Firestore בעצמה",
     importsLib && usesCore && throwsOnFailure && doesNotWriteFirestore,
     JSON.stringify({importsLib, usesCore, throwsOnFailure, doesNotWriteFirestore}));
+}
+
+{
+  const sanitizesRoster = /Array\.isArray\(rawRoster\)/.test(fn);
+  const capsCount = /\.slice\(0,\s*300\)/.test(fn);
+  const capsLength = /\.slice\(0,\s*60\)/.test(fn);
+  const defaultsToEmpty = /: \[\];\s*\n\s*const result = await analyzeBoardImageCore/.test(fn);
+  record("rosterNames מהלקוח מסונן ומוגבל (מערך מחרוזות, עד 300 שמות, 60 תווים כל אחד) לפני שהוא מגיע ל-AI",
+    sanitizesRoster && capsCount && capsLength && defaultsToEmpty,
+    JSON.stringify({sanitizesRoster, capsCount, capsLength, defaultsToEmpty}));
 }
 
 console.log("\n=== SUMMARY ===");
