@@ -24,6 +24,7 @@ const {buildDailyDigests} = require("./lib/daily_digest");
 const {buildDutyRosterDigests} = require("./lib/duty_roster_digest");
 const {analyzeBoardImage: analyzeBoardImageCore} = require("./lib/board_ai_analyze");
 const {isQuietDay} = require("./lib/quiet_days");
+const {validateTestNotificationRequest} = require("./lib/test_notification");
 const {dumpCollection} = require("./lib/backup");
 const {decide, SHED_NAMES} = require("./lib/notify");
 const {shouldAuthorize} = require("./lib/authorize");
@@ -419,6 +420,30 @@ exports.dutyRosterDigest = onSchedule(
       sentCount++;
     }
     console.log(`שיבוץ תורנויות (${dayName}): ${digests.length} מסגרות עם שיבוץ, ${sentCount} נשלחו בפועל`);
+  },
+);
+
+/* ===== sendTestNotificationToSelf — התראת-בדיקה, אך ורק למכשיר הקורא =====
+   ה-token מגיע מהלקוח (fcmToken של המכשיר הנוכחי) ולא מחיפוש בשרת —
+   מבנית אין דרך לשלוח למישהו אחר עם הפונקציה הזו. נועדה למי שרוצה
+   לראות בעצמו איך נראית התראה אוטומטית (כמו dutyRosterDigest) על
+   המכשיר שלו, בלי להציף אף מפקד אחר. */
+exports.sendTestNotificationToSelf = onCall(
+  {region: "me-west1", enforceAppCheck: true, memory: "128MiB", timeoutSeconds: 30},
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "נדרש להיות מחובר");
+    }
+    const {ok, token, title, body, error} = validateTestNotificationRequest(request.data);
+    if (!ok) {
+      throw new HttpsError("invalid-argument", error);
+    }
+    try {
+      await getMessaging().send({token, data: {title, body, kind: "test_preview"}});
+    } catch (e) {
+      throw new HttpsError("internal", "שליחת ההתראה נכשלה: " + (e && e.message || String(e)));
+    }
+    return {ok: true};
   },
 );
 
