@@ -5656,6 +5656,7 @@ async function openDutyRosterModal(aiDays){
       <textarea class="m-input" id="duty-tp-${day}" rows="2" placeholder="שם מלא בכל שורה">${escapeHTML(d.duty.join("\n"))}</textarea>
       <label>⚪ נח</label>
       <textarea class="m-input" id="duty-rest-${day}" rows="2" placeholder="שם מלא בכל שורה">${escapeHTML(d.rest.join("\n"))}</textarea>
+      <button type="button" class="m-btn ghost" style="width:100%;margin-top:6px;font-size:12px;padding:8px" onclick="previewDutyRosterNotification('${day}')">🔔 שלח לי תצוגה מקדימה של ההתראה ליום זה</button>
     </div>`;
   }).join("");
   // הצעת AI היא טיוטה בלבד — לא נשמרת עד שאדם בודק ולוחץ "שמור שיבוץ" בעצמו
@@ -5718,6 +5719,41 @@ async function saveDutyRoster(){
   if(ambiguous.length){ toast("❓ יש שמות דו-משמעיים — תקן לשם המלא ונסה לשמור שוב"); return; }
   await sSetRaw("board_roster", {weekKey: todayKey(), days: resolvedDays});
   toast("שיבוץ התורנויות נשמר ✓");
+}
+
+/* שולחת התראת-בדיקה אמיתית (FCM) על התוכן הנוכחי בעורך, ליום נבחר —
+   אך ורק למכשיר של מי שלחץ (fcmToken של המכשיר הנוכחי), באותו נוסח
+   בדיוק שהתזכורת האוטומטית (dutyRosterDigest, functions/index.js)
+   הייתה שולחת למפקד המסגרת שלו. לא נוגעת באף מפקד אחר ולא כותבת
+   ל-board_roster — רק עוזרת לראות איך ההתראה נראית לפני שסומכים עליה.
+   מסננת לפי שם מדויק (כמו resolveNameToShed בשרת) — שמות שלא הושלמו
+   לשם מלא (טיוטת AI שעדיין לא נשמרה) לא יזוהו, בכוונה, כדי שהתצוגה
+   המקדימה תשקף בדיוק את מה שהתזכורת האמיתית הייתה שולחת. */
+async function previewDutyRosterNotification(day){
+  if(!fcmToken){ toast("אין הרשאת התראות במכשיר הזה — אשר קודם התראות ונסה שוב 🔕"); return; }
+  const dutyNames = parseDutyNames(document.getElementById("duty-tp-"+day).value);
+  const restNames = parseDutyNames(document.getElementById("duty-rest-"+day).value);
+  const allPersonnel = await fetchAllPersonnelByShed();
+  const mine = new Set((allPersonnel[currentShed.id]||[]).map(p=>p.name));
+  const myDuty = dutyNames.filter(n=>mine.has(n));
+  const myRest = restNames.filter(n=>mine.has(n));
+  if(!myDuty.length && !myRest.length){
+    toast(`אף אחד מ${currentShed.name} לא מזוהה ביום ${day} (ודא ששמות נשמרו כשם מלא) — אין מה לתצוגה מקדימה`);
+    return;
+  }
+  const parts = [];
+  if(myDuty.length) parts.push(`צוות תורן: ${myDuty.join(", ")}`);
+  if(myRest.length) parts.push(`נח: ${myRest.join(", ")}`);
+  try{
+    const fnMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js");
+    const functions = fnMod.getFunctions(fbAuth.app, "me-west1");
+    const sendFn = fnMod.httpsCallable(functions, "sendTestNotificationToSelf");
+    await sendFn({token: fcmToken, title: `📋 תורנויות היום (${day}) · ${currentShed.name}`, body: parts.join(" · ")});
+    toast("נשלחה תצוגה מקדימה למכשיר שלך 🔔");
+  }catch(e){
+    console.error("previewDutyRosterNotification", e);
+    toast("שליחת התצוגה המקדימה נכשלה ⚠️");
+  }
 }
 
 /* כפתור "העלאת לוח צוות חדש":
