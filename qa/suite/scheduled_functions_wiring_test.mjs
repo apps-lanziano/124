@@ -45,11 +45,12 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
     hasSchedule && usesLib && importsLib, JSON.stringify({hasSchedule, usesLib, importsLib}));
 }
 
-// 5. תזכורות + מסדר בוקר + סקירת מ״ע אחזקה + תקציר יומי + שיבוץ תורנויות מסננים טוקנים למפקדים בלבד (אותה תבנית כמו remindUnsignedDaily)
+// 5. תזכורות + מסדר בוקר + סקירת מ״ע אחזקה + שיבוץ תורנויות מסננים טוקנים למפקדים בלבד (אותה תבנית כמו remindUnsignedDaily).
+// תקציר יומי (dailyDigest) לא נכלל כאן מדעת — הוא עבר לסינון ייעודי, ראו 5ג.
 {
   const filterCount = (fn.match(/filter\(\(\[, m\]\)\s*=>\s*m\s*&&\s*m\.role\s*===\s*"מפקד"\)/g) || []).length;
-  record("סה״כ 7 מקומות מסננים למפקד בלבד (חתימות, הסמכות, מילואים, מסדר בוקר, סקירת מ״ע אחזקה, תקציר יומי, שיבוץ תורנויות)",
-    filterCount===7, String(filterCount));
+  record("סה״כ 6 מקומות מסננים למפקד בלבד (חתימות, הסמכות, מילואים, מסדר בוקר, סקירת מ״ע אחזקה, שיבוץ תורנויות)",
+    filterCount===6, String(filterCount));
 }
 
 // 5ו. רישיונות עומדים לפוג ממשיכים להתדווח רק במסגרת סקירת מ״ע אחזקה
@@ -69,6 +70,20 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
   record("תקציר יומי: מתוזמן ל-08:00 (Asia/Jerusalem), ומשתמש בלוגיקה מ-lib/daily_digest",
     hasSchedule && hasCorrectTime && usesLib && importsLib,
     JSON.stringify({hasSchedule, hasCorrectTime, usesLib, importsLib}));
+}
+
+// 5ה. תקציר יומי — החלטת מוצר: רק רשימה סגורה של מפקדים בשם (לא כל role:"מפקד")
+// מקבלת אותו, כדי שמ״ע אחזקה/הדרכה לא יקבלו אותו לצד הסיכום הייעודי שלהם
+{
+  const importsFilter = /const \{buildDailyDigests, filterDailyDigestTokens\} = require\("\.\/lib\/daily_digest"\)/.test(fn);
+  const start = fn.indexOf("exports.dailyDigest");
+  const end = fn.indexOf("exports.dutyRosterDigest");
+  const body = start >= 0 && end > start ? fn.slice(start, end) : "";
+  const usesAllowlistFilter = /const cmdTokens = filterDailyDigestTokens\(tokMap\)/.test(body);
+  const noGenericInlineFilter = !/filter\(\(\[, m\]\)\s*=>\s*m\s*&&\s*m\.role\s*===\s*"מפקד"\)/.test(body);
+  record("תקציר יומי (dailyDigest) משתמש בסינון הרשימה הסגורה (filterDailyDigestTokens), לא בסינון role בלבד",
+    importsFilter && usesAllowlistFilter && noGenericInlineFilter,
+    JSON.stringify({importsFilter, usesAllowlistFilter, noGenericInlineFilter}));
 }
 
 // 5ד. שיבוץ תורנויות — מתוזמן ל-06:00, בטיימזון ישראל, מחובר ל-lib/duty_roster_digest

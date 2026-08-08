@@ -2,7 +2,7 @@
    מדומה, בלי צורך ב-emulator. חשוב: בשונה מתזכורות נקודתיות, התקציר לא
    אמור לקרוא/לכתוב שום לוג cooldown משלו — רק להרכיב תמונת מצב נוכחית
    מתוך פונקציות הקריאה הקיימות. */
-import { buildDailyDigests } from '../../functions/lib/daily_digest.js';
+import { buildDailyDigests, filterDailyDigestTokens, DAILY_DIGEST_ALLOWED_NAMES } from '../../functions/lib/daily_digest.js';
 
 const results = [];
 function record(name, pass, detail){ results.push({name, pass, detail}); }
@@ -64,6 +64,46 @@ const store = {
   record("קריאה שנייה (יום אחרי) עדיין מדווחת על אותה בעיה — אין cooldown לתקציר",
     first.length===1 && second.length===1 && second[0].totalCount===first[0].totalCount,
     JSON.stringify({first, second}));
+}
+
+// --- filterDailyDigestTokens: רשימה סגורה לפי שם — לא כל role:"מפקד" ---
+
+// 4. מפקד ברשימת ההרשאה מקבל טוקן, מפקד שלא ברשימה לא (גם אם התפקיד תקין)
+{
+  const tokMap = {
+    tok_naor: {name: "נאור ישראל", role: "מפקד"},
+    tok_other_cmdr: {name: "מישהו אחר לגמרי", role: "מפקד"},
+  };
+  const tokens = filterDailyDigestTokens(tokMap);
+  record("מפקד ברשימת ההרשאה מקבל טוקן", tokens.includes("tok_naor"), JSON.stringify(tokens));
+  record("מפקד עם role תקין אך לא ברשימת ההרשאה לא מקבל טוקן (זו בדיוק הבקשה: מ״ע אחזקה/הדרכה לא מקבלים סקירה זו)",
+    !tokens.includes("tok_other_cmdr"), JSON.stringify(tokens));
+}
+
+// 5. תפקיד לא-מפקד לא מקבל גם אם השם ברשימה (לדוגמה חייל בשם זהה)
+{
+  const tokMap = { tok_soldier: {name: "אלעד לנציאנו", role: "חייל"} };
+  const tokens = filterDailyDigestTokens(tokMap);
+  record("שם ברשימה אך תפקיד לא-מפקד לא מקבל טוקן", tokens.length===0, JSON.stringify(tokens));
+}
+
+// 6. רווחים כפולים/מובילים בשם לא מונעים התאמה (נורמליזציה)
+{
+  const tokMap = { tok_x: {name: "  אלעד   לנציאנו  ", role: "מפקד"} };
+  const tokens = filterDailyDigestTokens(tokMap);
+  record("נורמליזציית רווחים בשם עדיין מתאימה לרשימה", tokens.includes("tok_x"), JSON.stringify(tokens));
+}
+
+// 7. מפת טוקנים ריקה/undefined לא זורקת חריגה
+{
+  record("מפה ריקה מחזירה מערך ריק", JSON.stringify(filterDailyDigestTokens({}))==="[]", "ok");
+  record("undefined לא זורק חריגה", JSON.stringify(filterDailyDigestTokens(undefined))==="[]", "ok");
+}
+
+// 8. הרשימה כוללת בדיוק את 7 השמות שהוגדרו — לא פחות ולא יותר בטעות
+{
+  record("DAILY_DIGEST_ALLOWED_NAMES מכילה בדיוק 7 שמות",
+    DAILY_DIGEST_ALLOWED_NAMES.size===7, String(DAILY_DIGEST_ALLOWED_NAMES.size));
 }
 
 console.log("\n=== SUMMARY ===");

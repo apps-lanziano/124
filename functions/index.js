@@ -20,7 +20,7 @@ const {findUnsignedReminders} = require("./lib/reminders");
 const {findExpiringCerts} = require("./lib/cert_expiry_reminders");
 const {findOverdueReserves} = require("./lib/reserve_refresh_reminders");
 const {findVoIssues} = require("./lib/vo_reminders");
-const {buildDailyDigests} = require("./lib/daily_digest");
+const {buildDailyDigests, filterDailyDigestTokens} = require("./lib/daily_digest");
 const {buildDutyRosterDigests} = require("./lib/duty_roster_digest");
 const {analyzeBoardImage: analyzeBoardImageCore} = require("./lib/board_ai_analyze");
 const {isQuietDay} = require("./lib/quiet_days");
@@ -348,9 +348,7 @@ exports.dailyDigest = onSchedule(
       const tokRef = db.doc("sq124/push_tokens_" + d.shedId);
       const tokSnap = await tokRef.get();
       const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
-      const cmdTokens = Object.entries(tokMap)
-        .filter(([, m]) => m && m.role === "מפקד")
-        .map(([t]) => t);
+      const cmdTokens = filterDailyDigestTokens(tokMap);
       if (!cmdTokens.length) continue;
 
       const shedName = SHED_NAMES[d.shedId] || d.shedId;
