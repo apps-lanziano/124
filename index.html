@@ -853,8 +853,13 @@ nav{
 .cd .cd-q{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;background:none;border:none;font-family:inherit;color:var(--ink-2)}
 .cd .cd-qi{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-size:18px;background:var(--card);border:1px solid var(--line);color:var(--red);box-shadow:var(--shadow)}
 .cd .cd-q span{font-size:10.5px;font-weight:700}
-/* כפתור חזרה לדשבורד המפקד — צף מעל תוכן המסכים */
-#back-to-dash{position:absolute;bottom:calc(var(--nav-h, 80px) + 12px);inset-inline-start:14px;z-index:60;display:none;
+/* כפתור חזרה לדשבורד המפקד — צף מעל תוכן המסכים והסרגל התחתון (nav=30),
+   אך *מתחת* לכל שכבת-על: קורא/תצוגת לוח (40), חלונות (.modal-bg=55),
+   ותפריט "עוד" (.sheet-bg=56). קודם ה-z-index היה 60 ולכן הכפתור ריחף
+   מעל חלונות ותפריטים וחסם אותם — לחיצה עליו רק החליפה את המסך שמתחת
+   בלי לסגור את השכבה ("לא עושה כלום"). z-index:35 שומר אותו מעל המסך
+   הרגיל בלבד, וכל שכבת-על מכסה אותו כראוי. */
+#back-to-dash{position:absolute;bottom:calc(var(--nav-h, 80px) + 12px);inset-inline-start:14px;z-index:35;display:none;
   align-items:center;justify-content:center;background:linear-gradient(135deg,var(--red-deep),var(--red));color:#fff;
   border:none;border-radius:50%;width:44px;height:44px;padding:0;font-family:inherit;font-weight:800;font-size:22px;line-height:1;
   cursor:pointer;box-shadow:0 8px 20px -5px rgba(179,15,38,.55)}
