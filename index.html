@@ -1566,7 +1566,7 @@ nav{
           <div>
             <h3 style="margin:0;font-size:16px">✍️ חתימות ותיעוד קרא-וחתום</h3>
           </div>
-          <button class="add-btn" onclick="exportAdminLog()" style="background:var(--card);color:var(--red);border:1px solid var(--red-line);flex-shrink:0">📄 ייצוא לדוח</button>
+          <button class="add-btn" onclick="openSigHistory()" style="background:var(--card);color:var(--red);border:1px solid var(--red-line);flex-shrink:0">📋 היסטוריה לתיעוד</button>
         </div>
         <div class="cmd-tabs" style="margin-bottom:16px">
           <button class="cmd-tab active" id="logview-byName" onclick="adminLogView('byName')">👤 לפי שם</button>
@@ -2284,6 +2284,20 @@ nav{
       <div class="modal-actions" style="margin-top:12px;display:flex;gap:8px">
         <button class="m-btn primary" onclick="exportSafetyReport()" style="flex:1">📸 ייצוא כתמונה</button>
         <button class="m-btn ghost" onclick="document.getElementById('safety-report-modal').classList.remove('open')" style="flex:1">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- היסטוריית קרא-וחתום לתיעוד (אחראי הדרכה) — טקסט פשוט, בלי תלות ברשת/CDN -->
+  <div class="modal-bg" id="sig-history-modal">
+    <div class="modal">
+      <h3>📋 היסטוריית קרא-וחתום — לתיעוד</h3>
+      <div class="m-sub">לכל נושא: מי ביצע (שמות ותאריך), לפי מסגרת. להעתקה או שמירה כטקסט לצורך סיקור.</div>
+      <textarea id="sig-history-text" readonly style="width:100%;height:46vh;font-family:inherit;font-size:12.5px;line-height:1.6;border:1px solid var(--line);border-radius:12px;padding:10px;margin:10px 0;resize:vertical;direction:rtl;text-align:right;white-space:pre-wrap;background:var(--card);color:var(--ink)"></textarea>
+      <div class="modal-actions" style="display:flex;gap:8px">
+        <button class="m-btn primary" onclick="copySigHistory()" style="flex:1">📋 העתק</button>
+        <button class="m-btn ghost" onclick="saveSigHistoryFile()" style="flex:1">⬇️ שמור קובץ</button>
+        <button class="m-btn ghost" onclick="document.getElementById('sig-history-modal').classList.remove('open')" style="flex:0 0 auto">סגור</button>
       </div>
     </div>
   </div>
@@ -9370,6 +9384,81 @@ async function exportAdminLog(){
       toast("הדוח יוצא כתמונה 📸");
     });
   }catch(e){ toast("⚠️ ייצוא נכשל"); console.error(e); }
+}
+
+/* ===== היסטוריית קרא-וחתום לתיעוד — טקסט פשוט =====
+   לבקשת אחראי ההדרכה: תיעוד היסטורי לסיקור, לכל נושא קרא-וחתום מי ביצע
+   (שמות + תאריך), לפי מסגרת. במכוון טקסט פשוט (לא תמונה/PDF מעוצב): לא
+   תלוי ב-html2canvas מ-CDN (שנכשל ב-PWA/רשת חסומה, זו הסיבה שהייצוא
+   הקודם לא עבד), עובד לא-מקוון, וניתן להעתקה/שמירה לכל מסמך סיקור. */
+function buildSigHistoryText(data, meta){
+  const {adminItems, perShed} = data || {};
+  const lines = [];
+  lines.push("היסטוריית קרא-וחתום — טייסת 124");
+  if(meta && (meta.at || meta.by)) lines.push("הופק: " + (meta.at||"") + (meta.by ? (" · " + meta.by) : ""));
+  lines.push("=".repeat(42));
+  if(!adminItems || !adminItems.length){
+    lines.push(""); lines.push("אין עדיין פריטי קרא-וחתום שפורסמו.");
+    return lines.join("\n");
+  }
+  adminItems.slice().reverse().forEach(item=>{
+    lines.push("");
+    lines.push("נושא: " + item.title);
+    if(item.date) lines.push("תאריך פרסום: " + item.date);
+    lines.push("-".repeat(42));
+    let anyShed = false;
+    perShed.forEach(({shed, personnel, eventIds, sigsBy})=>{
+      if(!eventIds.has(item.id) || !personnel.length) return;   // לא הגיע/אין צוות
+      anyShed = true;
+      const signed  = personnel.filter(p=> sigsBy[p.name] && sigsBy[p.name][item.id]);
+      const missing = personnel.filter(p=> !(sigsBy[p.name] && sigsBy[p.name][item.id]));
+      lines.push(shed.name + " — ביצעו " + signed.length + "/" + personnel.length + ":");
+      if(signed.length){
+        signed.forEach(p=>{
+          const sig = sigsBy[p.name][item.id];
+          lines.push("  ✓ " + p.name + (sig && sig.date ? (" — " + sig.date) : ""));
+        });
+      } else {
+        lines.push("  (אף אחד עדיין)");
+      }
+      if(missing.length) lines.push("  טרם ביצעו: " + missing.map(p=>p.name).join(", "));
+    });
+    if(!anyShed) lines.push("(לא נקלט באף מסגרת עם צוות)");
+  });
+  return lines.join("\n");
+}
+async function openSigHistory(){
+  const box = document.getElementById("sig-history-text");
+  if(!box) return;
+  box.value = "טוען…";
+  document.getElementById("sig-history-modal").classList.add("open");
+  try{
+    const data = await computeAdminSigLog();
+    box.value = buildSigHistoryText(data, {at:new Date().toLocaleString("he-IL"), by:user||""});
+  }catch(e){ box.value = "טעינת ההיסטוריה נכשלה — נסה שוב."; console.error("openSigHistory", e); }
+}
+function copySigHistory(){
+  const box = document.getElementById("sig-history-text");
+  if(!box) return;
+  box.focus(); box.select();
+  const done = ()=>toast("הועתק ✓ אפשר להדביק במסמך הסיקור");
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(box.value).then(done, ()=>{ try{ document.execCommand("copy"); done(); }catch(_){ toast("בחר והעתק ידנית"); } });
+    } else { document.execCommand("copy"); done(); }
+  }catch(e){ toast("בחר והעתק ידנית"); }
+}
+function saveSigHistoryFile(){
+  const box = document.getElementById("sig-history-text");
+  if(!box) return;
+  try{
+    const blob = new Blob([box.value], {type:"text/plain;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "היסטוריית_קרא_וחתום.txt"; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    toast("נשמר כקובץ טקסט ✓");
+  }catch(e){ toast("שמירה נכשלה — השתמש בכפתור \"העתק\""); console.error(e); }
 }
 
 /* ---- squadron-wide alerts (overview) ---- */
