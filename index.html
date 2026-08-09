@@ -9393,39 +9393,52 @@ async function exportAdminLog(){
    הקודם לא עבד), עובד לא-מקוון, וניתן להעתקה/שמירה לכל מסמך סיקור. */
 function buildSigHistoryText(data, meta){
   const {adminItems, perShed} = data || {};
-  const lines = [];
-  lines.push("היסטוריית קרא-וחתום — טייסת 124");
-  if(meta && (meta.at || meta.by)) lines.push("הופק: " + (meta.at||"") + (meta.by ? (" · " + meta.by) : ""));
-  lines.push("=".repeat(42));
+  const L = [];
+  const BAR = "═".repeat(40);
+  const THIN = "─".repeat(36);
+  L.push(BAR);
+  L.push("   היסטוריית קרא-וחתום — טייסת 124");
+  if(meta && (meta.at || meta.by)) L.push("   הופק: " + (meta.at||"") + (meta.by ? (" · " + meta.by) : ""));
+  L.push(BAR);
   if(!adminItems || !adminItems.length){
-    lines.push(""); lines.push("אין עדיין פריטי קרא-וחתום שפורסמו.");
-    return lines.join("\n");
+    L.push(""); L.push("אין עדיין פריטי קרא-וחתום שפורסמו.");
+    return L.join("\n");
   }
-  adminItems.slice().reverse().forEach(item=>{
-    lines.push("");
-    lines.push("נושא: " + item.title);
-    if(item.date) lines.push("תאריך פרסום: " + item.date);
-    lines.push("-".repeat(42));
-    let anyShed = false;
-    perShed.forEach(({shed, personnel, eventIds, sigsBy})=>{
-      if(!eventIds.has(item.id) || !personnel.length) return;   // לא הגיע/אין צוות
-      anyShed = true;
+  // מבנה לפי מסגרת: כל מסגרת קטע נפרד ובולט, ובתוכו הנושאים ומי ביצע —
+  // כדי שהמסמך ייקרא מסגרת-אחר-מסגרת בבירור לצורך סיקור (בקשת המשתמש).
+  let anyShed = false;
+  perShed.forEach(({shed, personnel, eventIds, sigsBy})=>{
+    const items = adminItems.filter(it=>eventIds.has(it.id));
+    if(!personnel.length && !items.length) return;   // מסגרת ריקה לגמרי — מדלגים
+    anyShed = true;
+    L.push("");
+    L.push("");
+    L.push(BAR);
+    L.push("🏠  מסגרת: " + shed.name + "   ·   " + personnel.length + " אנשי צוות");
+    L.push(BAR);
+    if(!items.length){ L.push("   (לא פורסמו פריטי קרא-וחתום למסגרת זו)"); return; }
+    if(!personnel.length){ L.push("   (אין צוות רשום במסגרת זו)"); return; }
+    const ordered = items.slice().reverse();
+    ordered.forEach((item, idx)=>{
       const signed  = personnel.filter(p=> sigsBy[p.name] && sigsBy[p.name][item.id]);
       const missing = personnel.filter(p=> !(sigsBy[p.name] && sigsBy[p.name][item.id]));
-      lines.push(shed.name + " — ביצעו " + signed.length + "/" + personnel.length + ":");
+      L.push("");
+      L.push("   📄 " + item.title + (item.date ? ("   ·   פורסם " + item.date) : ""));
+      L.push("      ביצעו " + signed.length + "/" + personnel.length + ":");
       if(signed.length){
         signed.forEach(p=>{
           const sig = sigsBy[p.name][item.id];
-          lines.push("  ✓ " + p.name + (sig && sig.date ? (" — " + sig.date) : ""));
+          L.push("        ✓ " + p.name + (sig && sig.date ? ("   —   " + sig.date) : ""));
         });
       } else {
-        lines.push("  (אף אחד עדיין)");
+        L.push("        (אף אחד עדיין)");
       }
-      if(missing.length) lines.push("  טרם ביצעו: " + missing.map(p=>p.name).join(", "));
+      if(missing.length) L.push("      טרם ביצעו: " + missing.map(p=>p.name).join(", "));
+      if(idx < ordered.length-1){ L.push("      " + THIN); }
     });
-    if(!anyShed) lines.push("(לא נקלט באף מסגרת עם צוות)");
   });
-  return lines.join("\n");
+  if(!anyShed){ L.push(""); L.push("אין מסגרות עם נתונים להצגה."); }
+  return L.join("\n");
 }
 async function openSigHistory(){
   const box = document.getElementById("sig-history-text");
