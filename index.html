@@ -5949,10 +5949,16 @@ async function openBoardViewer(id){
   document.getElementById("board-viewer").classList.add("open");
   initImgZoomGestures("board-zoom-wrap", "board-viewer-img", "board-zoom-lbl");
   showZoomHint("board-zoom-hint");
+  // הכפתור האדום הצף "לדשבורד" מרחף מעל שכבת התמונה (z-index גבוה יותר) ולחיצה
+  // עליו רק מחליפה את המסך שמתחת בלי לסגור את התמונה — "נראה שלא עושה כלום".
+  // מסתירים אותו כל עוד התמונה פתוחה (יש לתצוגה כפתור חזור → משלה שעובד).
+  { const bd = document.getElementById("back-to-dash"); if(bd) bd.style.display = "none"; }
   openFullscreenOverlay(closeBoardViewer);
 }
 function closeBoardViewer(){
   document.getElementById("board-viewer").classList.remove("open");
+  // מחזירים את שליטת ה-class על הנראות (‎.show‎) — הכפתור יחזור אם וכשמתאים למסך שמתחת
+  { const bd = document.getElementById("back-to-dash"); if(bd) bd.style.display = ""; }
   closeFullscreenOverlay();
 }
 
