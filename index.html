@@ -391,7 +391,11 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
   pointer-events:none;transition:opacity .4s}
 #board-zoom-ctrl{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:3}
 #board-zoom-hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:3}
-/* תמונת קרא-וחתום: מסגרת בגובה מוגבל בתוך עמוד גולל, לא מסך מלא */
+/* תמונת קרא-וחתום: מסגרת בגובה מוגבל בתוך עמוד גולל, לא מסך מלא.
+   .doc-zoom-frame הוא ההורה הממוקם (position:relative) של פקדי הזום —
+   בלעדיו הם היו נצמדים ל-#doc-reader כולו ומכסים את כפתור "אישור קריאה"
+   שבתחתית (באג שבגללו לא ניתן היה ללחוץ על הכפתור). */
+.doc-zoom-frame{position:relative}
 .doc-img-zoom-wrap{width:100%;max-height:65vh;border-radius:var(--radius);border:1px solid var(--line);box-shadow:var(--shadow-lg)}
 .doc-zoom-ctrl{position:absolute;bottom:10px;left:50%;transform:translateX(-50%)}
 .doc-zoom-hint{position:absolute;top:10px;left:50%;transform:translateX(-50%)}
@@ -4508,15 +4512,17 @@ async function openReader(id, adminSourced){
   const ftype = currentDoc.ftype || "image";
   let viewer = "";
   if(ftype === "image"){
-    viewer = `<div class="img-zoom-wrap doc-img-zoom-wrap" id="doc-zoom-wrap">
-        <img id="doc-zoom-img" src="${fileData}" alt="קרא וחתום">
-      </div>
-      <div class="img-zoom-hint doc-zoom-hint" id="doc-zoom-hint">🔍 צביטה להגדלה · הקשה כפולה לזום מהיר</div>
-      <div class="img-zoom-ctrl doc-zoom-ctrl">
-        <button onclick="imgZoomBy('doc-zoom-wrap','doc-zoom-img','doc-zoom-lbl',-0.5)" aria-label="הקטן">−</button>
-        <span class="img-zoom-lbl" id="doc-zoom-lbl">100%</span>
-        <button onclick="imgZoomBy('doc-zoom-wrap','doc-zoom-img','doc-zoom-lbl',0.5)" aria-label="הגדל">+</button>
-        <button onclick="imgZoomReset('doc-zoom-wrap','doc-zoom-img','doc-zoom-lbl')" aria-label="איפוס" style="font-size:16px">⟲</button>
+    viewer = `<div class="doc-zoom-frame">
+        <div class="img-zoom-wrap doc-img-zoom-wrap" id="doc-zoom-wrap">
+          <img id="doc-zoom-img" src="${fileData}" alt="קרא וחתום">
+        </div>
+        <div class="img-zoom-hint doc-zoom-hint" id="doc-zoom-hint">🔍 צביטה להגדלה · הקשה כפולה לזום מהיר</div>
+        <div class="img-zoom-ctrl doc-zoom-ctrl">
+          <button onclick="imgZoomBy('doc-zoom-wrap','doc-zoom-img','doc-zoom-lbl',-0.5)" aria-label="הקטן">−</button>
+          <span class="img-zoom-lbl" id="doc-zoom-lbl">100%</span>
+          <button onclick="imgZoomBy('doc-zoom-wrap','doc-zoom-img','doc-zoom-lbl',0.5)" aria-label="הגדל">+</button>
+          <button onclick="imgZoomReset('doc-zoom-wrap','doc-zoom-img','doc-zoom-lbl')" aria-label="איפוס" style="font-size:16px">⟲</button>
+        </div>
       </div>`;
   } else if(ftype === "pdf"){
     viewer = `<div class="file-viewer"><iframe src="${fileData}" title="מסמך PDF"></iframe></div>
@@ -4549,6 +4555,9 @@ async function openReader(id, adminSourced){
     }
   }
   document.getElementById("doc-reader").classList.add("open");
+  // הכפתור האדום הצף "לדשבורד" מרחף (z-index גבוה) ועלול לכסות את הפינה
+  // של כפתור "אישור קריאה" — מסתירים אותו כל עוד הקורא פתוח.
+  { const bd = document.getElementById("back-to-dash"); if(bd) bd.style.display = "none"; }
   if(ftype === "image"){
     imgZoomReset("doc-zoom-wrap", "doc-zoom-img", "doc-zoom-lbl");
     initImgZoomGestures("doc-zoom-wrap", "doc-zoom-img", "doc-zoom-lbl");
@@ -4558,6 +4567,7 @@ async function openReader(id, adminSourced){
 }
 function closeReader(){
   document.getElementById("doc-reader").classList.remove("open");
+  { const bd = document.getElementById("back-to-dash"); if(bd) bd.style.display = ""; }
   closeFullscreenOverlay();
 }
 
