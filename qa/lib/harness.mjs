@@ -176,6 +176,59 @@ export async function visibleScreens(page){
   });
 }
 
+/* סורק חסימות-לחיצה: עבור הקונטיינר הפעיל (שכבת-על פתוחה אם יש, אחרת
+   המסך הפעיל), מוודא שכל אלמנט אינטראקטיבי גלוי הוא באמת האלמנט
+   העליון בנקודת המרכז שלו (document.elementFromPoint). אם אלמנט אחר
+   מכסה אותו — המשתמש לא יכול ללחוץ עליו, וזה בדיוק סוג הבאג שמשתמשים
+   גילו ידנית (כפתור צף שחוסם, פקד זום מעל "אישור קריאה"). מחזיר רשימת
+   פקדים חסומים (ריק = תקין). מסנן אלמנטים מוסתרים/זעירים/מחוץ למסך
+   וקינון לגיטימי (אלמנט מכוסה ע"י צאצא/הורה של עצמו). */
+export async function findOccludedControls(page, contextLabel){
+  return page.evaluate((label)=>{
+    const overlay = document.querySelector('#doc-reader.open, #board-viewer.open, .modal-bg.open, .sheet-bg.open');
+    const container = overlay || document.querySelector('.screen.active') || document.body;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const sel = 'button, a[href], [role="button"], .m-btn, .admin-card, .banner, .confirm-btn';
+    const bad = [];
+    for(const el of container.querySelectorAll(sel)){
+      if(el.disabled) continue;
+      const cs = getComputedStyle(el);
+      if(cs.display==='none' || cs.visibility==='hidden' || Number(cs.opacity)===0 || cs.pointerEvents==='none') continue;
+      const r = el.getBoundingClientRect();
+      if(r.width < 8 || r.height < 8) continue;               // מכווץ/מוסתר
+      const cx = r.left + r.width/2, cy = r.top + r.height/2;
+      if(cx < 0 || cy < 0 || cx > vw || cy > vh) continue;     // גלל מחוץ למסך — לא נבדק
+      // דלג על אלמנטים שנחתכים ע"י אב עם overflow (אקורדיון/פאנל מקופל
+      // עם max-height:0) — יש להם מיקום ב-DOM אך אינם נראים/לחיצים בפועל,
+      // ולכן elementFromPoint יחזיר את מה שמעליהם ויפליל אותם בטעות.
+      let clipped = false;
+      for(let anc = el.parentElement; anc && anc !== document.body; anc = anc.parentElement){
+        const acs = getComputedStyle(anc);
+        if(acs.overflow !== 'visible' || acs.overflowY !== 'visible' || acs.overflowX !== 'visible'){
+          const ar = anc.getBoundingClientRect();
+          if(cx < ar.left-1 || cx > ar.right+1 || cy < ar.top-1 || cy > ar.bottom+1){ clipped = true; break; }
+        }
+      }
+      if(clipped) continue;
+      const hit = document.elementFromPoint(cx, cy);
+      if(!hit) continue;
+      if(el === hit || el.contains(hit) || hit.contains(el)) continue;   // קינון לגיטימי
+      if(hit.closest && hit.closest('button, a[href], [role="button"]') === el) continue;
+      // כיסוי ע"י "כרום" קבוע (סרגל ניווט תחתון), או ע"י הכפתור הצף במסך
+      // רגיל — אינו באג לחיצה אמיתי כי התוכן נגלל מסביבו. אבל בשכבת-על
+      // (שלא נגללת) כל כיסוי הוא באג ולכן נשמר.
+      const coveredByChrome = hit.closest && (hit.closest("nav") || (!overlay && hit.closest("#back-to-dash")));
+      if(coveredByChrome) continue;
+      bad.push({
+        context: label || "",
+        control: ((el.id ? "#"+el.id : "") + " " + (el.textContent||"").trim().slice(0,32)).trim() || el.className,
+        coveredBy: (hit.id ? "#"+hit.id : (hit.className && typeof hit.className==="string" ? "."+hit.className.split(" ")[0] : hit.tagName)),
+      });
+    }
+    return bad;
+  }, contextLabel);
+}
+
 /* מנווט למסך ומחזיר האם הוא נטען והציג תוכן */
 export async function visitScreen(page, screenId){
   return page.evaluate(async (id)=>{
