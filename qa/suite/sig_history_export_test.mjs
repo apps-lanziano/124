@@ -36,6 +36,7 @@ const out = await page.evaluate(async ()=>{
 });
 
 record("התחברות הצליחה", login.ok, JSON.stringify(login));
+record("לוגיקה טהורה: כל מסגרת מודגשת כקטע נפרד (כותרת מסגרת)", /🏠\s*מסגרת:\s*סככה 1/.test(out.pureText), out.pureText.slice(0,160));
 record("לוגיקה טהורה: הנושא מופיע בטקסט", out.pureText.includes("נוהל בטיחות"), out.pureText.slice(0,120));
 record("לוגיקה טהורה: מי שביצע (דני) מופיע עם תאריך", out.pureText.includes("דני") && out.pureText.includes("2.1.2026"), out.pureText);
 record("לוגיקה טהורה: מי שלא ביצע (רון) מופיע תחת \"טרם ביצעו\"", /טרם ביצעו:.*רון/.test(out.pureText), out.pureText);
