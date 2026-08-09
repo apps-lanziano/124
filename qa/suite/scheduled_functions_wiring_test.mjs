@@ -89,10 +89,10 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
 // 5ד. שיבוץ תורנויות — מתוזמן ל-06:00, בטיימזון ישראל, מחובר ל-lib/duty_roster_digest
 {
   const hasSchedule = /dutyRosterDigest\s*=\s*onSchedule/.test(fn);
-  const hasCorrectTime = /schedule:\s*"0 8 \* \* \*"/.test(fn);
+  const hasCorrectTime = /schedule:\s*"5 8 \* \* \*"/.test(fn);
   const usesLib = /buildDutyRosterDigests\(db\)/.test(fn);
   const importsLib = /require\("\.\/lib\/duty_roster_digest"\)/.test(fn);
-  record("שיבוץ תורנויות: מתוזמן ל-08:00 (Asia/Jerusalem), ומשתמש בלוגיקה מ-lib/duty_roster_digest",
+  record("שיבוץ תורנויות: מתוזמן ל-08:05 (מיד אחרי הסקירה היומית, ברצף), ומשתמש בלוגיקה מ-lib/duty_roster_digest",
     hasSchedule && hasCorrectTime && usesLib && importsLib,
     JSON.stringify({hasSchedule, hasCorrectTime, usesLib, importsLib}));
 }
