@@ -48,13 +48,14 @@ messaging.onBackgroundMessage(async (payload)=>{
   const title = d.title || "טייסת 124";
   const body  = d.body  || "";
 
-  // עדכון ה-badge: בסיס מהחלון + מספר הפריטים החדשים בהודעה זו
+  // עדכון ה-badge: מונה *התראות שלא נצפו* — כל התראה מוסיפה 1 (לא לפי
+  // מספר הפריטים בתוכה), כדי שהמספר על הסמל יהיה מובן: "כמה התראות חדשות
+  // מאז שפתחת את האפליקציה". החלון מאפס את הבסיס ל-0 בכל פתיחה (updateAppBadge).
   let count = 1;
   try{
     const db = await idbBadge();
     const base = Number(await idbGet(db, "count")) || 0;
-    const inc  = Number(d.n) || 1;
-    count = base + inc;
+    count = base + 1;
     await idbPut(db, "count", count);
   }catch(e){}
   try{ if(self.navigator && "setAppBadge" in self.navigator) await self.navigator.setAppBadge(count); }catch(e){}

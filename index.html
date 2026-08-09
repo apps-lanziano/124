@@ -6273,27 +6273,19 @@ async function updateBadges(){
   }
   updateAppBadge();
 }
-/* Badge על סמל האפליקציה (כמו מונה ההודעות בוואטסאפ) — Badging API.
-   סופר את הפריטים שממתינים למשתמש: קרא-וחתום שטרם אושרו + הודעות שלא נקראו.
-   דורש שהאפליקציה מותקנת (הוספה למסך הבית); באייפון נדרש גם אישור התראות. */
+/* Badge על סמל האפליקציה — Badging API. משמעות פשוטה וברורה: *מספר
+   ההתראות שהגיעו מאז שפתחת את האפליקציה בפעם האחרונה*. כשהאפליקציה
+   פתוחה (הקוד הזה רץ) המשתמש כבר "ראה" — ולכן מאפסים ל-0. ה-Service
+   Worker מגדיל ב-1 לכל התראה שמגיעה כשהאפליקציה סגורה/ברקע (ראו
+   firebase-messaging-sw.js). כך המספר תמיד מובן: "כך וכך התראות חדשות
+   מאז שהיית פה", והוא נעלם ברגע שנכנסים. (מה שממתין לטיפול — קרא-וחתום,
+   מטלות וכו' — מוצג בתוך האפליקציה כתגי הניווט, ראו updateBadges.)
+   דורש שהאפליקציה מותקנת; באייפון נדרש גם אישור התראות. */
 async function updateAppBadge(){
   try{
     if(!("setAppBadge" in navigator)) return;         // לא נתמך בדפדפן זה
-    if(!user || !currentShed){ navigator.clearAppBadge(); return; }
-    let count = 0;
-    // קרא-וחתום שטרם אושרו ע"י המשתמש
-    const events = await getEvents();
-    const reads = await sGetSigs(user);
-    count += events.filter(e=>!reads[e.id]).length;
-    // הודעות שהמשתמש עדיין לא צפה בהן
-    const isDeptUnit = !!(currentShed && currentShed.isDept);
-    const myDept = isDeptUnit ? personDept(PERSONNEL.find(p=>p.name===user)) : null;
-    let msgs = (await sGet("messages_list")) || [];
-    if(isDeptUnit && myDept) msgs = msgs.filter(m=>!m.dept || m.dept===myDept);
-    count += msgs.filter(m=>!(m.reads && m.reads[safeName(user)])).length;
-    if(count>0) await navigator.setAppBadge(count);
-    else await navigator.clearAppBadge();
-    idbSetBadgeBase(count);   // בסיס מסונכרן ל-Service Worker (שמגדיל בזמן push)
+    await navigator.clearAppBadge();   // האפליקציה פתוחה => "נצפה" => 0
+    idbSetBadgeBase(0);                // מאפסים את הבסיס ל-Service Worker
   }catch(e){ /* לא נתמך / נכשל — מתעלמים בשקט */ }
 }
 /* מונה ה-badge משותף עם ה-Service Worker דרך IndexedDB: החלון כותב את הספירה
