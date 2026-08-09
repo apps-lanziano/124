@@ -325,11 +325,13 @@ exports.remindVoIssuesDaily = onSchedule(
   },
 );
 
-/* ===== תקציר יומי =====
-   פוש אחד מרוכז לכל מפקד ב-08:00, בנוסף (לא במקום) לתזכורות הנקודתיות
-   למעלה — כדי שלא יצטרך "לרדוף" אחרי כמה פינגים נפרדים כדי להבין את
-   תמונת המצב של הבוקר. ריצה יומית קבועה, בלי תלות בלוג cooldown של אף
-   תזכורת אחרת (ראו lib/daily_digest.js). */
+/* ===== תקציר יומי (כולל שיבוץ תורנויות) =====
+   פוש אחד מרוכז לכל מפקד ב-08:00 — כולל גם את ממצאי הבוקר (חתימות/תקלות/
+   הסמכות) וגם את שיבוץ התורנות של היום מתוך "לוח צוות שבועי", כהודעה
+   אחת. אוחד לבקשת המשתמש (היו שתי התראות נפרדות ב-08:00 וב-08:05).
+   שיבוץ התורנות מצליב כל שם מול רשימות הצוות האמיתיות (buildDutyRosterDigests)
+   כדי לצרף לכל מפקד רק את החיילים של המסגרת שלו. ריצה יומית קבועה, בלי
+   תלות בלוג cooldown של אף תזכורת אחרת (ראו lib/daily_digest.js). */
 exports.dailyDigest = onSchedule(
   {
     schedule: "0 8 * * *",
@@ -341,84 +343,60 @@ exports.dailyDigest = onSchedule(
   async () => {
     if (isQuietDay(Date.now())) { console.log("תקציר יומי: יום שקט (שישי/שבת) — מדלג"); return; }
     const digests = await buildDailyDigests(db);
-    if (!digests.length) return;
+    const {dayName, digests: rosterDigests, unmatched} = await buildDutyRosterDigests(db);
+    if (unmatched.length) {
+      console.warn(`שיבוץ תורנויות (${dayName}): ${unmatched.length} שמות לא זוהו באף סככה: ${unmatched.join(", ")}`);
+    }
+
+    // מאחדים לפי מסגרת — מסגרת נכללת אם יש לה ממצאי סקירה או שיבוץ תורנות היום
+    const byShed = new Map();
+    for (const d of digests) byShed.set(d.shedId, {shedId: d.shedId, digest: d, roster: null});
+    for (const r of rosterDigests) {
+      const e = byShed.get(r.shedId) || {shedId: r.shedId, digest: null, roster: null};
+      e.roster = r;
+      byShed.set(r.shedId, e);
+    }
+    if (!byShed.size) return;
 
     let sentCount = 0;
-    for (const d of digests) {
-      const tokRef = db.doc("sq124/push_tokens_" + d.shedId);
+    for (const {shedId, digest, roster} of byShed.values()) {
+      const tokRef = db.doc("sq124/push_tokens_" + shedId);
       const tokSnap = await tokRef.get();
       const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
       const cmdTokens = filterDailyDigestTokens(tokMap);
       if (!cmdTokens.length) continue;
 
-      const shedName = SHED_NAMES[d.shedId] || d.shedId;
-      const parts = [];
-      if (d.unsignedCount) parts.push(`${d.unsignedCount} חתימות חסרות`);
-      if (d.openFaults) parts.push(`${d.openFaults} תקלות פתוחות`);
-      if (d.certsSoon) parts.push(`${d.certsSoon} הסמכות פגות השבוע`);
+      const shedName = SHED_NAMES[shedId] || shedId;
+      const lines = [];
+      if (digest) {
+        const parts = [];
+        if (digest.unsignedCount) parts.push(`${digest.unsignedCount} חתימות חסרות`);
+        if (digest.openFaults) parts.push(`${digest.openFaults} תקלות פתוחות`);
+        if (digest.certsSoon) parts.push(`${digest.certsSoon} הסמכות פגות השבוע`);
+        if (parts.length) lines.push(parts.join(" · "));
+      }
+      if (roster && (roster.duty.length || roster.rest.length)) {
+        const rparts = [];
+        if (roster.duty.length) rparts.push(`צוות תורן: ${roster.duty.join(", ")}`);
+        if (roster.rest.length) rparts.push(`נח: ${roster.rest.join(", ")}`);
+        lines.push(`🗓️ תורנות היום${dayName ? ` (${dayName})` : ""} — ${rparts.join(" · ")}`);
+      }
+      if (!lines.length) continue;
+
+      const count = (digest ? digest.totalCount : 0) +
+        (roster ? roster.duty.length + roster.rest.length : 0);
       await getMessaging().sendEachForMulticast({
         tokens: cmdTokens,
         data: {
           title: "📋 סקירה יומית למפקד · " + shedName,
-          body: parts.join(" · "),
+          body: lines.join("\n"),
           kind: "daily_digest",
-          n: String(d.totalCount),
+          n: String(count),
         },
       });
       sentCount++;
     }
-    console.log(`תקציר יומי: ${digests.length} מסגרות עם ממצאים, ${sentCount} נשלחו בפועל`);
-  },
-);
-
-/* ===== שיבוץ תורנויות יומי (מתוך "לוח צוות שבועי") =====
-   בכל בוקר ב-08:05 — מיד אחרי הסקירה היומית (dailyDigest ב-08:00), כך
-   ששתי ההתראות מגיעות ברצף ולא בול באותו רגע. קוראת את שיבוץ היום
-   (board_roster, מסמך גלובלי שמערבב שמות מכמה סככות), מצליבה כל שם מול
-   רשימות הצוות האמיתיות כדי לדעת לאיזו סככה הוא שייך בפועל, ושולחת לכל
-   מפקד רק את החיילים של המסגרת שלו — לא את כל השיבוץ הטייסתי. */
-exports.dutyRosterDigest = onSchedule(
-  {
-    schedule: "5 8 * * *",
-    timeZone: "Asia/Jerusalem",
-    region: "me-west1",
-    memory: "256MiB",
-    timeoutSeconds: 120,
-  },
-  async () => {
-    if (isQuietDay(Date.now())) { console.log("שיבוץ תורנויות: יום שקט (שישי/שבת) — מדלג"); return; }
-    const {dayName, digests, unmatched} = await buildDutyRosterDigests(db);
-    if (unmatched.length) {
-      console.warn(`שיבוץ תורנויות (${dayName}): ${unmatched.length} שמות לא זוהו באף סככה: ${unmatched.join(", ")}`);
-    }
-    if (!digests.length) return;
-
-    let sentCount = 0;
-    for (const d of digests) {
-      const tokRef = db.doc("sq124/push_tokens_" + d.shedId);
-      const tokSnap = await tokRef.get();
-      const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
-      const cmdTokens = Object.entries(tokMap)
-        .filter(([, m]) => m && m.role === "מפקד")
-        .map(([t]) => t);
-      if (!cmdTokens.length) continue;
-
-      const shedName = SHED_NAMES[d.shedId] || d.shedId;
-      const parts = [];
-      if (d.duty.length) parts.push(`צוות תורן: ${d.duty.join(", ")}`);
-      if (d.rest.length) parts.push(`נח: ${d.rest.join(", ")}`);
-      await getMessaging().sendEachForMulticast({
-        tokens: cmdTokens,
-        data: {
-          title: `📋 תורנויות היום (${dayName}) · ${shedName}`,
-          body: parts.join(" · "),
-          kind: "duty_roster_digest",
-          n: String(d.duty.length + d.rest.length),
-        },
-      });
-      sentCount++;
-    }
-    console.log(`שיבוץ תורנויות (${dayName}): ${digests.length} מסגרות עם שיבוץ, ${sentCount} נשלחו בפועל`);
+    console.log(`תקציר יומי (כולל תורנויות): ${byShed.size} מסגרות, ${sentCount} נשלחו בפועל`);
   },
 );
 
