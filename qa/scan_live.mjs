@@ -83,31 +83,6 @@ export async function run(){
     } else {
       console.error("[חי·אבחון legacy-global cfg_personnel] " + (legacy===null?"missing":"notarr"));
     }
-    // האם מסמך סככה 2 נראה כמו זרע (שמות בלבד, בלי שדות אישיים)?
-    const s2 = await get("shed2_cfg_personnel");
-    if(Array.isArray(s2) && s2.length){
-      const sample = s2[0] || {};
-      console.error("[חי·אבחון shed2 keys] " + Object.keys(sample).sort().join(","));
-    }
-    // ===== בדיקת שחזור PITR: האם אפשר לקרוא את מסמך סככה 2 כפי שהיה
-    // בעבר (לפני הדריסה)? getAll עם readTime עובד רק אם PITR מופעל
-    // בפרויקט והזמן בתוך חלון 7 הימים. read-only, לא כותב כלום. =====
-    const admin = await import('firebase-admin');
-    const docRef = db.collection(COLLECTION).doc("shed2_cfg_personnel");
-    for(const hoursAgo of [12, 24, 48, 72]){
-      try{
-        const t = admin.default.firestore.Timestamp.fromMillis(Date.now() - hoursAgo*3600*1000);
-        const [snap] = await db.getAll(docRef, { readTime: t });
-        const v = snap.exists ? snap.data().v : null;
-        const n = Array.isArray(v) ? v.length : (v===null?"missing":"notarr");
-        const pins = Array.isArray(v) ? v.filter(p=>p&&p.pinHash).length : 0;
-        const cmd  = Array.isArray(v) ? v.filter(p=>p&&p.role==="מפקד").length : 0;
-        console.error(`[PITR shed2 -${hoursAgo}h] n=${n} pin:${pins} מפקד:${cmd}`);
-      }catch(e){
-        console.error(`[PITR shed2 -${hoursAgo}h] לא זמין: ${String(e&&e.message).slice(0,90)}`);
-        break;   // אם PITR לא זמין בכלל — אין טעם לנסות זמנים נוספים
-      }
-    }
   }catch(e){ console.error("[חי·אבחון] נכשל:", String(e&&e.message).slice(0,120)); }
 
   /* ---------- 1. פריטים שפורסמו אך לא הגיעו לכל המסגרות ---------- */
