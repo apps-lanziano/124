@@ -54,43 +54,6 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
   console.log("errs1",errs); await p.close();
 }
 
-/* exportAdminLog: window.print() לא עובד בכלל ב-PWA מותקן במסך הבית
-   (בעיקר iOS standalone) — לכן הוחלף בייצוא תמונה עם html2canvas, אותה
-   שיטה שכבר מוכחת בדוח קרא-וחתום/מגמות. בודק גם מקרה בלי נתונים (לא
-   קורא ל-html2canvas בכלל) וגם עם נתונים (קורא לו על האזור הנכון). */
-// 1b. exportAdminLog: בלי נתונים מציג הודעה; עם נתונים קורא ל-html2canvas על admin-log-export-box
-{
-  const {p, errs} = await page();
-  const out = await p.evaluate(async ()=>{
-    window.sGetRaw = async ()=>null; window.sGetIn = async ()=>null;
-    let toastMsg = ""; window.toast = m=>toastMsg=m;
-
-    // בלי נתונים בכלל — לא אמור לקרוס, רק להראות הודעה, ולא לגעת ב-html2canvas
-    let html2canvasCalled = false;
-    window.html2canvas = async ()=>{ html2canvasCalled = true; return {toBlob(cb){ cb(new Blob(["x"])); }}; };
-    await exportAdminLog();
-    const noDataToast = toastMsg;
-    const noDataSkipped = !html2canvasCalled;
-
-    // עכשיו עם נתונים אמיתיים
-    await renderAdminSignatures();
-    let capturedEl = null;
-    window.html2canvas = async (el)=>{ capturedEl = el; return {toBlob(cb){ cb(new Blob(["x"])); }}; };
-    toastMsg = "";
-    await exportAdminLog();
-    return {
-      noDataToast, noDataSkipped,
-      withDataToast: toastMsg,
-      capturedCorrectBox: capturedEl && capturedEl.id === "admin-log-export-box",
-    };
-  });
-  record("exportAdminLog: בלי נתונים מציג הודעה ולא קורא ל-html2canvas",
-    out.noDataToast.includes("אין נתונים") && out.noDataSkipped, JSON.stringify(out));
-  record("exportAdminLog: עם נתונים קורא ל-html2canvas על admin-log-export-box ומציג הצלחה",
-    out.capturedCorrectBox && out.withDataToast.includes("יוצא"), JSON.stringify(out));
-  console.log("errs1b",errs); await p.close();
-}
-
 // 2. saveEvent (admin) logs only on success, not on failure
 {
   const {p, errs} = await page();
