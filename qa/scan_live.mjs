@@ -62,6 +62,20 @@ export async function run(){
   };
   const arr = async key => { const v = await get(key); return Array.isArray(v) ? v : []; };
 
+  /* ---------- אבחון דחוף (מספרים בלבד, ללא שמות) ----------
+     נועד לאמת מול Firestore אם רשימות הצוות קיימות — לתפיסת דיווח על
+     "מחיקת משתמשים". בטוח לפרסום: רק מונים ומצב מסמך לכל מסגרת. */
+  try{
+    const parts = [];
+    for(const shed of SHEDS){
+      const raw = await get(shed.id+"_cfg_personnel");
+      const n = Array.isArray(raw) ? raw.length : (raw===null ? "missing" : "notarr");
+      const pins = Array.isArray(raw) ? raw.filter(p=>p && p.pinHash).length : 0;
+      parts.push(`${shed.id}=${n}(pin:${pins})`);
+    }
+    console.error("[חי·אבחון אנשי צוות] " + parts.join(" "));
+  }catch(e){ console.error("[חי·אבחון] נכשל:", String(e&&e.message).slice(0,120)); }
+
   /* ---------- 1. פריטים שפורסמו אך לא הגיעו לכל המסגרות ---------- */
   {
     const adminEvents = await arr("admin_events");
