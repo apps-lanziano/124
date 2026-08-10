@@ -412,6 +412,13 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
 .board-del{width:36px;height:36px;border-radius:10px;border:1px solid var(--red-line);background:var(--red-soft);color:var(--red);cursor:pointer;font-size:15px;flex-shrink:0;display:grid;place-items:center;transition:background .2s}
 .board-del:active{background:var(--red-line)}
 /* board viewer overlay */
+/* מסך מלא ללוח הצוות — אותה שכבה והתנהגות זום כמו צפייה בצילום הלוח */
+#roster-full{position:absolute;inset:0;z-index:40;background:var(--bg);display:none;flex-direction:column}
+#roster-full.open{display:flex;animation:slideIn .35s cubic-bezier(.2,.8,.3,1)}
+#roster-full .reader-body{padding:0;position:relative;flex:1;overflow:hidden}
+#roster-full-wrap{position:absolute;inset:0;background:var(--bg);direction:rtl;padding:10px}
+#roster-full-inner{width:100%;transform-origin:top right}
+#roster-full-ctrl{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:3}
 #board-viewer{position:absolute;inset:0;z-index:40;background:var(--bg);display:none;flex-direction:column}
 #board-viewer.open{display:flex;animation:slideIn .35s cubic-bezier(.2,.8,.3,1)}
 #board-viewer .reader-body{padding:0;position:relative;flex:1;overflow:hidden}
@@ -689,7 +696,109 @@ nav{
 .alert-row.mid{background:var(--gold-soft);border-color:#ffe7a8}
 .alert-row .al-ic{font-size:19px;flex-shrink:0}
 .alert-row .al-tx{font-size:13.5px;font-weight:600;line-height:1.4}
+
+/* ===== לוח צוות שבועי — תצוגה מובנית =====
+   התצוגה הראשית נאמנה לגיליון שמ"ע תורנויות ממלא: שורות תפקיד מול
+   עמודות ימים, עם עמודת התפקידים דביקה כדי שגלילת הימים לא תאבד הקשר. */
+.roster-segs{display:flex;background:var(--bg);border-radius:11px;padding:3px;margin-bottom:10px}
+.roster-segs div{flex:1;text-align:center;font-size:13px;font-weight:700;padding:8px 2px;border-radius:9px;color:var(--ink-3);cursor:pointer}
+.roster-segs div.on{background:var(--card);color:var(--red);box-shadow:0 1px 3px rgba(0,0,0,.09)}
+.roster-wkbar{background:var(--red-soft);border:1px solid var(--red-line);border-radius:11px;
+  padding:9px 12px;margin-bottom:10px;font-size:12.5px;font-weight:600;color:var(--red-deep)}
+.roster-grid-wrap{border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden}
+.roster-grid{border-collapse:collapse;width:100%}
+.roster-grid th,.roster-grid td{border:1px solid var(--line);padding:4px 3px;vertical-align:middle;
+  text-align:center;white-space:normal}
+.roster-grid .rlbl{background:var(--bg);font-weight:800;color:var(--ink-2);line-height:1.2}
+.roster-grid .rlbl small{font-weight:600;color:var(--ink-3)}
+.roster-grid thead th{background:var(--gold-soft);color:#6b5100;font-weight:800;line-height:1.25}
+.roster-grid thead th.wknd{background:#eef1f6;color:#42506b}
+.roster-grid thead th.now{background:var(--red);color:#fff}
+.roster-grid thead th.rlbl.wk{background:var(--bg);color:var(--ink-2);cursor:default}
+/* "fit" — כל השבוע נכנס לרוחב המסך כמסמך אחד, בלי גלילה לצדדים.
+   זו התצוגה שמחליפה את צילום הגיליון שכולם מסתמכים עליו היום. */
+.roster-grid.fit{table-layout:fixed;font-size:8.5px}
+.roster-grid.fit .rlbl{width:38px;font-size:8px}
+.roster-grid.fit thead th{cursor:pointer;font-size:8.5px}
+.roster-grid.fit .rc{font-size:8px;padding:1px 4px;margin:.5px;border-radius:9px}
+.roster-grid.fit .rc small{display:none}
+.roster-grid.fit .rq{display:none}
+/* "wide" — במסך המלא יש מקום לשמות מלאים ולתגיות */
+.roster-grid.wide{font-size:12px;width:100%;table-layout:fixed}
+.roster-grid.wide .rlbl{width:11%;font-size:11px}
+.roster-grid.wide th,.roster-grid.wide td{padding:6px 5px}
+.roster-full-btn{width:100%;margin-top:10px;font-size:13px;padding:11px}
+.roster-grid td.pfz{background:#fffdf7}
+.roster-grid td.restz{background:#f3f8f1}
+.roster-grid td.pmsz{background:#fdf4f4}
+.roster-grid td.now{box-shadow:inset 0 0 0 2px var(--red-line)}
+.rc{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;
+  background:var(--bg);color:var(--ink-2);margin:1px;white-space:nowrap}
+.rc.duty{background:var(--red-soft);color:var(--red)}
+.rc.me{background:var(--red);color:#fff;box-shadow:0 0 0 2px var(--red-line)}
+.rc.rest{background:#eaf3e6;color:#3f6b32}
+.rc.pms{background:#faeeee;color:#8a4444}
+.rc.course{background:#e3f0fb;color:#1c5f96;box-shadow:inset 0 0 0 1px #b7d8f2}
+.rc.res{background:var(--gold-soft);color:#7a6420;box-shadow:inset 0 0 0 1px #f0e5c4}
+.rc small{font-weight:600;opacity:.75}
+.rq{font-size:8.5px;font-weight:800;padding:1px 5px;border-radius:5px;background:rgba(0,0,0,.1);margin-inline-start:4px}
+.rnone{font-size:9.5px;color:var(--ink-3);font-style:italic;font-weight:600}
+.rnone-b{padding:12px;text-align:center;font-size:12px;color:var(--ink-3);font-weight:600}
+.roster-hint{font-size:11px;color:var(--ink-3);margin-top:8px;text-align:center}
+/* תצוגת יום */
+.roster-daystrip{display:flex;gap:5px;margin-bottom:10px}
+.roster-daystrip div{flex:1;text-align:center;padding:8px 2px;border-radius:9px;background:var(--bg);
+  font-size:12px;font-weight:700;color:var(--ink-3);cursor:pointer}
+.roster-daystrip div.wk{flex:1.6}
+.roster-daystrip div.mine{box-shadow:inset 0 0 0 1.5px var(--red-line);color:var(--red)}
+.roster-daystrip div.on{background:var(--red);color:#fff;box-shadow:none}
+.roster-wknd{background:#eef1f6;border:1px solid #dde2ec;border-radius:11px;padding:9px 12px;
+  margin-bottom:10px;font-size:12px;font-weight:600;color:#42506b}
+.rblk{background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:hidden;margin-bottom:9px}
+.rblk-h{background:var(--bg);padding:7px 11px;font-size:11px;font-weight:800;color:var(--red-deep);
+  border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.rblk-h.restz{background:#eef4ea;color:#3f6b32}
+.rblk-h.pmsz{background:#faeeee;color:#8a4444}
+.rblk-c{font-size:10.5px;color:var(--ink-3);font-weight:700}
+.rrow{display:grid;grid-template-columns:80px 1fr;border-bottom:1px solid var(--bg);align-items:center}
+.rrow:last-child{border-bottom:0}
+.rrow-k{padding:8px 9px;font-size:11px;font-weight:700;color:var(--ink-3);border-inline-end:1px solid var(--bg);
+  align-self:stretch;display:flex;align-items:center}
+.rrow-v{padding:7px 9px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:36px}
+.rpool{padding:9px;display:flex;flex-wrap:wrap;gap:5px}
+.rblk .rc{font-size:11.5px;padding:4px 9px}
+.roster-sq{background:var(--red-soft);border:1px solid var(--red-line);border-radius:11px;padding:9px;
+  text-align:center;font-size:12px;font-weight:800;color:var(--red-deep)}
+/* תצוגת "רק אני" */
+.rmine-wrap{display:flex;flex-direction:column;gap:8px}
+.rmine{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px;
+  display:grid;grid-template-columns:86px 1fr;gap:10px;align-items:center}
+.rmine.now{border-color:var(--red-line);background:var(--red-soft)}
+.rmine-d{font-size:12.5px;font-weight:800;color:var(--ink)}
+.rmine-r{display:flex;flex-wrap:wrap;gap:4px}
+.rmine .rc{font-size:11px;padding:4px 9px}
+.rmine-rest{font-size:11.5px;font-weight:700;color:#3f6b32;margin-top:4px}
+/* עורך הלוח */
+.red-week{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:11px;margin-bottom:10px}
+.red-week label{font-size:11px;color:var(--ink-3);display:block;margin-bottom:3px;font-weight:600}
+.red-week .m-input{margin-bottom:0}
+.roster-daystrip div.bad{box-shadow:inset 0 0 0 1.5px var(--red);color:var(--red)}
+.roster-daystrip div small{display:block;font-size:9px;font-weight:700;opacity:.85}
+.rc.add{background:transparent;border:1.5px dashed var(--line);color:var(--ink-3);cursor:pointer}
+.rc.empty{background:transparent;border:1.5px dashed var(--red-line);color:var(--red);font-weight:700;cursor:pointer}
+.rc-x{display:inline-block;font-size:10px;font-weight:800;color:var(--ink-3);padding:2px 4px;cursor:pointer;margin-inline-start:-3px}
+.rblk-note{padding:7px 11px;font-size:10.5px;color:var(--ink-3);border-top:1px solid var(--bg)}
+.rsel{font-family:inherit;font-size:11.5px;font-weight:700;padding:5px 8px;border-radius:8px;
+  border:1.5px solid var(--line);background:var(--card);color:var(--ink)}
+.rpick{display:flex;align-items:center;gap:9px;padding:10px 8px;border-bottom:1px solid var(--bg);cursor:pointer}
+.rpick:last-child{border-bottom:0}
+.rpick.busy{opacity:.6}
+.rpick-n{font-size:13px;font-weight:700}
+.rpick-s{font-size:11px;color:var(--ink-3)}
+.rpick-go{margin-inline-start:auto;font-size:17px;font-weight:800;color:var(--red);flex:0 0 auto}
 /* התראה שמובילה למסך — חץ + משוב מגע, כדי שיהיה ברור שאפשר להקיש עליה */
+.board-arch-head{font-size:12px;font-weight:800;color:var(--ink-3);margin:22px 0 10px;
+  padding-top:16px;border-top:1px solid var(--line)}
 .alert-row.tappable{cursor:pointer;transition:transform .15s}
 .alert-row.tappable:active{transform:scale(.98);filter:brightness(.96)}
 .alert-row .al-go{margin-inline-start:auto;flex-shrink:0;font-size:20px;font-weight:800;color:var(--ink-3);line-height:1}
@@ -1339,11 +1448,13 @@ nav{
     <section class="screen" id="scr-board">
       <div class="sec-head">
         <div>
-          <h2>לוח צוות שבועי</h2>
-          <p>עדכונים מתבצעים ע"י מ"ע תורנויות.</p>
+          <h2>תורנויות 📅</h2>
+          <p>לוח הצוות השבועי. עדכונים מתבצעים ע"י מ"ע תורנויות.</p>
         </div>
+        <button class="add-btn hidden" id="roster-edit-btn" onclick="openRosterEditor()">✏️ עריכת הלוח</button>
       </div>
-      <div id="board-area"></div>
+      <div id="roster-view"></div>
+      <div id="board-archive"></div>
       <input type="file" id="board-input" accept="image/*" class="hidden" onchange="onBoardFile(event)">
     </section>
 
@@ -1917,7 +2028,7 @@ nav{
     <button class="nav-btn hidden" id="nav-cmd" data-scr="scr-cmd" onclick="go('scr-cmd',this)"><span class="ic">🎖️</span><span>מפקד</span></button>
     <button class="nav-btn active" id="nav-safety" data-scr="scr-safety" onclick="go('scr-safety',this)"><span class="ic">📄</span><span>קרא וחתום</span><span class="nav-badge hidden" id="badge-safety">0</span></button>
     <button class="nav-btn" id="nav-morning" data-scr="scr-morning" onclick="go('scr-morning',this)"><span class="ic">✅</span><span>מטלות</span><span class="nav-badge hidden" id="badge-morning">0</span></button>
-    <button class="nav-btn" id="nav-board" data-scr="scr-board" onclick="go('scr-board',this)"><span class="ic">📅</span><span>לוח שבועי</span></button>
+    <button class="nav-btn" id="nav-board" data-scr="scr-board" onclick="go('scr-board',this)"><span class="ic">📅</span><span>תורנויות</span></button>
     <button class="nav-btn" id="nav-certs" data-scr="scr-certs" onclick="go('scr-certs',this)"><span class="ic">🎓</span><span>הסמכות</span></button>
     <button class="nav-btn hidden" id="nav-training" data-scr="scr-training" onclick="go('scr-training',this)"><span class="ic">📚</span><span>חומרי הדרכה</span></button>
     <button class="nav-btn hidden" id="nav-tools" data-scr="scr-tools" onclick="go('scr-tools',this)"><span class="ic">🧰</span><span>חדר כלים</span></button>
@@ -1949,6 +2060,25 @@ nav{
   </div>
 
   <!-- BOARD VIEWER -->
+  <!-- לוח הצוות במסך מלא — כל השבוע כמסמך אחד, עם צביטה להגדלה -->
+  <div id="roster-full">
+    <div class="reader-head">
+      <button class="back-btn" onclick="closeRosterFull()">→</button>
+      <h3 id="roster-full-title">לוח צוות</h3>
+    </div>
+    <div class="reader-body">
+      <div id="roster-full-wrap" class="img-zoom-wrap">
+        <div id="roster-full-inner"></div>
+      </div>
+      <div id="roster-full-ctrl" class="img-zoom-ctrl">
+        <button onclick="imgZoomBy('roster-full-wrap','roster-full-inner','roster-full-lbl',-0.5)" aria-label="הקטן">−</button>
+        <span id="roster-full-lbl" class="img-zoom-lbl">100%</span>
+        <button onclick="imgZoomBy('roster-full-wrap','roster-full-inner','roster-full-lbl',0.5)" aria-label="הגדל">+</button>
+        <button onclick="imgZoomReset('roster-full-wrap','roster-full-inner','roster-full-lbl')" aria-label="איפוס" style="font-size:16px">⟲</button>
+      </div>
+    </div>
+  </div>
+
   <div id="board-viewer">
     <div class="reader-head">
       <button class="back-btn" onclick="closeBoardViewer()">→</button>
@@ -2355,15 +2485,32 @@ nav{
   </div>
 
   <!-- DUTY ROSTER MODAL — שיבוץ תורנויות שבועי (צוות תורן / נח) לפי הלוח, להתראה יומית ממוקדת למפקד הרלוונטי -->
+  <!-- עורך לוח הצוות — מ"ע תורנויות בלבד -->
   <div class="modal-bg" id="duty-roster-modal">
     <div class="modal">
-      <h3>🗓️ שיבוץ תורנויות השבוע</h3>
-      <div class="m-sub">שם מלא כפי שמופיע ברשימת הצוות, אחד בכל שורה — לכל יום בנפרד. המערכת מזהה אוטומטית לאיזו סככה כל שם שייך, ושולחת כל בוקר התראה למפקד הרלוונטי בלבד עם החיילים שלו.</div>
-      <div id="duty-roster-days"></div>
-      <div id="duty-roster-preview"></div>
+      <h3>✏️ עריכת לוח הצוות</h3>
+      <div class="m-sub">שיבוץ שבועי לפי תפקידים. משבצות חובה (ר״צ, פקיד כלים) חייבות להתמלא לפני פרסום.</div>
+      <div id="roster-ed-week"></div>
+      <div id="roster-ed-daystrip"></div>
+      <div id="roster-ed-body"></div>
+      <div id="roster-ed-preview"></div>
       <div class="modal-actions" style="margin-top:12px">
-        <button class="m-btn primary" onclick="saveDutyRoster()" style="flex:1">💾 שמור שיבוץ</button>
+        <button class="m-btn primary" onclick="publishRoster()" style="flex:1">📢 פרסם שבוע</button>
+        <button class="m-btn ghost" onclick="copyRosterFromLastWeek()" style="flex:0 0 auto">📋 העתק</button>
         <button class="m-btn ghost" onclick="document.getElementById('duty-roster-modal').classList.remove('open')" style="flex:0 0 auto">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- בחירת שם למשבצת בלוח -->
+  <div class="modal-bg" id="roster-pick-modal">
+    <div class="modal">
+      <h3 id="roster-pick-title">בחירת שם</h3>
+      <div class="m-sub" id="roster-pick-sub"></div>
+      <input class="m-input" id="roster-pick-search" placeholder="סנן לפי שם…" oninput="renderRosterPickList()">
+      <div id="roster-pick-list" style="max-height:44vh;overflow-y:auto"></div>
+      <div class="modal-actions" style="margin-top:10px">
+        <button class="m-btn ghost" onclick="document.getElementById('roster-pick-modal').classList.remove('open')" style="width:100%">סגור</button>
       </div>
     </div>
   </div>
@@ -3173,6 +3320,7 @@ let isVehiclesResp = false; // נע"ת רכבים — הרשאות הוספה/ע
 let isHearingResp = false; // נע"ת בדיקות שמיעה — הרשאת הזנת תאריכים בכשירות חיילים
 let isRangeResp = false;   // נע"ת מטווחים — הרשאת הזנת תאריכים בכשירות חיילים
 let isBoardPublisher = false; // נע"ת לוח צוות שבועי — הרשאת פרסום הלוח לכל המסגרות (בלי צורך במעמד אחראי הדרכה/אחזקה מלא)
+let isRosterManager = false;  // מ"ע תורנויות — אחריות ועריכה על לוח הצוות המובנה
 let evImgData = null;      // data URL of selected file
 let evFileMeta = null;     // {type:'image'|'pdf'|'word'|'ppt', name, mime}
 
@@ -4300,7 +4448,7 @@ async function doLogin(){
 function logout(){
   try{ if("clearAppBadge" in navigator) navigator.clearAppBadge(); }catch(e){}
   user=null; userRole=null; isCmd=false; isAdmin=false; isVehicleOfficer=false; isBudgetOfficer=false; isTechOfficer=false; isToolsResp=false; isVehiclesResp=false;
-  isHearingResp=false; isRangeResp=false; isBoardPublisher=false;
+  isHearingResp=false; isRangeResp=false; isBoardPublisher=false; isRosterManager=false;
   isOwner=false; impersonating=null; isSuperAdmin=false; superAdminSelf=null;
   // נטישת זהות המסגרת ב-Firebase וחזרה לזהות אנונימית ניטרלית, כדי שכניסה
   // הבאה תתחיל נקייה ולא תישאר מחוברת כמסגרת הקודמת.
@@ -4357,6 +4505,7 @@ function go(id, btn){
   if(id==="scr-naatim") renderNaatim();
   if(id==="scr-onboarding") renderOnboardingScreen();
   if(id==="scr-calendar") renderCalendarPage();
+  if(id==="scr-board") renderBoard();
   if(id==="scr-certs") renderCertsPage();
   if(id==="scr-medchecks") renderMedChecks();
   if(id==="scr-tools") renderToolsPage();
@@ -5033,6 +5182,10 @@ async function refreshAreaPermissions(){
   /* נע"ת לוח צוות שבועי — מעניק הרשאת פרסום הלוח לכל המסגרות בלי צורך
      במעמד אחראי הדרכה/אחזקה מלא (isAdmin) */
   isBoardPublisher = isAdmin || has("לוח צוות שבועי");
+  /* מ"ע תורנויות — אחריות ועריכה על לוח הצוות. לפי רשימת הנתונים
+     (roster_managers) או נע"ת ייעודי, כדי שהחלפת תפקיד לא תדרוש קוד. */
+  isRosterManager = isBoardPublisher || has("מ״ע תורנויות") ||
+    (await getRosterManagers()).includes(user);
   if(currentShed && currentShed.isDept){ isToolsResp = false; isVehiclesResp = (userRole==="מפקד"); return; }
   isToolsResp = userRole==="מפקד" || has("חדר כלים");
   isVehiclesResp = userRole==="מפקד" || has("רכבים");
@@ -5627,25 +5780,32 @@ async function removeVoTeamMember(id){
 async function getBoards(){ return (await sGet("boards_list")) || []; }
 
 async function renderBoard(){
+  rosterCache = null;                 // רענון מהמקור בכל כניסה למסך
+  document.getElementById("roster-edit-btn")?.classList.toggle("hidden", !isRosterManager);
+  await renderRosterView();
+  await renderBoardArchive();
+}
+/* ארכיון צילומי הלוח — נשאר כמסלול גיבוי ותיעוד מתחת ללוח המובנה */
+async function renderBoardArchive(){
   const boards = await getBoards();
-  const area = document.getElementById("board-area");
+  const area = document.getElementById("board-archive");
+  if(!area) return;
   // מפקד המסגרת, או מי ששובץ נע"ת "לוח צוות שבועי" (isBoardPublisher) —
   // כדי שאחראי תורנויות יוכל לנהל את הלוח בלי להיות מפקד המסגרת
   const canManage = userRole === "מפקד" || isBoardPublisher;
-  let html = "";
+  let html = `<div class="board-arch-head">📎 צילומי לוח (ארכיון)</div>`;
   if(canManage){
     html += `<div class="board-add-btn" onclick="triggerBoardUpload()">
       <div class="up-ic">📤</div>
       <h3>העלאת לוח צוות חדש</h3>
       <p>לחץ להעלאת צילום מסך של לוח שבועי</p>
     </div>`;
-    html += `<button class="m-btn ghost" style="width:100%;margin-bottom:12px" onclick="openDutyRosterModal()">🗓️ שיבוץ תורנויות השבוע (להתראה יומית למפקדים)</button>`;
     if(boards.length) html += `<button class="m-btn ghost" style="width:100%;margin-bottom:12px" onclick="analyzeLatestBoardWithAI()">🤖 נתח את הלוח האחרון עם AI (הצעה בלבד — עדיין דורש אישור ידני)</button>`;
   }
   if(boards.length === 0){
     html += `<div class="empty-state">
       <div class="ic">📅</div>
-      <h3>אין לוחות צוות עדיין</h3>
+      <h3>אין צילומי לוח עדיין</h3>
       <p>${canManage ? "העלה לוח ראשון באמצעות הכפתור למעלה" : "מ\"ע תורנויות טרם העלה לוח"}</p>
     </div>`;
   } else {
@@ -5672,12 +5832,299 @@ async function renderBoard(){
    יד בעברית מתמונה לא אמין מספיק לרוץ בלי אישור אדם) — מי שמפרסם את
    הלוח מזין את השיבוץ כטקסט, ורואה מיד אילו שמות לא זוהו באף סככה. */
 const WEEK_DAYS_HE = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
+
+/* ===== לוח הצוות — מבנה מובנה (v2) =====
+   הלוח האמיתי אינו שתי רשימות שטוחות אלא טבלה עם תפקידים. המבנה כאן
+   משקף את גיליון ה-Excel שמ"ע תורנויות ממלא בפועל:
+
+   {v:2, weekNumber, weekKey, squadronDuty:<shedId>, restWindow:"14:00-16:00",
+    days:{ "<יום>": {
+      lead, deputyLead, driver, tools,    // משבצות יחיד (ר"צ חובה, כלים חובה)
+      fixedAug:[שמות],                    // מתגבר — 2-3, לרוב אנשי קבע
+      pf:[{name, course:bool, reserve:bool}],   // גוף הצוות
+      pfRest:[שמות] | null,               // נחים; null = משמרת רצופה בלי נחים
+      pms:[שמות], pmsRest:[שמות],
+      basic:[{name, type}],               // תורנות בסיסית — הסוג משתנה
+      duty:[שמות], rest:[שמות]            // נגזרים — תאימות להתראה הקיימת
+    }}}
+
+   חמישי/שישי/שבת הם משמרת רצופה אחת ללא חילוף ובלי נחים: העריכה נעשית
+   על "חמישי" בלבד, והשמירה משכפלת את אותו תוכן לשלושת הימים — כך
+   buildDutyRosterDigests בשרת ממשיך לקרוא days[<יום>] כרגיל לכל יום. */
+const ROSTER_WEEKEND_DAYS = ["חמישי","שישי","שבת"];   // משמרת רצופה אחת
+const ROSTER_ROTATING_DAYS = ["ראשון","שני","שלישי","רביעי"];
+const ROSTER_EDIT_DAYS = [...ROSTER_ROTATING_DAYS, "חמישי"];   // "חמישי" מייצג את כל הסופ"ש
+const BASIC_DUTY_TYPES = ["אבט״ש","רס״ר","מטבח","שמירות"];
+const ROSTER_DEFAULT_REST_WINDOW = "14:00-16:00";
+/* תורן טייסת — תורנות שבועית שמתחלפת בין הסככות, בלי סככה 5 */
+const SQUADRON_DUTY_SHEDS = ["shed1","shed2","shed3","shed4"];
+/* אחריות ועריכה על הלוח. ברירת המחדל היא מ"ע התורנויות בפועל; הרשימה
+   נשמרת כנתון (roster_managers) כדי שהחלפת תפקיד לא תדרוש שינוי קוד.
+   נע"ת "מ״ע תורנויות"/"לוח צוות שבועי" מעניק את אותה הרשאה. */
+const ROSTER_MANAGERS_DEFAULT = ["טל מלכה","דניאל זאורוב"];
+async function getRosterManagers(){
+  const l = await sGetRaw("roster_managers");
+  return (Array.isArray(l) && l.length) ? l : ROSTER_MANAGERS_DEFAULT.slice();
+}
+
+function emptyRosterDay(isWeekend){
+  return {lead:"", deputyLead:"", driver:"", tools:"", fixedAug:[],
+    pf:[], pfRest: isWeekend ? null : [], pms:[], pmsRest:[], basic:[], duty:[], rest:[]};
+}
+function isWeekendDay(day){ return ROSTER_WEEKEND_DAYS.includes(day); }
+/* היום שאליו העריכה בפועל מתייחסת — כל ימי הסופ"ש מצביעים על "חמישי" */
+function rosterEditKey(day){ return isWeekendDay(day) ? "חמישי" : day; }
+
+/* המרה מהמבנה הישן (duty/rest שטוחים) למבנה המובנה. נשמר על הקריאה
+   בלבד — לא כותבים חזרה עד שמ"ע תורנויות שומר בפועל, כדי שלא "נמציא"
+   מבנה חדש על נתון שאיש לא אישר. */
+function migrateRosterToV2(raw){
+  const out = {v:2, weekNumber: raw && raw.weekNumber || null, weekKey: (raw && raw.weekKey) || "",
+    squadronDuty: (raw && raw.squadronDuty) || "", restWindow: (raw && raw.restWindow) || ROSTER_DEFAULT_REST_WINDOW, days:{}};
+  const src = (raw && raw.days) || {};
+  WEEK_DAYS_HE.forEach(day=>{
+    const d = src[day];
+    const day2 = emptyRosterDay(isWeekendDay(day));
+    if(d){
+      if(Array.isArray(d.pf)){                       // כבר v2
+        day2.lead = d.lead||""; day2.deputyLead = d.deputyLead||"";
+        day2.driver = d.driver||""; day2.tools = d.tools||"";
+        day2.fixedAug = Array.isArray(d.fixedAug)? d.fixedAug.slice() : [];
+        day2.pf = d.pf.map(x=> typeof x==="string" ? {name:x} : {...x});
+        day2.pfRest = d.pfRest === null ? null : (Array.isArray(d.pfRest)? d.pfRest.slice() : []);
+        day2.pms = Array.isArray(d.pms)? d.pms.slice() : [];
+        day2.pmsRest = Array.isArray(d.pmsRest)? d.pmsRest.slice() : [];
+        day2.basic = Array.isArray(d.basic)? d.basic.map(b=>({...b})) : [];
+        // השדות הנגזרים נשמרים כפי שהם באחסון — הם מה שההתראה היומית
+        // בשרת קוראת, ולכן קריאה חייבת לשקף אותם ולא לאפס אותם
+        day2.duty = Array.isArray(d.duty)? d.duty.slice() : [];
+        day2.rest = Array.isArray(d.rest)? d.rest.slice() : [];
+      } else {                                       // v1 — duty/rest שטוחים
+        day2.pf = (d.duty||[]).map(n=>({name:n}));
+        day2.pfRest = isWeekendDay(day) ? null : (d.rest||[]).slice();
+      }
+    }
+    out.days[day] = day2;
+  });
+  return out;
+}
+/* כל השמות המשובצים ביום — הבסיס לשדות duty/rest שההתראה היומית
+   והסקירה למפקד קוראות. שם מופיע פעם אחת גם אם שובץ בשתי משבצות
+   (פקיד כלים שהוא גם מאנשי ה-PF, למשל — מצב תקין ולא שגיאה). */
+function rosterDayAssigned(d){
+  const names = [];
+  const push = n => { if(n && !names.includes(n)) names.push(n); };
+  push(d.lead); push(d.deputyLead); push(d.driver); push(d.tools);
+  (d.fixedAug||[]).forEach(push);
+  (d.pf||[]).forEach(p=>push(p && p.name));
+  (d.pms||[]).forEach(push);
+  (d.basic||[]).forEach(b=>push(b && b.name));
+  return names;
+}
+function rosterDayCount(d){ return rosterDayAssigned(d).length; }
+
 async function getDutyRoster(){
   const r = await sGetRaw("board_roster");
-  return (r && r.days) ? r : {weekKey:"", days:{}};
+  return migrateRosterToV2(r);
 }
-function parseDutyNames(text){
-  return (text||"").split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+/* שמירה: משכפלת את משמרת הסופ"ש לשלושת ימיה, וגוזרת duty/rest לכל יום
+   כדי שההתראה היומית הקיימת תמשיך לעבוד בלי שינוי בצד השרת. */
+async function saveDutyRosterV2(roster){
+  const out = {v:2, weekNumber: roster.weekNumber||null, weekKey: roster.weekKey || todayKey(),
+    squadronDuty: roster.squadronDuty||"", restWindow: roster.restWindow || ROSTER_DEFAULT_REST_WINDOW, days:{}};
+  WEEK_DAYS_HE.forEach(day=>{
+    const src = roster.days[rosterEditKey(day)] || emptyRosterDay(isWeekendDay(day));
+    const d = JSON.parse(JSON.stringify(src));
+    if(isWeekendDay(day)) d.pfRest = null;            // משמרת רצופה — אין נחים
+    d.duty = rosterDayAssigned(d);
+    d.rest = (d.pfRest || []).concat(d.pmsRest || []);
+    out.days[day] = d;
+  });
+  return await sSetRaw("board_roster", out);
+}
+
+/* ===== תצוגת לוח הצוות =====
+   שלוש תצוגות: "לוח" (נאמן לגיליון — שורות תפקיד מול עמודות ימים),
+   "יום" (יום אחד בפריסה קריאה), ו"רק אני" (הימים שבהם אני משובץ).
+   שם קצר בתצוגת הלוח כדי שהעמודות יישארו צרות; בתצוגת היום שם מלא. */
+let rosterView = "board";      // board | day | mine
+let rosterDaySel = null;       // היום שנבחר בתצוגת "יום"
+let rosterCache = null;
+
+function shortName(n){
+  if(!n) return "";
+  const parts = String(n).trim().split(/\s+/);
+  return parts.length > 1 ? parts[0] + " " + parts[1][0] + "." : parts[0];
+}
+function todayHebrewDay(){ return WEEK_DAYS_HE[new Date().getDay()]; }
+/* תגיות מצב על חייל בגוף ה-PF. "בקורס" היא מגבלת זמינות ולא תפקיד —
+   ולכן מוצגת כטקסט מפורש ("עד 20:00") ולא רק כצבע, כמו בגיליון: מי
+   שרואה את הלוח בפעם הראשונה חייב להבין אותה בלי ידע מוקדם. */
+function pfTagHtml(p){
+  if(p && p.course) return `<span class="rq">בקורס · עד 20:00</span>`;
+  if(p && p.reserve) return `<span class="rq">מילואים</span>`;
+  return "";
+}
+function pfClass(p){ return p && p.course ? "course" : (p && p.reserve ? "res" : "duty"); }
+
+function rosterSquadronDutyName(id){
+  const s = SHEDS.find(x=>x.id===id);
+  return s ? s.name : "";
+}
+function setRosterView(v, day){
+  rosterView = v;
+  if(day) rosterDaySel = day;
+  renderRosterView();
+}
+async function renderRosterView(){
+  const box = document.getElementById("roster-view");
+  if(!box) return;
+  const r = rosterCache || (rosterCache = await getDutyRoster());
+  const today = todayHebrewDay();
+  if(!rosterDaySel) rosterDaySel = rosterEditKey(today);
+  const anyData = WEEK_DAYS_HE.some(d=>rosterDayCount(r.days[d]) > 0);
+
+  const head = `<div class="roster-segs">
+      <div class="${rosterView==="board"?"on":""}" onclick="setRosterView('board')">לוח</div>
+      <div class="${rosterView==="day"?"on":""}" onclick="setRosterView('day')">יום</div>
+      <div class="${rosterView==="mine"?"on":""}" onclick="setRosterView('mine')">רק אני</div>
+    </div>
+    ${r.squadronDuty?`<div class="roster-wkbar">🏠 תורן טייסת השבוע — <b>${escapeHTML(rosterSquadronDutyName(r.squadronDuty))}</b></div>`:""}`;
+
+  if(!anyData){
+    box.innerHTML = head + `<div class="empty-state"><div class="ic">🗓️</div>
+      <h3>לוח הצוות טרם שובץ</h3>
+      <p>${isRosterManager ? "לחץ על \"עריכת הלוח\" כדי לשבץ את השבוע" : "מ״ע תורנויות טרם פרסם את השבוע"}</p></div>`;
+    return;
+  }
+  box.innerHTML = head +
+    (rosterView==="board" ? rosterBoardHtml(r, today)
+     : rosterView==="day" ? rosterDayHtml(r, rosterDaySel, today)
+     : rosterMineHtml(r, today));
+}
+
+/* תצוגת "לוח" — נאמנה לגיליון ומציגה את *כל* השבוע במסמך אחד.
+   זה מכוון: היום כל אנשי הטייסת מקבלים את צילום הגיליון השלם ומסתמכים
+   עליו לאורך השבוע, ולכן תצוגה שדורשת גלילה לצדדים הייתה שוברת בדיוק
+   את מה שעובד. שבע העמודות נדחסות לרוחב המסך (שמות מקוצרים), ולמי
+   שרוצה לקרוא לעומק — "מסך מלא" עם צביטה להגדלה, אותו דפוס שכבר מוכר
+   מצפייה בתמונת הלוח. */
+function rosterBoardHtml(r, today, mode){
+  const fit = mode !== "wide";
+  const nm = n => fit ? shortName(n) : n;
+  const cols = [...ROSTER_ROTATING_DAYS, "חמישי"];
+  const th = cols.map(d=>{
+    const wknd = d==="חמישי";
+    const isToday = rosterEditKey(today)===d;
+    const click = fit ? ` onclick="setRosterView('day','${d}')"` : "";
+    return `<th class="${wknd?"wknd":""} ${isToday?"now":""}"${click}>${wknd?"ה׳–ש׳":d.slice(0,4)}</th>`;
+  }).join("");
+  const row = (label, cls, fn) => `<tr><td class="rlbl ${cls||""}">${label}</td>` +
+    cols.map(d=>{
+      const isToday = rosterEditKey(today)===d;
+      return `<td class="${cls||""} ${isToday?"now":""}">${fn(r.days[d], d) || ""}</td>`;
+    }).join("") + `</tr>`;
+  const chips = (arr, cls) => (arr||[]).map(n=>`<span class="rc ${n===user?"me":(cls||"")}">${escapeHTML(nm(n))}</span>`).join("");
+  const one = (n, cls) => n ? `<span class="rc ${n===user?"me":(cls||"duty")}">${escapeHTML(nm(n))}</span>` : "";
+
+  let html = `<table class="roster-grid ${fit?"fit":"wide"}"><thead><tr><th class="rlbl wk">${r.weekNumber?("שבוע "+r.weekNumber):"שבוע"}</th>${th}</tr></thead><tbody>`;
+  html += row("ר״צ", "", d=>one(d.lead));
+  html += row("ל/ ר״צ", "", d=>one(d.deputyLead));
+  html += row("מתגבר", "", d=>chips(d.fixedAug));
+  html += row("נהג", "", d=>one(d.driver));
+  html += row("כלים", "", d=>one(d.tools));
+  html += row("PF", "pfz", d=>(d.pf||[]).map(p=>
+    `<span class="rc ${p.name===user?"me":pfClass(p)}">${escapeHTML(nm(p.name))}</span>`).join(""));
+  html += row(`נחים<br><small>${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</small>`, "restz",
+    d=> d.pfRest === null ? `<span class="rnone">רצוף</span>` : chips(d.pfRest, "rest"));
+  html += row("PMS", "pmsz", d=>chips(d.pms, "pms"));
+  html += row("תורנות", "", d=>(d.basic||[]).map(b=>
+    `<span class="rc ${b.name===user?"me":""}">${escapeHTML(nm(b.name))}<small> ${escapeHTML(b.type||"")}</small></span>`).join(""));
+  html += `</tbody></table>`;
+  if(mode === "wide") return html;
+  return `<div class="roster-grid-wrap">${html}</div>
+    <button class="m-btn ghost roster-full-btn" onclick="openRosterFull()">⤢ מסך מלא · צביטה להגדלה</button>
+    <div class="roster-hint">הקש על יום לפירוט מלא בשמות מלאים</div>`;
+}
+/* מסך מלא — הלוח כולו כמסמך אחד, עם אותה התנהגות זום שכבר מוכרת
+   למשתמשים מצפייה בצילום הלוח (imgZoom*). */
+async function openRosterFull(){
+  const r = rosterCache || (rosterCache = await getDutyRoster());
+  document.getElementById("roster-full-inner").innerHTML = rosterBoardHtml(r, todayHebrewDay(), "wide");
+  document.getElementById("roster-full-title").textContent =
+    "לוח צוות" + (r.weekNumber ? (" · שבוע " + r.weekNumber) : "");
+  document.getElementById("roster-full").classList.add("open");
+  initImgZoomGestures("roster-full-wrap", "roster-full-inner", "roster-full-lbl");
+  imgZoomReset("roster-full-wrap", "roster-full-inner", "roster-full-lbl");
+  // הכפתור הצף "לדשבורד" מרחף מעל השכבה — מוסתר כל עוד המסך המלא פתוח
+  const b = document.getElementById("back-to-dash"); if(b) b.style.display = "none";
+}
+function closeRosterFull(){
+  document.getElementById("roster-full").classList.remove("open");
+  const b = document.getElementById("back-to-dash"); if(b) b.style.display = "";
+}
+
+/* תצוגת "יום" — שמות מלאים, ומגבלות זמינות כטקסט. */
+function rosterDayHtml(r, day, today){
+  const key = rosterEditKey(day);
+  const d = r.days[key] || emptyRosterDay(isWeekendDay(key));
+  const strip = [...ROSTER_ROTATING_DAYS, "חמישי"].map(x=>{
+    const wknd = x==="חמישי";
+    const mine = rosterDayAssigned(r.days[x]).includes(user);
+    return `<div class="${x===key?"on":""} ${mine?"mine":""} ${wknd?"wk":""}" onclick="setRosterView('day','${x}')">${wknd?"ה׳–ש׳":x.slice(0,3)}</div>`;
+  }).join("");
+  const blk = (title, count, inner, cls) => inner ? `<div class="rblk">
+      <div class="rblk-h ${cls||""}"><span>${title}</span>${count!==null?`<span class="rblk-c">${count}</span>`:""}</div>
+      ${inner}</div>` : "";
+  const rowIf = (k, v) => v ? `<div class="rrow"><div class="rrow-k">${k}</div><div class="rrow-v">${v}</div></div>` : "";
+  const one = n => n ? `<span class="rc ${n===user?"me":"duty"}">${escapeHTML(n)}</span>` : "";
+  const list = (arr, cls) => (arr||[]).map(n=>`<span class="rc ${n===user?"me":(cls||"")}">${escapeHTML(n)}</span>`).join("");
+
+  let skel = rowIf("ר״צ", one(d.lead)) + rowIf("ל/ ר״צ", one(d.deputyLead)) +
+    rowIf("מתגבר", list(d.fixedAug)) + rowIf("נהג", one(d.driver)) + rowIf("כלים", one(d.tools));
+  let html = `<div class="roster-daystrip">${strip}</div>`;
+  if(isWeekendDay(key)) html += `<div class="roster-wknd">משמרת רצופה — חמישי, שישי ושבת. אותו צוות, בלי חילוף ובלי נחים.</div>`;
+  html += blk("שלד", null, skel);
+  html += blk("PF", (d.pf||[]).length, (d.pf||[]).length ? `<div class="rpool">` + (d.pf||[]).map(p=>
+    `<span class="rc ${p.name===user?"me":pfClass(p)}">${escapeHTML(p.name)}${pfTagHtml(p)}</span>`).join("") + `</div>` : "");
+  html += d.pfRest === null
+    ? `<div class="rblk"><div class="rblk-h restz"><span>נחים</span></div><div class="rnone-b">אין נחים — משמרת רצופה</div></div>`
+    : blk(`נחים · ${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}`, (d.pfRest||[]).length,
+        (d.pfRest||[]).length ? `<div class="rpool">${list(d.pfRest,"rest")}</div>` : "", "restz");
+  html += blk("PMS", (d.pms||[]).length, (d.pms||[]).length ? `<div class="rpool">${list(d.pms,"pms")}</div>` : "", "pmsz");
+  html += blk("תורנות בסיסית", (d.basic||[]).length, (d.basic||[]).length
+    ? (d.basic||[]).map(b=>rowIf(escapeHTML(b.type||""), `<span class="rc ${b.name===user?"me":""}">${escapeHTML(b.name)}</span>`)).join("") : "");
+  if(r.squadronDuty) html += `<div class="roster-sq">תורן טייסת — ${escapeHTML(rosterSquadronDutyName(r.squadronDuty))}</div>`;
+  return html;
+}
+
+/* תצוגת "רק אני" — עונה ישירות על "מתי אני תורן השבוע". */
+function rosterMineHtml(r, today){
+  const rows = [];
+  [...ROSTER_ROTATING_DAYS, "חמישי"].forEach(day=>{
+    const d = r.days[day];
+    const roles = [];
+    if(d.lead===user) roles.push("ר״צ");
+    if(d.deputyLead===user) roles.push("ל/ ר״צ");
+    if(d.driver===user) roles.push("נהג");
+    if(d.tools===user) roles.push("פקיד כלים");
+    if((d.fixedAug||[]).includes(user)) roles.push("מתגבר");
+    const me = (d.pf||[]).find(p=>p.name===user);
+    if(me) roles.push(me.course ? "PF · בקורס עד 20:00" : (me.reserve ? "PF · מילואים" : "PF"));
+    if((d.pms||[]).includes(user)) roles.push("PMS");
+    (d.basic||[]).forEach(b=>{ if(b.name===user) roles.push(b.type||"תורנות"); });
+    const resting = (d.pfRest||[]).includes(user) || (d.pmsRest||[]).includes(user);
+    if(!roles.length && !resting) return;
+    rows.push(`<div class="rmine ${rosterEditKey(today)===day?"now":""}">
+      <div class="rmine-d">${day==="חמישי"?"חמישי–שבת":day}</div>
+      <div class="rmine-b">
+        ${roles.length?`<div class="rmine-r">${roles.map(x=>`<span class="rc duty">${escapeHTML(x)}</span>`).join("")}</div>`:""}
+        ${resting?`<div class="rmine-rest">נח · ${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</div>`:""}
+      </div></div>`);
+  });
+  if(!rows.length) return `<div class="empty-state"><div class="ic">✓</div>
+    <h3>אינך משובץ השבוע</h3><p>אין לך תורנות בלוח הנוכחי</p></div>`;
+  return `<div class="rmine-wrap">${rows.join("")}</div>`;
 }
 async function fetchAllPersonnelByShed(){
   const map = {};
@@ -5720,47 +6167,229 @@ function resolveDutyRosterDays(days, allPersonnel){
   });
   return {days: resolvedDays, ambiguous, unmatched: [...unmatchedSet]};
 }
-function dutyRosterPreviewHtml(resolvedDays, ambiguous, unmatched, allPersonnel, aiNote){
-  const matchedCount = {};
-  Object.values(resolvedDays).forEach(d=>{
-    [...d.duty, ...d.rest].forEach(name=>{
-      const matches = SHEDS.filter(s=>(allPersonnel[s.id]||[]).some(p=>p.name===name));
-      if(matches.length===1) matchedCount[matches[0].id] = (matchedCount[matches[0].id]||0)+1;
-    });
-  });
-  const summary = SHEDS.filter(s=>matchedCount[s.id]).map(s=>`${escapeHTML(s.name)}: ${matchedCount[s.id]}`).join(" · ");
+/* מונה שמות שלא זוהו — בולט במכוון. שם שלא הותאם לרשימת הצוות פשוט
+   לא יופיע אצל אף חייל ולא ייכנס להתראה היומית, וזה כשל שקט. עדיף
+   שמ"ע תורנויות יראה אותו כאן מאשר שחייל יגלה שהוא לא ידע שהוא תורן. */
+function dutyRosterPreviewHtml(ambiguous, unmatched, aiNote){
   const parts = [];
-  if(aiNote) parts.push(`<div class="duty-roster-match">🤖 זו הצעה של AI מתוך תמונת הלוח — בדוק ותקן לפני שמירה. רק לחיצה על "שמור שיבוץ" מפעילה את ההתראות.</div>`);
-  if(summary) parts.push(`<div class="duty-roster-match">✓ זוהו: ${summary}</div>`);
-  if(ambiguous.length) parts.push(`<div class="duty-roster-unmatch">❓ שם דו-משמעי — כמה אנשים תואמים, תקן ידנית לשם המלא הנכון: ${ambiguous.map(a=>`"${escapeHTML(a.name)}" (${a.candidates.map(c=>escapeHTML(c.fullName)).join(" / ")})`).join("; ")}</div>`);
-  if(unmatched.length) parts.push(`<div class="duty-roster-unmatch">⚠️ לא זוהו באף סככה (בדוק איות): ${unmatched.map(escapeHTML).join(", ")}</div>`);
+  if(aiNote) parts.push(`<div class="duty-roster-match">🤖 הצעת AI מתוך תמונת הלוח — בדוק ותקן. רק "פרסם שבוע" שומר.</div>`);
+  if(ambiguous.length) parts.push(`<div class="duty-roster-unmatch">❓ ${ambiguous.length} שמות דו-משמעיים — בחר את השם המלא הנכון: ${ambiguous.map(a=>`"${escapeHTML(a.name)}" (${a.candidates.map(c=>escapeHTML(c.fullName)).join(" / ")})`).join("; ")}</div>`);
+  if(unmatched.length) parts.push(`<div class="duty-roster-unmatch">⚠️ ${unmatched.length} שמות לא זוהו באף מסגרת — הם לא יקבלו התראה ולא יראו את התורנות: ${unmatched.map(escapeHTML).join(", ")}</div>`);
+  if(!ambiguous.length && !unmatched.length && aiNote) parts.push(`<div class="duty-roster-match">✓ כל השמות זוהו</div>`);
   return parts.join("");
 }
-async function openDutyRosterModal(aiDays){
-  const allPersonnel = await fetchAllPersonnelByShed();
-  let roster, resolution = null;
-  if(aiDays){
-    resolution = resolveDutyRosterDays(aiDays, allPersonnel);
-    roster = {days: resolution.days};
-  } else {
-    roster = await getDutyRoster();
-  }
-  document.getElementById("duty-roster-days").innerHTML = WEEK_DAYS_HE.map(day=>{
-    const d = roster.days[day] || {duty:[], rest:[]};
-    return `<div class="duty-roster-day">
-      <b>${day}</b>
-      <label>🔵 צוות תורן</label>
-      <textarea class="m-input" id="duty-tp-${day}" rows="2" placeholder="שם מלא בכל שורה">${escapeHTML(d.duty.join("\n"))}</textarea>
-      <label>⚪ נח</label>
-      <textarea class="m-input" id="duty-rest-${day}" rows="2" placeholder="שם מלא בכל שורה">${escapeHTML(d.rest.join("\n"))}</textarea>
-      <button type="button" class="m-btn ghost" style="width:100%;margin-top:6px;font-size:12px;padding:8px" onclick="previewDutyRosterNotification('${day}')">🔔 שלח לי תצוגה מקדימה של ההתראה ליום זה</button>
-    </div>`;
-  }).join("");
-  // הצעת AI היא טיוטה בלבד — לא נשמרת עד שאדם בודק ולוחץ "שמור שיבוץ" בעצמו
-  document.getElementById("duty-roster-preview").innerHTML = resolution
-    ? dutyRosterPreviewHtml(resolution.days, resolution.ambiguous, resolution.unmatched, allPersonnel, true)
-    : "";
+/* ===== עורך לוח הצוות (מ"ע תורנויות) =====
+   עובד על טיוטה בזיכרון; שום דבר לא נשמר עד "פרסם שבוע". ימי חמישי–שבת
+   נערכים פעם אחת (rosterEditKey) ומשוכפלים בשמירה. */
+let rosterDraft = null;
+let rosterEdDay = null;
+let rosterPickCtx = null;    // {field, index} — לאיזו משבצת נבחר השם
+let rosterAllPersonnel = null;
+
+async function openRosterEditor(aiDays){
+  if(!isRosterManager){ toast("רק מ״ע תורנויות יכול לערוך את הלוח 🔒"); return; }
+  rosterAllPersonnel = await fetchAllPersonnelByShed();
+  rosterDraft = await getDutyRoster();
+  if(aiDays) applyAiDaysToDraft(aiDays);
+  rosterEdDay = rosterEditKey(todayHebrewDay());
+  const iss = rosterDraft._aiIssues;
+  document.getElementById("roster-ed-preview").innerHTML = aiDays
+    ? dutyRosterPreviewHtml(iss ? iss.ambiguous : [], iss ? iss.unmatched : [], true) : "";
+  renderRosterEditor();
   document.getElementById("duty-roster-modal").classList.add("open");
+}
+/* הצעת ה-AI מגיעה במבנה הישן (duty/rest) — נכנסת כגוף ה-PF והנחים,
+   אחרי השלמת שמות חלקיים לשם המלא. שאר המשבצות נשארות לאדם. */
+function applyAiDaysToDraft(aiDays){
+  const {days: resolved, ambiguous, unmatched} = resolveDutyRosterDays(aiDays, rosterAllPersonnel);
+  ROSTER_EDIT_DAYS.forEach(day=>{
+    const src = resolved[day]; if(!src) return;
+    const d = rosterDraft.days[day];
+    d.pf = (src.duty||[]).map(n=>({name:n}));
+    if(!isWeekendDay(day)) d.pfRest = (src.rest||[]).slice();
+  });
+  rosterDraft._aiIssues = {ambiguous, unmatched};
+}
+function rosterEdSetDay(day){ rosterEdDay = day; renderRosterEditor(); }
+
+function renderRosterEditor(){
+  const r = rosterDraft;
+  const d = r.days[rosterEdDay];
+  const wknd = isWeekendDay(rosterEdDay);
+
+  // שבועי: תורן טייסת + חלון הנחים
+  document.getElementById("roster-ed-week").innerHTML = `
+    <div class="red-week">
+      <label>תורן טייסת (שבועי)</label>
+      <select class="m-input" style="margin-bottom:8px" aria-label="תורן טייסת שבועי" onchange="rosterDraft.squadronDuty=this.value">
+        <option value="">— לא נקבע —</option>
+        ${SQUADRON_DUTY_SHEDS.map(id=>{const s=SHEDS.find(x=>x.id===id);
+          return `<option value="${id}" ${r.squadronDuty===id?"selected":""}>${escapeHTML(s?s.name:id)}</option>`;}).join("")}
+      </select>
+      <label>חלון הנחים</label>
+      <input class="m-input" value="${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}"
+        oninput="rosterDraft.restWindow=this.value" placeholder="14:00-16:00">
+    </div>`;
+
+  // פס ימים — עם מונה משובצים וסימון יום שחסרה בו משבצת חובה
+  document.getElementById("roster-ed-daystrip").innerHTML =
+    `<div class="roster-daystrip">` + [...ROSTER_ROTATING_DAYS,"חמישי"].map(x=>{
+      const dd = r.days[x];
+      const bad = !dd.lead || !dd.tools;
+      return `<div class="${x===rosterEdDay?"on":""} ${bad?"bad":""} ${x==="חמישי"?"wk":""}" onclick="rosterEdSetDay('${x}')">
+        ${x==="חמישי"?"ה׳–ש׳":x.slice(0,3)}<small>${bad?"!":rosterDayCount(dd)}</small></div>`;
+    }).join("") + `</div>`;
+
+  const slot = (label, field, req) => {
+    const v = d[field];
+    return `<div class="rrow"><div class="rrow-k">${label}${req?' <b style="color:var(--red)">*</b>':""}</div>
+      <div class="rrow-v">${ v
+        ? `<span class="rc duty" onclick="rosterClearSlot('${field}')">${escapeHTML(v)} ✕</span>`
+        : `<span class="rc ${req?"empty":"add"}" onclick="openRosterPick('${field}')">${req?"חסר — בחר":"+ רשות"}</span>`}
+      </div></div>`;
+  };
+  const listRow = (label, field, cls) => `<div class="rrow"><div class="rrow-k">${label}</div>
+    <div class="rrow-v">${(d[field]||[]).map((n,i)=>
+      `<span class="rc ${cls||""}" onclick="rosterRemoveFromList('${field}',${i})">${escapeHTML(n)} ✕</span>`).join("")}
+      <span class="rc add" onclick="openRosterPick('${field}')">+</span></div></div>`;
+
+  let html = "";
+  if(wknd) html += `<div class="roster-wknd">משמרת רצופה — כל שינוי כאן חל על חמישי, שישי ושבת. אין שורת נחים.</div>`;
+  html += `<div class="rblk"><div class="rblk-h"><span>שלד</span><span class="rblk-c">חובה *</span></div>
+    ${slot("ר״צ","lead",true)}${slot("ל/ ר״צ","deputyLead",false)}
+    ${listRow("מתגבר","fixedAug")}${slot("נהג","driver",false)}${slot("כלים","tools",true)}</div>`;
+
+  html += `<div class="rblk"><div class="rblk-h"><span>PF</span><span class="rblk-c">${(d.pf||[]).length}</span></div>
+    <div class="rpool">${(d.pf||[]).map((p,i)=>
+      `<span class="rc ${pfClass(p)}" onclick="rosterCyclePf(${i})">${escapeHTML(p.name)}${pfTagHtml(p)}</span>
+       <span class="rc-x" onclick="rosterRemovePf(${i})">✕</span>`).join("")}
+      <span class="rc add" onclick="openRosterPick('pf')">+ הוסף</span></div>
+    <div class="rblk-note">הקש על שם כדי לסמן: רגיל → בקורס (עד 20:00) → מילואים</div></div>`;
+
+  if(wknd){
+    html += `<div class="rblk"><div class="rblk-h restz"><span>נחים</span></div>
+      <div class="rnone-b">אין נחים במשמרת רצופה</div></div>`;
+  } else {
+    html += `<div class="rblk"><div class="rblk-h restz"><span>נחים · ${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</span>
+      <span class="rblk-c">${(d.pfRest||[]).length}</span></div>
+      ${listRow("נחים","pfRest","rest")}</div>`;
+  }
+
+  html += `<div class="rblk"><div class="rblk-h pmsz"><span>PMS</span><span class="rblk-c">${(d.pms||[]).length}</span></div>
+    ${listRow("PMS","pms","pms")}${!wknd?listRow("PMS נחים","pmsRest","rest"):""}</div>`;
+
+  html += `<div class="rblk"><div class="rblk-h"><span>תורנות בסיסית</span><span class="rblk-c">${(d.basic||[]).length}</span></div>
+    ${(d.basic||[]).map((b,i)=>`<div class="rrow">
+      <div class="rrow-k">${escapeHTML(b.name)}</div>
+      <div class="rrow-v">
+        <select class="rsel" aria-label="סוג תורנות בסיסית" onchange="rosterDraft.days['${rosterEdDay}'].basic[${i}].type=this.value">
+          ${BASIC_DUTY_TYPES.map(t=>`<option ${b.type===t?"selected":""}>${escapeHTML(t)}</option>`).join("")}
+        </select>
+        <span class="rc-x" onclick="rosterRemoveBasic(${i})">✕</span>
+      </div></div>`).join("")}
+    <div class="rrow"><div class="rrow-k" style="color:var(--ink-3)">הוסף</div>
+      <div class="rrow-v"><span class="rc add" onclick="openRosterPick('basic')">+ שם</span></div></div></div>`;
+
+  html += `<button type="button" class="m-btn ghost" style="width:100%;font-size:12px;padding:9px"
+    onclick="previewDutyRosterNotification('${rosterEdDay}')">🔔 שלח לי תצוגה מקדימה של ההתראה ליום זה</button>`;
+  document.getElementById("roster-ed-body").innerHTML = html;
+}
+/* מחזוריות מצב חייל ב-PF: רגיל → בקורס → מילואים → רגיל */
+function rosterCyclePf(i){
+  const p = rosterDraft.days[rosterEdDay].pf[i];
+  if(!p.course && !p.reserve){ p.course = true; }
+  else if(p.course){ p.course = false; p.reserve = true; }
+  else { p.reserve = false; }
+  renderRosterEditor();
+}
+function rosterRemovePf(i){ rosterDraft.days[rosterEdDay].pf.splice(i,1); renderRosterEditor(); }
+function rosterRemoveBasic(i){ rosterDraft.days[rosterEdDay].basic.splice(i,1); renderRosterEditor(); }
+function rosterClearSlot(f){ rosterDraft.days[rosterEdDay][f] = ""; renderRosterEditor(); }
+function rosterRemoveFromList(f,i){ rosterDraft.days[rosterEdDay][f].splice(i,1); renderRosterEditor(); }
+
+/* בחירת שם — מציג את כל אנשי הטייסת, ומסמן מי כבר משובץ באותו יום.
+   שיבוץ כפול אינו נחסם (פקיד כלים שהוא גם מאנשי ה-PF הוא מצב תקין),
+   רק מוצג במפורש כדי שיהיה בחירה מודעת. */
+function openRosterPick(field){
+  rosterPickCtx = {field};
+  const labels = {lead:"ר״צ", deputyLead:"ל/ ר״צ", driver:"נהג", tools:"פקיד כלים",
+    fixedAug:"מתגבר", pf:"PF", pfRest:"נחים", pms:"PMS", pmsRest:"PMS נחים", basic:"תורנות בסיסית"};
+  document.getElementById("roster-pick-title").textContent = "משבצת: " + (labels[field]||field);
+  document.getElementById("roster-pick-sub").textContent =
+    (rosterEdDay==="חמישי" ? "חמישי–שבת" : rosterEdDay) + " · הקש על שם כדי לשבץ";
+  document.getElementById("roster-pick-search").value = "";
+  renderRosterPickList();
+  document.getElementById("roster-pick-modal").classList.add("open");
+}
+/* השמות מוצגים לפי אינדקס ברשימה ולא מוטמעים ב-onclick — שם עם גרש
+   (נפוץ בעברית: ג'וני, ר"צ) היה שובר את המחרוזת ומשתיק את הלחיצה. */
+let rosterPickRows = [];
+function renderRosterPickList(){
+  const q = (document.getElementById("roster-pick-search").value||"").trim();
+  const d = rosterDraft.days[rosterEdDay];
+  const assigned = new Set(rosterDayAssigned(d));
+  rosterPickRows = [];
+  SHEDS.forEach(s=>{
+    (rosterAllPersonnel[s.id]||[]).forEach(p=>{
+      if(!p || !p.name) return;
+      if(p.release && p.release <= todayKey()) return;      // משוחרר — לא לשיבוץ
+      if(q && !p.name.includes(q)) return;
+      rosterPickRows.push({name:p.name, shed:s.name, busy:assigned.has(p.name)});
+    });
+  });
+  rosterPickRows.sort((a,b)=> (a.busy?1:0)-(b.busy?1:0) || a.name.localeCompare(b.name,"he"));
+  document.getElementById("roster-pick-list").innerHTML = rosterPickRows.length
+    ? rosterPickRows.map((x,i)=>`<div class="rpick ${x.busy?"busy":""}" onclick="rosterPickChoose(${i})">
+        <div><div class="rpick-n">${escapeHTML(x.name)}</div>
+        <div class="rpick-s">${escapeHTML(x.shed)}${x.busy?" · כבר משובץ היום":""}</div></div>
+        <span class="rpick-go">+</span></div>`).join("")
+    : `<div class="empty-state" style="padding:22px"><p>לא נמצאו שמות</p></div>`;
+}
+function rosterPickChoose(idx){
+  const row = rosterPickRows[idx]; if(!row) return;
+  const name = row.name;
+  const f = rosterPickCtx && rosterPickCtx.field; if(!f) return;
+  const d = rosterDraft.days[rosterEdDay];
+  if(f==="pf"){ if(!d.pf.some(p=>p.name===name)) d.pf.push({name}); }
+  else if(f==="basic"){ d.basic.push({name, type:BASIC_DUTY_TYPES[0]}); }
+  else if(Array.isArray(d[f])){ if(!d[f].includes(name)) d[f].push(name); }
+  else d[f] = name;
+  document.getElementById("roster-pick-modal").classList.remove("open");
+  renderRosterEditor();
+}
+/* "העתק משבוע קודם" — הרבה בלוח חוזר כמעט זהה (תורנות בסיסית, תורן
+   טייסת, מתגבר קבע). ממלא רק משבצות ריקות כדי לא לדרוס עבודה קיימת. */
+async function copyRosterFromLastWeek(){
+  const prev = await getDutyRoster();
+  let filled = 0;
+  ROSTER_EDIT_DAYS.forEach(day=>{
+    const src = prev.days[day], dst = rosterDraft.days[day];
+    if(!src) return;
+    ["lead","deputyLead","driver","tools"].forEach(f=>{ if(!dst[f] && src[f]){ dst[f]=src[f]; filled++; } });
+    if(!dst.fixedAug.length && src.fixedAug.length){ dst.fixedAug = src.fixedAug.slice(); filled++; }
+    if(!dst.basic.length && src.basic.length){ dst.basic = src.basic.map(b=>({...b})); filled++; }
+  });
+  if(!rosterDraft.squadronDuty && prev.squadronDuty){ rosterDraft.squadronDuty = prev.squadronDuty; filled++; }
+  renderRosterEditor();
+  toast(filled ? `הועתקו ${filled} שדות מהשבוע הקודם ✓` : "אין מה להעתיק — הכל כבר מלא");
+}
+/* פרסום — חסום כשחסרה משבצת חובה, כדי שלוח חלקי לא יגיע לחיילים. */
+async function publishRoster(){
+  const missing = ROSTER_EDIT_DAYS.filter(day=>{
+    const d = rosterDraft.days[day];
+    return rosterDayCount(d) > 0 && (!d.lead || !d.tools);
+  });
+  if(missing.length){
+    toast(`⚠️ חסר ר״צ או פקיד כלים ב: ${missing.map(x=>x==="חמישי"?"חמישי–שבת":x).join(", ")}`);
+    return;
+  }
+  rosterDraft.weekKey = todayKey();
+  const ok = await saveDutyRosterV2(rosterDraft);
+  if(ok === false){ toast("⚠️ שמירת הלוח נכשלה — בדוק חיבור ונסה שוב"); return; }
+  rosterCache = null;
+  document.getElementById("duty-roster-modal").classList.remove("open");
+  await renderRosterView();
+  toast("הלוח פורסם ✓");
 }
 /* ניתוח לוח צוות שבועי ע"י AI (Claude Vision, functions/lib/board_ai_analyze.js).
    שולח את התמונה המלאה של הלוח האחרון ומקבל הצעת שיבוץ — לא כותב שום
@@ -5787,37 +6416,13 @@ async function analyzeLatestBoardWithAI(){
     const analyzeFn = fnMod.httpsCallable(functions, "analyzeBoardImage");
     const res = await analyzeFn({image: full, rosterNames});
     const days = (res.data && res.data.days) || {};
-    if(!Object.keys(days).length){ toast("ה-AI לא זיהה שיבוץ ברור בלוח הזה — אפשר למלא ידנית"); await openDutyRosterModal(); return; }
-    await openDutyRosterModal(days);
+    if(!Object.keys(days).length){ toast("ה-AI לא זיהה שיבוץ ברור בלוח הזה — אפשר למלא ידנית"); await openRosterEditor(); return; }
+    await openRosterEditor(days);
   }catch(e){
     console.error("analyzeLatestBoardWithAI", e);
     toast("ניתוח ה-AI נכשל — אפשר למלא ידנית ⚠️");
   }
 }
-/* השלמת שמות חלקיים לשם המלא (resolveDutyRosterDays) קורית תמיד לפני
-   שמירה — גם על שיבוץ שהוקלד ידנית, לא רק על הצעת AI — כדי שההתראה
-   היומית (שמצליבה שמות מדויקים בלבד) תעבוד בוודאות. אם נשאר שם
-   דו-משמעי, השמירה נחסמת עד שהאדם מתקן אותו בעצמו. */
-async function saveDutyRoster(){
-  const days = {};
-  WEEK_DAYS_HE.forEach(day=>{
-    days[day] = {
-      duty: parseDutyNames(document.getElementById("duty-tp-"+day).value),
-      rest: parseDutyNames(document.getElementById("duty-rest-"+day).value),
-    };
-  });
-  const allPersonnel = await fetchAllPersonnelByShed();
-  const {days: resolvedDays, ambiguous, unmatched} = resolveDutyRosterDays(days, allPersonnel);
-  WEEK_DAYS_HE.forEach(day=>{
-    document.getElementById("duty-tp-"+day).value = resolvedDays[day].duty.join("\n");
-    document.getElementById("duty-rest-"+day).value = resolvedDays[day].rest.join("\n");
-  });
-  document.getElementById("duty-roster-preview").innerHTML = dutyRosterPreviewHtml(resolvedDays, ambiguous, unmatched, allPersonnel, false);
-  if(ambiguous.length){ toast("❓ יש שמות דו-משמעיים — תקן לשם המלא ונסה לשמור שוב"); return; }
-  await sSetRaw("board_roster", {weekKey: todayKey(), days: resolvedDays});
-  toast("שיבוץ התורנויות נשמר ✓");
-}
-
 /* שולחת התראת-בדיקה אמיתית (FCM) על התוכן הנוכחי בעורך, ליום נבחר —
    אך ורק למכשיר של מי שלחץ (fcmToken של המכשיר הנוכחי), באותו נוסח
    בדיוק שהתזכורת האוטומטית (dutyRosterDigest, functions/index.js)
@@ -5828,9 +6433,10 @@ async function saveDutyRoster(){
    המקדימה תשקף בדיוק את מה שהתזכורת האמיתית הייתה שולחת. */
 async function previewDutyRosterNotification(day){
   if(!fcmToken){ toast("אין הרשאת התראות במכשיר הזה — אשר קודם התראות ונסה שוב 🔕"); return; }
-  const dutyNames = parseDutyNames(document.getElementById("duty-tp-"+day).value);
-  const restNames = parseDutyNames(document.getElementById("duty-rest-"+day).value);
-  const allPersonnel = await fetchAllPersonnelByShed();
+  const d = (rosterDraft && rosterDraft.days[rosterEditKey(day)]) || emptyRosterDay(isWeekendDay(day));
+  const dutyNames = rosterDayAssigned(d);
+  const restNames = (d.pfRest || []).concat(d.pmsRest || []);
+  const allPersonnel = rosterAllPersonnel || await fetchAllPersonnelByShed();
   const mine = new Set((allPersonnel[currentShed.id]||[]).map(p=>p.name));
   const myDuty = dutyNames.filter(n=>mine.has(n));
   const myRest = restNames.filter(n=>mine.has(n));
@@ -9797,7 +10403,7 @@ async function renderTrends(boxId){
   // --- פעולות מהירות ---
   const qa = [{ic:"📢",l:"הודעה",go:"openMsgMgmt()"}];
   if(showMorning){ qa.push({ic:"🌅",l:"מטלות בוקר",go:"go('scr-morning',document.getElementById('nav-morning'))"}); qa.push({ic:"🔒",l:"סגירת יום",go:"go('scr-closeday',null)"}); }
-  else { if(showCerts) qa.push({ic:"🎓",l:"הסמכות",go:"goCertsPage()"}); qa.push({ic:"📅",l:"לוח שבועי",go:"go('scr-board',null)"}); }
+  else { if(showCerts) qa.push({ic:"🎓",l:"הסמכות",go:"goCertsPage()"}); qa.push({ic:"📅",l:"תורנויות",go:"go('scr-board',null)"}); }
   qa.push({ic:"👥",l:"צוות",go:"openTeamMgmt()"});
   const qaHtml = qa.map(a=>`<button class="cd-q" onclick="${a.go}"><span class="cd-qi">${a.ic}</span><span>${escapeHTML(a.l)}</span></button>`).join("");
 
