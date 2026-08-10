@@ -3765,7 +3765,29 @@ async function sGetRaw(key, shared=true){
 /* מחזירה true/false לפי הצלחה בפועל — חיוני לקריאות עם קבצים גדולים
    (תמונות לוח/קרא-וחתום) שבהן כשל רשת שקט לא יכול פשוט "להיבלע":
    בלי זה, המסך מציג "נשמר בהצלחה" גם כשהכתיבה לא הגיעה בפועל. */
+/* רשת ביטחון נגד "רוקון" רשימת צוות: חוסמת כתיבה שמחליפה רשימה שיש בה
+   PINים/מפקדים ברשימה בגודל דומה שאין בה *אף* PIN ו*אף* מפקד — בדיוק
+   דפוס הנזק שקרה לסככה 2 (17 אנשים "עירומים", 0 PIN, 0 מפקד). מגן על כל
+   נתיבי הכתיבה בבת אחת, כולל מול גרסה ישנה בזיכרון/עריכה חיצונית. עריכות
+   רגילות תמיד משאירות לפחות PIN/מפקד אחד ברשימה, ולכן לא נחסמות. */
+async function personnelBlankOutGuard(key, next){
+  if(!Array.isArray(next) || next.length < 3) return null;
+  if(next.some(p=>p && p.pinHash)) return null;              // יש PIN בחדש — לא רוקון
+  if(next.some(p=>p && p.role==="מפקד")) return null;         // יש מפקד בחדש — לא רוקון
+  const cur = await sGetRaw(key);
+  if(!Array.isArray(cur)) return null;
+  const curPins = cur.filter(p=>p && p.pinHash).length;
+  const curCmd  = cur.filter(p=>p && p.role==="מפקד").length;
+  if(curPins < 3 && curCmd < 2) return null;                 // אין הרבה מה לאבד — לא חוסמים
+  return `נחסמה כתיבה שהייתה מוחקת ${curPins} PIN ו-${curCmd} מפקדים (${key})`;
+}
 async function sSetRaw(key, val, shared=true){
+  if(/cfg_personnel$/.test(key)){
+    try{
+      const blocked = await personnelBlankOutGuard(key, val);
+      if(blocked){ console.error("🛑 " + blocked); return false; }
+    }catch(e){ /* אם ההגנה עצמה נכשלה — לא שוברים כתיבה תקינה */ }
+  }
   mem[key]=val;
   if(fbReady){
     try{
