@@ -3771,15 +3771,18 @@ async function sGetRaw(key, shared=true){
    נתיבי הכתיבה בבת אחת, כולל מול גרסה ישנה בזיכרון/עריכה חיצונית. עריכות
    רגילות תמיד משאירות לפחות PIN/מפקד אחד ברשימה, ולכן לא נחסמות. */
 async function personnelBlankOutGuard(key, next){
-  if(!Array.isArray(next) || next.length < 3) return null;
-  if(next.some(p=>p && p.pinHash)) return null;              // יש PIN בחדש — לא רוקון
-  if(next.some(p=>p && p.role==="מפקד")) return null;         // יש מפקד בחדש — לא רוקון
+  if(!Array.isArray(next)) return null;
+  // אם בחדש יש ולו PIN אחד או מפקד אחד — זו לא "מחיקה", עוברים.
+  if(next.some(p=>p && p.pinHash)) return null;
+  if(next.some(p=>p && p.role==="מפקד")) return null;
+  // כאן: החדש ריק מ-PINים ומ-מפקדים (או ריק לגמרי — כולל רשימה שכולה
+  // "חיילים" בלי PIN, בדיוק דפוס הנזק לסככה 2). בודקים מה עומדים לאבד.
   const cur = await sGetRaw(key);
   if(!Array.isArray(cur)) return null;
   const curPins = cur.filter(p=>p && p.pinHash).length;
   const curCmd  = cur.filter(p=>p && p.role==="מפקד").length;
   if(curPins < 3 && curCmd < 2) return null;                 // אין הרבה מה לאבד — לא חוסמים
-  return `נחסמה כתיבה שהייתה מוחקת ${curPins} PIN ו-${curCmd} מפקדים (${key})`;
+  return `נחסמה כתיבה שהייתה מוחקת ${curPins} PIN ו-${curCmd} מפקדים (${key}; חדש=${next.length})`;
 }
 async function sSetRaw(key, val, shared=true){
   if(/cfg_personnel$/.test(key)){
