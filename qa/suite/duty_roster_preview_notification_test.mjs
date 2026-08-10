@@ -1,8 +1,10 @@
 /* משוב משתמש: רצה לראות איך מפקד מקבל את התראת שיבוץ התורנויות, בלי
    לשלוח בפועל לאף מפקד אמיתי חוץ מעצמה. הפתרון: כפתור "תצוגה מקדימה"
-   לכל יום בעורך השיבוץ (openDutyRosterModal), ששולח התראת FCM אמיתית
-   אך ורק למכשיר הנוכחי (fcmToken בזיכרון), בדיוק באותו נוסח שהתזכורת
-   האוטומטית (functions/index.js exports.dutyRosterDigest) שולחת.
+   בעורך הלוח (renderRosterEditor), ששולח התראת FCM אמיתית אך ורק
+   למכשיר הנוכחי (fcmToken בזיכרון), בדיוק באותו נוסח שהתזכורת
+   האוטומטית (functions/index.js exports.dailyDigest) שולחת.
+   העורך עובד יום-בכל-פעם (rosterEdDay), ולכן יש כפתור אחד ליום הנבחר
+   במקום כפתור לכל בלוק יום כמו בעורך הטקסט הישן.
    בדיקת מקור (regex על index.html) — קריאה אמיתית ל-httpsCallable
    דורשת Firebase Functions SDK אמיתי שלא זמין בסביבת בדיקה (וממילא
    חסום ברשת ע"י qa/lib/harness.mjs). */
@@ -13,12 +15,13 @@ const results = [];
 function record(name, pass, detail){ results.push({name, pass, detail}); }
 const html = readFileSync(`${ROOT}/index.html`, 'utf8');
 
-// 1. כפתור תצוגה מקדימה מופיע בכל בלוק יום בעורך השיבוץ
+// 1. כפתור תצוגה מקדימה קיים בעורך הלוח, על היום שנבחר לעריכה
 {
-  const start = html.indexOf("async function openDutyRosterModal");
-  const body = start >= 0 ? html.slice(start, start + 1400) : "";
-  const hasButton = /onclick="previewDutyRosterNotification\('\$\{day\}'\)"/.test(body);
-  record("כל בלוק יום בעורך השיבוץ כולל כפתור תצוגה מקדימה של ההתראה", hasButton, String(hasButton));
+  const start = html.indexOf("function renderRosterEditor");
+  const end = html.indexOf("function rosterCyclePf");
+  const body = (start >= 0 && end > start) ? html.slice(start, end) : "";
+  const hasButton = /onclick="previewDutyRosterNotification\('\$\{rosterEdDay\}'\)"/.test(body);
+  record("עורך הלוח כולל כפתור תצוגה מקדימה של ההתראה ליום הנבחר", hasButton, String(hasButton));
 }
 
 // 2. previewDutyRosterNotification: חסימה בלי הרשאת התראות, בלי לקרוא לשרת
