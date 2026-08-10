@@ -19,7 +19,8 @@ const out = await page.evaluate(async ()=>{
 
   const alerts = await computeAlerts();
   const missingNav = alerts.filter(a=>!a.nav);
-  const badTarget  = alerts.filter(a=>a.nav && !document.getElementById(a.nav));
+  // יעד שמתחיל ב-"__" הוא חלון (למשל תיבת הבקשות), לא מסך — לגיטימי
+  const badTarget  = alerts.filter(a=>a.nav && !a.nav.startsWith("__") && !document.getElementById(a.nav));
 
   await openAlerts();
   const modalOpen = document.getElementById("alerts-modal").classList.contains("open");

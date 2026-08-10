@@ -79,8 +79,8 @@ async function loginWithShortcut(shortcut, role, personIndex=0){
 {
   const {out:soldierOut} = await loginWithShortcut(null, "חייל");
   const {out:cmdOut} = await loginWithShortcut(null, "מפקד");
-  record("בלי קיצור: חייל נוחת על scr-safety כרגיל (רגרסיה)",
-    soldierOut.activeScreen==="scr-safety", JSON.stringify(soldierOut));
+  record("בלי קיצור: חייל נוחת על scr-today (\"היום שלי\") כמסך הפתיחה",
+    soldierOut.activeScreen==="scr-today", JSON.stringify(soldierOut));
   record("בלי קיצור: מפקד נוחת על scr-cmd כרגיל (רגרסיה)",
     cmdOut.activeScreen==="scr-cmd", JSON.stringify(cmdOut));
 }
