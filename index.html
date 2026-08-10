@@ -3373,11 +3373,14 @@ async function loadRuntimeLists(){
 
   const t = await sGet("cfg_tasks");
   if(p && Array.isArray(p) && p.length){ PERSONNEL = p; }
-  else if(currentShed && currentShed.id === "shed2"){
-    // סככה 2 נזרעת מרשימת האקסל המקורית
+  else if(currentShed && currentShed.id === "shed2" && PERSONNEL_SEED.length){
+    // סככה 2 נזרעת מרשימת האקסל המקורית — רק אם יש בפועל זרע (כיום ריק).
     PERSONNEL = PERSONNEL_SEED.slice(); await sSet("cfg_personnel", PERSONNEL);
   } else {
-    PERSONNEL = []; // סככה חדשה — המפקד יזין את הצוות
+    // ריק (סככה חדשה, או קריאה שהחזירה ריק) — *לא כותבים* רשימה ריקה כדי
+    // שקריאה חולפת/שגויה לעולם לא תדרוס צוות אמיתי. הזרע ריק ממילא, ולכן
+    // הכתיבה הישנה כאן רק סיכנה מחיקה. בזיכרון בלבד — מסך "מפקד ראשון".
+    PERSONNEL = [];
   }
 
   if(t && Array.isArray(t) && t.length){ MORNING_TASKS = t; }
@@ -9549,7 +9552,7 @@ async function ensureShed2Seed(){
   try{
     // צוות סככה 2
     let pers = (await sGetIn("shed2","cfg_personnel")) || [];
-    if(pers.length===0){
+    if(pers.length===0 && PERSONNEL_SEED.length){   // הזרע ריק כיום — לא כותבים ריק, לא דורסים
       await sSetIn("shed2","cfg_personnel", PERSONNEL_SEED.slice());
       pers = PERSONNEL_SEED.slice();
     }

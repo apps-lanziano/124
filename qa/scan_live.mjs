@@ -71,9 +71,24 @@ export async function run(){
       const raw = await get(shed.id+"_cfg_personnel");
       const n = Array.isArray(raw) ? raw.length : (raw===null ? "missing" : "notarr");
       const pins = Array.isArray(raw) ? raw.filter(p=>p && p.pinHash).length : 0;
-      parts.push(`${shed.id}=${n}(pin:${pins})`);
+      const cmd  = Array.isArray(raw) ? raw.filter(p=>p && p.role==="מפקד").length : 0;
+      const setAt= Array.isArray(raw) ? raw.filter(p=>p && p.pinSetAt).length : 0;
+      parts.push(`${shed.id}=${n}(מפקד:${cmd} pin:${pins} setAt:${setAt})`);
     }
-    console.error("[חי·אבחון אנשי צוות] " + parts.join(" "));
+    console.error("[חי·אבחון צוות] " + parts.join(" "));
+    // מסמך ישן גלובלי (מקור מיגרציית סככה 2) — אם עדיין קיים, בכמה אנשים/PIN
+    const legacy = await get("cfg_personnel");
+    if(Array.isArray(legacy)){
+      console.error(`[חי·אבחון legacy-global cfg_personnel] n=${legacy.length} pin:${legacy.filter(p=>p&&p.pinHash).length} מפקד:${legacy.filter(p=>p&&p.role==="מפקד").length}`);
+    } else {
+      console.error("[חי·אבחון legacy-global cfg_personnel] " + (legacy===null?"missing":"notarr"));
+    }
+    // האם מסמך סככה 2 נראה כמו זרע (שמות בלבד, בלי שדות אישיים)?
+    const s2 = await get("shed2_cfg_personnel");
+    if(Array.isArray(s2) && s2.length){
+      const sample = s2[0] || {};
+      console.error("[חי·אבחון shed2 keys] " + Object.keys(sample).sort().join(","));
+    }
   }catch(e){ console.error("[חי·אבחון] נכשל:", String(e&&e.message).slice(0,120)); }
 
   /* ---------- 1. פריטים שפורסמו אך לא הגיעו לכל המסגרות ---------- */
