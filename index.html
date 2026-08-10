@@ -9363,29 +9363,6 @@ function adminLogView(which){
   else if(which==="byShed") box.innerHTML = renderLogByShed(adminLogData);
   else box.innerHTML = renderLogByItem(adminLogData);
 }
-/* ייצוא הדוח כתמונה — לא window.print(): ב-PWA מותקן במסך הבית (בעיקר
-   באייפון, ה"מצב standalone") הדפדפן לא מציג את דיאלוג ההדפסה בכלל,
-   כך שהכפתור לא עשה שום דבר. html2canvas כבר בשימוש מוכח באפליקציה
-   (דוח קרא-וחתום/מגמות) ועובד בכל הפלטפורמות, כולל PWA מותקן. */
-async function exportAdminLog(){
-  const box = document.getElementById("admin-log-export-box");
-  const listBox = document.getElementById("admin-log-list");
-  if(!box || !listBox || !listBox.innerHTML.trim()){ toast("אין נתונים לייצוא"); return; }
-  toast("מכין תמונה…");
-  try{
-    if(!window.html2canvas){
-      await new Promise((res,rej)=>{ const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; s.integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H"; s.crossOrigin="anonymous"; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
-    }
-    const canvas = await window.html2canvas(box, {scale:2, backgroundColor:"#ffffff"});
-    canvas.toBlob(blob=>{
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href=url; a.download="יומן_תיעוד_קרא_וחתום_"+adminLogCurrentView+".png"; a.click();
-      URL.revokeObjectURL(url);
-      toast("הדוח יוצא כתמונה 📸");
-    });
-  }catch(e){ toast("⚠️ ייצוא נכשל"); console.error(e); }
-}
-
 /* ===== היסטוריית קרא-וחתום לתיעוד — טקסט פשוט =====
    לבקשת אחראי ההדרכה: תיעוד היסטורי לסיקור, לכל נושא קרא-וחתום מי ביצע
    (שמות + תאריך), לפי מסגרת. במכוון טקסט פשוט (לא תמונה/PDF מעוצב): לא
