@@ -689,6 +689,10 @@ nav{
 .alert-row.mid{background:var(--gold-soft);border-color:#ffe7a8}
 .alert-row .al-ic{font-size:19px;flex-shrink:0}
 .alert-row .al-tx{font-size:13.5px;font-weight:600;line-height:1.4}
+/* התראה שמובילה למסך — חץ + משוב מגע, כדי שיהיה ברור שאפשר להקיש עליה */
+.alert-row.tappable{cursor:pointer;transition:transform .15s}
+.alert-row.tappable:active{transform:scale(.98);filter:brightness(.96)}
+.alert-row .al-go{margin-inline-start:auto;flex-shrink:0;font-size:20px;font-weight:800;color:var(--ink-3);line-height:1}
 /* תזכורת אישית */
 .reminder-chip-row{display:flex;gap:8px;margin-bottom:12px}
 .reminder-chip{flex:1;padding:10px 6px;border-radius:11px;border:1.5px solid var(--line);background:#fff;color:var(--ink-2);font-family:'Assistant';font-weight:700;font-size:12.5px;cursor:pointer;transition:all .2s}
@@ -9841,7 +9845,7 @@ async function computeAlerts(){
     if(await sGet("rollcall_active"+rcSuf)){
       const checks = (await sGet("rollcall_checkins"+rcSuf)) || {};
       const missing = PERSONNEL.filter(p=>!checks[p.name]).length;
-      if(missing>0) alerts.push({icon:"🛡️", text:`נכס פעיל — ${missing} טרם סימנו נוכחות`, level:"high"});
+      if(missing>0) alerts.push({icon:"🛡️", text:`נכס פעיל — ${missing} טרם סימנו נוכחות`, level:"high", nav:"scr-rollcall"});
     }
   }
 
@@ -9851,7 +9855,7 @@ async function computeAlerts(){
   {
     const report = await sGet("daily_rollcall_report");
     if(report && report.dayKey === rollcallDayKey() && report.absentCount>0){
-      alerts.push({icon:"📋", text:`מסדר בוקר — ${report.absentCount} נעדרים היום`, level: report.absentCount>=3 ? "high" : "mid"});
+      alerts.push({icon:"📋", text:`מסדר בוקר — ${report.absentCount} נעדרים היום`, level: report.absentCount>=3 ? "high" : "mid", nav:"scr-cmd"});
     }
   }
 
@@ -9863,9 +9867,9 @@ async function computeAlerts(){
     sigsArrA.forEach(sigs=>{ if(!sigs[e.id]) missing++; });
     const age = eventAgeDays(e.id);
     if(missing>0 && age>=3){
-      alerts.push({icon:"⏳", text:`"${e.title}" — ${missing} לא חתמו (${age} ימים)`, level:"high"});
+      alerts.push({icon:"⏳", text:`"${e.title}" — ${missing} לא חתמו (${age} ימים)`, level:"high", nav:"scr-safety"});
     } else if(missing>0){
-      alerts.push({icon:"✍️", text:`"${e.title}" — ${missing} עדיין לא חתמו`, level:"mid"});
+      alerts.push({icon:"✍️", text:`"${e.title}" — ${missing} עדיין לא חתמו`, level:"mid", nav:"scr-safety"});
     }
   }
   if(isTrimmedUnit) return alerts;
@@ -9873,16 +9877,16 @@ async function computeAlerts(){
   const done = (await sGet("team_morning_"+todayKey())) || {};
   const openM = MORNING_TASKS.filter(t=>!done[t.id]).length;
   if(openM>0 && new Date().getHours()>=11){
-    alerts.push({icon:"⏰", text:`${openM} מטלות בוקר לא בוצעו (חלף 11:00)`, level:"high"});
+    alerts.push({icon:"⏰", text:`${openM} מטלות בוקר לא בוצעו (חלף 11:00)`, level:"high", nav:"scr-morning"});
   } else if(openM>0){
-    alerts.push({icon:"🧰", text:`${openM} מטלות בוקר עדיין פתוחות`, level:"mid"});
+    alerts.push({icon:"🧰", text:`${openM} מטלות בוקר עדיין פתוחות`, level:"mid", nav:"scr-morning"});
   }
   // open faults > 4 days
   const faults = await getFaults();
   for(const f of faults.filter(x=>x.status!=="closed")){
     const m = /_(\d{10,})/.exec(f.id);
     const age = m ? Math.floor((Date.now()-Number(m[1]))/86400000) : 0;
-    if(age>=4) alerts.push({icon:"🛠️", text:`תקלה פתוחה ${age} ימים: "${f.title}"`, level:"high"});
+    if(age>=4) alerts.push({icon:"🛠️", text:`תקלה פתוחה ${age} ימים: "${f.title}"`, level:"high", nav:"scr-faults"});
   }
   // expiring certifications (feature 15)
   const certs = (await sGet("certs_list")) || [];
@@ -9891,8 +9895,8 @@ async function computeAlerts(){
     if(!c.expiry) continue;
     const exp = new Date(c.expiry+"T00:00:00");
     const daysLeft = Math.round((exp-today)/86400000);
-    if(daysLeft<0) alerts.push({icon:"🎓", text:`${c.person}: ${c.name} — פג תוקף!`, level:"high"});
-    else if(daysLeft<=30) alerts.push({icon:"🎓", text:`${c.person}: ${c.name} — פג בעוד ${daysLeft} ימים`, level:"mid"});
+    if(daysLeft<0) alerts.push({icon:"🎓", text:`${c.person}: ${c.name} — פג תוקף!`, level:"high", nav:"scr-certs"});
+    else if(daysLeft<=30) alerts.push({icon:"🎓", text:`${c.person}: ${c.name} — פג בעוד ${daysLeft} ימים`, level:"mid", nav:"scr-certs"});
   }
   // expiring tool calibrations — חדר כלים (שבוע לפני)
   const tools = (await sGet("tools_list")) || [];
@@ -9900,8 +9904,8 @@ async function computeAlerts(){
     if(t.inRepair || !t.expiry) continue;
     const exp = new Date(t.expiry+"T00:00:00");
     const daysLeft = Math.round((exp-today)/86400000);
-    if(daysLeft<0) alerts.push({icon:"🧰", text:`${t.name}${t.serial?(" (מספר "+t.serial+")"):""} — פג תוקף כיול!`, level:"high"});
-    else if(daysLeft<=TOOLS_ALERT_DAYS) alerts.push({icon:"🧰", text:`${t.name}${t.serial?(" (מספר "+t.serial+")"):""} — פ.ת בעוד ${daysLeft} ימים`, level:"mid"});
+    if(daysLeft<0) alerts.push({icon:"🧰", text:`${t.name}${t.serial?(" (מספר "+t.serial+")"):""} — פג תוקף כיול!`, level:"high", nav:"scr-tools"});
+    else if(daysLeft<=TOOLS_ALERT_DAYS) alerts.push({icon:"🧰", text:`${t.name}${t.serial?(" (מספר "+t.serial+")"):""} — פ.ת בעוד ${daysLeft} ימים`, level:"mid", nav:"scr-tools"});
   }
   // upcoming vehicle service — מעקב רכבים (שבועיים לפני)
   const vehicles = (await sGet("vehicles_list")) || [];
@@ -9909,8 +9913,8 @@ async function computeAlerts(){
     if(!v.nextService) continue;
     const next = new Date(v.nextService+"T00:00:00");
     const daysLeft = Math.round((next-today)/86400000);
-    if(daysLeft<0) alerts.push({icon:"🚙", text:`${v.name}${v.number?(" (מס' "+v.number+")"):""} — עבר מועד הטיפול!`, level:"high"});
-    else if(daysLeft<=VEHICLES_ALERT_DAYS) alerts.push({icon:"🚙", text:`${v.name}${v.number?(" (מס' "+v.number+")"):""} — טיפול בעוד ${daysLeft} ימים`, level:"mid"});
+    if(daysLeft<0) alerts.push({icon:"🚙", text:`${v.name}${v.number?(" (מס' "+v.number+")"):""} — עבר מועד הטיפול!`, level:"high", nav:"scr-vehicles"});
+    else if(daysLeft<=VEHICLES_ALERT_DAYS) alerts.push({icon:"🚙", text:`${v.name}${v.number?(" (מס' "+v.number+")"):""} — טיפול בעוד ${daysLeft} ימים`, level:"mid", nav:"scr-vehicles"});
   }
   return alerts;
 }
@@ -9920,6 +9924,16 @@ function switchAlertsTab(tab, btn){
   document.querySelectorAll("#alerts-tabs .cmd-tab").forEach(b=>b.classList.remove("active"));
   if(btn) btn.classList.add("active");
   renderAlertsBody();
+}
+/* מעבר מהתראה בפעמון אל המסך שבו מטפלים בה: סוגר את חלון ההתראות (ואת
+   תפריט "עוד" אם פתוח) ומנווט, כולל סימון כפתור הניווט התואם אם קיים.
+   מסכים שנמצאים רק בתפריט "עוד" — go() מקבל null ומטפל בזה כרגיל. */
+function goFromAlert(scr){
+  if(!scr || !document.getElementById(scr)) return;
+  document.getElementById("alerts-modal")?.classList.remove("open");
+  document.getElementById("more-sheet")?.classList.remove("open");
+  const btn = document.querySelector('.nav-btn[data-scr="'+scr+'"]');
+  go(scr, btn || null);
 }
 async function openAlerts(){
   alertsTab = "all";
@@ -9947,7 +9961,14 @@ async function renderAlertsBody(){
       if(alerts.length===0){
         body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)"><div style="font-size:40px;margin-bottom:8px">✅</div><b style="font-size:15px;color:var(--green)">אין התראות פתוחות</b><p style="font-size:13px;margin-top:4px">הכל תחת שליטה</p></div>`;
       } else {
-        body.innerHTML = alerts.map(a=>`<div class="alert-row ${a.level}"><span class="al-ic">${a.icon}</span><span class="al-tx">${escapeHTML(a.text)}</span></div>`).join("");
+        body.innerHTML = alerts.map(a=>{
+          // כל התראה מובילה למסך שבו מטפלים בה בפועל (nav). בלי זה הבאנר
+          // נראה לחיץ אבל לא עושה כלום — משתמשים דיווחו על זה.
+          const clickable = !!a.nav && !!document.getElementById(a.nav);
+          return `<div class="alert-row ${a.level}${clickable?" tappable":""}"${clickable?` onclick="goFromAlert('${a.nav}')"`:""}>
+            <span class="al-ic">${a.icon}</span><span class="al-tx">${escapeHTML(a.text)}</span>${clickable?'<span class="al-go">›</span>':""}
+          </div>`;
+        }).join("");
       }
       updateAlertBell(alerts);
     }
