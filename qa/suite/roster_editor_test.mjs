@@ -37,10 +37,28 @@ const out = await page.evaluate(async ()=>{
   r.overrideGrants = isRosterManager;
   await sSetRaw("roster_managers", null);
 
-  // ---- פעולות העריכה ----
+  // ---- שני הבאנרים למ"ע תורנויות ----
   user = "טל מלכה"; await refreshAreaPermissions();
-  await openRosterEditor();
+  go("scr-board", null); await renderBoard();
+  const banners = document.querySelectorAll(".roster-mgr-banners .roster-banner");
+  r.bannerCount = banners.length;
+  const bannerTxt = document.querySelector(".roster-mgr-banners")?.textContent || "";
+  r.hasCurBanner = bannerTxt.includes("עריכת לוח נוכחי");
+  r.hasFutBanner = bannerTxt.includes("בניית לוח עתידי");
+
+  // ---- עריכת לוח נוכחי ----
+  await openRosterEditor(null, "current");
   r.editorOpen = document.getElementById("duty-roster-modal").classList.contains("open");
+  r.curTitle = document.getElementById("roster-ed-title").textContent;
+  document.getElementById("duty-roster-modal").classList.remove("open");
+
+  // ---- בניית לוח עתידי — כותרת וסלוט שונים ----
+  await openRosterEditor(null, "next");
+  r.futTitle = document.getElementById("roster-ed-title").textContent;
+  r.futPublishLabel = document.getElementById("roster-ed-publish").textContent;
+
+  // חוזרים לעריכת הנוכחי להמשך הבדיקות
+  await openRosterEditor(null, "current");
   rosterEdDay = "שני";
 
   // שיבוץ שם למשבצת דרך בורר השמות
@@ -86,6 +104,12 @@ record("נע\"ת \"מ״ע תורנויות\" מעניק הרשאה (מסלול �
 record("רשימה מותאמת דורסת את ברירת המחדל",
   out.talAfterOverride === false && out.overrideGrants === true,
   `tal=${out.talAfterOverride} other=${out.overrideGrants}`);
+record("שני באנרים מוצגים למ״ע תורנויות", out.bannerCount === 2, String(out.bannerCount));
+record("באנר \"עריכת לוח נוכחי\" קיים", out.hasCurBanner, String(out.hasCurBanner));
+record("באנר \"בניית לוח עתידי\" קיים", out.hasFutBanner, String(out.hasFutBanner));
+record("כותרת עריכת לוח נוכחי", /עריכת לוח נוכחי/.test(out.curTitle||""), out.curTitle);
+record("כותרת בניית לוח עתידי", /בניית לוח עתידי/.test(out.futTitle||""), out.futTitle);
+record("בלוח עתידי הכפתור הוא \"שמור\" ולא \"פרסם\"", /שמור/.test(out.futPublishLabel||""), out.futPublishLabel);
 record("העורך נפתח למ״ע תורנויות", out.editorOpen, String(out.editorOpen));
 record("בורר השמות מציג אנשי צוות", out.pickHasNames, String(out.pickHasNames));
 record("בחירת שם משבצת אותו במשבצת", leadOk, out.leadValue);
