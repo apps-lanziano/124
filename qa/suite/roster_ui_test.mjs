@@ -28,8 +28,8 @@ const out = await page.evaluate(async ()=>{
   go("scr-board", null);
   await renderBoard();
 
-  // חייל רגיל — אין כפתור עריכה
-  r.editHiddenForSoldier = document.getElementById("roster-edit-btn").classList.contains("hidden");
+  // חייל רגיל — אין באנרי עריכה כלל
+  r.editHiddenForSoldier = !document.querySelector(".roster-mgr-banners");
   r.isManager = isRosterManager;
 
   // תצוגת לוח
@@ -93,7 +93,7 @@ const out = await page.evaluate(async ()=>{
 
 record("התחברות חייל הצליחה", login.ok, JSON.stringify(login));
 record("חייל רגיל אינו מ״ע תורנויות", out.isManager === false, String(out.isManager));
-record("כפתור העריכה מוסתר לחייל רגיל", out.editHiddenForSoldier, String(out.editHiddenForSoldier));
+record("באנרי העריכה מוסתרים לחייל רגיל", out.editHiddenForSoldier, String(out.editHiddenForSoldier));
 record("תצוגת לוח: הטבלה מוצגת", out.hasGrid, String(out.hasGrid));
 record("תצוגת לוח: כל שורות התפקידים מהגיליון קיימות", out.hasRoleRows, String(out.hasRoleRows));
 record("תצוגת לוח: תורן טייסת שבועי מוצג", out.hasSquadron, String(out.hasSquadron));

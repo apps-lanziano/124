@@ -58,6 +58,16 @@ const out = await page.evaluate(async ()=>{
   dual.lead = "א"; dual.tools = "ב"; dual.pf = [{name:"ב"},{name:"ג"}];
   r.dualAssigned = rosterDayAssigned(dual);
 
+  // 3b) לוח עתידי נשמר בנפרד ולא נוגע בלוח הנוכחי (שההתראה קוראת)
+  const future = migrateRosterToV2(null);
+  future.days["שני"].lead = "עתידי בלבד";
+  future.days["שני"].tools = "כלים עתידי";
+  await saveDutyRosterV2(future, "next");
+  const curAfter = await getDutyRoster("current");
+  const nextAfter = await getDutyRoster("next");
+  r.futureIsolated = curAfter.days["שני"].lead !== "עתידי בלבד";
+  r.futureSaved    = nextAfter.days["שני"].lead === "עתידי בלבד";
+
   // 4) פרסום חסום כשחסרה משבצת חובה (פקיד כלים)
   rosterDraft = migrateRosterToV2(null);
   rosterDraft.days["שלישי"].lead = "חייל ה סככה 1";        // ערך ייחודי שטרם נשמר
@@ -94,6 +104,8 @@ record("סופ\"ש: אותו צוות בחמישי, שישי ושבת",
 record("סופ\"ש: אין נחים בשלושת הימים", out.wkndRestNull.every(x=>x===null), JSON.stringify(out.wkndRestNull));
 record("שיבוץ כפול נספר פעם אחת (פקיד כלים שגם ב-PF)",
   JSON.stringify(out.dualAssigned) === JSON.stringify(["א","ב","ג"]), JSON.stringify(out.dualAssigned));
+record("לוח עתידי נשמר בנפרד ולא נוגע בלוח הנוכחי", out.futureIsolated && out.futureSaved,
+  `isolated=${out.futureIsolated} saved=${out.futureSaved}`);
 record("פרסום נחסם כשחסר פקיד כלים", /חסר/.test(out.blockedToast||""), out.blockedToast);
 record("פרסום חסום באמת לא נשמר", out.blockedNotSaved, String(out.blockedNotSaved));
 
