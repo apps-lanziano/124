@@ -700,6 +700,52 @@ nav{
 /* ===== לוח צוות שבועי — תצוגה מובנית =====
    התצוגה הראשית נאמנה לגיליון שמ"ע תורנויות ממלא: שורות תפקיד מול
    עמודות ימים, עם עמודת התפקידים דביקה כדי שגלילת הימים לא תאבד הקשר. */
+/* ===== מסך "היום שלי" ===== */
+.today-flag{display:flex;align-items:center;gap:12px;border-radius:16px;padding:14px 16px;margin-bottom:10px;color:#fff}
+.today-flag.duty{background:linear-gradient(135deg,var(--red-deep),var(--red))}
+.today-flag.tom{background:linear-gradient(135deg,#8a6500,var(--gold))}
+.today-flag.rest{background:linear-gradient(135deg,#2f6b52,var(--green))}
+.today-flag .tf-ic{font-size:26px;flex:0 0 auto}
+.today-flag .tf-tx{display:flex;flex-direction:column;line-height:1.3}
+.today-flag .tf-tx b{font-size:16px;font-weight:800}
+.today-flag .tf-tx span{font-size:12px;opacity:.9}
+.today-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px 14px;margin-bottom:10px;box-shadow:var(--shadow)}
+.today-card.tappable{cursor:pointer}
+.today-card.tappable:active{transform:scale(.99)}
+.today-card .tc-h{font-family:var(--mono,inherit);font-size:11px;font-weight:800;letter-spacing:.04em;
+  color:var(--ink-3);text-transform:uppercase;padding:9px 0 5px}
+.tc-row{display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid var(--bg);cursor:pointer}
+.tc-row:first-child{border-top:0}
+.tc-ic{font-size:18px;flex:0 0 auto}
+.tc-t{flex:1;font-size:14px;font-weight:600;line-height:1.35}
+.tc-go{color:var(--ink-3);font-size:20px;font-weight:800}
+.tc-empty{padding:14px 0;font-size:13.5px;font-weight:600;color:var(--green);text-align:center}
+/* ===== מודל בקשות ===== */
+.req-type-pick{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:6px 0 12px}
+.rtp{display:flex;align-items:center;gap:7px;padding:10px;border-radius:12px;border:1.5px solid var(--line);
+  cursor:pointer;font-size:13px;font-weight:700;color:var(--ink-2)}
+.rtp.on{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+.rtp-ic{font-size:17px}
+.req-lbl{display:block;font-size:11.5px;color:var(--ink-3);font-weight:600;margin:8px 0 4px}
+.req-person{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border:1.5px solid var(--line);
+  border-radius:12px;margin-bottom:6px;cursor:pointer;font-size:13.5px;font-weight:700}
+.req-person.on{border-color:var(--red);background:var(--red-soft)}
+.req-person .req-rad{width:17px;height:17px;border-radius:50%;border:1.5px solid var(--line);flex:0 0 auto}
+.req-person.on .req-rad{border-color:var(--red);background:var(--red);box-shadow:inset 0 0 0 3px #fff}
+.req-warn{background:var(--gold-soft);border:1px solid #f0e0b0;border-radius:11px;padding:11px;font-size:12.5px;color:#8a6500;font-weight:600}
+.req-card{border:1px solid var(--line);border-radius:13px;padding:11px;margin-bottom:8px;background:var(--card)}
+.req-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.req-who{font-size:12px;font-weight:800;color:var(--ink);background:var(--bg);padding:2px 8px;border-radius:8px}
+.req-body{flex:1;font-size:13px;font-weight:600;min-width:0}
+.req-reason{font-size:12px;color:var(--ink-2);background:var(--bg);border-radius:9px;padding:7px 9px;margin-top:7px}
+.req-note{font-size:12px;color:#8a4444;background:#faeeee;border-radius:9px;padding:7px 9px;margin-top:7px}
+.req-acts{display:flex;gap:7px;margin-top:9px}
+.req-acts .m-btn{padding:9px;font-size:13px}
+.st{font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.st.w{background:var(--gold-soft);color:#8a6500}
+.st.a{background:var(--green-soft);color:var(--green)}
+.st.r{background:var(--red-soft);color:var(--red)}
+.m-btn.ok{background:var(--green);color:#fff;border:none;flex:1}
 .roster-mgr-banners{display:flex;gap:8px;margin-bottom:10px}
 .roster-banner{flex:1;display:flex;align-items:center;gap:9px;padding:11px;border-radius:13px;border:1px solid;
   cursor:pointer;font-family:inherit;text-align:right;transition:transform .15s}
@@ -1339,6 +1385,11 @@ nav{
     <div id="brief-area"></div>
     <!-- GLOBAL MESSAGES BOARD (feature 11) — appears on every screen -->
     <div id="messages-area"></div>
+
+    <!-- ===== היום שלי (חיילים) ===== -->
+    <section class="screen" id="scr-today">
+      <div id="today-content"></div>
+    </section>
 
     <!-- ===== SAFETY ===== -->
     <section class="screen active" id="scr-safety">
@@ -2043,6 +2094,7 @@ nav{
   <button id="back-to-dash" onclick="go('scr-cmd',document.getElementById('nav-cmd'))" aria-label="חזרה לדשבורד" title="חזרה לדשבורד">→</button>
   <nav>
     <button class="nav-btn hidden" id="nav-cmd" data-scr="scr-cmd" onclick="go('scr-cmd',this)"><span class="ic">🎖️</span><span>מפקד</span></button>
+    <button class="nav-btn hidden" id="nav-today" data-scr="scr-today" onclick="go('scr-today',this)"><span class="ic">🏠</span><span>היום שלי</span><span class="nav-badge hidden" id="badge-today">0</span></button>
     <button class="nav-btn active" id="nav-safety" data-scr="scr-safety" onclick="go('scr-safety',this)"><span class="ic">📄</span><span>קרא וחתום</span><span class="nav-badge hidden" id="badge-safety">0</span></button>
     <button class="nav-btn" id="nav-morning" data-scr="scr-morning" onclick="go('scr-morning',this)"><span class="ic">✅</span><span>מטלות</span><span class="nav-badge hidden" id="badge-morning">0</span></button>
     <button class="nav-btn" id="nav-board" data-scr="scr-board" onclick="go('scr-board',this)"><span class="ic">📅</span><span>תורנויות</span></button>
@@ -2200,6 +2252,7 @@ nav{
       <div class="sheet-item" id="sheet-naatim" onclick="closeMoreAnd('scr-naatim')"><div class="s-ic">🗂️</div><div class="s-tx"><b>נע"תים</b><span>תחומי אחריות ובדיקה שבועית</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-duties" onclick="closeMoreAnd('scr-duties')"><div class="s-ic">🔄</div><div class="s-tx"><b>תורנויות</b><span>שיבוץ שמי שבועי</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-closeday" onclick="closeMoreAnd('scr-closeday')"><div class="s-ic">🌙</div><div class="s-tx"><b>סגירת יום</b><span>צ'קליסט סוף משמרת</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="sheet-certs" onclick="closeMoreAnd('scr-certs')"><div class="s-ic">🎓</div><div class="s-tx"><b>הסמכות</b><span>תוקף וחידוש הסמכות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-training" onclick="closeMoreAnd('scr-training')"><div class="s-ic">📚</div><div class="s-tx"><b>חומרי הדרכה</b><span>מהמנהל הטייסתי</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-medchecks" onclick="closeMoreAnd('scr-medchecks')"><div class="s-ic">🪖</div><div class="s-tx"><b>כשירות חיילים</b><span>שמיעה ומטווח — תוקף וחידוש</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-calendar" onclick="closeMoreAnd('scr-calendar')"><div class="s-ic">📅</div><div class="s-tx"><b>לוח שנה מאוחד</b><span>הסמכות, כיול כלים, טסט רכב ותורנויות</span></div><span class="s-chev">‹</span></div>
@@ -2515,6 +2568,57 @@ nav{
         <button class="m-btn primary" id="roster-ed-publish" onclick="publishRoster()" style="flex:1">📢 פרסם שבוע</button>
         <button class="m-btn ghost" onclick="copyRosterFromLastWeek()" style="flex:0 0 auto">📋 העתק</button>
         <button class="m-btn ghost" onclick="document.getElementById('duty-roster-modal').classList.remove('open')" style="flex:0 0 auto">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- בקשה חדשה (חייל): החלפת תורנות / יציאה מוקדמת / חופשה / אחר -->
+  <div class="modal-bg" id="request-modal">
+    <div class="modal">
+      <h3 id="req-title">בקשה חדשה</h3>
+      <div class="m-sub" id="req-sub">הבקשה תישלח למפקד המסגרת לאישור.</div>
+      <div class="req-type-pick" id="req-type-pick"></div>
+      <div id="req-fields"></div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn primary" onclick="submitRequest()" style="flex:1">שלח לאישור</button>
+        <button class="m-btn ghost" onclick="document.getElementById('request-modal').classList.remove('open')" style="flex:0 0 auto">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- הבקשות שלי (חייל) -->
+  <div class="modal-bg" id="my-requests-modal">
+    <div class="modal">
+      <h3>הבקשות שלי</h3>
+      <button class="m-btn primary" style="width:100%;margin:4px 0 12px" onclick="openNewRequest()">+ בקשה חדשה</button>
+      <div id="my-requests-list" style="max-height:52vh;overflow-y:auto"></div>
+      <div class="modal-actions" style="margin-top:10px">
+        <button class="m-btn ghost" onclick="document.getElementById('my-requests-modal').classList.remove('open')" style="width:100%">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- בקשות ממתינות (מפקד) -->
+  <div class="modal-bg" id="requests-inbox-modal">
+    <div class="modal">
+      <h3>בקשות ממתינות</h3>
+      <div class="m-sub" id="req-inbox-sub"></div>
+      <div id="requests-inbox-list" style="max-height:56vh;overflow-y:auto"></div>
+      <div class="modal-actions" style="margin-top:10px">
+        <button class="m-btn ghost" onclick="document.getElementById('requests-inbox-modal').classList.remove('open')" style="width:100%">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- דחיית בקשה עם הערה (מפקד) -->
+  <div class="modal-bg" id="reject-req-modal">
+    <div class="modal">
+      <h3>דחיית בקשה</h3>
+      <div class="m-sub" id="reject-req-sub"></div>
+      <textarea class="m-input" id="reject-req-note" rows="3" placeholder="הערה לחייל (חובה) — מה הסיבה, ומה אפשר לעשות במקום"></textarea>
+      <div class="modal-actions" style="margin-top:8px">
+        <button class="m-btn primary" style="background:var(--red)" onclick="confirmRejectRequest()" style="flex:1">שלח דחייה</button>
+        <button class="m-btn ghost" onclick="document.getElementById('reject-req-modal').classList.remove('open')" style="flex:0 0 auto">ביטול</button>
       </div>
     </div>
   </div>
@@ -4308,6 +4412,12 @@ async function applyLoginUiForRole(person){
   // נשאר נגיש מתפריט "עוד" כמו קודם, כדי לא להוסיף עוד לשונית לבאנר שלו
   document.getElementById("nav-training").classList.toggle("hidden", userRole === "מפקד");
   document.getElementById("sheet-training").classList.toggle("hidden", userRole !== "מפקד");
+  // "היום שלי" — מסך פתיחה לחיילים בלבד. כדי לפנות לו מקום בסרגל, הסמכות
+  // עוברת לתפריט "עוד" אצל חיילים (לבקשת המשתמש); אצל מפקד נשאר כרגיל.
+  const isSoldier = userRole !== "מפקד";
+  document.getElementById("nav-today").classList.toggle("hidden", !isSoldier);
+  document.getElementById("sheet-certs").classList.toggle("hidden", !isSoldier);
+  // nav-certs עצמו נקבע למטה (שורה משותפת עם לוגיקת מחלקות)
   document.getElementById("safety-search").value = "";
   document.getElementById("tools-search").value = "";
   document.getElementById("nav-tools").classList.toggle("hidden", !isToolsResp);
@@ -4339,7 +4449,8 @@ async function applyLoginUiForRole(person){
   document.getElementById("nav-morning").classList.toggle("hidden", isDeptUnit);
   document.getElementById("sheet-naatim").classList.toggle("hidden", isDeptUnit);
   document.getElementById("sheet-closeday").classList.toggle("hidden", isDeptUnit);
-  document.getElementById("nav-certs").classList.toggle("hidden", isDeptUnit && userRole==="מפקד");
+  // הסמכות יורדת מהסרגל לחיילים (עברה ל"עוד") וגם למפקד מחלקות
+  document.getElementById("nav-certs").classList.toggle("hidden", isSoldier || (isDeptUnit && userRole==="מפקד"));
   if(isDeptUnit && userRole==="מפקד") document.getElementById("more-tasks-item").classList.add("hidden");
   // בסככות (לא במחלקות) — תקלות וימי הולדת עוברים מהבאר התחתון לתפריט "עוד" כדי לצמצם עומס
   document.getElementById("nav-faults").classList.toggle("hidden", !isDeptUnit);
@@ -4430,7 +4541,8 @@ async function doLogin(){
     } else if(userRole === "מפקד"){
       landingScreen = "scr-cmd"; landingBtn = document.querySelector('[data-scr="scr-cmd"]');
     } else {
-      landingScreen = "scr-safety"; landingBtn = document.querySelector('[data-scr="scr-safety"]');
+      // חייל נוחת על "היום שלי" — מסך הפתיחה האישי
+      landingScreen = "scr-today"; landingBtn = document.querySelector('[data-scr="scr-today"]');
     }
     // קיצור דרך ממסך הבית (PWA shortcuts) — נכנס עם ?shortcut=... בכתובת.
     // go() לא דורש שהכפתור המפעיל יהיה גלוי, ולכן הקיצור עובד גם אם המסך
@@ -4523,6 +4635,7 @@ function go(id, btn){
   if(id==="scr-onboarding") renderOnboardingScreen();
   if(id==="scr-calendar") renderCalendarPage();
   if(id==="scr-board") renderBoard();
+  if(id==="scr-today") renderToday();
   if(id==="scr-certs") renderCertsPage();
   if(id==="scr-medchecks") renderMedChecks();
   if(id==="scr-tools") renderToolsPage();
@@ -6096,6 +6209,280 @@ async function openRosterFull(){
 function closeRosterFull(){
   document.getElementById("roster-full").classList.remove("open");
   const b = document.getElementById("back-to-dash"); if(b) b.style.display = "";
+}
+
+/* התפקידים שלי ביום נתון בלוח — לשימוש גם ב"רק אני" וגם ב"היום שלי" */
+function rosterMyRoles(d, name){
+  if(!d) return [];
+  const roles = [];
+  if(d.lead===name) roles.push("ראש צוות");
+  if(d.deputyLead===name) roles.push("ל/ ראש צוות");
+  if(d.driver===name) roles.push("נהג");
+  if(d.tools===name) roles.push("פקיד כלים");
+  if((d.fixedAug||[]).includes(name)) roles.push("מתגבר");
+  const me = (d.pf||[]).find(p=>p.name===name);
+  if(me) roles.push(me.course ? "PF · בקורס עד 20:00" : (me.reserve ? "PF · מילואים" : "PF"));
+  if((d.pms||[]).includes(name)) roles.push("PMS");
+  (d.basic||[]).forEach(b=>{ if(b.name===name) roles.push(b.type||"תורנות"); });
+  return roles;
+}
+function hebDayOffset(n){ return WEEK_DAYS_HE[(new Date().getDay()+n+7)%7]; }
+
+/* ===== מסך "היום שלי" (חיילים) =====
+   עונה על השאלה הראשונה בבוקר: אני תורן? מה אני חייב? מה קורה היום.
+   הנתונים כולם קיימים כבר — לוח הצוות, קרא-וחתום, הסמכות, ימי הולדת. */
+async function renderToday(){
+  const box = document.getElementById("today-content");
+  if(!box) return;
+  box.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)">⏳ טוען…</div>`;
+  try{
+    const roster = await getDutyRoster("current");
+    const todayName = todayHebrewDay(), tomName = hebDayOffset(1);
+    const todayD = roster.days[rosterEditKey(todayName)];
+    const tomD   = roster.days[rosterEditKey(tomName)];
+    const myRolesToday = rosterMyRoles(todayD, user);
+    const onDutyToday = myRolesToday.length > 0;
+    const onDutyTom   = rosterDayAssigned(tomD).includes(user);
+    const restToday   = (todayD && (todayD.pfRest||[]).includes(user));
+
+    let html = "";
+    // 1) דגל תורנות
+    if(onDutyToday){
+      html += `<div class="today-flag duty"><div class="tf-ic">🗓️</div>
+        <div class="tf-tx"><b>אתה תורן היום</b><span>${myRolesToday.map(escapeHTML).join(" · ")}</span></div></div>`;
+    } else if(onDutyTom){
+      html += `<div class="today-flag tom"><div class="tf-ic">⏭️</div>
+        <div class="tf-tx"><b>אתה תורן מחר</b><span>${escapeHTML(tomName)} · ${rosterMyRoles(tomD,user).map(escapeHTML).join(" · ")}</span></div></div>
+        <button class="m-btn ghost" style="width:100%;margin-bottom:10px" onclick="openNewRequest('swap')">🔄 בקש החלפת תורנות</button>`;
+    } else if(restToday){
+      html += `<div class="today-flag rest"><div class="tf-ic">😌</div>
+        <div class="tf-tx"><b>אתה נח היום</b><span>${escapeHTML(roster.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</span></div></div>`;
+    }
+
+    // 2) פתוח עבורך — קרא-וחתום שלא נחתמו + הסמכות שלי שפגות
+    const open = [];
+    const events = await getEvents();
+    const mySigs = await sGetSigs(user);
+    events.forEach(e=>{ if(!mySigs[e.id]) open.push({icon:"📄", t:`קרא-וחתום: ${e.title}`, go:"go('scr-safety',document.getElementById('nav-safety'))"}); });
+    const certs = (await sGet("certs_list")) || [];
+    const today0 = new Date(); today0.setHours(0,0,0,0);
+    certs.filter(c=>c.person===user && c.expiry).forEach(c=>{
+      const dl = Math.round((new Date(c.expiry+"T00:00:00")-today0)/86400000);
+      if(dl<0) open.push({icon:"🎓", t:`${c.name} — פג תוקף!`, go:"goCertsPage()"});
+      else if(dl<=30) open.push({icon:"🎓", t:`${c.name} — פג בעוד ${dl} ימים`, go:"goCertsPage()"});
+    });
+    html += `<div class="today-card"><div class="tc-h">פתוח עבורך${open.length?` · ${open.length}`:""}</div>`;
+    if(open.length){
+      html += open.map(o=>`<div class="tc-row" onclick="${o.go}"><span class="tc-ic">${o.icon}</span><span class="tc-t">${escapeHTML(o.t)}</span><span class="tc-go">›</span></div>`).join("");
+    } else {
+      html += `<div class="tc-empty">✓ אין פריטים פתוחים — אתה מעודכן</div>`;
+    }
+    html += `</div>`;
+
+    // 3) הבקשות שלי
+    const myReqs = (await getDutyRequests()).filter(r=>r.by===user);
+    const pendMine = myReqs.filter(r=>r.status==="pending").length;
+    html += `<div class="today-card tappable" onclick="openMyRequests()">
+      <div class="tc-row" style="border:0"><span class="tc-ic">📨</span>
+        <span class="tc-t">הבקשות שלי${pendMine?` · ${pendMine} ממתינות`:""}</span><span class="tc-go">›</span></div></div>`;
+
+    // 4) היום בטייסת — ימי הולדת
+    const bdays = (PERSONNEL||[]).filter(p=>{
+      if(!p.bday || p.bday==="2000-01-01") return false;
+      const [,mm,dd] = p.bday.split("-");
+      const t = new Date();
+      return Number(mm)===t.getMonth()+1 && Number(dd)===t.getDate();
+    });
+    if(bdays.length){
+      html += `<div class="today-card"><div class="tc-h">היום בטייסת</div>` +
+        bdays.map(p=>`<div class="tc-row" style="border:0"><span class="tc-ic">🎂</span><span class="tc-t">${escapeHTML(p.name)} — יום הולדת! 🎉</span></div>`).join("") + `</div>`;
+    }
+    box.innerHTML = html;
+  }catch(e){ console.error("renderToday", e); box.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)">⚠️ שגיאה בטעינה</div>`; }
+}
+
+/* ===== בקשות (החלפת תורנות / יציאה / חופשה / אחר) =====
+   מאוחסנות תחת duty_requests (מוגבל-לסככה). מפקד המסגרת מאשר או דוחה;
+   אישור החלפה מחיל אוטומטית את ההחלפה על לוח הצוות. */
+async function getDutyRequests(){ return (await sGet("duty_requests")) || []; }
+async function saveDutyRequests(list){ return await sSet("duty_requests", list); }
+const REQ_TYPES = [
+  {key:"swap",     ic:"🔄", label:"החלפת תורנות"},
+  {key:"leave",    ic:"🕐", label:"יציאה מוקדמת"},
+  {key:"vacation", ic:"🏖️", label:"חופשה"},
+  {key:"other",    ic:"💬", label:"אחר"},
+];
+function reqTypeMeta(k){ return REQ_TYPES.find(t=>t.key===k) || REQ_TYPES[3]; }
+let reqDraftType = "swap";
+
+function openMyRequests(){
+  renderMyRequestsList();
+  document.getElementById("my-requests-modal").classList.add("open");
+}
+async function renderMyRequestsList(){
+  const box = document.getElementById("my-requests-list");
+  const list = (await getDutyRequests()).filter(r=>r.by===user).sort((a,b)=>b.ts-a.ts);
+  if(!list.length){ box.innerHTML = `<div class="empty-state" style="padding:24px"><div class="ic">📨</div><h3>אין בקשות</h3><p>לחץ "בקשה חדשה" כדי לפתוח</p></div>`; return; }
+  box.innerHTML = list.map(r=>reqCardHtml(r, false)).join("");
+}
+function reqStatusPill(s){
+  return s==="approved" ? `<span class="st a">אושר</span>`
+    : s==="rejected" ? `<span class="st r">נדחה</span>`
+    : `<span class="st w">ממתין</span>`;
+}
+function reqBodyText(r){
+  const m = reqTypeMeta(r.type);
+  if(r.type==="swap") return `${m.ic} החלפה · ${escapeHTML(r.day)} · מחליף: ${escapeHTML(r.replacement||"—")}`;
+  if(r.type==="leave") return `${m.ic} יציאה מוקדמת · ${escapeHTML(r.date||"")}${r.from?` מ-${escapeHTML(r.from)}`:""}`;
+  if(r.type==="vacation") return `${m.ic} חופשה · ${escapeHTML(r.date||"")}`;
+  return `${m.ic} ${escapeHTML(r.reason||"בקשה")}`;
+}
+function reqCardHtml(r, forCommander){
+  const reason = r.reason && r.type!=="other" ? `<div class="req-reason">"${escapeHTML(r.reason)}"</div>` : "";
+  const note = r.note ? `<div class="req-note">📝 ${escapeHTML(r.note)}</div>` : "";
+  const who = forCommander ? `<div class="req-who">${escapeHTML(r.by)}</div>` : "";
+  const actions = (forCommander && r.status==="pending")
+    ? `<div class="req-acts"><button class="m-btn ok" onclick="approveRequest('${r.id}')">אשר</button>
+       <button class="m-btn ghost" onclick="openRejectRequest('${r.id}')">דחה</button></div>` : "";
+  return `<div class="req-card">
+    <div class="req-top">${who}<span class="req-body">${reqBodyText(r)}</span>${reqStatusPill(r.status)}</div>
+    ${reason}${note}${actions}</div>`;
+}
+
+/* פתיחת בקשה חדשה — סוג ברירת מחדל swap אם החייל תורן, אחרת יציאה */
+function openNewRequest(type){
+  reqDraftType = type || "leave";
+  document.getElementById("my-requests-modal").classList.remove("open");
+  renderReqTypePicker();
+  renderReqFields();
+  document.getElementById("request-modal").classList.add("open");
+}
+function setReqType(k){ reqDraftType = k; renderReqTypePicker(); renderReqFields(); }
+function renderReqTypePicker(){
+  document.getElementById("req-type-pick").innerHTML = REQ_TYPES.map(t=>
+    `<div class="rtp ${t.key===reqDraftType?"on":""}" onclick="setReqType('${t.key}')">
+      <span class="rtp-ic">${t.ic}</span><span>${t.label}</span></div>`).join("");
+}
+async function renderReqFields(){
+  const box = document.getElementById("req-fields");
+  if(reqDraftType==="swap"){
+    // ימים שבהם אני משובץ, ולכל יום מי שנח בו (מועמדים להחלפה)
+    const roster = await getDutyRoster("current");
+    const myDays = [...ROSTER_ROTATING_DAYS,"חמישי"].filter(d=>rosterDayAssigned(roster.days[d]).includes(user));
+    if(!myDays.length){ box.innerHTML = `<div class="req-warn">אינך משובץ בלוח הנוכחי — אין תורנות להחליף.</div>`; return; }
+    if(!reqDraftDay || !myDays.includes(reqDraftDay)) reqDraftDay = myDays[0];
+    const rest = (roster.days[reqDraftDay].pfRest)||[];
+    box.innerHTML = `<label class="req-lbl">איזו תורנות</label>
+      <div class="pick">${myDays.map(d=>`<div class="${d===reqDraftDay?"on":""}" onclick="setSwapDay('${d}')">${d==="חמישי"?"ה׳–ש׳":d}</div>`).join("")}</div>
+      <label class="req-lbl">מי מחליף (מתוך מי שנח באותו יום)</label>
+      ${rest.length ? rest.map(n=>`<div class="req-person ${reqDraftRepl===n?"on":""}" onclick="setSwapRepl('${escapeHTML(n).replace(/'/g,"\\'")}')">
+          <span>${escapeHTML(n)}</span><span class="req-rad"></span></div>`).join("")
+        : `<div class="req-warn">אין אף אחד שרשום נח ביום ${escapeHTML(reqDraftDay)}. אפשר להחליף רק מול מי שנח, כדי לא ליצור כפל תורנות.</div>`}`;
+  } else if(reqDraftType==="leave"){
+    box.innerHTML = `<label class="req-lbl">תאריך</label><input class="m-input" id="req-date" placeholder="למשל 11.8" value="${escapeHTML(reqDraftDate)}">
+      <label class="req-lbl">החל משעה</label><input class="m-input" id="req-from" placeholder="למשל 14:00" value="${escapeHTML(reqDraftFrom)}">
+      <label class="req-lbl">סיבה</label><textarea class="m-input" id="req-reason" rows="2" placeholder="פרט בקצרה">${escapeHTML(reqDraftReason)}</textarea>`;
+  } else if(reqDraftType==="vacation"){
+    box.innerHTML = `<label class="req-lbl">תאריכים</label><input class="m-input" id="req-date" placeholder="למשל 2–3.8" value="${escapeHTML(reqDraftDate)}">
+      <label class="req-lbl">סיבה</label><textarea class="m-input" id="req-reason" rows="2" placeholder="פרט בקצרה">${escapeHTML(reqDraftReason)}</textarea>`;
+  } else {
+    box.innerHTML = `<label class="req-lbl">הבקשה</label><textarea class="m-input" id="req-reason" rows="3" placeholder="כתוב את בקשתך">${escapeHTML(reqDraftReason)}</textarea>`;
+  }
+}
+let reqDraftDay="", reqDraftRepl="", reqDraftDate="", reqDraftFrom="", reqDraftReason="";
+function setSwapDay(d){ reqDraftDay=d; reqDraftRepl=""; renderReqFields(); }
+function setSwapRepl(n){ reqDraftRepl=n; renderReqFields(); }
+
+async function submitRequest(){
+  const type = reqDraftType;
+  const req = {id:"req_"+Date.now(), type, by:user, shed:currentShed.id, status:"pending", ts:Date.now()};
+  if(type==="swap"){
+    if(!reqDraftDay || !reqDraftRepl){ toast("בחר יום ומחליף"); return; }
+    req.day = reqDraftDay; req.replacement = reqDraftRepl;
+  } else if(type==="leave"){
+    req.date = (document.getElementById("req-date").value||"").trim();
+    req.from = (document.getElementById("req-from").value||"").trim();
+    req.reason = (document.getElementById("req-reason").value||"").trim();
+    if(!req.date){ toast("הזן תאריך"); return; }
+  } else if(type==="vacation"){
+    req.date = (document.getElementById("req-date").value||"").trim();
+    req.reason = (document.getElementById("req-reason").value||"").trim();
+    if(!req.date){ toast("הזן תאריך"); return; }
+  } else {
+    req.reason = (document.getElementById("req-reason").value||"").trim();
+    if(!req.reason){ toast("כתוב את הבקשה"); return; }
+  }
+  const list = await getDutyRequests();
+  list.push(req);
+  const ok = await saveDutyRequests(list);
+  if(ok===false){ toast("⚠️ שליחת הבקשה נכשלה — נסה שוב"); return; }
+  reqDraftDay=reqDraftRepl=reqDraftDate=reqDraftFrom=reqDraftReason="";
+  document.getElementById("request-modal").classList.remove("open");
+  toast("הבקשה נשלחה לאישור המפקד ✓");
+  renderToday();
+}
+
+/* מפקד — תיבת בקשות ממתינות של המסגרת */
+async function openRequestsInbox(){
+  await renderRequestsInbox();
+  document.getElementById("requests-inbox-modal").classList.add("open");
+}
+async function renderRequestsInbox(){
+  const list = (await getDutyRequests()).sort((a,b)=>b.ts-a.ts);
+  const pending = list.filter(r=>r.status==="pending");
+  document.getElementById("req-inbox-sub").textContent = pending.length ? `${pending.length} ממתינות להחלטה` : "אין בקשות ממתינות";
+  const box = document.getElementById("requests-inbox-list");
+  const show = pending.concat(list.filter(r=>r.status!=="pending").slice(0,10));
+  box.innerHTML = show.length ? show.map(r=>reqCardHtml(r, true)).join("")
+    : `<div class="empty-state" style="padding:24px"><div class="ic">✓</div><h3>אין בקשות</h3></div>`;
+}
+async function approveRequest(id){
+  const list = await getDutyRequests();
+  const r = list.find(x=>x.id===id); if(!r || r.status!=="pending") return;
+  if(r.type==="swap"){
+    const applied = await applySwapToBoard(r.day, r.by, r.replacement);
+    if(!applied){ toast("⚠️ ההחלפה לא הוחלה על הלוח — בדוק שהשמות עדיין בלוח"); return; }
+  }
+  r.status="approved"; r.decidedBy=user; r.decidedTs=Date.now();
+  const ok = await saveDutyRequests(list);
+  if(ok===false){ toast("⚠️ השמירה נכשלה"); return; }
+  rosterCache = null;
+  await renderRequestsInbox(); updateAlertBell();
+  toast("הבקשה אושרה ✓");
+}
+let rejectReqId = null;
+function openRejectRequest(id){
+  rejectReqId = id;
+  document.getElementById("reject-req-sub").textContent = "החייל יראה את ההערה — הסבר קצר עדיף על \"נדחה\" יבש.";
+  document.getElementById("reject-req-note").value = "";
+  document.getElementById("reject-req-modal").classList.add("open");
+}
+async function confirmRejectRequest(){
+  const note = (document.getElementById("reject-req-note").value||"").trim();
+  if(!note){ toast("הוסף הערה קצרה לחייל"); return; }
+  const list = await getDutyRequests();
+  const r = list.find(x=>x.id===rejectReqId); if(!r) return;
+  r.status="rejected"; r.note=note; r.decidedBy=user; r.decidedTs=Date.now();
+  const ok = await saveDutyRequests(list);
+  if(ok===false){ toast("⚠️ השמירה נכשלה"); return; }
+  document.getElementById("reject-req-modal").classList.remove("open");
+  await renderRequestsInbox(); updateAlertBell();
+  toast("הבקשה נדחתה");
+}
+/* החלת החלפה על לוח הצוות: המחליף (שנח) נכנס בדיוק לתפקיד של התורן,
+   והתורן עובר לנוח — כך שאין כפל תורנות. */
+async function applySwapToBoard(day, by, repl){
+  const roster = await getDutyRoster("current");
+  const key = rosterEditKey(day);
+  const d = roster.days[key]; if(!d) return false;
+  if(!rosterDayAssigned(d).includes(by)) return false;   // התורן כבר לא בלוח — אולי כבר הוחלף
+  ["lead","deputyLead","driver","tools"].forEach(f=>{ if(d[f]===by) d[f]=repl; });
+  d.fixedAug = (d.fixedAug||[]).map(n=> n===by?repl:n);
+  d.pf = (d.pf||[]).map(p=> p.name===by ? {...p, name:repl} : p);
+  d.basic = (d.basic||[]).map(b=> b.name===by ? {...b, name:repl} : b);
+  d.pfRest = (d.pfRest||[]).map(n=> n===repl ? by : n);
+  const ok = await saveDutyRosterV2(roster, "current");
+  return ok !== false;
 }
 
 /* תצוגת "יום" — שמות מלאים, ומגבלות זמינות כטקסט. */
@@ -10507,6 +10894,12 @@ async function computeAlerts(){
     }
   }
 
+  /* בקשות ממתינות מהחיילים (החלפת תורנות / יציאה / חופשה) — למפקד המסגרת */
+  {
+    const pend = (await getDutyRequests()).filter(r=>r.status==="pending");
+    if(pend.length) alerts.push({icon:"📨", text:`${pend.length} בקשות ממתינות לאישורך`, level:"high", nav:"__requests"});
+  }
+
   const events = await getEvents();
   // unsigned events (per soldier count) — שולפים את החתימות של כולם פעם אחת במקביל, לא בכל אירוע מחדש
   const sigsArrA = await Promise.all(PERSONNEL.map(p => sGetSigs(p.name)));
@@ -10577,9 +10970,12 @@ function switchAlertsTab(tab, btn){
    תפריט "עוד" אם פתוח) ומנווט, כולל סימון כפתור הניווט התואם אם קיים.
    מסכים שנמצאים רק בתפריט "עוד" — go() מקבל null ומטפל בזה כרגיל. */
 function goFromAlert(scr){
-  if(!scr || !document.getElementById(scr)) return;
+  if(!scr) return;
   document.getElementById("alerts-modal")?.classList.remove("open");
   document.getElementById("more-sheet")?.classList.remove("open");
+  // יעד מיוחד — תיבת הבקשות היא חלון, לא מסך ניווט
+  if(scr==="__requests"){ openRequestsInbox(); return; }
+  if(!document.getElementById(scr)) return;
   const btn = document.querySelector('.nav-btn[data-scr="'+scr+'"]');
   go(scr, btn || null);
 }
@@ -10611,8 +11007,9 @@ async function renderAlertsBody(){
       } else {
         body.innerHTML = alerts.map(a=>{
           // כל התראה מובילה למסך שבו מטפלים בה בפועל (nav). בלי זה הבאנר
-          // נראה לחיץ אבל לא עושה כלום — משתמשים דיווחו על זה.
-          const clickable = !!a.nav && !!document.getElementById(a.nav);
+          // נראה לחיץ אבל לא עושה כלום — משתמשים דיווחו על זה. יעד שמתחיל
+          // ב-"__" הוא חלון (לא מסך), ולכן לא נבדק מול getElementById.
+          const clickable = !!a.nav && (a.nav.startsWith("__") || !!document.getElementById(a.nav));
           return `<div class="alert-row ${a.level}${clickable?" tappable":""}"${clickable?` onclick="goFromAlert('${a.nav}')"`:""}>
             <span class="al-ic">${a.icon}</span><span class="al-tx">${escapeHTML(a.text)}</span>${clickable?'<span class="al-go">›</span>':""}
           </div>`;
