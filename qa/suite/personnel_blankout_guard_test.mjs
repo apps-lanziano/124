@@ -46,6 +46,18 @@ const out = await page.evaluate(async ()=>{
   await sSetRaw(KEY2, []);
   r.freshShedOk = await sSetRaw(KEY2, bare);
 
+  // 6) האירוע האמיתי של סככה 2: כל המפקדים "מתהפכים" לחיילים והרשימה
+  //    נשארת בגודל דומה בלי אף PIN — חייב להיחסם (השמות אמיתיים, לא זרע)
+  await sSetRaw(KEY, healthy);
+  const flippedToSoldiers = healthy.map(p=>({name:p.name, role:"חייל", bday:"2000-01-01"}));
+  const flipRet = await sSetRaw(KEY, flippedToSoldiers);
+  const afterFlip = await sGetRaw(KEY);
+  r.flipBlocked = flipRet === false && afterFlip.some(p=>p.role==="מפקד") && afterFlip.some(p=>p.pinHash);
+
+  // 7) כתיבת רשימה ריקה על מסגרת בריאה — חייבת להיחסם
+  const emptyRet = await sSetRaw(KEY, []);
+  r.emptyBlocked = emptyRet === false && (await sGetRaw(KEY)).length === healthy.length;
+
   return r;
 });
 
@@ -56,6 +68,8 @@ record("הנתונים הקיימים נשמרו ולא נמחקו", out.dataPre
 record("עריכה רגילה (הוספת חייל) עוברת", out.normalEditOk === true && out.editApplied, JSON.stringify(out));
 record("איפוס PIN בודד (נשארים PINים) עובר", out.singleResetOk === true, String(out.singleResetOk));
 record("מסגרת חדשה בלי PIN/מפקד — כתיבה מותרת", out.freshShedOk === true, String(out.freshShedOk));
+record("היפוך מפקדים לחיילים (האירוע האמיתי) נחסם", out.flipBlocked, String(out.flipBlocked));
+record("כתיבת רשימה ריקה על מסגרת בריאה נחסמת", out.emptyBlocked, String(out.emptyBlocked));
 
 await closeBrowser();
 
