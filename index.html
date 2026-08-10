@@ -244,6 +244,24 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
   display:flex;align-items:center;justify-content:center;cursor:pointer;
 }
 .modal-x:active{background:var(--red-soft);color:var(--red)}
+/* פופאפ "סקירה יומית" צף — נפתח כשמפקד מקיש על התראת הסקירה בטלפון.
+   ה-Service Worker שומר את תוכן הסקירה, ממקד/פותח את האפליקציה, וכאן
+   מציגים אותו בחלון צף וממורכז שנסגר ב-✕ (z-index מעל שאר השכבות). */
+.digest-pop-bg{position:absolute;inset:0;z-index:65;background:rgba(26,17,20,.6);backdrop-filter:blur(5px);
+  display:none;align-items:center;justify-content:center;padding:22px}
+.digest-pop-bg.open{display:flex;animation:fadeIn .25s}
+.digest-card{background:#fff;border-radius:22px;width:100%;max-width:420px;max-height:80vh;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;position:relative;
+  box-shadow:0 24px 60px -12px rgba(26,17,20,.5);animation:slideUp .35s cubic-bezier(.2,.9,.3,1)}
+.digest-card-hd{background:linear-gradient(135deg,var(--red-deep),var(--red));color:#fff;
+  padding:18px 48px 16px 18px;border-radius:22px 22px 0 0;position:sticky;top:0;z-index:2}
+.digest-card-hd h3{font-size:16px;font-weight:800;line-height:1.35;margin:0}
+.digest-card-x{position:absolute;top:12px;inset-inline-end:12px;width:32px;height:32px;border-radius:50%;
+  border:none;background:rgba(255,255,255,.22);color:#fff;font-size:15px;font-weight:800;line-height:1;
+  font-family:inherit;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.digest-card-x:active{background:rgba(255,255,255,.4)}
+.digest-card-body{padding:16px 18px 20px;white-space:pre-wrap;direction:rtl;text-align:right;
+  font-size:14px;line-height:1.75;color:var(--ink)}
 .modal .m-sub{font-size:12.5px;color:var(--ink-2);font-weight:300;margin-bottom:14px}
 #sig-canvas{
   width:100%;height:170px;border:2px dashed #e3ccd1;border-radius:14px;background:#fdfbfb;
@@ -2299,6 +2317,17 @@ nav{
         <button class="m-btn ghost" onclick="saveSigHistoryFile()" style="flex:1">⬇️ שמור קובץ</button>
         <button class="m-btn ghost" onclick="document.getElementById('sig-history-modal').classList.remove('open')" style="flex:0 0 auto">סגור</button>
       </div>
+    </div>
+  </div>
+
+  <!-- פופאפ "סקירה יומית" צף — נפתח מהקשה על התראת הסקירה בטלפון -->
+  <div class="digest-pop-bg" id="digest-popup">
+    <div class="digest-card">
+      <div class="digest-card-hd">
+        <button class="digest-card-x" onclick="closeDigestPopup()" aria-label="סגור">✕</button>
+        <h3 id="digest-popup-title">📋 סקירה יומית</h3>
+      </div>
+      <div class="digest-card-body" id="digest-popup-body"></div>
     </div>
   </div>
 
@@ -6356,6 +6385,41 @@ async function updateAppBadge(){
    המדויקת, וה-SW מגדיל ממנה כשמגיע push בזמן שהאפליקציה סגורה. */
 function idbBadge(){ return new Promise((res,rej)=>{ const r=indexedDB.open("sq124-badge",1); r.onupgradeneeded=()=>r.result.createObjectStore("kv"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
 async function idbSetBadgeBase(n){ try{ const db=await idbBadge(); const tx=db.transaction("kv","readwrite"); tx.objectStore("kv").put(n,"count"); }catch(e){} }
+/* ===== פופאפ "סקירה יומית" צף =====
+   כשמפקד מקיש על התראת הסקירה בטלפון, ה-Service Worker שומר את תוכן
+   הסקירה תחת "pending_digest" ב-IndexedDB, ממקד/פותח את האפליקציה, ושולח
+   הודעת SHOW_DIGEST. כאן קוראים את התוכן ומציגים אותו בחלון צף שנסגר ב-✕. */
+function idbGetKV(key){
+  return new Promise((res)=>{ idbBadge().then(db=>{ const rq=db.transaction("kv","readonly").objectStore("kv").get(key); rq.onsuccess=()=>res(rq.result); rq.onerror=()=>res(undefined); }).catch(()=>res(undefined)); });
+}
+function idbDelKV(key){
+  return new Promise((res)=>{ idbBadge().then(db=>{ const tx=db.transaction("kv","readwrite"); tx.objectStore("kv").delete(key); tx.oncomplete=()=>res(); tx.onerror=()=>res(); }).catch(()=>res()); });
+}
+function showDigestPopup(title, body){
+  const t = document.getElementById("digest-popup-title");
+  const b = document.getElementById("digest-popup-body");
+  const bg = document.getElementById("digest-popup");
+  if(!t || !b || !bg) return;
+  t.textContent = title || "📋 סקירה יומית";
+  b.textContent = body || "";
+  bg.classList.add("open");
+}
+function closeDigestPopup(){ document.getElementById("digest-popup")?.classList.remove("open"); }
+/* נקרא בעליית האפליקציה (פתיחה קרה אחרי הקשה על ההתראה) וגם כשמתקבלת
+   הודעת SHOW_DIGEST מה-Service Worker (האפליקציה כבר פתוחה ורק מקבלת פוקוס). */
+async function checkPendingDigest(){
+  try{
+    const p = await idbGetKV("pending_digest");
+    if(p && (p.title || p.body)){ await idbDelKV("pending_digest"); showDigestPopup(p.title, p.body); }
+  }catch(e){}
+}
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.addEventListener("message", (e)=>{
+    if(e.data && e.data.type === "SHOW_DIGEST") checkPendingDigest();
+  });
+}
+// פתיחה קרה: אם המשתמש הקיש על התראת הסקירה והאפליקציה נפתחה מחדש
+window.addEventListener("load", ()=>{ checkPendingDigest(); });
 /* בקשת אישור התראות פעם אחת (נדרש באייפון כדי שה-badge יופיע). מופעל מתוך
    מחווה של המשתמש (כניסה), ורק אם האפליקציה מותקנת ועדיין לא נשאל/הוחלט. */
 async function ensureBadgePermission(){
