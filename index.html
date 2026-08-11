@@ -12127,6 +12127,15 @@ async function renderTrends(boxId){
 async function computeAlerts(){
   const alerts = [];
   if(!currentShed || isAdmin) return alerts;
+  /* מ"ע תורנויות שאינו מפקד — הפעמון מציג רק את מה שרלוונטי לו: החלפות
+     שממתינות לאישורו (מכל הטייסת), בלי התראות ניהול-מסגרת. */
+  if(isRosterManager && userRole!=="מפקד"){
+    try{
+      const naat = await fetchSwapsPendingNaat();
+      if(naat.length) alerts.push({icon:"🔄", text:`${naat.length} החלפות ממתינות לאישורך`, level:"high", nav:"__naatswaps"});
+    }catch(e){ console.error("naat alert", e); }
+    return alerts;
+  }
   /* במסגרות "מ״ע אחזקה" ו"הדרכה" הוסרו מטלות בוקר, תקלות, הסמכות, חדר כלים
      ומעקב רכבים סככתי — אין להתריע על מסכים שלא קיימים בהן. נשארות
      התראות קרא וחתום. */
@@ -12158,6 +12167,11 @@ async function computeAlerts(){
     if(pend.length) alerts.push({icon:"📨", text:`${pend.length} בקשות ממתינות לאישורך`, level:"high", nav:"__requests"});
     const crossB = await fetchSwapsForShedB();
     if(crossB.length) alerts.push({icon:"↔️", text:`${crossB.length} החלפות בין-מסגרתיות לאישורך`, level:"high", nav:"__requests"});
+    // מ"ע תורנויות — החלפות שהמפקדים אישרו וממתינות להחלתו על הלוח
+    if(isRosterManager){
+      const naat = await fetchSwapsPendingNaat();
+      if(naat.length) alerts.push({icon:"🔄", text:`${naat.length} החלפות ממתינות לאישורך (מ״ע)`, level:"high", nav:"__naatswaps"});
+    }
   }
 
   const events = await getEvents();
@@ -12233,8 +12247,9 @@ function goFromAlert(scr){
   if(!scr) return;
   document.getElementById("alerts-modal")?.classList.remove("open");
   document.getElementById("more-sheet")?.classList.remove("open");
-  // יעד מיוחד — תיבת הבקשות היא חלון, לא מסך ניווט
+  // יעד מיוחד — תיבת הבקשות/החלפות היא חלון, לא מסך ניווט
   if(scr==="__requests"){ openRequestsInbox(); return; }
+  if(scr==="__naatswaps"){ openNaatSwaps(); return; }
   if(!document.getElementById(scr)) return;
   const btn = document.querySelector('.nav-btn[data-scr="'+scr+'"]');
   go(scr, btn || null);
@@ -12285,7 +12300,8 @@ async function renderAlertsBody(){
 async function updateAlertBell(precomputed){
   const bell = document.getElementById("alert-bell");
   if(!bell) return;
-  if(userRole !== "מפקד"){ bell.style.display="none"; return; }
+  // הפעמון גלוי למפקד, וגם למ"ע תורנויות (כדי לקבל התראת החלפות לאישורו)
+  if(userRole !== "מפקד" && !isRosterManager){ bell.style.display="none"; return; }
   bell.style.display="flex";
   const badge = document.getElementById("alert-bell-count");
   try{
