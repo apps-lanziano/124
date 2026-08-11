@@ -2713,6 +2713,26 @@ nav{
     </div>
   </div>
 
+  <!-- תורנות בסיסית לטווח ימים (מ״ע תורנויות) -->
+  <div class="modal-bg" id="basic-interval-modal">
+    <div class="modal">
+      <h3>תורנות בסיסית — טווח ימים</h3>
+      <div class="m-sub">אותה תורנות לאורך כמה ימים ברצף (למשל מטבח מ-ד׳ עד ה׳–ש׳).</div>
+      <label class="req-lbl">חייל</label>
+      <select class="m-input" id="bi-name"></select>
+      <label class="req-lbl">סוג תורנות</label>
+      <select class="m-input" id="bi-type"></select>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1"><label class="req-lbl">מיום</label><select class="m-input" id="bi-from"></select></div>
+        <div style="flex:1"><label class="req-lbl">עד יום</label><select class="m-input" id="bi-to"></select></div>
+      </div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn primary" onclick="applyBasicInterval()" style="flex:1">שבץ לטווח</button>
+        <button class="m-btn ghost" onclick="document.getElementById('basic-interval-modal').classList.remove('open')" style="flex:0 0 auto">ביטול</button>
+      </div>
+    </div>
+  </div>
+
   <!-- WHATSAPP SHARE PROMPT -->
   <div class="modal-bg" id="wa-modal">
     <div class="modal" style="text-align:center">
@@ -7415,7 +7435,8 @@ function renderRosterEditor(){
         <span class="rc-x" onclick="rosterRemoveBasic(${i})">✕</span>
       </div></div>`).join("")}
     <div class="rrow"><div class="rrow-k" style="color:var(--ink-3)">הוסף</div>
-      <div class="rrow-v"><span class="rc add" onclick="openRosterPick('basic')">+ שם</span></div></div></div>`;
+      <div class="rrow-v"><span class="rc add" onclick="openRosterPick('basic')">+ שם (יום זה)</span>
+      <span class="rc add" onclick="openBasicInterval()">+ טווח ימים</span></div></div></div>`;
 
   html += `<button type="button" class="m-btn ghost" style="width:100%;font-size:12px;padding:9px"
     onclick="previewDutyRosterNotification('${rosterEdDay}')">🔔 שלח לי תצוגה מקדימה של ההתראה ליום זה</button>`;
@@ -7464,6 +7485,45 @@ function rosterCyclePf(i){
 }
 function rosterRemovePf(i){ rosterDraft.days[rosterEdDay].pf.splice(i,1); renderRosterEditor(); }
 function rosterRemoveBasic(i){ rosterDraft.days[rosterEdDay].basic.splice(i,1); renderRosterEditor(); }
+/* תורנות בסיסית לטווח ימים — משבצת אותו חייל+סוג בכל יום בטווח בבת אחת
+   (במקום להוסיף יום-יום). "חמישי" מייצג את כל משמרת הסופ"ש. */
+function openBasicInterval(){
+  if(!isRosterManager || !rosterDraft){ toast("רק מ״ע תורנויות יכול לשבץ 🔒"); return; }
+  const names = [];
+  SHEDS.forEach(s=>(rosterAllPersonnel[s.id]||[]).forEach(p=>{
+    if(p && p.name && !(p.release && p.release<=todayKey())) names.push(p.name);
+  }));
+  const uniq = [...new Set(names)].sort((a,b)=>a.localeCompare(b,"he"));
+  const dl = d => d==="חמישי"?"ה׳–ש׳":(DAY_LETTER[d]||d);
+  const dateOf = d => fmtHeShort(rosterDayLockDates(d, rosterEditSlot)[0]);
+  document.getElementById("bi-name").innerHTML = uniq.map(n=>`<option>${escapeHTML(n)}</option>`).join("");
+  document.getElementById("bi-type").innerHTML = BASIC_DUTY_TYPES.map(t=>`<option>${escapeHTML(t)}</option>`).join("");
+  const dayOpts = ROSTER_EDIT_DAYS.map(d=>`<option value="${d}">${dl(d)} · ${dateOf(d)}</option>`).join("");
+  document.getElementById("bi-from").innerHTML = dayOpts;
+  document.getElementById("bi-to").innerHTML = dayOpts;
+  document.getElementById("bi-from").value = rosterEdDay;
+  document.getElementById("bi-to").value = rosterEdDay;
+  document.getElementById("basic-interval-modal").classList.add("open");
+}
+function applyBasicInterval(){
+  const name = document.getElementById("bi-name").value;
+  const type = document.getElementById("bi-type").value;
+  const from = document.getElementById("bi-from").value;
+  const to   = document.getElementById("bi-to").value;
+  const fi = ROSTER_EDIT_DAYS.indexOf(from), ti = ROSTER_EDIT_DAYS.indexOf(to);
+  if(!name || fi<0 || ti<0){ toast("בחר חייל וימים"); return; }
+  const [a,b] = fi<=ti ? [fi,ti] : [ti,fi];
+  const iv = "iv_"+Date.now();
+  let n = 0;
+  for(let i=a;i<=b;i++){
+    const day = ROSTER_EDIT_DAYS[i];
+    const arr = rosterDraft.days[day].basic = rosterDraft.days[day].basic || [];
+    if(!arr.some(x=>x.name===name && x.type===type)){ arr.push({name, type, iv}); n++; }
+  }
+  document.getElementById("basic-interval-modal").classList.remove("open");
+  renderRosterEditor();
+  toast(n ? `שובץ ל-${n} ימים ✓` : "כבר משובץ בטווח שנבחר");
+}
 function rosterClearSlot(f){ rosterDraft.days[rosterEdDay][f] = ""; renderRosterEditor(); }
 function rosterRemoveFromList(f,i){ rosterDraft.days[rosterEdDay][f].splice(i,1); renderRosterEditor(); }
 
