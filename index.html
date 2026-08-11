@@ -8034,21 +8034,21 @@ async function saveRosterDraftNext(){
 /* פרסום הלוח העתידי: מקדם את הטיוטה ללוח הפעיל (current) כך שכולם רואים
    אותו וההתראה היומית קוראת ממנו. שומר גם עותק ב-next. */
 async function publishFutureRoster(){
-  if(!confirm("לפרסם את הלוח? השבוע הנוכחי יעבור ל\"שבוע שעבר\", והלוח הזה יהפוך לפעיל. ההתראה היומית תקרא ממנו.")) return;
+  if(!confirm("להפוך את הטיוטה ללוח הנוכחי הפעיל?\n\n• הטיוטה נשמרת גם תחת \"שבוע הבא\" ולא נמחקת.\n• השבוע הנוכחי הקודם עובר ל\"שבוע שעבר\".\n• מכאן ההתראה היומית תקרא מהלוח הזה.")) return;
   rosterDraft.weekKey = todayKey();
-  // שמירה על רצף מלא בלי לדרוס: הנוכחי הנוכחי → "שבוע שעבר", הטיוטה →
-  // "נוכחי", והעתידי מתאפס לבניית השבוע הבא.
+  // בלי לדרוס ובלי לאבד: הנוכחי הקודם → "שבוע שעבר", הטיוטה → "נוכחי",
+  // והטיוטה נשמרת כמות שהיא גם תחת "שבוע הבא" (לא נמחקת).
   const oldCurrent = await getDutyRoster("current");
   const hadCurrent = WEEK_DAYS_HE.some(d=>rosterDayCount(oldCurrent.days[d])>0);
   if(hadCurrent) await saveDutyRosterV2(oldCurrent, "prev");
-  const ok = await saveDutyRosterV2(rosterDraft, "current");
+  await saveDutyRosterV2(rosterDraft, "next");               // הטיוטה נשמרת — לא נמחקת
+  const ok = await saveDutyRosterV2(rosterDraft, "current"); // הופך ללוח הפעיל
   if(ok === false){ toast("⚠️ הפרסום נכשל — בדוק חיבור ונסה שוב"); return; }
-  await saveDutyRosterV2(migrateRosterToV2(null), "next");   // מתפנה לבניית השבוע הבא
   rosterCache = null;
   boardWeekSlot = "current";
   document.getElementById("duty-roster-modal").classList.remove("open");
   await renderRosterView();
-  toast("הלוח פורסם ✓ — השבוע הקודם נשמר תחת \"שבוע שעבר\"");
+  toast("הלוח פורסם וכעת פעיל ✓ — הטיוטה נשמרה");
 }
 /* תצוגה מקדימה — מציגה את הטיוטה בדיוק כמו הלוח השבועי אחרי הפרסום
    (אותו rosterBoardHtml, מסך מלא עם זום), לפני שמפרסמים. */
