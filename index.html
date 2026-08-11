@@ -6540,7 +6540,7 @@ function rosterDayHtml(r, day, today){
   const strip = [...ROSTER_ROTATING_DAYS, "חמישי"].map(x=>{
     const wknd = x==="חמישי";
     const mine = rosterDayAssigned(r.days[x]).includes(user);
-    return `<div class="${x===key?"on":""} ${mine?"mine":""} ${wknd?"wk":""}" onclick="setRosterView('day','${x}')">${wknd?"ה׳–ש׳":x.slice(0,3)}</div>`;
+    return `<div class="${x===key?"on":""} ${mine?"mine":""} ${wknd?"wk":""}" onclick="setRosterView('day','${x}')">${wknd?"ה׳–ש׳":DAY_LETTER[x]}</div>`;
   }).join("");
   const blk = (title, count, inner, cls) => inner ? `<div class="rblk">
       <div class="rblk-h ${cls||""}"><span>${title}</span>${count!==null?`<span class="rblk-c">${count}</span>`:""}</div>
@@ -6585,7 +6585,7 @@ function rosterMineHtml(r, today){
     const resting = (d.pfRest||[]).includes(user) || (d.pmsRest||[]).includes(user);
     if(!roles.length && !resting) return;
     rows.push(`<div class="rmine ${rosterEditKey(today)===day?"now":""}">
-      <div class="rmine-d">${day==="חמישי"?"חמישי–שבת":day}</div>
+      <div class="rmine-d">${day==="חמישי"?"ה׳–ש׳":DAY_LETTER[day]}</div>
       <div class="rmine-b">
         ${roles.length?`<div class="rmine-r">${roles.map(x=>`<span class="rc duty">${escapeHTML(x)}</span>`).join("")}</div>`:""}
         ${resting?`<div class="rmine-rest">נח · ${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</div>`:""}
@@ -6743,7 +6743,7 @@ async function openRosterEditor(aiDays, slot){
   document.getElementById("roster-ed-title").textContent =
     rosterEditSlot==="next" ? "🔮 בניית לוח עתידי" : "✏️ עריכת לוח נוכחי";
   document.getElementById("roster-ed-publish").textContent =
-    rosterEditSlot==="next" ? "💾 שמור לוח עתידי" : "📢 פרסם שבוע";
+    rosterEditSlot==="next" ? "💾 שמור לוח עתידי" : "💾 שמור ופרסם";
   const iss = rosterDraft._aiIssues;
   document.getElementById("roster-ed-preview").innerHTML = aiDays
     ? dutyRosterPreviewHtml(iss ? iss.ambiguous : [], iss ? iss.unmatched : [], true) : "";
@@ -6789,7 +6789,7 @@ function renderRosterEditor(){
       const dd = r.days[x];
       const bad = !dd.lead || !dd.tools;
       return `<div class="${x===rosterEdDay?"on":""} ${bad?"bad":""} ${x==="חמישי"?"wk":""}" onclick="rosterEdSetDay('${x}')">
-        ${x==="חמישי"?"ה׳–ש׳":x.slice(0,3)}<small>${bad?"!":rosterDayCount(dd)}</small></div>`;
+        ${x==="חמישי"?"ה׳–ש׳":DAY_LETTER[x]}<small>${bad?"!":rosterDayCount(dd)}</small></div>`;
     }).join("") + `</div>`;
 
   const slot = (label, field, req) => {
@@ -6959,24 +6959,26 @@ async function copyRosterFromLastWeek(){
   renderRosterEditor();
   toast(filled ? `הועתקו ${filled} שדות מהלוח הנוכחי ✓` : "אין מה להעתיק — הכל כבר מלא");
 }
-/* פרסום — חסום כשחסרה משבצת חובה, כדי שלוח חלקי לא יגיע לחיילים.
-   נשמר לפי הסלוט הפעיל: נוכחי (מה שההתראה שולחת) או עתידי. */
+/* פרסום/שמירה — לא חוסם בשום תנאי (לבקשת מ"ע תורנויות): אפשר לשמור לוח
+   חלקי או כזה שלא לפי החוקים. אם חסרה משבצת חובה מציגים אזהרה מיידעת
+   בלבד, וממשיכים לשמור. נשמר לפי הסלוט הפעיל: נוכחי או עתידי. */
 async function publishRoster(){
   const missing = ROSTER_EDIT_DAYS.filter(day=>{
     const d = rosterDraft.days[day];
     return rosterDayCount(d) > 0 && (!d.lead || !d.tools);
   });
-  if(missing.length){
-    toast(`⚠️ חסר ר״צ או פקיד כלים ב: ${missing.map(x=>x==="חמישי"?"חמישי–שבת":x).join(", ")}`);
-    return;
-  }
   rosterDraft.weekKey = todayKey();
   const ok = await saveDutyRosterV2(rosterDraft, rosterEditSlot);
   if(ok === false){ toast("⚠️ שמירת הלוח נכשלה — בדוק חיבור ונסה שוב"); return; }
   rosterCache = null;
   document.getElementById("duty-roster-modal").classList.remove("open");
   await renderRosterView();
-  toast(rosterEditSlot==="next" ? "הלוח העתידי נשמר ✓" : "הלוח פורסם ✓");
+  // נשמר תמיד; אם חסרה משבצת חובה — רק מיידעים, לא חוסמים.
+  if(missing.length){
+    toast(`נשמר ✓ (שים לב: חסר ר״צ/פקיד כלים ב-${missing.map(x=>x==="חמישי"?"ה׳–ש׳":DAY_LETTER[x]).join(", ")})`);
+  } else {
+    toast(rosterEditSlot==="next" ? "הלוח העתידי נשמר ✓" : "הלוח פורסם ✓");
+  }
 }
 /* ניתוח לוח צוות שבועי ע"י AI (Claude Vision, functions/lib/board_ai_analyze.js).
    שולח את התמונה המלאה של הלוח האחרון ומקבל הצעת שיבוץ — לא כותב שום

@@ -77,8 +77,8 @@ const out = await page.evaluate(async ()=>{
   // רק אני — הימים שבהם אני משובץ, עם התפקיד
   setRosterView("mine"); await renderRosterView();
   const mineHtml = document.getElementById("roster-view").innerHTML;
-  r.mineHasMon = mineHtml.includes("שני");
-  r.mineHasWk  = mineHtml.includes("חמישי–שבת");
+  r.mineHasMon = mineHtml.includes("ב׳");        // ימים כאותיות בכל לשונית
+  r.mineHasWk  = mineHtml.includes("ה׳–ש׳");
   r.mineHasPf  = mineHtml.includes("PF");
   r.mineHasLead= mineHtml.includes("ר״צ");
 
