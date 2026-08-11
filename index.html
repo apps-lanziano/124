@@ -736,6 +736,8 @@ nav{
 .req-card{border:1px solid var(--line);border-radius:13px;padding:11px;margin-bottom:8px;background:var(--card)}
 .req-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .req-who{font-size:12px;font-weight:800;color:var(--ink);background:var(--bg);padding:2px 8px;border-radius:8px}
+.req-sec{font-size:11.5px;font-weight:800;color:var(--ink-3);margin:10px 2px 6px}
+.req-people{max-height:150px;overflow-y:auto;border:1px solid var(--line);border-radius:11px}
 .req-deadline{background:#eef4fb;border:1px solid #cfe0f2;border-radius:11px;padding:9px 11px;font-size:12px;color:#1c5f96;font-weight:600;margin-bottom:8px}
 .req-deadline.closed{background:var(--red-soft);border-color:var(--red-line);color:var(--red-deep)}
 .req-body{flex:1;font-size:13px;font-weight:600;min-width:0}
@@ -6515,6 +6517,7 @@ function reqStatusPill(s){
   return s==="approved" ? `<span class="st a">אושר</span>`
     : s==="rejected" ? `<span class="st r">נדחה</span>`
     : s==="naat" ? `<span class="st w">ממתין למ״ע</span>`
+    : s==="pending_b" ? `<span class="st w">ממתין למסגרת</span>`
     : `<span class="st w">ממתין</span>`;
 }
 /* טווח תאריכים לתצוגה: משתמש ב-fromDate/toDate המובנים אם קיימים,
@@ -6528,7 +6531,10 @@ function reqDateText(r){
 }
 function reqBodyText(r){
   const m = reqTypeMeta(r.type);
-  if(r.type==="swap") return `${m.ic} החלפה · ${escapeHTML(r.day==="חמישי"?"ה׳–ש׳":r.day||"")} · מחליף: ${escapeHTML(r.replacement||"—")}`;
+  if(r.type==="swap"){
+    const dl = d => d==="חמישי"?"ה׳–ש׳":(DAY_LETTER[d]||d||"");
+    return `${m.ic} החלפה · ${escapeHTML(dl(r.day))} ⇄ ${escapeHTML(r.replacement||"—")}${r.replDay?` (${escapeHTML(dl(r.replDay))})`:""}`;
+  }
   if(r.type==="leave") return `${m.ic} יציאה מוקדמת · ${escapeHTML(reqDateText(r))}${r.from?` מ-${escapeHTML(r.from)}`:""}`;
   if(r.type==="vacation") return `${m.ic} חופשה · ${escapeHTML(reqDateText(r))}`;
   if(r.type==="course")   return `${m.ic} קורס · ${escapeHTML(reqDateText(r))} · עד 20:00`;
@@ -6671,18 +6677,37 @@ function renderReqTypePicker(){
 async function renderReqFields(){
   const box = document.getElementById("req-fields");
   if(reqDraftType==="swap"){
-    // ימים שבהם אני משובץ, ולכל יום מי שנח בו (מועמדים להחלפה)
+    // החלפה ראש-בראש: בוחרים יום שאני תורן בו, מחליף, ויום שהמחליף תורן
+    // בו. באישור — מחליפים את שניהם: אני נכנס ליום שלו, הוא ליום שלי.
     const roster = await getDutyRoster("current");
-    const myDays = [...ROSTER_ROTATING_DAYS,"חמישי"].filter(d=>rosterDayAssigned(roster.days[d]).includes(user));
+    const assign = weekAssignmentsByPerson(roster);
+    const shedMap = await personShedMap();
+    const dl = d => d==="חמישי" ? "ה׳–ש׳" : DAY_LETTER[d]||d;
+    const myDays = assign[user] || [];
     if(!myDays.length){ box.innerHTML = `<div class="req-warn">אינך משובץ בלוח הנוכחי — אין תורנות להחליף.</div>`; return; }
     if(!reqDraftDay || !myDays.includes(reqDraftDay)) reqDraftDay = myDays[0];
-    const rest = (roster.days[reqDraftDay].pfRest)||[];
-    box.innerHTML = `<label class="req-lbl">איזו תורנות</label>
-      <div class="pick">${myDays.map(d=>`<div class="${d===reqDraftDay?"on":""}" onclick="setSwapDay('${d}')">${d==="חמישי"?"ה׳–ש׳":d}</div>`).join("")}</div>
-      <label class="req-lbl">מי מחליף (מתוך מי שנח באותו יום)</label>
-      ${rest.length ? rest.map(n=>`<div class="req-person ${reqDraftRepl===n?"on":""}" onclick="setSwapRepl('${escapeHTML(n).replace(/'/g,"\\'")}')">
-          <span>${escapeHTML(n)}</span><span class="req-rad"></span></div>`).join("")
-        : `<div class="req-warn">אין אף אחד שרשום נח ביום ${escapeHTML(reqDraftDay)}. אפשר להחליף רק מול מי שנח, כדי לא ליצור כפל תורנות.</div>`}`;
+    // מועמדים: כל מי שמשובץ השבוע (חוץ ממני), מכל הטייסת
+    const cands = Object.keys(assign).filter(n=>n!==user).sort((a,b)=>a.localeCompare(b,"he"));
+    let html = `<label class="req-lbl">היום שאני תורן</label>
+      <div class="pick">${myDays.map(d=>`<div class="${d===reqDraftDay?"on":""}" onclick="setSwapDay('${d}')">${dl(d)}</div>`).join("")}</div>
+      <label class="req-lbl">מי מחליף</label>`;
+    if(!cands.length){ box.innerHTML = html + `<div class="req-warn">אין מי להחליף מולו בלוח הנוכחי.</div>`; return; }
+    html += `<div class="req-people">${cands.map(n=>{
+      const cross = shedMap[n] && shedMap[n]!==currentShed.id;
+      const sn = cross ? (SHEDS.find(s=>s.id===shedMap[n])||{}).name : "";
+      return `<div class="req-person ${reqDraftRepl===n?"on":""}" onclick="setSwapRepl('${escapeHTML(n).replace(/'/g,"\\'")}','${shedMap[n]||""}')">
+        <span>${escapeHTML(n)}${cross?` · ${escapeHTML(sn)}`:""}</span><span class="req-rad"></span></div>`;
+    }).join("")}</div>`;
+    if(reqDraftRepl){
+      const replDays = (assign[reqDraftRepl]||[]).filter(d=>d!==reqDraftDay);
+      html += `<label class="req-lbl">היום שהמחליף תורן</label>`;
+      html += replDays.length
+        ? `<div class="pick">${replDays.map(d=>`<div class="${d===reqDraftReplDay?"on":""}" onclick="setSwapReplDay('${d}')">${dl(d)}</div>`).join("")}</div>`
+        : `<div class="req-warn">ל${escapeHTML(reqDraftRepl)} אין יום תורנות אחר להחלפה מולו.</div>`;
+      if(reqDraftReplShed && reqDraftReplShed!==currentShed.id)
+        html += `<div class="req-deadline">↔️ החלפה בין-מסגרתית — תדרוש אישור של שני המפקדים ואז מ״ע תורנויות.</div>`;
+    }
+    box.innerHTML = html;
   } else if(reqDraftType==="leave" || reqDraftType==="after"){
     // אילוץ ליום בודד — אפטר / יציאה מוקדמת. נשמר כתאריך אמיתי כדי שינעל
     // את היום אצל מ"ע תורנויות.
@@ -6702,9 +6727,25 @@ async function renderReqFields(){
     box.innerHTML = `<label class="req-lbl">הבקשה</label><textarea class="m-input" id="req-reason" rows="3" placeholder="כתוב את בקשתך">${escapeHTML(reqDraftReason)}</textarea>`;
   }
 }
-let reqDraftDay="", reqDraftRepl="", reqDraftDate="", reqDraftFrom="", reqDraftReason="", reqDraftFromDate="", reqDraftToDate="";
-function setSwapDay(d){ reqDraftDay=d; reqDraftRepl=""; renderReqFields(); }
-function setSwapRepl(n){ reqDraftRepl=n; renderReqFields(); }
+let reqDraftDay="", reqDraftRepl="", reqDraftDate="", reqDraftFrom="", reqDraftReason="", reqDraftFromDate="", reqDraftToDate="", reqDraftReplDay="", reqDraftReplShed="";
+function setSwapDay(d){ reqDraftDay=d; renderReqFields(); }
+function setSwapRepl(n,shed){ reqDraftRepl=n; reqDraftReplShed=shed||""; reqDraftReplDay=""; renderReqFields(); }
+function setSwapReplDay(d){ reqDraftReplDay=d; renderReqFields(); }
+/* מי משובץ באילו ימים בשבוע — לבחירת החלפה ראש-בראש (התורן שלי מול
+   התורן של המחליף). כולל את כל הטייסת, כי הלוח חוצה-סככות. */
+function weekAssignmentsByPerson(roster){
+  const map = {};
+  ROSTER_EDIT_DAYS.forEach(day=>{
+    rosterDayAssigned(roster.days[day]).forEach(n=>{ (map[n]=map[n]||[]).push(day); });
+  });
+  return map;
+}
+async function personShedMap(){
+  const byShed = await fetchAllPersonnelByShed();
+  const map = {};
+  SHEDS.forEach(s=>(byShed[s.id]||[]).forEach(p=>{ if(p&&p.name&&!map[p.name]) map[p.name]=s.id; }));
+  return map;
+}
 
 async function submitRequest(){
   const type = reqDraftType;
@@ -6713,8 +6754,9 @@ async function submitRequest(){
   const byCommander = !!behalf || reqEditByCommander;   // מפקד לא כפוף לחלון ההזנה
   const patch = { type };
   if(type==="swap"){
-    if(!reqDraftDay || !reqDraftRepl){ toast("בחר יום ומחליף"); return; }
+    if(!reqDraftDay || !reqDraftRepl || !reqDraftReplDay){ toast("בחר יום שלך, מחליף, ויום שלו"); return; }
     patch.day = reqDraftDay; patch.replacement = reqDraftRepl;
+    patch.replDay = reqDraftReplDay; patch.replShed = reqDraftReplShed || currentShed.id;
   } else if(type==="leave" || type==="after"){
     patch.fromDate = (document.getElementById("req-fromdate").value||"").trim();
     patch.toDate = patch.fromDate;
@@ -6749,7 +6791,7 @@ async function submitRequest(){
   const ok = await saveDutyRequests(list);
   if(ok===false){ toast("⚠️ השמירה נכשלה — נסה שוב"); return; }
   const wasEdit=!!editing, behalfName=behalf;
-  reqDraftDay=reqDraftRepl=reqDraftDate=reqDraftFrom=reqDraftReason=reqDraftFromDate=reqDraftToDate="";
+  reqDraftDay=reqDraftRepl=reqDraftDate=reqDraftFrom=reqDraftReason=reqDraftFromDate=reqDraftToDate=reqDraftReplDay=reqDraftReplShed="";
   reqOnBehalf = null; reqEditId = null; reqEditByCommander = false;
   rosterCache = null;
   document.getElementById("request-modal").classList.remove("open");
@@ -6766,14 +6808,58 @@ async function openRequestsInbox(){
   await renderRequestsInbox();
   document.getElementById("requests-inbox-modal").classList.add("open");
 }
+/* החלפות בין-מסגרתיות שממתינות לאישור המפקד של מסגרת המחליף. הבקשה
+   שמורה במסגרת המבקש — סורקים רוחבית וכל שורה נושאת את מסגרת המקור. */
+async function fetchSwapsForShedB(){
+  if(!currentShed) return [];
+  const out = [];
+  await Promise.all(SHEDS.map(async s=>{
+    if(s.id===currentShed.id) return;
+    const list = (await sGetIn(s.id,"duty_requests")) || [];
+    list.forEach(r=>{ if(r.type==="swap" && r.status==="pending_b" && r.replShed===currentShed.id) out.push({...r, _shed:s.id}); });
+  }));
+  return out.sort((a,b)=>(a.ts||0)-(b.ts||0));
+}
+function swapShedBCardHtml(r){
+  const shedA = (SHEDS.find(s=>s.id===r._shed)||{}).name || r._shed;
+  return `<div class="req-card">
+    <div class="req-top"><span class="req-who">${escapeHTML(r.by)} · ${escapeHTML(shedA)}</span>
+      <span class="req-body">${reqBodyText(r)}</span>${reqStatusPill(r.status)}</div>
+    <div class="req-reason">מחליף מהמסגרת שלך: ${escapeHTML(r.replacement)} · אישר מפקד ${escapeHTML(shedA)}</div>
+    <div class="req-acts">
+      <button class="m-btn ok" onclick="approveSwapShedB('${r.id}','${r._shed}')">אשר</button>
+      <button class="m-btn ghost" onclick="rejectSwapShedB('${r.id}','${r._shed}')">דחה</button></div></div>`;
+}
+async function approveSwapShedB(id, shedA){
+  const list = (await sGetIn(shedA,"duty_requests")) || [];
+  const r = list.find(x=>x.id===id); if(!r || r.status!=="pending_b") return;
+  r.status="naat"; r.cmdrBby=user; r.cmdrBts=Date.now();
+  const ok = await sSetIn(shedA,"duty_requests",list);
+  if(ok===false){ toast("⚠️ השמירה נכשלה"); return; }
+  await renderRequestsInbox(); updateAlertBell();
+  toast("אושר ✓ — הועבר לאישור מ״ע תורנויות");
+}
+async function rejectSwapShedB(id, shedA){
+  const list = (await sGetIn(shedA,"duty_requests")) || [];
+  const r = list.find(x=>x.id===id); if(!r) return;
+  r.status="rejected"; r.note="נדחה ע״י מפקד המסגרת השנייה";
+  const ok = await sSetIn(shedA,"duty_requests",list);
+  if(ok===false){ toast("⚠️ השמירה נכשלה"); return; }
+  await renderRequestsInbox(); updateAlertBell();
+  toast("ההחלפה נדחתה");
+}
 async function renderRequestsInbox(){
   const list = (await getDutyRequests()).sort((a,b)=>b.ts-a.ts);
   const pending = list.filter(r=>r.status==="pending");
-  document.getElementById("req-inbox-sub").textContent = pending.length ? `${pending.length} ממתינות להחלטה` : "אין בקשות ממתינות";
+  const crossB = await fetchSwapsForShedB();
+  const cnt = pending.length + crossB.length;
+  document.getElementById("req-inbox-sub").textContent = cnt ? `${cnt} ממתינות להחלטה` : "אין בקשות ממתינות";
   const box = document.getElementById("requests-inbox-list");
+  let html = "";
+  if(crossB.length) html += `<div class="req-sec">↔️ החלפות בין-מסגרתיות לאישורך</div>` + crossB.map(swapShedBCardHtml).join("");
   const show = pending.concat(list.filter(r=>r.status!=="pending").slice(0,10));
-  box.innerHTML = show.length ? show.map(r=>reqCardHtml(r, true)).join("")
-    : `<div class="empty-state" style="padding:24px"><div class="ic">✓</div><h3>אין בקשות</h3></div>`;
+  if(show.length) html += (crossB.length?`<div class="req-sec">בקשות המסגרת</div>`:"") + show.map(r=>reqCardHtml(r, true)).join("");
+  box.innerHTML = html || `<div class="empty-state" style="padding:24px"><div class="ic">✓</div><h3>אין בקשות</h3></div>`;
 }
 async function approveRequest(id){
   const list = await getDutyRequests();
@@ -6782,6 +6868,16 @@ async function approveRequest(id){
   // עד שמ"ע תורנויות מאשר. שאר האילוצים (חופש/קורס/אפטר) מאושרים מיד
   // והופכים לנעילה אצל מ"ע + אירוע ביומן.
   if(r.type==="swap"){
+    // החלפה בין שתי מסגרות — צריך גם את אישור המפקד של מסגרת המחליף
+    const crossShed = r.replShed && r.replShed!==r.shed;
+    if(crossShed && !r.cmdrAok){
+      r.cmdrAok=true; r.cmdrAby=user; r.status="pending_b";
+      const ok = await saveDutyRequests(list);
+      if(ok===false){ toast("⚠️ השמירה נכשלה"); return; }
+      await renderRequestsInbox(); updateAlertBell();
+      toast("אושר ✓ — ממתין לאישור מפקד המסגרת השנייה");
+      return;
+    }
     r.status="naat"; r.cmdrBy=user; r.cmdrTs=Date.now();
     const ok = await saveDutyRequests(list);
     if(ok===false){ toast("⚠️ השמירה נכשלה"); return; }
@@ -6830,6 +6926,30 @@ async function applySwapToBoard(day, by, repl){
   const ok = await saveDutyRosterV2(roster, "current");
   return ok !== false;
 }
+/* החלפת שם בכל המשבצות של יום נתון (בלי נגיעה בלוגיקת הנחים). */
+function substituteInDay(d, from, to){
+  if(!d) return false;
+  let hit = false;
+  ["lead","deputyLead","driver","tools"].forEach(f=>{ if(d[f]===from){ d[f]=to; hit=true; } });
+  d.fixedAug = (d.fixedAug||[]).map(n=>{ if(n===from){ hit=true; return to; } return n; });
+  d.pf = (d.pf||[]).map(p=>{ if(p.name===from){ hit=true; return {...p, name:to}; } return p; });
+  d.basic = (d.basic||[]).map(b=>{ if(b.name===from){ hit=true; return {...b, name:to}; } return b; });
+  if(Array.isArray(d.pfRest)) d.pfRest = d.pfRest.map(n=>{ if(n===from){ hit=true; return to; } return n; });
+  if(Array.isArray(d.pms))    d.pms    = d.pms.map(n=>{ if(n===from){ hit=true; return to; } return n; });
+  return hit;
+}
+/* החלפה ראש-בראש: אני נכנס ליום של המחליף, והוא נכנס ליום שלי. */
+async function applySwapHeadToHead(myDay, requester, replDay, replacement){
+  const roster = await getDutyRoster("current");
+  const dA = roster.days[rosterEditKey(myDay)];
+  const dB = roster.days[rosterEditKey(replDay)];
+  if(!dA || !dB) return false;
+  const okA = substituteInDay(dA, requester, replacement);
+  const okB = substituteInDay(dB, replacement, requester);
+  if(!okA && !okB) return false;               // אף אחד מהם כבר לא בלוח
+  const ok = await saveDutyRosterV2(roster, "current");
+  return ok !== false;
+}
 
 /* ===== תור אישור החלפות למ"ע תורנויות =====
    אחרי שהמפקד אישר החלפה (status="naat"), רק מ"ע תורנויות מחיל אותה על
@@ -6867,7 +6987,9 @@ async function renderNaatSwaps(){
 }
 async function naatApproveSwap(idx){
   const r = naatSwapRows[idx]; if(!r) return;
-  const applied = await applySwapToBoard(r.day, r.by, r.replacement);
+  const applied = r.replDay
+    ? await applySwapHeadToHead(r.day, r.by, r.replDay, r.replacement)   // ראש-בראש
+    : await applySwapToBoard(r.day, r.by, r.replacement);                // תאימות לאחור
   if(!applied){ toast("⚠️ ההחלפה לא הוחלה — בדוק שהשמות עדיין בלוח"); return; }
   const list = (await sGetIn(r._shed,"duty_requests")) || [];
   const rr = list.find(x=>x.id===r.id); if(rr){ rr.status="approved"; rr.naatBy=user; rr.naatTs=Date.now(); }
@@ -11442,6 +11564,8 @@ async function computeAlerts(){
   {
     const pend = (await getDutyRequests()).filter(r=>r.status==="pending");
     if(pend.length) alerts.push({icon:"📨", text:`${pend.length} בקשות ממתינות לאישורך`, level:"high", nav:"__requests"});
+    const crossB = await fetchSwapsForShedB();
+    if(crossB.length) alerts.push({icon:"↔️", text:`${crossB.length} החלפות בין-מסגרתיות לאישורך`, level:"high", nav:"__requests"});
   }
 
   const events = await getEvents();

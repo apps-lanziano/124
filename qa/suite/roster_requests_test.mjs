@@ -33,15 +33,18 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
     r.dutyFlagShown = /אתה תורן היום/.test(todayHtml);
     r.myRolesShown  = /PF/.test(todayHtml) || /ראש צוות/.test(todayHtml);
 
-    // שליחת בקשת החלפה מול מי שנח (או מדלגים אם סופ"ש בלי נחים)
-    r.weekend = isWeekendDay(today);
-    if(!r.weekend){
-      await openNewRequest("swap");
-      setSwapDay(today); setSwapRepl("חייל ד סככה 1");
-      await submitRequest();
-      const my = (await getDutyRequests()).filter(x=>x.by===me);
-      r.reqSaved = my.length===1 && my[0].type==="swap" && my[0].replacement==="חייל ד סככה 1" && my[0].status==="pending";
-    } else { r.reqSaved = true; }
+    // החלפה ראש-בראש: אני תורן ביום א', המחליף תורן ביום ב' — בוחרים את
+    // שני הימים ומחליפים ביניהם. לוח דטרמיניסטי כדי לא להיות תלוי ב"היום".
+    const ds = migrateRosterToV2(null); ds.squadronDuty="shed1";
+    ds.days["ראשון"].lead = me;
+    ds.days["שני"].lead = "חייל ד סככה 1";
+    await saveDutyRosterV2(ds, "current"); rosterCache = null;
+    await openNewRequest("swap");
+    setSwapDay("ראשון"); setSwapRepl("חייל ד סככה 1","shed1"); setSwapReplDay("שני");
+    await submitRequest();
+    const my = (await getDutyRequests()).filter(x=>x.by===me && x.type==="swap");
+    r.reqSaved = my.length===1 && my[0].replacement==="חייל ד סככה 1"
+      && my[0].day==="ראשון" && my[0].replDay==="שני" && my[0].status==="pending";
 
     // בקשת יציאה מוקדמת — תאריך אמיתי (type=date) כדי שינעל יום אצל מ"ע
     await openNewRequest("leave");
@@ -68,7 +71,7 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
   record("ניווט: הסמכות מופיעה בתפריט \"עוד\"", out.sheetCertsShown, String(out.sheetCertsShown));
   record("היום שלי: דגל \"אתה תורן היום\" מוצג", out.dutyFlagShown, String(out.dutyFlagShown));
   record("היום שלי: התפקיד שלי מוצג", out.myRolesShown, String(out.myRolesShown));
-  record("בקשת החלפה נשמרת כ\"ממתין\"" + (out.weekend?" (דולג — סופ\"ש)":""), out.reqSaved, String(out.reqSaved));
+  record("בקשת החלפה ראש-בראש נשמרת (שני הימים)", out.reqSaved, String(out.reqSaved));
   record("בקשת יציאה מוקדמת נשמרת", out.leaveSaved, String(out.leaveSaved));
   record("בקשה ריקה נחסמת", out.emptyBlocked, String(out.emptyBlocked));
 
@@ -82,20 +85,16 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
 
   const out = await page.evaluate(async ()=>{
     const r = {};
-    // לוח: א' תורן היום, ב' נח היום
+    // לוח ראש-בראש: א' תורן ביום ראשון, ג' תורן ביום שני
     const d = migrateRosterToV2(null);
-    const today = rosterEditKey(todayHebrewDay());
-    const dd = d.days[today];
-    dd.lead = "חייל א סככה 1"; dd.tools = "חייל ב סככה 1";
-    dd.pf = [{name:"חייל א סככה 1"}];
-    if(!isWeekendDay(today)) dd.pfRest = ["חייל ג סככה 1"];
+    d.days["ראשון"].lead = "חייל א סככה 1";
+    d.days["שני"].lead = "חייל ג סככה 1";
     await saveDutyRosterV2(d, "current");
-    r.weekend = isWeekendDay(today);
 
-    // בקשת החלפה ממתינה: א' -> ג'
+    // בקשת החלפה ראש-בראש (א' ראשון ⇄ ג' שני) + חופשה
     await saveDutyRequests([
-      {id:"rq1", type:"swap", by:"חייל א סככה 1", shed:"shed1", day:today, replacement:"חייל ג סככה 1", status:"pending", ts:Date.now()},
-      {id:"rq2", type:"vacation", by:"חייל ד סככה 1", shed:"shed1", date:"2-3.8", reason:"חתונה", status:"pending", ts:Date.now()+1},
+      {id:"rq1", type:"swap", by:"חייל א סככה 1", shed:"shed1", day:"ראשון", replacement:"חייל ג סככה 1", replDay:"שני", replShed:"shed1", status:"pending", ts:Date.now()},
+      {id:"rq2", type:"vacation", by:"חייל ד סככה 1", shed:"shed1", fromDate:"2026-08-20", toDate:"2026-08-20", reason:"חתונה", status:"pending", ts:Date.now()+1},
     ]);
 
     // התראת פעמון כוללת "בקשות ממתינות"
@@ -109,26 +108,17 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
     r.inboxHasReqs = document.querySelectorAll("#requests-inbox-list .req-card").length >= 2;
 
     // החלפה = שני שערים. שלב 1: אישור המפקד — עובר ל"ממתין למ״ע" ולא
-    // משנה את הלוח עדיין. שלב 2: מ״ע תורנויות מאשר ומחיל על הלוח.
-    if(!r.weekend){
-      await approveRequest("rq1");
-      const afterCmdr = (await getDutyRequests()).find(x=>x.id==="rq1");
-      const b1 = (await getDutyRoster("current")).days[today];
-      r.cmdrStage = afterCmdr.status==="naat" && b1.lead==="חייל א סככה 1";   // טרם הוחל
-      isRosterManager = true;
-      await openNaatSwaps();
-      await naatApproveSwap(0);
-      const nd = (await getDutyRoster("current")).days[today];
-      r.swapApplied = nd.lead==="חייל ג סככה 1" && (nd.pfRest||[]).includes("חייל א סככה 1")
-        && !(nd.pfRest||[]).includes("חייל ג סככה 1");
-      r.reqApproved = (await getDutyRequests()).find(x=>x.id==="rq1").status==="approved";
-    } else {
-      await approveRequest("rq1");
-      r.cmdrStage = (await getDutyRequests()).find(x=>x.id==="rq1").status==="naat";
-      isRosterManager = true; await openNaatSwaps(); await naatApproveSwap(0);
-      r.swapApplied = true;
-      r.reqApproved = (await getDutyRequests()).find(x=>x.id==="rq1").status==="approved";
-    }
+    // משנה את הלוח. שלב 2: מ״ע תורנויות מאשר ומחיל ראש-בראש.
+    await approveRequest("rq1");
+    const afterCmdr = (await getDutyRequests()).find(x=>x.id==="rq1");
+    const b1 = await getDutyRoster("current");
+    r.cmdrStage = afterCmdr.status==="naat" && b1.days["ראשון"].lead==="חייל א סככה 1";   // טרם הוחל
+    isRosterManager = true;
+    await openNaatSwaps();
+    await naatApproveSwap(0);
+    const nd = await getDutyRoster("current");
+    r.swapApplied = nd.days["ראשון"].lead==="חייל ג סככה 1" && nd.days["שני"].lead==="חייל א סככה 1";
+    r.reqApproved = (await getDutyRequests()).find(x=>x.id==="rq1").status==="approved";
 
     // דחייה עם הערה — חובה הערה
     openRejectRequest("rq2");
@@ -141,6 +131,22 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
     await confirmRejectRequest();
     const rq2 = (await getDutyRequests()).find(x=>x.id==="rq2");
     r.rejected = rq2.status==="rejected" && /עמוס/.test(rq2.note||"");
+
+    // החלפה בין-מסגרתית — דורשת אישור שני המפקדים לפני מ״ע
+    await saveDutyRequests((await getDutyRequests()).concat([
+      {id:"rqx", type:"swap", by:"חייל א סככה 1", shed:"shed1", day:"ראשון",
+       replacement:"מחליף סככה 2", replDay:"שני", replShed:"shed2", status:"pending", ts:Date.now()+5}
+    ]));
+    await approveRequest("rqx");   // מפקד סככה 1 → ממתין למסגרת השנייה
+    r.xPendingB = (await getDutyRequests()).find(x=>x.id==="rqx").status==="pending_b";
+    // מפקד סככה 2 רואה את הבקשה ומאשר
+    const saveShed = currentShed;
+    currentShed = SHEDS.find(s=>s.id==="shed2") || saveShed;
+    const forB = await fetchSwapsForShedB();
+    r.xVisibleToB = forB.some(x=>x.id==="rqx");
+    await approveSwapShedB("rqx","shed1");
+    currentShed = saveShed;
+    r.xNaat = (await getDutyRequests()).find(x=>x.id==="rqx").status==="naat";
     return r;
   });
 
@@ -148,10 +154,13 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
   record("התראת פעמון: בקשות ממתינות", out.alertShown, String(out.alertShown));
   record("תיבת הבקשות נפתחת עם הבקשות הממתינות", out.inboxOpen && out.inboxHasReqs, JSON.stringify(out));
   record("אישור מפקד מעביר החלפה ל\"ממתין למ״ע\" (לא משנה לוח)", out.cmdrStage, String(out.cmdrStage));
-  record("אישור מ״ע מחיל את ההחלפה על הלוח (מחליף נכנס, תורן לנוח)" + (out.weekend?" (סופ\"ש)":""), out.swapApplied, String(out.swapApplied));
+  record("אישור מ״ע מחיל ראש-בראש על הלוח (שני הימים מתחלפים)", out.swapApplied, String(out.swapApplied));
   record("הבקשה מסומנת כמאושרת אחרי מ״ע", out.reqApproved, String(out.reqApproved));
   record("דחייה דורשת הערה", out.rejectNeedsNote, String(out.rejectNeedsNote));
   record("דחייה עם הערה נשמרת", out.rejected, String(out.rejected));
+  record("החלפה בין-מסגרתית: אישור מפקד א׳ → ממתין למסגרת השנייה", out.xPendingB, String(out.xPendingB));
+  record("החלפה בין-מסגרתית: נראית למפקד המסגרת השנייה", out.xVisibleToB, String(out.xVisibleToB));
+  record("החלפה בין-מסגרתית: אישור מפקד ב׳ → ממתין למ״ע", out.xNaat, String(out.xNaat));
 
   await closeBrowser();
 }
