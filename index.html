@@ -892,6 +892,8 @@ nav{
 .rpick.softc{background:#fff7ed}
 .rpick.softc .rpick-s{color:#9a5b12;font-weight:600}
 .rc.softc{outline:1.5px solid #e0a458;outline-offset:-1.5px}
+.rpick.sel{background:var(--red-soft);box-shadow:inset 0 0 0 1.5px var(--red-line)}
+.rpick.sel .rpick-go{color:var(--red);font-weight:800}
 .rpick.sat{background:#fffbe6}
 .rpick.sat .rpick-s{color:#8a7500;font-weight:600}
 .rpick-cnt{font-size:10px;font-weight:800;padding:2px 6px;border-radius:8px;background:var(--bg);color:var(--ink-3);flex:0 0 auto;white-space:nowrap}
@@ -2635,7 +2637,8 @@ nav{
       <div id="roster-ed-daystrip"></div>
       <div id="roster-ed-body"></div>
       <div id="roster-ed-preview"></div>
-      <div class="modal-actions" style="margin-top:12px">
+      <button type="button" class="m-btn ghost" style="width:100%;margin-top:10px" onclick="previewRosterDraft()">👁️ תצוגה מקדימה של הלוח</button>
+      <div class="modal-actions" style="margin-top:10px">
         <button class="m-btn ghost hidden" id="roster-ed-savedraft" onclick="saveRosterDraftNext()" style="flex:1">💾 שמור טיוטה</button>
         <button class="m-btn primary" id="roster-ed-publish" onclick="rosterPrimaryAction()" style="flex:1">📢 פרסם שבוע</button>
         <button class="m-btn ghost" onclick="copyRosterFromLastWeek()" style="flex:0 0 auto">📋 העתק</button>
@@ -2750,7 +2753,8 @@ nav{
       <div class="rpick-legend" id="roster-pick-legend"></div>
       <div id="roster-pick-list" style="max-height:40vh;overflow-y:auto"></div>
       <div class="modal-actions" style="margin-top:10px">
-        <button class="m-btn ghost" onclick="document.getElementById('roster-pick-modal').classList.remove('open')" style="width:100%">סגור</button>
+        <button class="m-btn primary hidden" id="roster-pick-confirm" onclick="confirmRosterPick()" style="flex:1">אישור</button>
+        <button class="m-btn ghost" onclick="document.getElementById('roster-pick-modal').classList.remove('open')" style="flex:1">סגור</button>
       </div>
     </div>
   </div>
@@ -6238,7 +6242,6 @@ async function renderBoardArchive(){
       <h3>העלאת לוח צוות חדש</h3>
       <p>לחץ להעלאת צילום מסך של לוח שבועי</p>
     </div>`;
-    if(boards.length) html += `<button class="m-btn ghost" style="width:100%;margin-bottom:12px" onclick="analyzeLatestBoardWithAI()">🤖 נתח את הלוח האחרון עם AI (הצעה בלבד — עדיין דורש אישור ידני)</button>`;
   }
   if(boards.length === 0){
     html += `<div class="empty-state">
@@ -6320,6 +6323,7 @@ function rosterWeekSundayIso(slot){
   const d = new Date(); d.setHours(0,0,0,0);
   d.setDate(d.getDate()-d.getDay());                 // ראשון של השבוע הנוכחי
   if(slot==="next") d.setDate(d.getDate()+7);
+  else if(slot==="prev") d.setDate(d.getDate()-7);
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 }
 /* תאריך/י ISO של יום-בלוח. "חמישי" (מפתח משמרת סופ"ש) מחזיר את כל
@@ -6451,7 +6455,11 @@ function rosterDayCount(d){ return rosterDayAssigned(d).length; }
 /* שני לוחות: "current" (board_roster) — השבוע הפעיל שההתראה היומית
    קוראת; ו-"next" (board_roster_next) — לוח עתידי שמ"ע תורנויות בונה
    מראש. השרת קורא רק את current, ולכן בניית העתידי לא נוגעת בהתראות. */
-function rosterStorageKey(slot){ return slot==="next" ? "board_roster_next" : "board_roster"; }
+function rosterStorageKey(slot){
+  return slot==="next" ? "board_roster_next"
+    : slot==="prev" ? "board_roster_prev"
+    : "board_roster";
+}
 async function getDutyRoster(slot){
   const r = await sGetRaw(rosterStorageKey(slot));
   return migrateRosterToV2(r);
@@ -6638,13 +6646,14 @@ function viewArchivedRoster(i){
    את מה שעובד. שבע העמודות נדחסות לרוחב המסך (שמות מקוצרים), ולמי
    שרוצה לקרוא לעומק — "מסך מלא" עם צביטה להגדלה, אותו דפוס שכבר מוכר
    מצפייה בתמונת הלוח. */
-function rosterBoardHtml(r, today, mode){
+function rosterBoardHtml(r, today, mode, weekSlot){
   const fit = mode !== "wide";
   const nm = n => fit ? shortName(n) : n;
   const cols = [...ROSTER_ROTATING_DAYS, "חמישי"];
-  // תאריך יומי לכל עמודה — לפי השבוע הנוכחי (סופ"ש = טווח ה׳–ש׳)
+  // תאריך יומי לכל עמודה — לפי השבוע המוצג (נוכחי/שעבר/הבא; סופ"ש = טווח)
+  const wk = weekSlot || "current";
   const dateLbl = d => {
-    const ds = rosterDayLockDates(d, "current");
+    const ds = rosterDayLockDates(d, wk);
     return d==="חמישי" ? `${fmtHeShort(ds[0])}–${fmtHeShort(ds[2])}` : fmtHeShort(ds[0]);
   };
   const th = cols.map(d=>{
@@ -7739,13 +7748,21 @@ function rosterRemoveFromList(f,i){ rosterDraft.days[rosterEdDay][f].splice(i,1)
 /* בחירת שם — מציג את כל אנשי הטייסת, ומסמן מי כבר משובץ באותו יום.
    שיבוץ כפול אינו נחסם (פקיד כלים שהוא גם מאנשי ה-PF הוא מצב תקין),
    רק מוצג במפורש כדי שיהיה בחירה מודעת. */
+/* משבצות שמאפשרות בחירה מרובה (רשימות). משבצות שלד יחידניות (ר״צ/נהג
+   וכו') נשארות בחירה בודדת. */
+const ROSTER_MULTI_FIELDS = ["pf","basic","fixedAug","pfRest","pmsRest","reserve","pms"];
+let rosterPickMulti = false;
+let rosterPickSel = new Set();
 function openRosterPick(field){
   rosterPickCtx = {field};
+  rosterPickMulti = ROSTER_MULTI_FIELDS.includes(field);
+  rosterPickSel = new Set();
   const labels = {lead:"ר״צ", deputyLead:"ל/ ר״צ", driver:"נהג", tools:"פקיד כלים",
     fixedAug:"מתגבר", pf:"PF", pfRest:"נחים", reserve:"מילואים", pms:"PMS", pmsRest:"PMS נחים", basic:"תורנות בסיסית"};
   document.getElementById("roster-pick-title").textContent = "משבצת: " + (labels[field]||field);
   document.getElementById("roster-pick-sub").textContent =
-    (rosterEdDay==="חמישי" ? "חמישי–שבת" : rosterEdDay) + " · הקש על שם כדי לשבץ";
+    (rosterEdDay==="חמישי" ? "חמישי–שבת" : rosterEdDay) +
+    (rosterPickMulti ? " · סמן כמה שמות ואז לחץ אישור" : " · הקש על שם כדי לשבץ");
   document.getElementById("roster-pick-search").value = "";
   renderRosterPickList();
   document.getElementById("roster-pick-modal").classList.add("open");
@@ -7757,7 +7774,10 @@ function renderRosterPickList(){
   const q = (document.getElementById("roster-pick-search").value||"").trim();
   const d = rosterDraft.days[rosterEdDay];
   const assigned = new Set(rosterDayAssigned(d));
-  const weekAssign = weekAssignmentsByPerson(rosterDraft);   // שם -> ימים שכבר שובץ השבוע
+  // ספירת "שובץ N/Q" — רק ראשון–רביעי. חמישי הוא חלק ממשמרת הסופ"ש
+  // ואינו נספר כפעילות נפרדת (אחרת חייל היה מקבל 3 במקום 2).
+  const rotCount = {};
+  ROSTER_ROTATING_DAYS.forEach(day=>{ rosterDayAssigned(rosterDraft.days[day]).forEach(n=>{ rotCount[n]=(rotCount[n]||0)+1; }); });
   const nextSlot = rosterEditSlot==="next";
   rosterPickRows = [];
   SHEDS.forEach(s=>{
@@ -7766,7 +7786,7 @@ function renderRosterPickList(){
       if(p.release && p.release <= todayKey()) return;      // משוחרר — לא לשיבוץ
       if(q && !p.name.includes(q)) return;
       const lock = constraintLockFor(p.name, rosterEdDay, rosterEditSlot, rosterConstraints);
-      const cnt = (weekAssign[p.name]||[]).length;
+      const cnt = rotCount[p.name] || 0;                     // ספירה א׳–ד׳ בלבד
       const quota = rosterPfNames.has(p.name) ? 2 : 3;      // PF פעמיים, אחרת (PMS) שלוש
       const sat = nextSlot && rosterPrevSat.has(p.name);    // עשה שבת — לא לראשון
       rosterPickRows.push({name:p.name, shed:s.name, busy:assigned.has(p.name), lock, cnt, quota, sat});
@@ -7778,13 +7798,19 @@ function renderRosterPickList(){
   const mark = x => x.lock ? (x.lock.soft?"🎓 ":"🔒 ") : (x.sat?"🟡 ":"");
   const cls = x => x.lock ? (x.lock.soft?"softc":"locked") : (x.sat?"sat":"");
   const sub = x => x.lock ? x.lock.label : (x.sat ? "עשה שבת — לא לשבץ בראשון" : (x.busy?"כבר משובץ היום":x.shed));
+  const selected = x => rosterPickMulti && rosterPickSel.has(x.name);
   document.getElementById("roster-pick-list").innerHTML = rosterPickRows.length
-    ? rosterPickRows.map((x,i)=>`<div class="rpick ${x.busy?"busy":""} ${cls(x)}" onclick="rosterPickChoose(${i})">
+    ? rosterPickRows.map((x,i)=>`<div class="rpick ${x.busy?"busy":""} ${cls(x)} ${selected(x)?"sel":""}" onclick="rosterPickChoose(${i})">
         <div><div class="rpick-n">${mark(x)}${escapeHTML(x.name)}</div>
         <div class="rpick-s">${escapeHTML(x.lock||x.sat?sub(x):(x.busy?`${x.shed} · כבר משובץ היום`:x.shed))}</div></div>
         <span class="rpick-cnt ${x.cnt>=x.quota?"full":(x.cnt>0?"part":"")}">שובץ ${x.cnt}/${x.quota}</span>
-        <span class="rpick-go">+</span></div>`).join("")
+        <span class="rpick-go">${rosterPickMulti?(selected(x)?"✓":"○"):"+"}</span></div>`).join("")
     : `<div class="empty-state" style="padding:22px"><p>לא נמצאו שמות</p></div>`;
+  const conf = document.getElementById("roster-pick-confirm");
+  if(conf){
+    conf.classList.toggle("hidden", !rosterPickMulti);
+    conf.textContent = `אישור${rosterPickSel.size?` (${rosterPickSel.size})`:""}`;
+  }
   // מקרא הצבעים
   const leg = document.getElementById("roster-pick-legend");
   if(leg) leg.innerHTML =
@@ -7794,20 +7820,39 @@ function renderRosterPickList(){
     (nextSlot?`<span><b class="lg sat"></b>עשה שבת</span>`:``)+
     `<span>🎓 קורס</span><span>🔒 אילוץ</span>`;
 }
-function rosterPickChoose(idx){
-  const row = rosterPickRows[idx]; if(!row) return;
-  const name = row.name;
-  const f = rosterPickCtx && rosterPickCtx.field; if(!f) return;
+/* מוסיף שם בודד למשבצת (לפי סוג השדה). מחזיר את אזהרת האילוץ אם יש. */
+function rosterAddName(f, name){
   const d = rosterDraft.days[rosterEdDay];
   if(f==="pf"){ if(!d.pf.some(p=>p.name===name)) d.pf.push({name}); }
   else if(f==="basic"){ d.basic.push({name, type:BASIC_DUTY_TYPES[0]}); }
   else if(Array.isArray(d[f])){ if(!d[f].includes(name)) d[f].push(name); }
   else d[f] = name;
+}
+function rosterPickChoose(idx){
+  const row = rosterPickRows[idx]; if(!row) return;
+  const name = row.name;
+  const f = rosterPickCtx && rosterPickCtx.field; if(!f) return;
+  // בחירה מרובה — רק מסמנים/מבטלים, השיבוץ בפועל ב"אישור"
+  if(rosterPickMulti){
+    if(rosterPickSel.has(name)) rosterPickSel.delete(name); else rosterPickSel.add(name);
+    renderRosterPickList();
+    return;
+  }
+  rosterAddName(f, name);
   document.getElementById("roster-pick-modal").classList.remove("open");
   // אילוץ מאושר ביום זה — לא חוסם (מ"ע מחליט), רק מזהיר במפורש.
-  // קורס (רך) הוא מידע, לא אזהרה: זמין לצוות תורן עד 21:00, בלי נח.
   if(row.lock) toast(`${row.lock.soft?"🎓":"⚠️"} ${name} · ${row.lock.label}`);
   else if(row.sat && rosterEdDay==="ראשון") toast(`🟡 ${name} עשה שבת — עדיף לא לשבץ בראשון`);
+  renderRosterEditor();
+}
+/* אישור בחירה מרובה — משבץ בבת אחת את כל מי שסומן. */
+function confirmRosterPick(){
+  const f = rosterPickCtx && rosterPickCtx.field; if(!f) return;
+  const names = [...rosterPickSel];
+  names.forEach(n=>rosterAddName(f, n));
+  document.getElementById("roster-pick-modal").classList.remove("open");
+  rosterPickSel = new Set();
+  if(names.length) toast(`שובצו ${names.length} ✓`);
   renderRosterEditor();
 }
 /* "העתק" — הרבה בלוח חוזר כמעט זהה (תורנות בסיסית, תורן טייסת, מתגבר
@@ -7871,6 +7916,18 @@ async function publishFutureRoster(){
   document.getElementById("duty-roster-modal").classList.remove("open");
   await renderRosterView();
   toast("הלוח פורסם וכעת פעיל ✓");
+}
+/* תצוגה מקדימה — מציגה את הטיוטה בדיוק כמו הלוח השבועי אחרי הפרסום
+   (אותו rosterBoardHtml, מסך מלא עם זום), לפני שמפרסמים. */
+function previewRosterDraft(){
+  if(!rosterDraft) return;
+  document.getElementById("roster-full-title").textContent =
+    "👁️ תצוגה מקדימה — " + (rosterEditSlot==="next" ? "לוח עתידי" : "לוח נוכחי");
+  document.getElementById("roster-full-inner").innerHTML =
+    rosterBoardHtml(rosterDraft, todayHebrewDay(), "wide", rosterEditSlot);
+  document.getElementById("roster-full").classList.add("open");
+  initImgZoomGestures("roster-full-wrap", "roster-full-inner", "roster-full-lbl");
+  imgZoomReset("roster-full-wrap", "roster-full-inner", "roster-full-lbl");
 }
 /* ניתוח לוח צוות שבועי ע"י AI (Claude Vision, functions/lib/board_ai_analyze.js).
    שולח את התמונה המלאה של הלוח האחרון ומקבל הצעת שיבוץ — לא כותב שום
