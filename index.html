@@ -788,6 +788,10 @@ nav{
 .roster-segs{display:flex;background:var(--bg);border-radius:11px;padding:3px;margin-bottom:10px}
 .roster-segs div{flex:1;text-align:center;font-size:13px;font-weight:700;padding:8px 2px;border-radius:9px;color:var(--ink-3);cursor:pointer}
 .roster-segs div.on{background:var(--card);color:var(--red);box-shadow:0 1px 3px rgba(0,0,0,.09)}
+.roster-weeksel{display:flex;gap:6px;margin-bottom:10px}
+.roster-weeksel div{flex:1;text-align:center;font-size:12px;font-weight:800;padding:8px 2px;border-radius:10px;
+  color:var(--ink-3);background:var(--bg);border:1px solid var(--line);cursor:pointer}
+.roster-weeksel div.on{background:var(--red-soft);color:var(--red-deep);border-color:var(--red-line)}
 .roster-wkbar{background:var(--red-soft);border:1px solid var(--red-line);border-radius:11px;
   padding:9px 12px;margin-bottom:10px;font-size:12.5px;font-weight:600;color:var(--red-deep)}
 .roster-grid-wrap{border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden}
@@ -6485,6 +6489,7 @@ async function saveDutyRosterV2(roster, slot){
    "יום" (יום אחד בפריסה קריאה), ו"רק אני" (הימים שבהם אני משובץ).
    שם קצר בתצוגת הלוח כדי שהעמודות יישארו צרות; בתצוגת היום שם מלא. */
 let rosterView = "board";      // board | day | mine
+let boardWeekSlot = "current"; // prev | current | next — איזה שבוע מוצג בלוח
 let rosterDaySel = null;       // היום שנבחר בתצוגת "יום"
 let rosterCache = null;
 
@@ -6516,8 +6521,13 @@ function setRosterView(v, day){
 async function renderRosterView(){
   const box = document.getElementById("roster-view");
   if(!box) return;
-  const r = rosterCache || (rosterCache = await getDutyRoster());
+  // הלוח מציג שבוע לפי boardWeekSlot (שעבר/נוכחי/הבא). רק "נוכחי" נשמר
+  // במטמון (הוא מה שנקרא הכי הרבה); שעבר/הבא נטענים לפי דרישה.
+  const r = boardWeekSlot==="current"
+    ? (rosterCache || (rosterCache = await getDutyRoster()))
+    : await getDutyRoster(boardWeekSlot);
   const today = todayHebrewDay();
+  const todayForBoard = boardWeekSlot==="current" ? today : "";  // "היום" רק בשבוע הנוכחי
   if(!rosterDaySel) rosterDaySel = rosterEditKey(today);
   const anyData = WEEK_DAYS_HE.some(d=>rosterDayCount(r.days[d]) > 0);
 
@@ -6535,7 +6545,13 @@ async function renderRosterView(){
         <span class="rb-ic">🗄️</span><span class="rb-tx"><b>ארכיון לוחות<span id="roster-arc-badge" class="rb-badge hidden"></span></b><small>היסטוריית הלוחות השבועיים למעקב</small></span></button>` : "";
   // "תורן טייסת" מוצג כשורה בתוך הלוח (מתחת ל"תורנות"), לא כבאנר נפרד;
   // בתצוגות "יום"/"רק אני" נשאר באנר קצר כי אין שם טבלה.
-  const head = mgrBanners + `<div class="roster-segs">
+  // בורר שבוע — שעבר / נוכחי / הבא (אפשר גם להחליק ימינה/שמאלה על הלוח)
+  const weekSel = `<div class="roster-weeksel">
+      <div class="${boardWeekSlot==="prev"?"on":""}" onclick="setBoardWeek('prev')">שבוע שעבר</div>
+      <div class="${boardWeekSlot==="current"?"on":""}" onclick="setBoardWeek('current')">נוכחי</div>
+      <div class="${boardWeekSlot==="next"?"on":""}" onclick="setBoardWeek('next')">שבוע הבא</div>
+    </div>`;
+  const head = mgrBanners + weekSel + `<div class="roster-segs">
       <div class="${rosterView==="board"?"on":""}" onclick="setRosterView('board')">לוח</div>
       <div class="${rosterView==="day"?"on":""}" onclick="setRosterView('day')">יום</div>
       <div class="${rosterView==="mine"?"on":""}" onclick="setRosterView('mine')">רק אני</div>
@@ -6544,15 +6560,40 @@ async function renderRosterView(){
 
   if(!anyData){
     box.innerHTML = head + `<div class="empty-state"><div class="ic">🗓️</div>
-      <h3>לוח הצוות טרם שובץ</h3>
-      <p>${isRosterManager ? "השתמש בבאנר \"עריכת לוח נוכחי\" כדי לשבץ את השבוע" : "מ״ע תורנויות טרם פרסם את השבוע"}</p></div>`;
+      <h3>${boardWeekSlot==="prev"?"אין לוח לשבוע שעבר":boardWeekSlot==="next"?"לוח השבוע הבא טרם נבנה":"לוח הצוות טרם שובץ"}</h3>
+      <p>${isRosterManager ? (boardWeekSlot==="next"?"השתמש בבאנר \"בניית לוח עתידי\"":"השתמש בבאנר \"עריכת לוח נוכחי\" כדי לשבץ את השבוע") : "מ״ע תורנויות טרם פרסם"}</p></div>`;
+    initRosterSwipe();
     return;
   }
   box.innerHTML = head +
-    (rosterView==="board" ? rosterBoardHtml(r, today)
-     : rosterView==="day" ? rosterDayHtml(r, rosterDaySel, today)
-     : rosterMineHtml(r, today));
+    (rosterView==="board" ? rosterBoardHtml(r, todayForBoard, undefined, boardWeekSlot)
+     : rosterView==="day" ? rosterDayHtml(r, rosterDaySel, todayForBoard)
+     : rosterMineHtml(r, todayForBoard));
+  initRosterSwipe();
   if(isRosterManager){ updateRosterMgrBadges(); maybeArchiveRoster(); }
+}
+/* בחירת השבוע המוצג + החלקה ימינה/שמאלה על הלוח. */
+function setBoardWeek(slot){ boardWeekSlot = slot; renderRosterView(); }
+function rosterWeekShift(delta){
+  const order = ["prev","current","next"];
+  const i = Math.min(2, Math.max(0, order.indexOf(boardWeekSlot) + delta));
+  if(order[i] !== boardWeekSlot){ boardWeekSlot = order[i]; renderRosterView(); }
+}
+let _rosterSwipeBound = false;
+function initRosterSwipe(){
+  const box = document.getElementById("roster-view");
+  if(!box || _rosterSwipeBound) return;
+  _rosterSwipeBound = true;
+  let x0 = null, y0 = null;
+  box.addEventListener("touchstart", e=>{ const t=e.changedTouches[0]; x0=t.clientX; y0=t.clientY; }, {passive:true});
+  box.addEventListener("touchend", e=>{
+    if(x0===null) return;
+    const t=e.changedTouches[0], dx=t.clientX-x0, dy=t.clientY-y0;
+    x0=null;
+    if(Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy)*1.5) return;   // לא החלקה אופקית מובהקת
+    // RTL: החלקה שמאלה → קדימה (השבוע הבא); ימינה → אחורה (שבוע שעבר)
+    rosterWeekShift(dx < 0 ? 1 : -1);
+  }, {passive:true});
 }
 /* מונה החלפות שממתינות לאישור מ"ע + מונה לוחות בארכיון. */
 async function updateRosterMgrBadges(){
@@ -7327,7 +7368,7 @@ async function naatRejectSwap(idx){
 function rosterDayHtml(r, day, today){
   const key = rosterEditKey(day);
   const d = r.days[key] || emptyRosterDay(isWeekendDay(key));
-  const dLbl = x => { const ds=rosterDayLockDates(x,"current"); return x==="חמישי"?`${fmtHeShort(ds[0])}–${fmtHeShort(ds[2])}`:fmtHeShort(ds[0]); };
+  const dLbl = x => { const ds=rosterDayLockDates(x,boardWeekSlot); return x==="חמישי"?`${fmtHeShort(ds[0])}–${fmtHeShort(ds[2])}`:fmtHeShort(ds[0]); };
   const strip = [...ROSTER_ROTATING_DAYS, "חמישי"].map(x=>{
     const wknd = x==="חמישי";
     const mine = rosterDayAssigned(r.days[x]).includes(user);
@@ -7907,15 +7948,21 @@ async function saveRosterDraftNext(){
 /* פרסום הלוח העתידי: מקדם את הטיוטה ללוח הפעיל (current) כך שכולם רואים
    אותו וההתראה היומית קוראת ממנו. שומר גם עותק ב-next. */
 async function publishFutureRoster(){
-  if(!confirm("לפרסם את הלוח? הוא יהפוך ללוח הפעיל שכולם רואים, וההתראה היומית תקרא ממנו.")) return;
+  if(!confirm("לפרסם את הלוח? השבוע הנוכחי יעבור ל\"שבוע שעבר\", והלוח הזה יהפוך לפעיל. ההתראה היומית תקרא ממנו.")) return;
   rosterDraft.weekKey = todayKey();
-  await saveDutyRosterV2(rosterDraft, "next");
+  // שמירה על רצף מלא בלי לדרוס: הנוכחי הנוכחי → "שבוע שעבר", הטיוטה →
+  // "נוכחי", והעתידי מתאפס לבניית השבוע הבא.
+  const oldCurrent = await getDutyRoster("current");
+  const hadCurrent = WEEK_DAYS_HE.some(d=>rosterDayCount(oldCurrent.days[d])>0);
+  if(hadCurrent) await saveDutyRosterV2(oldCurrent, "prev");
   const ok = await saveDutyRosterV2(rosterDraft, "current");
   if(ok === false){ toast("⚠️ הפרסום נכשל — בדוק חיבור ונסה שוב"); return; }
+  await saveDutyRosterV2(migrateRosterToV2(null), "next");   // מתפנה לבניית השבוע הבא
   rosterCache = null;
+  boardWeekSlot = "current";
   document.getElementById("duty-roster-modal").classList.remove("open");
   await renderRosterView();
-  toast("הלוח פורסם וכעת פעיל ✓");
+  toast("הלוח פורסם ✓ — השבוע הקודם נשמר תחת \"שבוע שעבר\"");
 }
 /* תצוגה מקדימה — מציגה את הטיוטה בדיוק כמו הלוח השבועי אחרי הפרסום
    (אותו rosterBoardHtml, מסך מלא עם זום), לפני שמפרסמים. */
