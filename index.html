@@ -733,6 +733,12 @@ nav{
 .req-person{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border:1.5px solid var(--line);
   border-radius:12px;margin-bottom:6px;cursor:pointer;font-size:13.5px;font-weight:700}
 .req-person.on{border-color:var(--red);background:var(--red-soft)}
+/* בחירת יום (החלפת תורנות) — צ'יפים ניתנים ללחיצה עם מצב נבחר */
+.pick{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:6px}
+.pick>div{flex:1 1 auto;min-width:54px;text-align:center;padding:11px 8px;border:1.5px solid var(--line);
+  border-radius:11px;font-size:13px;font-weight:800;color:var(--ink-2);background:var(--card);cursor:pointer;transition:.12s}
+.pick>div.on{border-color:var(--red);background:var(--red-soft);color:var(--red-deep)}
+.pick>div:active{transform:scale(.96)}
 .req-person .req-rad{width:17px;height:17px;border-radius:50%;border:1.5px solid var(--line);flex:0 0 auto}
 .req-person.on .req-rad{border-color:var(--red);background:var(--red);box-shadow:inset 0 0 0 3px #fff}
 .req-warn{background:var(--gold-soft);border:1px solid #f0e0b0;border-radius:11px;padding:11px;font-size:12.5px;color:#8a6500;font-weight:600}
@@ -5678,7 +5684,7 @@ async function renderCalendarPage(){
   const acts = document.getElementById("cal-actions");
   if(acts){
     const btns = [];
-    if(userRole==="מפקד") btns.push(`<button class="m-btn ghost" onclick="openCalEvent()">➕ אירוע ליומן</button>`);
+    if(userRole==="מפקד" || isAdmin || isSuperAdmin) btns.push(`<button class="m-btn ghost" onclick="openCalEvent()">➕ אירוע ליומן</button>`);
     btns.push(`<button class="m-btn ghost" onclick="openCalConstraint()">📌 אילוץ / זימון</button>`);
     acts.innerHTML = btns.join("");
   }
