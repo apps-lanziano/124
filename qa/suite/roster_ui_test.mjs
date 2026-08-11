@@ -51,6 +51,9 @@ const out = await page.evaluate(async ()=>{
     return t && w ? t.scrollWidth <= w.clientWidth + 1 : false;
   })();
   r.hasFullBtn    = !!document.querySelector(".roster-full-btn");
+  // תאריך יומי בכותרת כל עמודה (למשל 17.8)
+  r.headerDates   = [...document.querySelectorAll(".roster-grid thead th small")]
+                      .filter(s=>/\d+\.\d+/.test(s.textContent)).length >= 5;
 
   // מסך מלא — כל הלוח בשמות מלאים, עם זום
   await openRosterFull();
@@ -104,6 +107,7 @@ record("תצוגת לוח: כל שש עמודות השבוע מוצגות יחד
 record("תצוגת לוח: הלוח נכנס לרוחב המסך בלי גלילה לצדדים",
   out.isFit && out.gridFitsWidth, `fit=${out.isFit} fits=${out.gridFitsWidth}`);
 record("תצוגת לוח: יש כפתור מסך מלא", out.hasFullBtn, String(out.hasFullBtn));
+record("תצוגת לוח: תאריך יומי בכותרת כל עמודה", out.headerDates, String(out.headerDates));
 record("מסך מלא: נפתח עם הלוח בשמות מלאים", out.fullOpen && out.fullWide && out.fullFullNames,
   JSON.stringify({open:out.fullOpen, wide:out.fullWide, names:out.fullFullNames}));
 record("מסך מלא: פקדי זום קיימים", out.fullHasZoom, String(out.fullHasZoom));

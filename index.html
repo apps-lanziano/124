@@ -788,6 +788,8 @@ nav{
 .roster-grid .rlbl{background:var(--bg);font-weight:800;color:var(--ink-2);line-height:1.2}
 .roster-grid .rlbl small{font-weight:600;color:var(--ink-3)}
 .roster-grid thead th{background:var(--gold-soft);color:#6b5100;font-weight:800;line-height:1.25}
+.roster-grid thead th small{display:block;font-size:9px;font-weight:700;opacity:.8}
+.roster-grid.fit thead th small{font-size:8px;opacity:.75}
 .roster-grid thead th.wknd{background:#eef1f6;color:#42506b}
 .roster-grid thead th.now{background:var(--red);color:#fff}
 .roster-grid thead th.rlbl.wk{background:var(--bg);color:var(--ink-2);cursor:default}
@@ -6461,11 +6463,16 @@ function rosterBoardHtml(r, today, mode){
   const fit = mode !== "wide";
   const nm = n => fit ? shortName(n) : n;
   const cols = [...ROSTER_ROTATING_DAYS, "חמישי"];
+  // תאריך יומי לכל עמודה — לפי השבוע הנוכחי (סופ"ש = טווח ה׳–ש׳)
+  const dateLbl = d => {
+    const ds = rosterDayLockDates(d, "current");
+    return d==="חמישי" ? `${fmtHeShort(ds[0])}–${fmtHeShort(ds[2])}` : fmtHeShort(ds[0]);
+  };
   const th = cols.map(d=>{
     const wknd = d==="חמישי";
     const isToday = rosterEditKey(today)===d;
     const click = fit ? ` onclick="setRosterView('day','${d}')"` : "";
-    return `<th class="${wknd?"wknd":""} ${isToday?"now":""}"${click}>${wknd?"ה׳–ש׳":DAY_LETTER[d]}</th>`;
+    return `<th class="${wknd?"wknd":""} ${isToday?"now":""}"${click}>${wknd?"ה׳–ש׳":DAY_LETTER[d]}<small>${dateLbl(d)}</small></th>`;
   }).join("");
   const row = (label, cls, fn) => `<tr><td class="rlbl ${cls||""}">${label}</td>` +
     cols.map(d=>{
@@ -7131,10 +7138,11 @@ async function naatRejectSwap(idx){
 function rosterDayHtml(r, day, today){
   const key = rosterEditKey(day);
   const d = r.days[key] || emptyRosterDay(isWeekendDay(key));
+  const dLbl = x => { const ds=rosterDayLockDates(x,"current"); return x==="חמישי"?`${fmtHeShort(ds[0])}–${fmtHeShort(ds[2])}`:fmtHeShort(ds[0]); };
   const strip = [...ROSTER_ROTATING_DAYS, "חמישי"].map(x=>{
     const wknd = x==="חמישי";
     const mine = rosterDayAssigned(r.days[x]).includes(user);
-    return `<div class="${x===key?"on":""} ${mine?"mine":""} ${wknd?"wk":""}" onclick="setRosterView('day','${x}')">${wknd?"ה׳–ש׳":DAY_LETTER[x]}</div>`;
+    return `<div class="${x===key?"on":""} ${mine?"mine":""} ${wknd?"wk":""}" onclick="setRosterView('day','${x}')">${wknd?"ה׳–ש׳":DAY_LETTER[x]}<small>${dLbl(x)}</small></div>`;
   }).join("");
   const blk = (title, count, inner, cls) => inner ? `<div class="rblk">
       <div class="rblk-h ${cls||""}"><span>${title}</span>${count!==null?`<span class="rblk-c">${count}</span>`:""}</div>
