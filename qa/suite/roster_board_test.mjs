@@ -68,16 +68,16 @@ const out = await page.evaluate(async ()=>{
   r.futureIsolated = curAfter.days["שני"].lead !== "עתידי בלבד";
   r.futureSaved    = nextAfter.days["שני"].lead === "עתידי בלבד";
 
-  // 4) פרסום חסום כשחסרה משבצת חובה (פקיד כלים)
+  // 4) פרסום לא נחסם גם כשחסרה משבצת חובה — נשמר עם אזהרה מיידעת בלבד
   rosterDraft = migrateRosterToV2(null);
   rosterDraft.days["שלישי"].lead = "חייל ה סככה 1";        // ערך ייחודי שטרם נשמר
-  rosterDraft.days["שלישי"].pf = [{name:"חייל ב סככה 1"}]; // יש שיבוץ אבל אין tools
-  rosterEdDay = "שלישי";
+  rosterDraft.days["שלישי"].pf = [{name:"חייל ב סככה 1"}]; // יש שיבוץ אבל אין tools (פקיד כלים)
+  rosterEdDay = "שלישי"; rosterEditSlot = "current";
+  rosterAllPersonnel = await fetchAllPersonnelByShed(); rosterPfNames = new Set();
   let toasted = ""; window.toast = m => toasted = m;
   await publishRoster();
-  r.blockedToast = toasted;
-  const afterBlocked = await getDutyRoster();
-  r.blockedNotSaved = afterBlocked.days["שלישי"].lead !== "חייל ה סככה 1";
+  r.savedDespiteMissing = (await getDutyRoster()).days["שלישי"].lead === "חייל ה סככה 1";
+  r.warnedAboutMissing = /חסר/.test(toasted);
 
   return r;
 });
@@ -106,8 +106,8 @@ record("שיבוץ כפול נספר פעם אחת (פקיד כלים שגם ב-
   JSON.stringify(out.dualAssigned) === JSON.stringify(["א","ב","ג"]), JSON.stringify(out.dualAssigned));
 record("לוח עתידי נשמר בנפרד ולא נוגע בלוח הנוכחי", out.futureIsolated && out.futureSaved,
   `isolated=${out.futureIsolated} saved=${out.futureSaved}`);
-record("פרסום נחסם כשחסר פקיד כלים", /חסר/.test(out.blockedToast||""), out.blockedToast);
-record("פרסום חסום באמת לא נשמר", out.blockedNotSaved, String(out.blockedNotSaved));
+record("פרסום נשמר גם כשחסרה משבצת חובה (לא חוסם)", out.savedDespiteMissing, String(out.savedDespiteMissing));
+record("מוצגת אזהרה מיידעת על משבצת חסרה", out.warnedAboutMissing, String(out.warnedAboutMissing));
 
 await closeBrowser();
 
