@@ -56,6 +56,7 @@ const out = await page.evaluate(async ()=>{
   await openRosterEditor(null, "next");
   r.futTitle = document.getElementById("roster-ed-title").textContent;
   r.futPublishLabel = document.getElementById("roster-ed-publish").textContent;
+  r.futSaveDraftShown = !document.getElementById("roster-ed-savedraft").classList.contains("hidden");
 
   // חוזרים לעריכת הנוכחי להמשך הבדיקות
   await openRosterEditor(null, "current");
@@ -121,7 +122,8 @@ record("באנר \"עריכת לוח נוכחי\" קיים", out.hasCurBanner, S
 record("באנר \"בניית לוח עתידי\" קיים", out.hasFutBanner, String(out.hasFutBanner));
 record("כותרת עריכת לוח נוכחי", /עריכת לוח נוכחי/.test(out.curTitle||""), out.curTitle);
 record("כותרת בניית לוח עתידי", /בניית לוח עתידי/.test(out.futTitle||""), out.futTitle);
-record("בלוח עתידי הכפתור הוא \"שמור\" ולא \"פרסם\"", /שמור/.test(out.futPublishLabel||""), out.futPublishLabel);
+record("בלוח עתידי הכפתור הראשי הוא \"פרסם לוח צוות\"", /פרסם לוח צוות/.test(out.futPublishLabel||""), out.futPublishLabel);
+record("בלוח עתידי מופיע כפתור \"שמור טיוטה\"", out.futSaveDraftShown, String(out.futSaveDraftShown));
 record("העורך נפתח למ״ע תורנויות", out.editorOpen, String(out.editorOpen));
 record("בורר השמות מציג אנשי צוות", out.pickHasNames, String(out.pickHasNames));
 record("בחירת שם משבצת אותו במשבצת", leadOk, out.leadValue);

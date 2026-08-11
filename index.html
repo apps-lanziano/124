@@ -2633,7 +2633,8 @@ nav{
       <div id="roster-ed-body"></div>
       <div id="roster-ed-preview"></div>
       <div class="modal-actions" style="margin-top:12px">
-        <button class="m-btn primary" id="roster-ed-publish" onclick="publishRoster()" style="flex:1">📢 פרסם שבוע</button>
+        <button class="m-btn ghost hidden" id="roster-ed-savedraft" onclick="saveRosterDraftNext()" style="flex:1">💾 שמור טיוטה</button>
+        <button class="m-btn primary" id="roster-ed-publish" onclick="rosterPrimaryAction()" style="flex:1">📢 פרסם שבוע</button>
         <button class="m-btn ghost" onclick="copyRosterFromLastWeek()" style="flex:0 0 auto">📋 העתק</button>
         <button class="m-btn ghost" onclick="document.getElementById('duty-roster-modal').classList.remove('open')" style="flex:0 0 auto">סגור</button>
       </div>
@@ -7473,8 +7474,11 @@ async function openRosterEditor(aiDays, slot){
   rosterEdDay = rosterEditKey(todayHebrewDay());
   document.getElementById("roster-ed-title").textContent =
     rosterEditSlot==="next" ? "🔮 בניית לוח עתידי" : "✏️ עריכת לוח נוכחי";
+  // לוח עתידי: "שמור טיוטה" (שומר וממשיך לערוך, לא מפרסם) + "פרסם לוח צוות"
+  // (רק כשמסיימים — מקדם את הטיוטה ללוח הפעיל). לוח נוכחי: שמור ופרסם.
+  document.getElementById("roster-ed-savedraft").classList.toggle("hidden", rosterEditSlot!=="next");
   document.getElementById("roster-ed-publish").textContent =
-    rosterEditSlot==="next" ? "💾 שמור לוח עתידי" : "💾 שמור ופרסם";
+    rosterEditSlot==="next" ? "📢 פרסם לוח צוות" : "💾 שמור ופרסם";
   const iss = rosterDraft._aiIssues;
   document.getElementById("roster-ed-preview").innerHTML = aiDays
     ? dutyRosterPreviewHtml(iss ? iss.ambiguous : [], iss ? iss.unmatched : [], true) : "";
@@ -7778,8 +7782,32 @@ async function publishRoster(){
   if(missing.length){
     toast(`נשמר ✓ (שים לב: חסר ר״צ/פקיד כלים ב-${missing.map(x=>x==="חמישי"?"ה׳–ש׳":DAY_LETTER[x]).join(", ")})`);
   } else {
-    toast(rosterEditSlot==="next" ? "הלוח העתידי נשמר ✓" : "הלוח פורסם ✓");
+    toast("הלוח פורסם ✓");
   }
+}
+/* הכפתור הראשי בעורך: בלוח נוכחי מפרסם מיד; בלוח עתידי מפרסם (מקדם ל-
+   לוח הפעיל) רק כשמסיימים. */
+function rosterPrimaryAction(){ return rosterEditSlot==="next" ? publishFutureRoster() : publishRoster(); }
+/* לוח עתידי — שמירת טיוטה בלי לפרסם. נשמר ל-board_roster_next בלבד, לא
+   נוגע בלוח הפעיל שההתראה קוראת. העורך נשאר פתוח כדי להמשיך לערוך. */
+async function saveRosterDraftNext(){
+  rosterDraft.weekKey = todayKey();
+  const ok = await saveDutyRosterV2(rosterDraft, "next");
+  if(ok === false){ toast("⚠️ שמירת הטיוטה נכשלה — נסה שוב"); return; }
+  toast("הטיוטה נשמרה — אפשר להמשיך לערוך ✓");
+}
+/* פרסום הלוח העתידי: מקדם את הטיוטה ללוח הפעיל (current) כך שכולם רואים
+   אותו וההתראה היומית קוראת ממנו. שומר גם עותק ב-next. */
+async function publishFutureRoster(){
+  if(!confirm("לפרסם את הלוח? הוא יהפוך ללוח הפעיל שכולם רואים, וההתראה היומית תקרא ממנו.")) return;
+  rosterDraft.weekKey = todayKey();
+  await saveDutyRosterV2(rosterDraft, "next");
+  const ok = await saveDutyRosterV2(rosterDraft, "current");
+  if(ok === false){ toast("⚠️ הפרסום נכשל — בדוק חיבור ונסה שוב"); return; }
+  rosterCache = null;
+  document.getElementById("duty-roster-modal").classList.remove("open");
+  await renderRosterView();
+  toast("הלוח פורסם וכעת פעיל ✓");
 }
 /* ניתוח לוח צוות שבועי ע"י AI (Claude Vision, functions/lib/board_ai_analyze.js).
    שולח את התמונה המלאה של הלוח האחרון ומקבל הצעת שיבוץ — לא כותב שום
