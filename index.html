@@ -5776,8 +5776,10 @@ async function renderCalendarPage(){
   const acts = document.getElementById("cal-actions");
   if(acts){
     const btns = [];
-    if(userRole==="מפקד" || isAdmin || isSuperAdmin) btns.push(`<button class="m-btn ghost" onclick="openCalEvent()">➕ אירוע ליומן</button>`);
-    btns.push(`<button class="m-btn ghost" onclick="openCalConstraint()">📌 אילוץ / זימון</button>`);
+    if(userRole==="מפקד" || isAdmin || isSuperAdmin){
+      btns.push(`<button class="m-btn ghost" onclick="openCalEvent()">➕ אירוע ליומן</button>`);
+      btns.push(`<button class="m-btn ghost" onclick="openCalConstraint()">📌 אילוץ / זימון</button>`);
+    }
     acts.innerHTML = btns.join("");
   }
   renderCalDayDetail(byDate);
@@ -5832,12 +5834,14 @@ async function deleteCalEvent(id){
   await renderCalendarPage();
   toast("האירוע נמחק");
 }
-/* הוספת אילוץ/זימון מתוך היומן — פותח את זרימת האילוצים עם התאריך הנבחר.
-   מפקד → הזנה בשם חייל (מאושר מיידית); חייל → בקשה משלו. */
+/* הוספת אילוץ/זימון מתוך היומן — רק מפקד/מנהל. תמיד במסלול "בשם חייל":
+   האילוץ מאושר מיידית ומסתנכרן למ"ע תורנויות בכל המסגרות (נעילה בעורך
+   הלוח), בדיוק כמו אילוץ שמפקד מזין. עם התאריך שנבחר ביומן. */
 function openCalConstraint(){
+  if(!(userRole==="מפקד" || isAdmin || isSuperAdmin)){ toast("רק מפקד יכול להזין אילוץ/זימון 🔒"); return; }
   const d = calSelectedDate || todayKey();
-  if(userRole==="מפקד") openCommanderConstraint();
-  else openNewRequest("vacation");
+  openCommanderConstraint();
+  if(!reqOnBehalf) return;                     // אין חיילים במסגרת — openCommanderConstraint כבר התריע
   reqDraftType = "vacation"; reqDraftFromDate = d; reqDraftToDate = "";
   renderReqTypePicker(); renderReqFields();
 }

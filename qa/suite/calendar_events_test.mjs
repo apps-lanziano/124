@@ -38,6 +38,16 @@ const out = await page.evaluate(async ()=>{
   r.constraintOpened = document.getElementById("request-modal").classList.contains("open")
     && reqDraftFromDate==="2026-08-25" && reqDraftType==="vacation" && !!reqOnBehalf;
 
+  // שליחה → אילוץ מאושר מיידית שמסתנכרן למ"ע (נעילה בעורך כלל המסגרות)
+  const who = reqOnBehalf;
+  document.getElementById("req-fromdate").value = "2026-08-25";
+  document.getElementById("req-todate").value = "";
+  await submitRequest();
+  const c = (await getDutyRequests()).find(x=>x.by===who && x.type==="vacation" && x.fromDate==="2026-08-25");
+  r.constraintApproved = !!c && c.status==="approved" && c.byCommander===true;
+  const map = await fetchApprovedConstraintsByName();
+  r.constraintSynced = Array.isArray(map[who]) && map[who].some(x=>x.fromDate==="2026-08-25");
+
   return r;
 });
 
@@ -48,8 +58,30 @@ record("האירוע מופיע גם ביום השני בטווח", out.onDay2, 
 record("האירוע אינו מופיע מחוץ לטווח", out.notDay3, String(out.notDay3));
 record("מחיקת אירוע ידני", out.deleted, String(out.deleted));
 record("הוספת אילוץ/זימון מהיומן פותחת טופס עם התאריך הנבחר", out.constraintOpened, String(out.constraintOpened));
+record("אילוץ מהיומן נשמר כמאושר (בשם חייל)", out.constraintApproved, String(out.constraintApproved));
+record("אילוץ מהיומן מסתנכרן למ״ע (מפת הנעילות)", out.constraintSynced, String(out.constraintSynced));
 
 await closeBrowser();
+
+// ---------- חייל: אין כפתור אילוץ/זימון ביומן ----------
+{
+  const { page } = await newPage();
+  const login = await loginAsFramework(page, "shed1", "חייל");
+  const out2 = await page.evaluate(async ()=>{
+    const r = {};
+    go("scr-calendar", null); await renderCalendarPage();
+    r.noConstraintBtn = !document.getElementById("cal-actions").innerHTML.includes("אילוץ");
+    r.noEventBtn = !document.getElementById("cal-actions").innerHTML.includes("אירוע ליומן");
+    let toasted=""; window.toast=m=>toasted=m;
+    openCalConstraint();
+    r.blocked = /רק מפקד/.test(toasted) && !document.getElementById("request-modal").classList.contains("open");
+    return r;
+  });
+  record("חייל: אין כפתור אילוץ/זימון ביומן", out2.noConstraintBtn, String(out2.noConstraintBtn));
+  record("חייל: אין כפתור אירוע ליומן", out2.noEventBtn, String(out2.noEventBtn));
+  record("חייל: ניסיון להזין אילוץ נחסם", out2.blocked, String(out2.blocked));
+  await closeBrowser();
+}
 
 console.log("\n=== SUMMARY ===");
 let allPass = true;
