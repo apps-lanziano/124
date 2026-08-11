@@ -23,6 +23,7 @@ const out = await page.evaluate(async ()=>{
     {id:"c2", type:"other",    by:"חייל ב סככה 1", shed:"shed1", reason:"משהו", status:"approved", ts:Date.now()+1},
     {id:"c3", type:"after",    by:"חייל ג סככה 1", shed:"shed1", fromDate:friDate, toDate:friDate, status:"approved", ts:Date.now()+2},
     {id:"c4", type:"vacation", by:"חייל ד סככה 1", shed:"shed1", fromDate:monDate, toDate:monDate, status:"pending", ts:Date.now()+3},
+    {id:"c5", type:"course",   by:"חייל ה סככה 1", shed:"shed1", fromDate:monDate, toDate:monDate, status:"approved", ts:Date.now()+4},
   ]);
 
   const map = await fetchApprovedConstraintsByName();
@@ -38,6 +39,11 @@ const out = await page.evaluate(async ()=>{
   // תווית הנעילה כוללת את סוג האילוץ
   const lbl = constraintLockFor(soldier, "שני", "current", map);
   r.lockLabel = !!lbl && /חופשה/.test(lbl.label);
+  r.hardNotSoft = !!lbl && lbl.soft===false;
+  // קורס = אילוץ "רך": זמין לצוות תורן עד 21:00, בלי נח — לא נעילה מלאה
+  const courseLbl = constraintLockFor("חייל ה סככה 1", "שני", "current", map);
+  r.courseSoft = !!courseLbl && courseLbl.soft===true && /21:00/.test(courseLbl.label) && /ללא נח/.test(courseLbl.label);
+  r.courseNotHardLock = !CONSTRAINT_LOCK_TYPES.includes("course") && CONSTRAINT_DATED_TYPES.includes("course");
 
   // 3) העורך טוען אילוצים ומסמן 🔒 ברשימת הבחירה (מ"ע תורנויות)
   isRosterManager = true;
@@ -72,6 +78,9 @@ record("אילוץ ממתין (לא מאושר) אינו נועל", out.mapExclu
 record("נעילה חלה על היום הנכון (שני) ולא על אחר (שלישי)", out.lockMon && out.lockTue, JSON.stringify({mon:out.lockMon,tue:out.lockTue}));
 record("אפטר בשישי נועל את משמרת סופ\"ש", out.lockWknd, String(out.lockWknd));
 record("תווית הנעילה כוללת את סוג האילוץ", out.lockLabel, String(out.lockLabel));
+record("חופש = נעילה מלאה (soft=false)", out.hardNotSoft, String(out.hardNotSoft));
+record("קורס = אילוץ רך: זמין עד 21:00, ללא נח", out.courseSoft, String(out.courseSoft));
+record("קורס אינו נעילה מלאה אך כן אילוץ תאריכי", out.courseNotHardLock, String(out.courseNotHardLock));
 record("רשימת הבחירה בעורך מציגה 🔒 לחייל נעול", out.pickShowsLock, String(out.pickShowsLock));
 record("האילוץ המאושר מופיע ביומן המסגרת", out.calHasConstraint, String(out.calHasConstraint));
 record("מפקד מזין אילוץ בשם חייל — מאושר מיידית", out.behalfApproved, String(out.behalfApproved));

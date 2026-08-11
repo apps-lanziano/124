@@ -865,6 +865,9 @@ nav{
 .rpick.locked{background:var(--red-soft)}
 .rpick.locked .rpick-s{color:var(--red);font-weight:600}
 .rc.locked{outline:1.5px solid var(--red);outline-offset:-1.5px}
+.rpick.softc{background:#fff7ed}
+.rpick.softc .rpick-s{color:#9a5b12;font-weight:600}
+.rc.softc{outline:1.5px solid #e0a458;outline-offset:-1.5px}
 .rpick-n{font-size:13px;font-weight:700}
 .rpick-s{font-size:11px;color:var(--ink-3)}
 .rpick-go{margin-inline-start:auto;font-size:17px;font-weight:800;color:var(--red);flex:0 0 auto}
@@ -5565,7 +5568,7 @@ async function getCalendarEvents(){
   Object.entries(dutyTable || {}).forEach(([name,row])=>{ if(row && row.date && row.duty) events.push({date:row.date, type:"duty", label:`${name} — ${row.duty}`}); });
   // אילוצים מאושרים (חופש/קורס/אפטר/יציאה) — כל יום בטווח מקבל אירוע
   (requests || []).forEach(req=>{
-    if(req.status!=="approved" || !CONSTRAINT_LOCK_TYPES.includes(req.type)) return;
+    if(req.status!=="approved" || !CONSTRAINT_DATED_TYPES.includes(req.type)) return;
     const f = req.fromDate || req.toDate, t = req.toDate || req.fromDate;
     if(!f) return;
     const m = reqTypeMeta(req.type);
@@ -6109,10 +6112,14 @@ function rosterDayLockDates(dayKey, slot){
   const idx = WEEK_DAYS_HE.indexOf(dayKey);
   return idx<0 ? [] : [isoAddDays(sun, idx)];
 }
-/* סוגי אילוץ שנועלים יום בלוח (מול swap/other שאינם נועלים תאריך). */
-const CONSTRAINT_LOCK_TYPES = ["vacation","course","after","leave"];
+/* סוגי אילוץ תאריכיים. "נעילה" = לא זמין כלל (חופש/אפטר/יציאה).
+   "רך" = קורס: זמין לצוות תורן עד 21:00, בלוח שבועי, בלי נח — סימון
+   מייעץ בלבד, לא חוסם שיבוץ. swap/other אינם אילוץ תאריכי. */
+const CONSTRAINT_LOCK_TYPES = ["vacation","after","leave"];
+const CONSTRAINT_SOFT_TYPES = ["course"];
+const CONSTRAINT_DATED_TYPES = [...CONSTRAINT_LOCK_TYPES, ...CONSTRAINT_SOFT_TYPES];
 function constraintCoversDate(req, iso){
-  if(!req || !CONSTRAINT_LOCK_TYPES.includes(req.type)) return false;
+  if(!req || !CONSTRAINT_DATED_TYPES.includes(req.type)) return false;
   const f = req.fromDate || req.toDate;
   const t = req.toDate || req.fromDate;
   if(!f) return false;
@@ -6125,7 +6132,7 @@ async function fetchApprovedConstraintsByName(){
   await Promise.all(SHEDS.map(async s=>{
     const list = (await sGetIn(s.id,"duty_requests")) || [];
     list.forEach(req=>{
-      if(req.status!=="approved" || !CONSTRAINT_LOCK_TYPES.includes(req.type)) return;
+      if(req.status!=="approved" || !CONSTRAINT_DATED_TYPES.includes(req.type)) return;
       if(!req.fromDate && !req.toDate) return;      // אילוץ ללא תאריך אמיתי — לא ננעל
       (map[req.by] = map[req.by] || []).push(req);
     });
@@ -6137,14 +6144,20 @@ function constraintLockFor(name, dayKey, slot, byNameMap){
   const reqs = (byNameMap && byNameMap[name]) || [];
   if(!reqs.length) return null;
   const dates = rosterDayLockDates(dayKey, slot);
+  // נעילה מלאה גוברת על סימון רך — אם יש חופש וגם קורס באותו יום, נציג נעילה
+  let softHit = null;
   for(const req of reqs){
-    if(dates.some(iso=>constraintCoversDate(req, iso))){
-      const m = reqTypeMeta(req.type);
-      const when = req.date || (req.fromDate===req.toDate || !req.toDate ? fmtHeShort(req.fromDate) : `${fmtHeShort(req.fromDate)}–${fmtHeShort(req.toDate)}`);
-      return {label: `${m.ic} ${m.label}${when?` · ${when}`:""}`, type:req.type};
+    if(!dates.some(iso=>constraintCoversDate(req, iso))) continue;
+    const m = reqTypeMeta(req.type);
+    const when = req.date || (req.fromDate===req.toDate || !req.toDate ? fmtHeShort(req.fromDate) : `${fmtHeShort(req.fromDate)}–${fmtHeShort(req.toDate)}`);
+    if(CONSTRAINT_SOFT_TYPES.includes(req.type)){
+      // קורס — זמין לצוות תורן עד 21:00, בלי נח
+      softHit = softHit || {label:`${m.ic} קורס · זמין עד 21:00 · ללא נח${when?` · ${when}`:""}`, type:req.type, soft:true};
+    } else {
+      return {label: `${m.ic} ${m.label}${when?` · ${when}`:""}`, type:req.type, soft:false};
     }
   }
-  return null;
+  return softHit;
 }
 /* תאריך ISO -> "13.8" לתצוגה קצרה */
 function fmtHeShort(iso){
@@ -7036,19 +7049,22 @@ function renderRosterEditor(){
         ${x==="חמישי"?"ה׳–ש׳":DAY_LETTER[x]}<small>${bad?"!":rosterDayCount(dd)}</small></div>`;
     }).join("") + `</div>`;
 
-  // 🔒 לצד שם ששובץ אך יש לו אילוץ מאושר ביום זה (מזהיר, לא חוסם)
-  const lk = name => constraintLockFor(name, rosterEdDay, rosterEditSlot, rosterConstraints) ? "🔒 " : "";
+  // 🔒/🎓 לצד שם ששובץ ויש לו אילוץ מאושר ביום זה (מזהיר, לא חוסם).
+  // 🔒 = לא זמין (חופש/אפטר), 🎓 = קורס (זמין לצוות תורן עד 21:00, בלי נח)
+  const lkOf = name => constraintLockFor(name, rosterEdDay, rosterEditSlot, rosterConstraints);
+  const lk = name => { const l=lkOf(name); return l ? (l.soft?"🎓 ":"🔒 ") : ""; };
+  const lc = name => { const l=lkOf(name); return l ? (l.soft?"softc":"locked") : ""; };
   const slot = (label, field, req) => {
     const v = d[field];
     return `<div class="rrow"><div class="rrow-k">${label}${req?' <b style="color:var(--red)">*</b>':""}</div>
       <div class="rrow-v">${ v
-        ? `<span class="rc duty ${lk(v)?"locked":""}" onclick="rosterClearSlot('${field}')">${lk(v)}${escapeHTML(v)} ✕</span>`
+        ? `<span class="rc duty ${lc(v)}" onclick="rosterClearSlot('${field}')">${lk(v)}${escapeHTML(v)} ✕</span>`
         : `<span class="rc ${req?"empty":"add"}" onclick="openRosterPick('${field}')">${req?"חסר — בחר":"+ רשות"}</span>`}
       </div></div>`;
   };
   const listRow = (label, field, cls) => `<div class="rrow"><div class="rrow-k">${label}</div>
     <div class="rrow-v">${(d[field]||[]).map((n,i)=>
-      `<span class="rc ${cls||""} ${lk(n)?"locked":""}" onclick="rosterRemoveFromList('${field}',${i})">${lk(n)}${escapeHTML(n)} ✕</span>`).join("")}
+      `<span class="rc ${cls||""} ${lc(n)}" onclick="rosterRemoveFromList('${field}',${i})">${lk(n)}${escapeHTML(n)} ✕</span>`).join("")}
       <span class="rc add" onclick="openRosterPick('${field}')">+</span></div></div>`;
 
   let html = "";
@@ -7059,7 +7075,7 @@ function renderRosterEditor(){
 
   html += `<div class="rblk"><div class="rblk-h"><span>PF</span><span class="rblk-c">${(d.pf||[]).length}</span></div>
     <div class="rpool">${(d.pf||[]).map((p,i)=>
-      `<span class="rc ${pfClass(p)} ${lk(p.name)?"locked":""}" onclick="rosterCyclePf(${i})">${lk(p.name)}${escapeHTML(p.name)}${pfTagHtml(p)}</span>
+      `<span class="rc ${pfClass(p)} ${lc(p.name)}" onclick="rosterCyclePf(${i})">${lk(p.name)}${escapeHTML(p.name)}${pfTagHtml(p)}</span>
        <span class="rc-x" onclick="rosterRemovePf(${i})">✕</span>`).join("")}
       <span class="rc add" onclick="openRosterPick('pf')">+ הוסף</span></div>
     <div class="rblk-note">הקש על שם כדי לסמן: רגיל → בקורס (עד 20:00) → מילואים</div></div>`;
@@ -7169,11 +7185,13 @@ function renderRosterPickList(){
       rosterPickRows.push({name:p.name, shed:s.name, busy:assigned.has(p.name), lock});
     });
   });
-  // נעולים (אילוץ מאושר ביום זה) ואז משובצים — למטה; פנויים למעלה
-  rosterPickRows.sort((a,b)=> (a.lock?1:0)-(b.lock?1:0) || (a.busy?1:0)-(b.busy?1:0) || a.name.localeCompare(b.name,"he"));
+  // סדר: פנויים → קורס (רך) → נעולים מלא. בתוך כל קבוצה משובצים למטה.
+  const rank = x => x.lock ? (x.lock.soft?1:2) : 0;
+  rosterPickRows.sort((a,b)=> rank(a)-rank(b) || (a.busy?1:0)-(b.busy?1:0) || a.name.localeCompare(b.name,"he"));
+  const mark = l => l ? (l.soft?"🎓 ":"🔒 ") : "";
   document.getElementById("roster-pick-list").innerHTML = rosterPickRows.length
-    ? rosterPickRows.map((x,i)=>`<div class="rpick ${x.busy?"busy":""} ${x.lock?"locked":""}" onclick="rosterPickChoose(${i})">
-        <div><div class="rpick-n">${x.lock?"🔒 ":""}${escapeHTML(x.name)}</div>
+    ? rosterPickRows.map((x,i)=>`<div class="rpick ${x.busy?"busy":""} ${x.lock?(x.lock.soft?"softc":"locked"):""}" onclick="rosterPickChoose(${i})">
+        <div><div class="rpick-n">${mark(x.lock)}${escapeHTML(x.name)}</div>
         <div class="rpick-s">${escapeHTML(x.shed)}${x.lock?` · ${escapeHTML(x.lock.label)}`:(x.busy?" · כבר משובץ היום":"")}</div></div>
         <span class="rpick-go">+</span></div>`).join("")
     : `<div class="empty-state" style="padding:22px"><p>לא נמצאו שמות</p></div>`;
@@ -7188,8 +7206,9 @@ function rosterPickChoose(idx){
   else if(Array.isArray(d[f])){ if(!d[f].includes(name)) d[f].push(name); }
   else d[f] = name;
   document.getElementById("roster-pick-modal").classList.remove("open");
-  // אילוץ מאושר ביום זה — לא חוסם (מ"ע מחליט), רק מזהיר במפורש
-  if(row.lock) toast(`⚠️ ל${name} יש ${row.lock.label} ביום זה`);
+  // אילוץ מאושר ביום זה — לא חוסם (מ"ע מחליט), רק מזהיר במפורש.
+  // קורס (רך) הוא מידע, לא אזהרה: זמין לצוות תורן עד 21:00, בלי נח.
+  if(row.lock) toast(`${row.lock.soft?"🎓":"⚠️"} ${name} · ${row.lock.label}`);
   renderRosterEditor();
 }
 /* "העתק" — הרבה בלוח חוזר כמעט זהה (תורנות בסיסית, תורן טייסת, מתגבר
