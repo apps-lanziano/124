@@ -535,6 +535,9 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
 .duty-select:focus,.duty-dateinp:focus{border-color:var(--red)}
 .duty-select:disabled,.duty-dateinp:disabled{background:#faf7f7;color:var(--ink-2);border-color:#f3ebec}
 .duty-select.filled{border-color:var(--red-line);background:var(--red-soft);color:var(--red);font-weight:700}
+.duty-dates{display:flex;flex-direction:column;gap:4px}
+.duty-dates label{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:800;color:var(--ink-3)}
+.duty-dates label .duty-dateinp{flex:1;padding:6px 7px;font-size:11.5px}
 .duty-lock-note{font-size:11.5px;color:var(--ink-3);font-weight:300;text-align:center;margin-top:10px}
 .duty-roster-day{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 11px;margin-bottom:8px}
 .duty-roster-day b{display:block;margin-bottom:6px;font-size:13px}
@@ -5595,18 +5598,68 @@ async function renderDuties(){
     el.innerHTML = `
       <div class="duty-name"><div class="avatar">${initials(p.name)}</div><b>${escapeHTML(p.name)}</b></div>
       <select class="duty-select ${row.duty?"filled":""}" ${canEdit?"":"disabled"} onchange="saveDuty('${jsStr(p.name)}','duty',this.value);this.classList.toggle('filled',!!this.value)">${opts}</select>
-      <input type="date" class="duty-dateinp" aria-label="תאריך תורנות — ${escapeHTML(p.name)}" value="${row.date||""}" ${canEdit?"":"disabled"} onchange="saveDuty('${jsStr(p.name)}','date',this.value)">`;
+      <div class="duty-dates">
+        <label>מ<input type="date" class="duty-dateinp" aria-label="מתאריך — ${escapeHTML(p.name)}" value="${row.fromDate||row.date||""}" ${canEdit?"":"disabled"} onchange="saveDuty('${jsStr(p.name)}','fromDate',this.value)"></label>
+        <label>עד<input type="date" class="duty-dateinp" aria-label="עד תאריך — ${escapeHTML(p.name)}" value="${row.toDate||""}" ${canEdit?"":"disabled"} onchange="saveDuty('${jsStr(p.name)}','toDate',this.value)"></label>
+      </div>`;
     list.appendChild(el);
   });
-  document.getElementById("duty-lock-note").textContent =
-    canEdit ? "✏️ לחץ על תורנות או תאריך כדי לעדכן — השינויים נשמרים אוטומטית" : "🔒 צפייה בלבד — עדכון שיבוץ מתבצע ע\"י מפקד";
+  document.getElementById("duty-lock-note").innerHTML =
+    canEdit ? "✏️ בחר תורנות וטווח תאריכים (מ–עד) — נשמר אוטומטית ומסתנכרן ללוח הצוות השבועי בתאריכים המתאימים"
+            : "🔒 צפייה בלבד — עדכון שיבוץ מתבצע ע\"י מפקד";
 }
 async function saveDuty(name, field, value){
   const table = (await sGet("duty_table")) || {};
-  if(!table[name]) table[name] = {duty:"", date:""};
+  if(!table[name]) table[name] = {duty:"", date:"", fromDate:"", toDate:""};
   table[name][field] = value;
-  await sSet("duty_table", table);
+  const ok = await sSet("duty_table", table);
+  if(ok===false){ toast("⚠️ השמירה נכשלה"); return; }
+  await syncDutyToBoard(name);                 // סנכרון אוטומטי ללוח הצוות
   toast("השיבוץ עודכן ✓");
+}
+/* היום-בשבוע-בלוח שאליו תאריך ISO שייך — רק אם הוא בשבוע הנוכחי של הלוח
+   (ראשון–שבת). מחוץ לשבוע מחזיר null (הלוח לא מכסה אותו). */
+function rosterDayForIso(iso){
+  const sun = isoOfDate(thisWeekSunday());
+  const sat = isoAddDays(sun, 6);
+  if(!iso || iso < sun || iso > sat) return null;
+  const idx = Math.round((new Date(iso+"T00:00:00") - new Date(sun+"T00:00:00"))/86400000);
+  return WEEK_DAYS_HE[idx] || null;
+}
+/* סנכרון שורת תורנות (מהטבלה) ללוח הצוות השבועי: כל תאריך בטווח שנופל
+   בשבוע הנוכחי נכנס כתורנות בסיסית ליום המתאים. אידמפוטנטי — קודם מסירים
+   את השיבוצים הקודמים שמקורם בטבלה (src:"table") עבור החייל, ואז מוסיפים
+   מחדש לפי הטווח העדכני. כך עריכה/מחיקה מתעדכנת נכון. */
+async function syncDutyToBoard(name){
+  try{
+    const table = (await sGet("duty_table")) || {};
+    const row = table[name] || {};
+    const roster = await getDutyRoster("current");
+    let changed = false;
+    ROSTER_EDIT_DAYS.forEach(day=>{
+      const d = roster.days[day]; if(!d || !Array.isArray(d.basic)) return;
+      const before = d.basic.length;
+      d.basic = d.basic.filter(b=>!(b && b.src==="table" && b.name===name));
+      if(d.basic.length !== before) changed = true;
+    });
+    const from = row.fromDate || row.date;
+    const to = row.toDate || from;
+    if(row.duty && from){
+      let cur = from, guard = 0;
+      while(cur <= to && guard++ < 400){
+        const dayName = rosterDayForIso(cur);
+        if(dayName){
+          const d = roster.days[rosterEditKey(dayName)];
+          if(d && !(d.basic||[]).some(b=>b.name===name && b.type===row.duty)){
+            (d.basic = d.basic||[]).push({name, type:row.duty, src:"table"});
+            changed = true;
+          }
+        }
+        cur = isoAddDays(cur, 1);
+      }
+    }
+    if(changed){ await saveDutyRosterV2(roster, "current"); rosterCache = null; }
+  }catch(e){ console.error("syncDutyToBoard", e); }
 }
 
 /* ===== לוח שנה מאוחד (feature: לוח שנה מאוחד) =====
@@ -5657,7 +5710,13 @@ async function getCalendarEvents(){
   certs.forEach(c=>{ if(c.expiry) events.push({date:c.expiry, type:"cert", label:`${c.person} — ${certCleanName(c.name)}`}); });
   tools.forEach(t=>{ if(t.expiry && !t.inRepair) events.push({date:t.expiry, type:"tool", label:t.name+(t.serial?` — מספר ${t.serial}`:"")}); });
   vehicles.forEach(v=>{ if(v.testDate) events.push({date:v.testDate, type:"vehicle", label:v.name+(v.number?` — מס' ${v.number}`:"")}); });
-  Object.entries(dutyTable || {}).forEach(([name,row])=>{ if(row && row.date && row.duty) events.push({date:row.date, type:"duty", label:`${name} — ${row.duty}`}); });
+  Object.entries(dutyTable || {}).forEach(([name,row])=>{
+    if(!row || !row.duty) return;
+    const f = row.fromDate || row.date, t = row.toDate || f;
+    if(!f) return;
+    let cur = f, guard = 0;
+    while(cur <= t && guard++ < 400){ events.push({date:cur, type:"duty", label:`${name} — ${row.duty}`}); cur = isoAddDays(cur, 1); }
+  });
   // אילוצים מאושרים (חופש/קורס/אפטר/יציאה) — כל יום בטווח מקבל אירוע
   (requests || []).forEach(req=>{
     if(req.status!=="approved" || !CONSTRAINT_DATED_TYPES.includes(req.type)) return;
