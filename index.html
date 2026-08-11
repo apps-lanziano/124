@@ -771,6 +771,17 @@ nav{
 .roster-banner.swp{background:#fff7ed;border-color:#f5d9b0}
 .roster-banner.arc{background:#f3f0fb;border-color:#ddd2f0}
 .roster-banner.arc .rb-tx b{color:#5b3fa0}
+.roster-banner.cns{background:#e9f7f4;border-color:#c3e8e0}
+.roster-banner.cns .rb-tx b{color:#0d7a68}
+.cns-person{padding:11px 4px;border-bottom:1px solid var(--line)}
+.cns-person:last-child{border-bottom:0}
+.cns-person-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+.cns-person-h b{font-size:13.5px;font-weight:800}
+.cns-person-h small{font-size:11px;color:var(--ink-3)}
+.cns-chips{display:flex;flex-wrap:wrap;gap:6px}
+.cns-chip{font-size:11px;font-weight:700;padding:3px 8px;border-radius:9px;background:var(--red-soft);color:var(--red-deep)}
+.cns-chip.soft{background:#fff7ed;color:#9a5b12}
+.cns-chip.pend{opacity:.6;text-decoration:none;border:1px dashed currentColor}
 .arc-row{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:12px 10px;border-bottom:1px solid var(--bg);cursor:pointer}
 .arc-row:last-child{border-bottom:0}
 .arc-row b{font-size:13.5px;font-weight:800;display:block}
@@ -2719,6 +2730,19 @@ nav{
       <div id="naat-swaps-list" style="max-height:56vh;overflow-y:auto"></div>
       <div class="modal-actions" style="margin-top:10px">
         <button class="m-btn ghost" onclick="document.getElementById('naat-swaps-modal').classList.remove('open')" style="width:100%">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- לוח אילוצים מרוכז (מ״ע תורנויות) -->
+  <div class="modal-bg" id="constraints-board-modal">
+    <div class="modal">
+      <h3>📋 לוח אילוצים מרוכז</h3>
+      <div class="m-sub" id="cns-board-sub"></div>
+      <input class="m-input" id="cns-board-search" placeholder="סנן לפי שם…" oninput="renderConstraintsBoard()">
+      <div id="cns-board-body" style="max-height:60vh;overflow-y:auto"></div>
+      <div class="modal-actions" style="margin-top:10px">
+        <button class="m-btn ghost" onclick="document.getElementById('constraints-board-modal').classList.remove('open')" style="width:100%">סגור</button>
       </div>
     </div>
   </div>
@@ -6541,6 +6565,8 @@ async function renderRosterView(){
     </div>
     <button class="roster-banner swp" onclick="openNaatSwaps()" style="width:100%;margin-bottom:10px">
         <span class="rb-ic">🔄</span><span class="rb-tx"><b>החלפות לאישור מ״ע<span id="roster-naat-badge" class="rb-badge hidden"></span></b><small>בקשות החלפה שהמפקד אישר — ממתינות להחלתך על הלוח</small></span></button>
+    <button class="roster-banner cns" onclick="openConstraintsBoard()" style="width:100%;margin-bottom:10px">
+        <span class="rb-ic">📋</span><span class="rb-tx"><b>לוח אילוצים מרוכז<span id="roster-cns-badge" class="rb-badge hidden"></span></b><small>מי זמין ומי לא — כל האילוצים במקום אחד</small></span></button>
     <button class="roster-banner arc" onclick="openRosterArchive()" style="width:100%;margin-bottom:10px">
         <span class="rb-ic">🗄️</span><span class="rb-tx"><b>ארכיון לוחות<span id="roster-arc-badge" class="rb-badge hidden"></span></b><small>היסטוריית הלוחות השבועיים למעקב</small></span></button>` : "";
   // "תורן טייסת" מוצג כשורה בתוך הלוח (מתחת ל"תורנות"), לא כבאנר נפרד;
@@ -6611,6 +6637,16 @@ async function updateRosterMgrBadges(){
       if(n>0){ ab.textContent = n; ab.classList.remove("hidden"); } else ab.classList.add("hidden");
     }catch(e){ ab.classList.add("hidden"); }
   }
+  const cb = document.getElementById("roster-cns-badge");
+  if(cb){
+    try{
+      const today = todayKey();
+      const n = new Set((await fetchAllConstraints())
+        .filter(c=>{ const t=c.toDate||c.fromDate||c.date; return !t || t>=today; })
+        .map(c=>c.by)).size;
+      if(n>0){ cb.textContent = n; cb.classList.remove("hidden"); } else cb.classList.add("hidden");
+    }catch(e){ cb.classList.add("hidden"); }
+  }
 }
 
 /* ===== ארכיון לוחות שבועיים =====
@@ -6679,6 +6715,56 @@ function viewArchivedRoster(i){
   document.getElementById("roster-full").classList.add("open");
   initImgZoomGestures("roster-full-wrap", "roster-full-inner", "roster-full-lbl");
   imgZoomReset("roster-full-wrap", "roster-full-inner", "roster-full-lbl");
+}
+
+/* ===== לוח אילוצים מרוכז (מ"ע תורנויות) =====
+   מרכז את כל האילוצים התאריכיים מכל המסגרות (חופש/קורס/אפטר/יציאה),
+   קבוצים לפי חייל — תמונה כללית של מי זמין ומי לא. */
+async function fetchAllConstraints(){
+  const out = [];
+  await Promise.all(SHEDS.map(async s=>{
+    const list = (await sGetIn(s.id,"duty_requests")) || [];
+    list.forEach(req=>{
+      if(req.status==="rejected") return;
+      if(!CONSTRAINT_DATED_TYPES.includes(req.type)) return;
+      if(!req.fromDate && !req.date) return;
+      out.push({...req, _shed:s.id});
+    });
+  }));
+  return out;
+}
+let _cnsRows = [];
+async function openConstraintsBoard(){
+  if(!isRosterManager){ toast("רק מ״ע תורנויות 🔒"); return; }
+  const today = todayKey();
+  // רק אילוצים שלא הסתיימו (עתיד/נוכחי)
+  _cnsRows = (await fetchAllConstraints()).filter(c=>{ const t=c.toDate||c.fromDate||c.date; return !t || t>=today; });
+  document.getElementById("cns-board-search").value = "";
+  renderConstraintsBoard();
+  document.getElementById("constraints-board-modal").classList.add("open");
+}
+function renderConstraintsBoard(){
+  const q = (document.getElementById("cns-board-search").value||"").trim();
+  const rows = q ? _cnsRows.filter(c=>c.by && c.by.includes(q)) : _cnsRows;
+  const byName = {};
+  rows.forEach(c=>{ (byName[c.by]=byName[c.by]||[]).push(c); });
+  const names = Object.keys(byName).sort((a,b)=>a.localeCompare(b,"he"));
+  document.getElementById("cns-board-sub").textContent =
+    names.length ? `${names.length} אנשים עם אילוצים` : "אין אילוצים פעילים";
+  const box = document.getElementById("cns-board-body");
+  if(!names.length){ box.innerHTML = `<div class="empty-state" style="padding:24px"><div class="ic">✓</div><h3>אין אילוצים פעילים</h3><p>כולם זמינים לשיבוץ</p></div>`; return; }
+  const dt = c => c.date || (c.fromDate ? (!c.toDate||c.toDate===c.fromDate ? fmtHeShort(c.fromDate) : `${fmtHeShort(c.fromDate)}–${fmtHeShort(c.toDate)}`) : "");
+  box.innerHTML = names.map(n=>{
+    const shed = (SHEDS.find(s=>s.id===byName[n][0]._shed)||{}).name || "";
+    const chips = byName[n].sort((a,b)=>(a.fromDate||a.date||"").localeCompare(b.fromDate||b.date||"")).map(c=>{
+      const m = reqTypeMeta(c.type);
+      const soft = CONSTRAINT_SOFT_TYPES.includes(c.type);
+      const pend = c.status!=="approved";
+      return `<span class="cns-chip ${soft?"soft":"hard"} ${pend?"pend":""}">${m.ic} ${escapeHTML(m.label)} · ${escapeHTML(dt(c))}${pend?" · ממתין":""}</span>`;
+    }).join("");
+    return `<div class="cns-person"><div class="cns-person-h"><b>${escapeHTML(n)}</b><small>${escapeHTML(shed)}</small></div>
+      <div class="cns-chips">${chips}</div></div>`;
+  }).join("");
 }
 
 /* תצוגת "לוח" — נאמנה לגיליון ומציגה את *כל* השבוע במסמך אחד.
