@@ -68,6 +68,28 @@ const out = await page.evaluate(async ()=>{
   const behalf = (await getDutyRequests()).find(x=>x.by==="חייל ה סככה 1" && x.type==="after");
   r.behalfApproved = !!behalf && behalf.status==="approved" && behalf.byCommander===true && behalf.fromDate===monDate;
 
+  // 6) מפקד עורך אילוץ מאושר — משנה תאריך ושומר על הסטטוס
+  window.confirm = ()=>true;
+  const tueDate = rosterDayLockDates("שלישי","current")[0];
+  await saveDutyRequests((await getDutyRequests()).concat([
+    {id:"e1", type:"vacation", by:soldier, shed:"shed1", fromDate:monDate, toDate:monDate, status:"approved", ts:Date.now()+9}
+  ]));
+  await openEditRequest("e1", true);
+  document.getElementById("req-fromdate").value = tueDate;
+  document.getElementById("req-todate").value = "";
+  await submitRequest();
+  const e1 = (await getDutyRequests()).find(x=>x.id==="e1");
+  r.editKeepsStatus = !!e1 && e1.fromDate===tueDate && e1.status==="approved";
+
+  // 7) מפקד מוחק אילוץ
+  await deleteRequest("e1");
+  r.deleted = !(await getDutyRequests()).some(x=>x.id==="e1");
+
+  // 8) חלון ההזנה לחייל: עקבי מול נעילת ג' 10:00
+  const nw = nextWeekRangeIso();
+  r.deadlineConsistent = soldierEntryBlocked(nw.from) === nextWeekEntryLocked();
+  r.currentWeekAllowed = soldierEntryBlocked(monDate) === false;   // השבוע הנוכחי לא נחסם
+
   return r;
 });
 
@@ -84,6 +106,10 @@ record("קורס אינו נעילה מלאה אך כן אילוץ תאריכי"
 record("רשימת הבחירה בעורך מציגה 🔒 לחייל נעול", out.pickShowsLock, String(out.pickShowsLock));
 record("האילוץ המאושר מופיע ביומן המסגרת", out.calHasConstraint, String(out.calHasConstraint));
 record("מפקד מזין אילוץ בשם חייל — מאושר מיידית", out.behalfApproved, String(out.behalfApproved));
+record("מפקד עורך אילוץ מאושר — משנה תאריך ושומר סטטוס", out.editKeepsStatus, String(out.editKeepsStatus));
+record("מפקד מוחק אילוץ", out.deleted, String(out.deleted));
+record("חלון ההזנה עקבי מול נעילת ג׳ 10:00", out.deadlineConsistent, String(out.deadlineConsistent));
+record("השבוע הנוכחי אינו נחסם לחייל", out.currentWeekAllowed, String(out.currentWeekAllowed));
 
 await closeBrowser();
 

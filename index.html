@@ -736,6 +736,8 @@ nav{
 .req-card{border:1px solid var(--line);border-radius:13px;padding:11px;margin-bottom:8px;background:var(--card)}
 .req-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .req-who{font-size:12px;font-weight:800;color:var(--ink);background:var(--bg);padding:2px 8px;border-radius:8px}
+.req-deadline{background:#eef4fb;border:1px solid #cfe0f2;border-radius:11px;padding:9px 11px;font-size:12px;color:#1c5f96;font-weight:600;margin-bottom:8px}
+.req-deadline.closed{background:var(--red-soft);border-color:var(--red-line);color:var(--red-deep)}
 .req-body{flex:1;font-size:13px;font-weight:600;min-width:0}
 .req-reason{font-size:12px;color:var(--ink-2);background:var(--bg);border-radius:9px;padding:7px 9px;margin-top:7px}
 .req-note{font-size:12px;color:#8a4444;background:#faeeee;border-radius:9px;padding:7px 9px;margin-top:7px}
@@ -6537,9 +6539,21 @@ function reqCardHtml(r, forCommander){
   const reason = r.reason && r.type!=="other" ? `<div class="req-reason">"${escapeHTML(r.reason)}"</div>` : "";
   const note = r.note ? `<div class="req-note">📝 ${escapeHTML(r.note)}</div>` : "";
   const who = forCommander ? `<div class="req-who">${escapeHTML(r.by)}</div>` : "";
-  const actions = (forCommander && r.status==="pending")
-    ? `<div class="req-acts"><button class="m-btn ok" onclick="approveRequest('${r.id}')">אשר</button>
-       <button class="m-btn ghost" onclick="openRejectRequest('${r.id}')">דחה</button></div>` : "";
+  const btns = [];
+  if(forCommander){
+    // מפקד: אישור/דחייה לבקשה ממתינה, ועריכה/מחיקה בכל שלב (גם אחרי אישור)
+    if(r.status==="pending"){
+      btns.push(`<button class="m-btn ok" onclick="approveRequest('${r.id}')">אשר</button>`);
+      btns.push(`<button class="m-btn ghost" onclick="openRejectRequest('${r.id}')">דחה</button>`);
+    }
+    if(r.type!=="swap") btns.push(`<button class="m-btn ghost" onclick="openEditRequest('${r.id}',true)">✏️ ערוך</button>`);
+    btns.push(`<button class="m-btn ghost" onclick="deleteRequest('${r.id}')">🗑 מחק</button>`);
+  } else if(r.status==="pending"){
+    // חייל: עריכה/ביטול כל עוד לא אושר
+    if(r.type!=="swap") btns.push(`<button class="m-btn ghost" onclick="openEditRequest('${r.id}',false)">✏️ ערוך</button>`);
+    btns.push(`<button class="m-btn ghost" onclick="deleteRequest('${r.id}')">בטל</button>`);
+  }
+  const actions = btns.length ? `<div class="req-acts">${btns.join("")}</div>` : "";
   return `<div class="req-card">
     <div class="req-top">${who}<span class="req-body">${reqBodyText(r)}</span>${reqStatusPill(r.status)}</div>
     ${reason}${note}${actions}</div>`;
@@ -6547,18 +6561,84 @@ function reqCardHtml(r, forCommander){
 
 /* מצב "בשם חייל" — מפקד מזין אילוץ עבור חייל במסגרת. null = החייל עצמו. */
 let reqOnBehalf = null;
+let reqEditId = null;          // מזהה בקשה בעריכה (null = בקשה חדשה)
+let reqEditByCommander = false;
+
+/* ===== חלון הזנת אילוצים לחיילים =====
+   נעילה: חייל יכול להזין/לערוך אילוץ לשבוע הבא רק עד יום ג' בשעה 10:00.
+   אחרי זה לוח השבוע הבא כבר נבנה — פונים למפקד (שיכול להזין בכל עת).
+   אילוצים לשבוע הנוכחי או לשבוע שאחרי-הבא אינם מוגבלים בחלון הזה. */
+function isoOfDate(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function thisWeekSunday(){ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-d.getDay()); return d; }
+function nextWeekRangeIso(){
+  const s=thisWeekSunday(); const ns=new Date(s); ns.setDate(s.getDate()+7);
+  const ne=new Date(ns); ne.setDate(ns.getDate()+6);
+  return {from:isoOfDate(ns), to:isoOfDate(ne)};
+}
+function nextWeekEntryLocked(){
+  const s=thisWeekSunday(); const tue=new Date(s); tue.setDate(s.getDate()+2); tue.setHours(10,0,0,0);
+  return new Date() >= tue;
+}
+/* חוסם הזנת חייל שנופלת בשבוע הבא אחרי שהחלון נסגר (ג' 10:00). */
+function soldierEntryBlocked(fromDate){
+  if(!fromDate || !nextWeekEntryLocked()) return false;
+  const nw = nextWeekRangeIso();
+  return fromDate >= nw.from && fromDate <= nw.to;
+}
+function constraintDeadlineNote(){
+  const nw = nextWeekRangeIso();
+  const closed = nextWeekEntryLocked();
+  return `<div class="req-deadline ${closed?"closed":""}">⏳ הזנת אילוצים לשבוע הבא (${fmtHeShort(nw.from)}–${fmtHeShort(nw.to)}) ${closed?"נסגרה ביום ג׳ 10:00 — פנה למפקד":"פתוחה עד יום ג׳ 10:00"}</div>`;
+}
 
 /* פתיחת בקשה חדשה — סוג ברירת מחדל swap אם החייל תורן, אחרת יציאה */
 function openNewRequest(type){
-  reqOnBehalf = null;
+  reqOnBehalf = null; reqEditId = null; reqEditByCommander = false;
+  reqDraftFromDate = reqDraftToDate = reqDraftFrom = reqDraftReason = reqDraftDay = reqDraftRepl = "";
   reqDraftType = type || "leave";
   document.getElementById("my-requests-modal").classList.remove("open");
-  document.getElementById("req-title").textContent = "בקשה חדשה";
-  document.getElementById("req-sub").textContent = "הבקשה תישלח למפקד המסגרת לאישור.";
-  document.getElementById("req-behalf").innerHTML = "";
+  document.getElementById("req-title").textContent = "אילוץ חדש";
+  document.getElementById("req-sub").textContent = "האילוץ יישלח למפקד המסגרת לאישור.";
+  document.getElementById("req-behalf").innerHTML = constraintDeadlineNote();
   renderReqTypePicker();
   renderReqFields();
   document.getElementById("request-modal").classList.add("open");
+}
+/* עריכת אילוץ קיים — חייל עד לאישור, מפקד בכל שלב. */
+async function openEditRequest(id, forCommander){
+  const r = (await getDutyRequests()).find(x=>x.id===id);
+  if(!r){ toast("האילוץ לא נמצא"); return; }
+  if(r.type==="swap"){ toast("לעריכת החלפת תורנות — מחק וצור בקשה חדשה"); return; }
+  if(!forCommander && r.status!=="pending"){ toast("אפשר לערוך רק אילוץ שטרם אושר"); return; }
+  reqEditId = id; reqEditByCommander = !!forCommander; reqOnBehalf = null;
+  reqDraftType = r.type;
+  reqDraftFromDate = r.fromDate||""; reqDraftToDate = r.toDate||"";
+  reqDraftFrom = r.from||""; reqDraftReason = r.reason||"";
+  reqDraftDay = ""; reqDraftRepl = "";
+  document.getElementById("my-requests-modal").classList.remove("open");
+  document.getElementById("requests-inbox-modal").classList.remove("open");
+  document.getElementById("req-title").textContent = "עריכת אילוץ";
+  document.getElementById("req-sub").textContent = forCommander
+    ? "עריכה ושמירה מחדש — הסטטוס נשמר." : "אפשר לערוך עד שהמפקד יאשר.";
+  document.getElementById("req-behalf").innerHTML = forCommander
+    ? `<div class="req-who">${escapeHTML(r.by)}</div>` : constraintDeadlineNote();
+  renderReqTypePicker();
+  renderReqFields();
+  document.getElementById("request-modal").classList.add("open");
+}
+/* מחיקת אילוץ — מפקד בכל שלב, חייל לביטול בקשה ממתינה. */
+async function deleteRequest(id){
+  if(!confirm("למחוק את האילוץ? הפעולה בלתי הפיכה.")) return;
+  const list = await getDutyRequests();
+  const idx = list.findIndex(x=>x.id===id); if(idx<0) return;
+  list.splice(idx,1);
+  const ok = await saveDutyRequests(list);
+  if(ok===false){ toast("⚠️ המחיקה נכשלה"); return; }
+  rosterCache = null;
+  if(document.getElementById("requests-inbox-modal").classList.contains("open")) await renderRequestsInbox();
+  if(document.getElementById("my-requests-modal").classList.contains("open")) await renderMyRequestsList();
+  updateAlertBell(); renderCommanderConstraints();
+  toast("האילוץ נמחק");
 }
 /* מפקד: הזנת אילוץ בשם חייל — מאושר מיידית (המפקד הוא הסמכות המאשרת).
    מכסה את מה שהיום נעשה ב"זימון": המפקד יודע שהחייל בחופש/קורס ומזין
@@ -6566,9 +6646,9 @@ function openNewRequest(type){
 function openCommanderConstraint(){
   const roster = PERSONNEL.filter(p=>p && p.name).sort((a,b)=>a.name.localeCompare(b.name,"he"));
   if(!roster.length){ toast("אין חיילים במסגרת"); return; }
-  reqOnBehalf = roster[0].name;
+  reqOnBehalf = roster[0].name; reqEditId = null; reqEditByCommander = false;
   reqDraftType = "vacation";
-  reqDraftFromDate = reqDraftToDate = reqDraftFrom = reqDraftReason = "";
+  reqDraftFromDate = reqDraftToDate = reqDraftFrom = reqDraftReason = reqDraftDay = reqDraftRepl = "";
   document.getElementById("req-title").textContent = "אילוץ בשם חייל";
   document.getElementById("req-sub").textContent = "האילוץ יאושר מיידית ויסונכרן למ״ע תורנויות + יומן.";
   document.getElementById("req-behalf").innerHTML =
@@ -6629,37 +6709,56 @@ function setSwapRepl(n){ reqDraftRepl=n; renderReqFields(); }
 async function submitRequest(){
   const type = reqDraftType;
   const behalf = reqOnBehalf;
-  const req = {id:"req_"+Date.now(), type, by: behalf || user, shed:currentShed.id, status:"pending", ts:Date.now()};
+  const editing = reqEditId;
+  const byCommander = !!behalf || reqEditByCommander;   // מפקד לא כפוף לחלון ההזנה
+  const patch = { type };
   if(type==="swap"){
     if(!reqDraftDay || !reqDraftRepl){ toast("בחר יום ומחליף"); return; }
-    req.day = reqDraftDay; req.replacement = reqDraftRepl;
+    patch.day = reqDraftDay; patch.replacement = reqDraftRepl;
   } else if(type==="leave" || type==="after"){
-    req.fromDate = (document.getElementById("req-fromdate").value||"").trim();
-    req.toDate = req.fromDate;
-    if(type==="leave") req.from = (document.getElementById("req-from").value||"").trim();
-    req.reason = (document.getElementById("req-reason").value||"").trim();
-    if(!req.fromDate){ toast("בחר תאריך"); return; }
+    patch.fromDate = (document.getElementById("req-fromdate").value||"").trim();
+    patch.toDate = patch.fromDate;
+    if(type==="leave") patch.from = (document.getElementById("req-from").value||"").trim();
+    patch.reason = (document.getElementById("req-reason").value||"").trim();
+    if(!patch.fromDate){ toast("בחר תאריך"); return; }
   } else if(type==="vacation" || type==="course"){
-    req.fromDate = (document.getElementById("req-fromdate").value||"").trim();
-    req.toDate = (document.getElementById("req-todate").value||"").trim() || req.fromDate;
-    req.reason = (document.getElementById("req-reason").value||"").trim();
-    if(!req.fromDate){ toast("בחר תאריך התחלה"); return; }
-    if(req.toDate < req.fromDate){ toast("תאריך הסיום מוקדם מתאריך ההתחלה"); return; }
+    patch.fromDate = (document.getElementById("req-fromdate").value||"").trim();
+    patch.toDate = (document.getElementById("req-todate").value||"").trim() || patch.fromDate;
+    patch.reason = (document.getElementById("req-reason").value||"").trim();
+    if(!patch.fromDate){ toast("בחר תאריך התחלה"); return; }
+    if(patch.toDate < patch.fromDate){ toast("תאריך הסיום מוקדם מתאריך ההתחלה"); return; }
   } else {
-    req.reason = (document.getElementById("req-reason").value||"").trim();
-    if(!req.reason){ toast("כתוב את הבקשה"); return; }
+    patch.reason = (document.getElementById("req-reason").value||"").trim();
+    if(!patch.reason){ toast("כתוב את הבקשה"); return; }
   }
-  // מפקד שמזין בשם חייל — האילוץ מאושר מיידית (הוא הסמכות המאשרת)
-  if(behalf){ req.status="approved"; req.decidedBy=user; req.decidedTs=Date.now(); req.byCommander=true; }
+  // חלון ההזנה: חייל אינו יכול להזין/לערוך אילוץ לשבוע הבא אחרי ג' 10:00
+  if(!byCommander && soldierEntryBlocked(patch.fromDate)){
+    toast("חלף חלון ההזנה לשבוע הבא (ג׳ 10:00) — פנה למפקד 🔒"); return;
+  }
   const list = await getDutyRequests();
-  list.push(req);
+  if(editing){
+    const r = list.find(x=>x.id===editing);
+    if(!r){ toast("האילוץ לא נמצא"); return; }
+    ["day","replacement","fromDate","toDate","from","reason"].forEach(k=>delete r[k]);  // ניקוי שאריות
+    Object.assign(r, patch); r.editedTs = Date.now();
+  } else {
+    const req = {id:"req_"+Date.now(), by: behalf || user, shed:currentShed.id, status:"pending", ts:Date.now(), ...patch};
+    if(behalf){ req.status="approved"; req.decidedBy=user; req.decidedTs=Date.now(); req.byCommander=true; }
+    list.push(req);
+  }
   const ok = await saveDutyRequests(list);
-  if(ok===false){ toast("⚠️ שליחת הבקשה נכשלה — נסה שוב"); return; }
+  if(ok===false){ toast("⚠️ השמירה נכשלה — נסה שוב"); return; }
+  const wasEdit=!!editing, behalfName=behalf;
   reqDraftDay=reqDraftRepl=reqDraftDate=reqDraftFrom=reqDraftReason=reqDraftFromDate=reqDraftToDate="";
-  reqOnBehalf = null;
+  reqOnBehalf = null; reqEditId = null; reqEditByCommander = false;
+  rosterCache = null;
   document.getElementById("request-modal").classList.remove("open");
-  if(behalf){ toast(`האילוץ של ${behalf} נשמר ואושר ✓`); renderCommanderConstraints(); }
-  else { toast("הבקשה נשלחה לאישור המפקד ✓"); renderToday(); }
+  if(document.getElementById("requests-inbox-modal").classList.contains("open")) await renderRequestsInbox();
+  if(document.getElementById("my-requests-modal").classList.contains("open")) await renderMyRequestsList();
+  renderCommanderConstraints(); updateAlertBell();
+  if(wasEdit) toast("האילוץ עודכן ✓");
+  else if(behalfName){ toast(`האילוץ של ${behalfName} נשמר ואושר ✓`); }
+  else { toast("האילוץ נשלח לאישור המפקד ✓"); renderToday(); }
 }
 
 /* מפקד — תיבת בקשות ממתינות של המסגרת */
