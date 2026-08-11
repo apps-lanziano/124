@@ -43,14 +43,14 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
       r.reqSaved = my.length===1 && my[0].type==="swap" && my[0].replacement==="חייל ד סככה 1" && my[0].status==="pending";
     } else { r.reqSaved = true; }
 
-    // בקשת יציאה מוקדמת
+    // בקשת יציאה מוקדמת — תאריך אמיתי (type=date) כדי שינעל יום אצל מ"ע
     await openNewRequest("leave");
-    document.getElementById("req-date").value = "11.8";
+    document.getElementById("req-fromdate").value = "2026-08-11";
     document.getElementById("req-from").value = "14:00";
     document.getElementById("req-reason").value = "תור לרופא";
     await submitRequest();
     const leaves = (await getDutyRequests()).filter(x=>x.by===me && x.type==="leave");
-    r.leaveSaved = leaves.length===1 && leaves[0].date==="11.8";
+    r.leaveSaved = leaves.length===1 && leaves[0].fromDate==="2026-08-11";
 
     // בקשה ריקה נחסמת
     await openNewRequest("other");
@@ -108,15 +108,27 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
     r.inboxOpen = document.getElementById("requests-inbox-modal").classList.contains("open");
     r.inboxHasReqs = document.querySelectorAll("#requests-inbox-list .req-card").length >= 2;
 
-    // אישור ההחלפה — מעדכן את הלוח (ג' נכנס במקום א', א' עובר לנוח)
+    // החלפה = שני שערים. שלב 1: אישור המפקד — עובר ל"ממתין למ״ע" ולא
+    // משנה את הלוח עדיין. שלב 2: מ״ע תורנויות מאשר ומחיל על הלוח.
     if(!r.weekend){
       await approveRequest("rq1");
-      const board = await getDutyRoster("current");
-      const nd = board.days[today];
+      const afterCmdr = (await getDutyRequests()).find(x=>x.id==="rq1");
+      const b1 = (await getDutyRoster("current")).days[today];
+      r.cmdrStage = afterCmdr.status==="naat" && b1.lead==="חייל א סככה 1";   // טרם הוחל
+      isRosterManager = true;
+      await openNaatSwaps();
+      await naatApproveSwap(0);
+      const nd = (await getDutyRoster("current")).days[today];
       r.swapApplied = nd.lead==="חייל ג סככה 1" && (nd.pfRest||[]).includes("חייל א סככה 1")
         && !(nd.pfRest||[]).includes("חייל ג סככה 1");
       r.reqApproved = (await getDutyRequests()).find(x=>x.id==="rq1").status==="approved";
-    } else { r.swapApplied = true; r.reqApproved = true; await approveRequest("rq1"); }
+    } else {
+      await approveRequest("rq1");
+      r.cmdrStage = (await getDutyRequests()).find(x=>x.id==="rq1").status==="naat";
+      isRosterManager = true; await openNaatSwaps(); await naatApproveSwap(0);
+      r.swapApplied = true;
+      r.reqApproved = (await getDutyRequests()).find(x=>x.id==="rq1").status==="approved";
+    }
 
     // דחייה עם הערה — חובה הערה
     openRejectRequest("rq2");
@@ -135,8 +147,9 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
   record("התחברות מפקד", login.ok, JSON.stringify(login));
   record("התראת פעמון: בקשות ממתינות", out.alertShown, String(out.alertShown));
   record("תיבת הבקשות נפתחת עם הבקשות הממתינות", out.inboxOpen && out.inboxHasReqs, JSON.stringify(out));
-  record("אישור החלפה מעדכן את הלוח (מחליף נכנס, תורן לנוח)" + (out.weekend?" (דולג — סופ\"ש)":""), out.swapApplied, String(out.swapApplied));
-  record("הבקשה מסומנת כמאושרת", out.reqApproved, String(out.reqApproved));
+  record("אישור מפקד מעביר החלפה ל\"ממתין למ״ע\" (לא משנה לוח)", out.cmdrStage, String(out.cmdrStage));
+  record("אישור מ״ע מחיל את ההחלפה על הלוח (מחליף נכנס, תורן לנוח)" + (out.weekend?" (סופ\"ש)":""), out.swapApplied, String(out.swapApplied));
+  record("הבקשה מסומנת כמאושרת אחרי מ״ע", out.reqApproved, String(out.reqApproved));
   record("דחייה דורשת הערה", out.rejectNeedsNote, String(out.rejectNeedsNote));
   record("דחייה עם הערה נשמרת", out.rejected, String(out.rejected));
 
