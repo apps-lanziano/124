@@ -566,6 +566,9 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
 .cal-event-row i{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .cal-event-row span{flex:1;min-width:0}
 .cal-event-row b{font-size:10px;font-weight:800;color:var(--ink-3)}
+.cal-ev-del{background:none;border:0;cursor:pointer;font-size:13px;padding:0 2px;flex:0 0 auto}
+.cal-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px}
+.cal-actions .m-btn{flex:1;min-width:130px;font-size:12.5px}
 
 /* ---------- NAV ---------- */
 nav{
@@ -1506,6 +1509,7 @@ nav{
         <b id="cal-month-label"></b>
         <button class="cal-nav-btn" onclick="calShift(1)">‹</button>
       </div>
+      <div id="cal-actions" class="cal-actions"></div>
       <div class="cal-grid" id="cal-grid"></div>
       <div class="cal-legend" id="cal-legend"></div>
       <div id="cal-day-detail"></div>
@@ -2622,6 +2626,26 @@ nav{
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn primary" onclick="submitRequest()" style="flex:1">שלח לאישור</button>
         <button class="m-btn ghost" onclick="document.getElementById('request-modal').classList.remove('open')" style="flex:0 0 auto">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- אירוע יומן ידני (מפקד) -->
+  <div class="modal-bg" id="cal-event-modal">
+    <div class="modal">
+      <h3 id="cal-ev-title">➕ אירוע ליומן</h3>
+      <div class="m-sub">אירוע חופשי שיופיע ליומן המסגרת (כמו יומן גוגל).</div>
+      <label class="req-lbl">כותרת</label>
+      <input class="m-input" id="cal-ev-name" placeholder="למשל: ביקורת מפקד גדוד">
+      <label class="req-lbl">מתאריך</label>
+      <input type="date" class="m-input" id="cal-ev-from">
+      <label class="req-lbl">עד תאריך <span style="color:var(--ink-3);font-weight:400">(אם יום בודד — השאר ריק)</span></label>
+      <input type="date" class="m-input" id="cal-ev-to">
+      <label class="req-lbl">הערה (רשות)</label>
+      <textarea class="m-input" id="cal-ev-note" rows="2" placeholder="פרטים נוספים"></textarea>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn primary" onclick="saveCalEvent()" style="flex:1">שמור</button>
+        <button class="m-btn ghost" onclick="document.getElementById('cal-event-modal').classList.remove('open')" style="flex:0 0 auto">ביטול</button>
       </div>
     </div>
   </div>
@@ -5542,7 +5566,11 @@ const CAL_TYPES = {
   duty:    {label:"תורנות",      color:"var(--red)"},
   bday:    {label:"יום הולדת",   color:"#db2777"},
   constraint:{label:"אילוץ",     color:"#0d9488"},
+  manual:  {label:"אירוע",       color:"#0891b2"},
 };
+/* אירועי יומן ידניים שהמפקד מזין (כמו יומן גוגל) — מוגבל-לסככה. */
+async function getManualEvents(){ return (await sGet("calendar_manual")) || []; }
+async function saveManualEvents(list){ return await sSet("calendar_manual", list); }
 let calYear, calMonth, calSelectedDate = null;
 function calInit(){
   const now = new Date();
@@ -5558,12 +5586,13 @@ function calShift(delta){
 }
 async function getCalendarEvents(){
   const isDeptUnit = !!(currentShed && currentShed.isDept);
-  const [certs, tools, vehicles, dutyTable, requests] = await Promise.all([
+  const [certs, tools, vehicles, dutyTable, requests, manual] = await Promise.all([
     getCerts(),
     isDeptUnit ? Promise.resolve([]) : getTools(),
     isDeptUnit ? Promise.resolve([]) : getVehicles(),
     sGet("duty_table"),
     getDutyRequests(),
+    getManualEvents(),
   ]);
   const events = [];
   certs.forEach(c=>{ if(c.expiry) events.push({date:c.expiry, type:"cert", label:`${c.person} — ${certCleanName(c.name)}`}); });
@@ -5579,6 +5608,16 @@ async function getCalendarEvents(){
     let cur = f, guard = 0;
     while(cur <= t && guard++ < 400){
       events.push({date:cur, type:"constraint", label:`${req.by} — ${m.label}`});
+      cur = isoAddDays(cur, 1);
+    }
+  });
+  // אירועי יומן ידניים — כל יום בטווח מקבל אירוע (מזוהה ב-id למחיקה)
+  (manual || []).forEach(ev=>{
+    const f = ev.fromDate, t = ev.toDate || ev.fromDate;
+    if(!f) return;
+    let cur = f, guard = 0;
+    while(cur <= t && guard++ < 400){
+      events.push({date:cur, type:"manual", label:ev.title, manualId:ev.id});
       cur = isoAddDays(cur, 1);
     }
   });
@@ -5615,6 +5654,14 @@ async function renderCalendarPage(){
   }
   document.getElementById("cal-grid").innerHTML = cells;
   document.getElementById("cal-legend").innerHTML = Object.values(CAL_TYPES).map(v=>`<span><i style="background:${v.color}"></i>${v.label}</span>`).join("");
+  // כפתורי הוספה — אירוע יומן (מפקד) ואילוץ/זימון (כולם)
+  const acts = document.getElementById("cal-actions");
+  if(acts){
+    const btns = [];
+    if(userRole==="מפקד") btns.push(`<button class="m-btn ghost" onclick="openCalEvent()">➕ אירוע ליומן</button>`);
+    btns.push(`<button class="m-btn ghost" onclick="openCalConstraint()">📌 אילוץ / זימון</button>`);
+    acts.innerHTML = btns.join("");
+  }
   renderCalDayDetail(byDate);
 }
 async function calSelectDay(dateStr){
@@ -5626,10 +5673,55 @@ function renderCalDayDetail(byDate){
   if(!calSelectedDate){ box.innerHTML=""; return; }
   const dayEvents = (byDate && byDate[calSelectedDate]) || [];
   const dateLabel = new Date(calSelectedDate+"T00:00:00").toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long"});
+  const canDel = userRole==="מפקד";
   const rows = dayEvents.length
-    ? dayEvents.map(e=>`<div class="cal-event-row"><i style="background:${CAL_TYPES[e.type].color}"></i><span>${escapeHTML(e.label)}</span><b>${CAL_TYPES[e.type].label}</b></div>`).join("")
+    ? dayEvents.map(e=>`<div class="cal-event-row"><i style="background:${CAL_TYPES[e.type].color}"></i>
+        <span>${escapeHTML(e.label)}</span><b>${CAL_TYPES[e.type].label}</b>
+        ${(canDel && e.type==="manual" && e.manualId)?`<button class="cal-ev-del" onclick="deleteCalEvent('${e.manualId}')">🗑</button>`:""}</div>`).join("")
     : `<div style="font-size:12.5px;color:var(--ink-3);padding:8px 0">אין אירועים ביום זה</div>`;
   box.innerHTML = `<div class="cal-day-hdr">${dateLabel}</div>${rows}`;
+}
+/* אירוע יומן ידני — פתיחה, שמירה ומחיקה (מפקד). */
+function openCalEvent(){
+  const d = calSelectedDate || todayKey();
+  document.getElementById("cal-ev-name").value = "";
+  document.getElementById("cal-ev-from").value = d;
+  document.getElementById("cal-ev-to").value = "";
+  document.getElementById("cal-ev-note").value = "";
+  document.getElementById("cal-event-modal").classList.add("open");
+}
+async function saveCalEvent(){
+  const title = (document.getElementById("cal-ev-name").value||"").trim();
+  const fromDate = (document.getElementById("cal-ev-from").value||"").trim();
+  const toDate = (document.getElementById("cal-ev-to").value||"").trim() || fromDate;
+  const note = (document.getElementById("cal-ev-note").value||"").trim();
+  if(!title){ toast("הזן כותרת"); return; }
+  if(!fromDate){ toast("בחר תאריך"); return; }
+  if(toDate < fromDate){ toast("תאריך הסיום מוקדם מתאריך ההתחלה"); return; }
+  const list = await getManualEvents();
+  list.push({id:"cev_"+Date.now(), title, fromDate, toDate, note, by:user, ts:Date.now()});
+  const ok = await saveManualEvents(list);
+  if(ok===false){ toast("⚠️ השמירה נכשלה"); return; }
+  document.getElementById("cal-event-modal").classList.remove("open");
+  await renderCalendarPage();
+  toast("האירוע נוסף ליומן ✓");
+}
+async function deleteCalEvent(id){
+  if(!confirm("למחוק את האירוע?")) return;
+  const list = (await getManualEvents()).filter(e=>e.id!==id);
+  const ok = await saveManualEvents(list);
+  if(ok===false){ toast("⚠️ המחיקה נכשלה"); return; }
+  await renderCalendarPage();
+  toast("האירוע נמחק");
+}
+/* הוספת אילוץ/זימון מתוך היומן — פותח את זרימת האילוצים עם התאריך הנבחר.
+   מפקד → הזנה בשם חייל (מאושר מיידית); חייל → בקשה משלו. */
+function openCalConstraint(){
+  const d = calSelectedDate || todayKey();
+  if(userRole==="מפקד") openCommanderConstraint();
+  else openNewRequest("vacation");
+  reqDraftType = "vacation"; reqDraftFromDate = d; reqDraftToDate = "";
+  renderReqTypePicker(); renderReqFields();
 }
 
 /* ============ BIRTHDAYS ============ */
