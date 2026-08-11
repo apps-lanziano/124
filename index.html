@@ -6292,7 +6292,7 @@ function fmtHeShort(iso){
 
 function emptyRosterDay(isWeekend){
   return {lead:"", deputyLead:"", driver:"", tools:"", fixedAug:[],
-    pf:[], pfRest: isWeekend ? null : [], pms:[], pmsRest:[], basic:[], duty:[], rest:[]};
+    pf:[], pfRest: isWeekend ? null : [], pms:[], pmsRest:[], reserve:[], basic:[], duty:[], rest:[]};
 }
 function isWeekendDay(day){ return ROSTER_WEEKEND_DAYS.includes(day); }
 /* היום שאליו העריכה בפועל מתייחסת — כל ימי הסופ"ש מצביעים על "חמישי" */
@@ -6317,6 +6317,13 @@ function migrateRosterToV2(raw){
         day2.pfRest = d.pfRest === null ? null : (Array.isArray(d.pfRest)? d.pfRest.slice() : []);
         day2.pms = Array.isArray(d.pms)? d.pms.slice() : [];
         day2.pmsRest = Array.isArray(d.pmsRest)? d.pmsRest.slice() : [];
+        day2.reserve = Array.isArray(d.reserve)? d.reserve.slice() : [];
+        // תאימות לאחור: מי שסומן "מילואים" בתוך רשימת ה-PF (דגל reserve)
+        // עובר לשורת "מילואים" הייעודית, ויורד מרשימת ה-PF.
+        day2.pf = day2.pf.filter(p=>{
+          if(p && p.reserve){ if(p.name && !day2.reserve.includes(p.name)) day2.reserve.push(p.name); return false; }
+          return true;
+        });
         day2.basic = Array.isArray(d.basic)? d.basic.map(b=>({...b})) : [];
         // השדות הנגזרים נשמרים כפי שהם באחסון — הם מה שההתראה היומית
         // בשרת קוראת, ולכן קריאה חייבת לשקף אותם ולא לאפס אותם
@@ -6341,6 +6348,7 @@ function rosterDayAssigned(d){
   (d.fixedAug||[]).forEach(push);
   (d.pf||[]).forEach(p=>push(p && p.name));
   (d.pms||[]).forEach(push);
+  (d.reserve||[]).forEach(push);
   (d.basic||[]).forEach(b=>push(b && b.name));
   return names;
 }
@@ -6492,6 +6500,7 @@ function rosterBoardHtml(r, today, mode){
     `<span class="rc ${p.name===user?"me":pfClass(p)}">${escapeHTML(nm(p.name))}</span>`).join(""));
   html += row(`נחים<br><small>${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</small>`, "restz",
     d=> d.pfRest === null ? `<span class="rnone">רצוף</span>` : chips(d.pfRest, "rest"));
+  html += row("מילואים", "", d=>chips(d.reserve, "res"));
   html += row("PMS", "pmsz", d=>chips(d.pms, "pms"));
   html += row("תורנות", "", d=>(d.basic||[]).map(b=>
     `<span class="rc ${b.name===user?"me":""}">${escapeHTML(nm(b.name))}<small> ${escapeHTML(b.type||"")}</small></span>`).join(""));
@@ -7162,6 +7171,7 @@ function rosterDayHtml(r, day, today){
     ? `<div class="rblk"><div class="rblk-h restz"><span>נחים</span></div><div class="rnone-b">אין נחים — משמרת רצופה</div></div>`
     : blk(`נחים · ${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}`, (d.pfRest||[]).length,
         (d.pfRest||[]).length ? `<div class="rpool">${list(d.pfRest,"rest")}</div>` : "", "restz");
+  html += blk("מילואים", (d.reserve||[]).length, (d.reserve||[]).length ? `<div class="rpool">${list(d.reserve,"res")}</div>` : "");
   html += blk("PMS", (d.pms||[]).length, (d.pms||[]).length ? `<div class="rpool">${list(d.pms,"pms")}</div>` : "", "pmsz");
   html += blk("תורנות בסיסית", (d.basic||[]).length, (d.basic||[]).length
     ? (d.basic||[]).map(b=>rowIf(escapeHTML(b.type||""), `<span class="rc ${b.name===user?"me":""}">${escapeHTML(b.name)}</span>`)).join("") : "");
@@ -7182,6 +7192,7 @@ function rosterMineHtml(r, today){
     if((d.fixedAug||[]).includes(user)) roles.push("מתגבר");
     const me = (d.pf||[]).find(p=>p.name===user);
     if(me) roles.push(me.course ? "PF · בקורס עד 20:00" : (me.reserve ? "PF · מילואים" : "PF"));
+    if((d.reserve||[]).includes(user)) roles.push("מילואים");
     if((d.pms||[]).includes(user)) roles.push("PMS");
     (d.basic||[]).forEach(b=>{ if(b.name===user) roles.push(b.type||"תורנות"); });
     const resting = (d.pfRest||[]).includes(user) || (d.pmsRest||[]).includes(user);
@@ -7235,6 +7246,7 @@ function computeRosterCompliance(roster, pfNames, shedPool){
     if(d.lead) bump(d.lead).lead++;
     (d.fixedAug||[]).forEach(n=>{ if(n) bump(n).duty++; });
     (d.pf||[]).forEach(p=>{ if(p && p.name){ const t=bump(p.name); t.duty++; if(p.course) t.course++; } });
+    (d.reserve||[]).forEach(n=>{ if(n){ const t=bump(n); t.duty++; t.reserve=(t.reserve||0)+1; } });   // מילואים — מתפקד כ-PF
     (d.pms||[]).forEach(n=>{ if(n) bump(n).duty++; });
     (d.basic||[]).forEach(b=>{ if(b && b.name){ bump(b.name).duty++; bump(b.name).basic++; } });
     // נח
@@ -7425,7 +7437,7 @@ function renderRosterEditor(){
       `<span class="rc ${pfClass(p)} ${lc(p.name)}" onclick="rosterCyclePf(${i})">${lk(p.name)}${escapeHTML(p.name)}${pfTagHtml(p)}</span>
        <span class="rc-x" onclick="rosterRemovePf(${i})">✕</span>`).join("")}
       <span class="rc add" onclick="openRosterPick('pf')">+ הוסף</span></div>
-    <div class="rblk-note">הקש על שם כדי לסמן: רגיל → בקורס (עד 20:00) → מילואים</div></div>`;
+    <div class="rblk-note">הקש על שם כדי לסמן: רגיל → בקורס (עד 20:00). למילואים — שורת "מילואים" נפרדת.</div></div>`;
 
   if(wknd){
     html += `<div class="rblk"><div class="rblk-h restz"><span>נחים</span></div>
@@ -7435,6 +7447,9 @@ function renderRosterEditor(){
       <span class="rblk-c">${(d.pfRest||[]).length}</span></div>
       ${listRow("נחים","pfRest","rest")}</div>`;
   }
+
+  html += `<div class="rblk"><div class="rblk-h"><span>מילואים</span><span class="rblk-c">${(d.reserve||[]).length}</span></div>
+    ${listRow("מילואים","reserve","res")}</div>`;
 
   html += `<div class="rblk"><div class="rblk-h pmsz"><span>PMS</span><span class="rblk-c">${(d.pms||[]).length}</span></div>
     ${listRow("PMS","pms","pms")}${!wknd?listRow("PMS נחים","pmsRest","rest"):""}</div>`;
@@ -7489,12 +7504,10 @@ function renderRosterCompliance(){
   }
   box.innerHTML = html;
 }
-/* מחזוריות מצב חייל ב-PF: רגיל → בקורס → מילואים → רגיל */
+/* מחזוריות מצב חייל ב-PF: רגיל → בקורס → רגיל. מילואים הם שורה נפרדת. */
 function rosterCyclePf(i){
   const p = rosterDraft.days[rosterEdDay].pf[i];
-  if(!p.course && !p.reserve){ p.course = true; }
-  else if(p.course){ p.course = false; p.reserve = true; }
-  else { p.reserve = false; }
+  p.course = !p.course; p.reserve = false;
   renderRosterEditor();
 }
 function rosterRemovePf(i){ rosterDraft.days[rosterEdDay].pf.splice(i,1); renderRosterEditor(); }
@@ -7547,7 +7560,7 @@ function rosterRemoveFromList(f,i){ rosterDraft.days[rosterEdDay][f].splice(i,1)
 function openRosterPick(field){
   rosterPickCtx = {field};
   const labels = {lead:"ר״צ", deputyLead:"ל/ ר״צ", driver:"נהג", tools:"פקיד כלים",
-    fixedAug:"מתגבר", pf:"PF", pfRest:"נחים", pms:"PMS", pmsRest:"PMS נחים", basic:"תורנות בסיסית"};
+    fixedAug:"מתגבר", pf:"PF", pfRest:"נחים", reserve:"מילואים", pms:"PMS", pmsRest:"PMS נחים", basic:"תורנות בסיסית"};
   document.getElementById("roster-pick-title").textContent = "משבצת: " + (labels[field]||field);
   document.getElementById("roster-pick-sub").textContent =
     (rosterEdDay==="חמישי" ? "חמישי–שבת" : rosterEdDay) + " · הקש על שם כדי לשבץ";

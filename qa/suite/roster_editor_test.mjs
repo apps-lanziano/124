@@ -69,7 +69,7 @@ const out = await page.evaluate(async ()=>{
   r.leadSet = rosterDraft.days["שני"].lead === r.pickRowName0;
   r.leadValue = rosterDraft.days["שני"].lead;
 
-  // מחזוריות מצב PF: רגיל -> בקורס -> מילואים -> רגיל
+  // מחזוריות מצב PF: רגיל -> בקורס -> רגיל (מילואים = שורה נפרדת)
   rosterDraft.days["שני"].pf = [{name:"בדיקה"}];
   const states = [];
   for(let i=0;i<4;i++){
@@ -78,6 +78,18 @@ const out = await page.evaluate(async ()=>{
     rosterCyclePf(0);
   }
   r.pfCycle = states;
+  // שורת מילואים ייעודית: שיבוץ, גזירה ל-duty, ומיגרציה מדגל PF ישן
+  rosterDraft.days["שלישי"].reserve = [];
+  openRosterPick("reserve"); // מגדיר rosterPickCtx
+  r.reserveLabel = document.getElementById("roster-pick-title").textContent.includes("מילואים");
+  document.getElementById("roster-pick-modal").classList.remove("open");
+  rosterEdDay = "שלישי";
+  rosterDraft.days["שלישי"].reserve.push("מיל א");
+  r.reserveAssigned = rosterDayAssigned(rosterDraft.days["שלישי"]).includes("מיל א");
+  const migLegacy = migrateRosterToV2({days:{"רביעי":{pf:[{name:"ותיק",reserve:true},{name:"רגיל"}]}}});
+  r.legacyMovedToReserve = migLegacy.days["רביעי"].reserve.includes("ותיק")
+    && !migLegacy.days["רביעי"].pf.some(p=>p.name==="ותיק")
+    && migLegacy.days["רביעי"].pf.some(p=>p.name==="רגיל");
 
   // "העתק משבוע קודם" ממלא רק ריקים ולא דורס עבודה קיימת
   await sSetRaw("board_roster", {v:2, days:{ "שני":{lead:"ישן", tools:"כלים ישן", fixedAug:["מתגבר ישן"],
@@ -113,8 +125,11 @@ record("בלוח עתידי הכפתור הוא \"שמור\" ולא \"פרסם\"
 record("העורך נפתח למ״ע תורנויות", out.editorOpen, String(out.editorOpen));
 record("בורר השמות מציג אנשי צוות", out.pickHasNames, String(out.pickHasNames));
 record("בחירת שם משבצת אותו במשבצת", leadOk, out.leadValue);
-record("מחזוריות PF: רגיל → בקורס → מילואים → רגיל",
-  JSON.stringify(out.pfCycle) === JSON.stringify(["plain","course","reserve","plain"]), JSON.stringify(out.pfCycle));
+record("מחזוריות PF: רגיל → בקורס → רגיל",
+  JSON.stringify(out.pfCycle) === JSON.stringify(["plain","course","plain","course"]), JSON.stringify(out.pfCycle));
+record("שורת מילואים: תווית הבחירה", out.reserveLabel, String(out.reserveLabel));
+record("שורת מילואים: נספר כמשובץ", out.reserveAssigned, String(out.reserveAssigned));
+record("מיגרציה: PF שסומן מילואים עובר לשורת מילואים", out.legacyMovedToReserve, String(out.legacyMovedToReserve));
 record("\"העתק משבוע קודם\" לא דורס שיבוץ קיים", out.copyKeptExisting, String(out.copyKeptExisting));
 record("\"העתק משבוע קודם\" ממלא משבצת ריקה", out.copyFilledEmpty, String(out.copyFilledEmpty));
 record("\"העתק משבוע קודם\" מביא גם את תורן הטייסת", out.copySquadron === "shed3", out.copySquadron);

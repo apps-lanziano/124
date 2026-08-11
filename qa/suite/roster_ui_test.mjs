@@ -20,6 +20,7 @@ const out = await page.evaluate(async ()=>{
   mon.lead = "חייל ב סככה 1"; mon.tools = "חייל ג סככה 1";
   mon.pf = [{name: me}, {name:"חייל ד סככה 1", course:true}];
   mon.pfRest = ["חייל ה סככה 1"];
+  mon.reserve = ["מיל בדיקה"];
   mon.basic = [{name:"חייל ג סככה 1", type:"מטבח"}];
   const thu = draft.days["חמישי"];
   thu.lead = me; thu.tools = "חייל ב סככה 1"; thu.pf = [{name:"חייל ב סככה 1"}];
@@ -36,7 +37,8 @@ const out = await page.evaluate(async ()=>{
   setRosterView("board"); await renderRosterView();
   const boardHtml = document.getElementById("roster-view").innerHTML;
   r.hasGrid       = !!document.querySelector(".roster-grid");
-  r.hasRoleRows   = ["ר״צ","מתגבר","כלים","PF","נחים","PMS","תורנות"].every(x=>boardHtml.includes(x));
+  r.hasRoleRows   = ["ר״צ","מתגבר","כלים","PF","נחים","מילואים","PMS","תורנות"].every(x=>boardHtml.includes(x));
+  r.hasReserveName= !!document.querySelector(".roster-grid .rc.res");
   r.hasSquadron   = boardHtml.includes("תורן טייסת");
   r.hasCourseChip = !!document.querySelector(".roster-grid .rc.course");
   r.hasMeChip     = !!document.querySelector(".roster-grid .rc.me");
@@ -98,7 +100,8 @@ record("התחברות חייל הצליחה", login.ok, JSON.stringify(login));
 record("חייל רגיל אינו מ״ע תורנויות", out.isManager === false, String(out.isManager));
 record("באנרי העריכה מוסתרים לחייל רגיל", out.editHiddenForSoldier, String(out.editHiddenForSoldier));
 record("תצוגת לוח: הטבלה מוצגת", out.hasGrid, String(out.hasGrid));
-record("תצוגת לוח: כל שורות התפקידים מהגיליון קיימות", out.hasRoleRows, String(out.hasRoleRows));
+record("תצוגת לוח: כל שורות התפקידים מהגיליון קיימות (כולל מילואים)", out.hasRoleRows, String(out.hasRoleRows));
+record("תצוגת לוח: שם מילואים מוצג בשורה", out.hasReserveName, String(out.hasReserveName));
 record("תצוגת לוח: תורן טייסת שבועי מוצג", out.hasSquadron, String(out.hasSquadron));
 record("תצוגת לוח: חייל בקורס מסומן", out.hasCourseChip, String(out.hasCourseChip));
 record("תצוגת לוח: השם שלי מודגש", out.hasMeChip, String(out.hasMeChip));
