@@ -860,6 +860,25 @@ nav{
 .rpick-n{font-size:13px;font-weight:700}
 .rpick-s{font-size:11px;color:var(--ink-3)}
 .rpick-go{margin-inline-start:auto;font-size:17px;font-weight:800;color:var(--red);flex:0 0 auto}
+/* פאנל בדיקת חוקי-האצבע */
+#roster-ed-compliance{margin-bottom:10px}
+.rcmp-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);
+  border-radius:12px;padding:9px 11px;cursor:pointer}
+.rcmp-bar b{font-size:12.5px;margin-inline-end:2px}
+.rcmp-chip{font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--bg)}
+.rcmp-chip.g{background:var(--green-soft);color:var(--green)}
+.rcmp-chip.r{background:var(--red-soft);color:var(--red)}
+.rcmp-chip.x{background:var(--bg);color:var(--ink-3)}
+.rcmp-tog{margin-inline-start:auto;color:var(--ink-3);font-size:11px}
+.rcmp-body{border:1px solid var(--line);border-top:0;border-radius:0 0 12px 12px;padding:10px 11px;margin-top:-4px}
+.rcmp-h{font-size:11px;font-weight:800;margin:8px 0 6px}
+.rcmp-h:first-child{margin-top:0}
+.rcmp-h.r{color:var(--red)} .rcmp-h.x{color:var(--ink-3)}
+.rcmp-row{padding:6px 0;border-bottom:1px solid var(--bg);font-size:12.5px}
+.rcmp-cat{font-size:10px;font-weight:700;color:var(--ink-3);background:var(--bg);padding:1px 6px;border-radius:6px}
+.rcmp-why{font-size:11px;color:var(--red);margin-top:2px}
+.rcmp-pool{display:flex;flex-wrap:wrap;gap:5px}
+.rcmp-ok{font-size:12.5px;font-weight:700;color:var(--green);text-align:center;padding:6px}
 /* התראה שמובילה למסך — חץ + משוב מגע, כדי שיהיה ברור שאפשר להקיש עליה */
 .board-arch-head{font-size:12px;font-weight:800;color:var(--ink-3);margin:22px 0 10px;
   padding-top:16px;border-top:1px solid var(--line)}
@@ -2561,6 +2580,7 @@ nav{
       <h3 id="roster-ed-title">✏️ עריכת לוח נוכחי</h3>
       <div class="m-sub">שיבוץ שבועי לפי תפקידים. משבצות חובה (ר״צ, פקיד כלים) חייבות להתמלא לפני פרסום.</div>
       <div id="roster-ed-week"></div>
+      <div id="roster-ed-compliance"></div>
       <div id="roster-ed-daystrip"></div>
       <div id="roster-ed-body"></div>
       <div id="roster-ed-preview"></div>
@@ -6580,6 +6600,81 @@ async function fetchAllPersonnelByShed(){
   await Promise.all(SHEDS.map(async s=>{ map[s.id] = (await sGetIn(s.id,"cfg_personnel")) || []; }));
   return map;
 }
+/* שמות מוסמכי PF מכל הטייסת — נגזר ממסך ההסמכות (הסמכה בשם "PF").
+   PMS = חייל קרבי בלי הסמכת PF. ר״צ אינו דורש הסמכה (לפי שיבוץ). */
+async function fetchPfNames(){
+  const set = new Set();
+  await Promise.all(SHEDS.map(async s=>{
+    const certs = (await sGetIn(s.id,"certs_list")) || [];
+    certs.forEach(c=>{ if(c && c.person && certCleanName(c.name)==="PF") set.add(c.person); });
+  }));
+  return set;
+}
+
+/* ===== מנוע חוקי-האצבע ללוח הצוות =====
+   עוזר למ"ע תורנויות לא לפספס אף חייל. לכל אדם סופר כמה פעמים שובץ השבוע
+   (תורן/נח) ומשווה למכסה לפי הסיווג:
+     · PF  — 2 בשבוע, אחת מהן נח
+     · PMS — 3 בשבוע, אחת מהן נח
+     · ר"צ — 1–2
+     · בקורס — מבצע בלי נח (עד 20:00)
+     · תורנות בסיסית — נספרת כתורנות אחת
+   מחזיר לכל שם: סיווג, ספירות, ומצב: ok (ירוק) / bad (אדום). "אפור" =
+   חייל קרבי במסגרת שלא שובץ כלל. זו עזרה מייעצת בלבד — לא חוסמת. */
+function personCategory(name, pfNames){ return pfNames.has(name) ? "PF" : "PMS"; }
+function computeRosterCompliance(roster, pfNames, shedPool){
+  const days = ROSTER_EDIT_DAYS;   // ראשון–רביעי + "חמישי" (מייצג משמרת סופ"ש)
+  const tally = {};   // name -> {duty, rest, lead, course, basic}
+  const bump = (name) => (tally[name] = tally[name] || {duty:0, rest:0, lead:0, course:0, basic:0});
+  days.forEach(day=>{
+    const d = roster.days[day]; if(!d) return;
+    // תפקידי "תורן" (לא נח)
+    [d.lead, d.deputyLead, d.driver, d.tools].forEach(n=>{ if(n){ bump(n).duty++; } });
+    if(d.lead) bump(d.lead).lead++;
+    (d.fixedAug||[]).forEach(n=>{ if(n) bump(n).duty++; });
+    (d.pf||[]).forEach(p=>{ if(p && p.name){ const t=bump(p.name); t.duty++; if(p.course) t.course++; } });
+    (d.pms||[]).forEach(n=>{ if(n) bump(n).duty++; });
+    (d.basic||[]).forEach(b=>{ if(b && b.name){ bump(b.name).duty++; bump(b.name).basic++; } });
+    // נח
+    (d.pfRest||[]).forEach(n=>{ if(n) bump(n).rest++; });
+    (d.pmsRest||[]).forEach(n=>{ if(n) bump(n).rest++; });
+  });
+
+  const rows = [];
+  Object.keys(tally).forEach(name=>{
+    const t = tally[name];
+    const total = t.duty + t.rest;
+    const cat = t.lead ? "ר\"צ" : personCategory(name, pfNames);
+    let ok = true; const reasons = [];
+    if(t.course && t.rest>0){ ok=false; reasons.push("בקורס — לא אמור לקבל נח"); }
+    if(t.lead){
+      if(total < 1 || total > 2){ ok=false; reasons.push(`ר"צ: ${total} תורנויות (צריך 1–2)`); }
+    } else if(t.basic){
+      if(total !== 1){ ok=false; reasons.push(`תורנות בסיסית: ${total} (צריך 1)`); }
+    } else if(cat==="PF"){
+      if(total !== 2){ ok=false; reasons.push(`PF: ${total} תורנויות (צריך 2)`); }
+      else if(t.rest < 1 && !t.course){ ok=false; reasons.push("PF: אף אחת מהתורנויות אינה נח"); }
+    } else { // PMS
+      if(total !== 3){ ok=false; reasons.push(`PMS: ${total} תורנויות (צריך 3)`); }
+      else if(t.rest < 1 && !t.course){ ok=false; reasons.push("PMS: אף אחת מהתורנויות אינה נח"); }
+    }
+    rows.push({name, cat, duty:t.duty, rest:t.rest, total, course:!!t.course, ok, reasons});
+  });
+
+  // אפור — חיילים קרביים במסגרת שלא שובצו כלל השבוע
+  const scheduled = new Set(Object.keys(tally));
+  const gray = (shedPool||[])
+    .filter(p=>p && p.name && !scheduled.has(p.name))
+    .filter(p=> p.role!=="מפקד" && !p.reserve && p.profession!=="פקיד כלים" && !(p.release && p.release<=todayKey()))
+    .map(p=>({name:p.name, cat: personCategory(p.name, pfNames)}));
+
+  return {
+    rows: rows.sort((a,b)=> (a.ok?1:0)-(b.ok?1:0) || a.name.localeCompare(b.name,"he")),
+    gray,
+    okCount: rows.filter(r=>r.ok).length,
+    badCount: rows.filter(r=>!r.ok).length,
+  };
+}
 /* שם בלוח עשוי להיות כתוב כשם מלא, רק שם פרטי, או רק שם משפחה — מצליב
    מול רשימות הצוות המלאות של כל הסככות כדי להשלים לשם המלא הנכון.
    אם יש יותר מהתאמה אפשרית אחת (למשל שני "דני" בסככות שונות) — לא
@@ -6634,12 +6729,14 @@ let rosterDraft = null;
 let rosterEdDay = null;
 let rosterPickCtx = null;    // {field, index} — לאיזו משבצת נבחר השם
 let rosterAllPersonnel = null;
+let rosterPfNames = new Set();
 let rosterEditSlot = "current";   // "current" | "next"
 
 async function openRosterEditor(aiDays, slot){
   if(!isRosterManager){ toast("רק מ״ע תורנויות יכול לערוך את הלוח 🔒"); return; }
   rosterEditSlot = slot || "current";
   rosterAllPersonnel = await fetchAllPersonnelByShed();
+  rosterPfNames = await fetchPfNames();
   rosterDraft = await getDutyRoster(rosterEditSlot);
   if(aiDays) applyAiDaysToDraft(aiDays);
   rosterEdDay = rosterEditKey(todayHebrewDay());
@@ -6748,6 +6845,39 @@ function renderRosterEditor(){
   html += `<button type="button" class="m-btn ghost" style="width:100%;font-size:12px;padding:9px"
     onclick="previewDutyRosterNotification('${rosterEdDay}')">🔔 שלח לי תצוגה מקדימה של ההתראה ליום זה</button>`;
   document.getElementById("roster-ed-body").innerHTML = html;
+  renderRosterCompliance();
+}
+/* פאנל "בדיקת חוקים" — מסכם עמידה בחוקי-האצבע על פני כל השבוע, כדי
+   שמ"ע תורנויות יראה במבט אחד את מי פספס או שיבץ לא לפי המכסה. */
+let rosterComplianceOpen = false;
+function toggleRosterCompliance(){ rosterComplianceOpen = !rosterComplianceOpen; renderRosterCompliance(); }
+function renderRosterCompliance(){
+  const box = document.getElementById("roster-ed-compliance");
+  if(!box) return;
+  const pool = (currentShed && rosterAllPersonnel && rosterAllPersonnel[currentShed.id]) || [];
+  const c = computeRosterCompliance(rosterDraft, rosterPfNames, pool);
+  const bad = c.rows.filter(r=>!r.ok);
+  const chip = (n,cls,lbl)=>`<span class="rcmp-chip ${cls}">${cls==="g"?"🟢":cls==="r"?"🔴":"⚪"} ${lbl}: ${n}</span>`;
+  let html = `<div class="rcmp-bar" onclick="toggleRosterCompliance()">
+    <b>בדיקת חוקים</b>
+    ${chip(c.okCount,"g","לפי החוק")}${chip(c.badCount,"r","חורגים")}${chip(c.gray.length,"x","לא שובצו")}
+    <span class="rcmp-tog">${rosterComplianceOpen?"▲":"▼"}</span></div>`;
+  if(rosterComplianceOpen){
+    html += `<div class="rcmp-body">`;
+    if(bad.length){
+      html += `<div class="rcmp-h r">🔴 חורגים מהחוק</div>` + bad.map(r=>
+        `<div class="rcmp-row"><b>${escapeHTML(r.name)}</b> <span class="rcmp-cat">${escapeHTML(r.cat)}</span>
+         <div class="rcmp-why">${r.reasons.map(escapeHTML).join(" · ")}</div></div>`).join("");
+    }
+    if(c.gray.length){
+      html += `<div class="rcmp-h x">⚪ לא שובצו כלל השבוע (${currentShed?escapeHTML(currentShed.name):""})</div>
+        <div class="rcmp-pool">` + c.gray.map(g=>
+        `<span class="rc" style="background:var(--bg);color:var(--ink-3)">${escapeHTML(g.name)} <small>${escapeHTML(g.cat)}</small></span>`).join("") + `</div>`;
+    }
+    if(!bad.length && !c.gray.length) html += `<div class="rcmp-ok">🟢 הכל לפי החוקים — לא פוספס אף אחד</div>`;
+    html += `</div>`;
+  }
+  box.innerHTML = html;
 }
 /* מחזוריות מצב חייל ב-PF: רגיל → בקורס → מילואים → רגיל */
 function rosterCyclePf(i){
