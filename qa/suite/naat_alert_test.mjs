@@ -20,7 +20,7 @@ const out = await page.evaluate(async ()=>{
   isRosterManager = true;
   const alerts = await computeAlerts();
   const a = alerts.find(x=>x.nav==="__naatswaps");
-  r.mgrAlert = !!a && /1 החלפות ממתינות/.test(a.text);
+  r.mgrAlert = !!a && /1 פריטים ממתינים/.test(a.text);
 
   // ניווט מההתראה פותח את תיבת ההחלפות (goFromAlert מנתב ל-openNaatSwaps)
   await openNaatSwaps();
