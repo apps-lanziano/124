@@ -7787,13 +7787,17 @@ async function fetchPfNames(){
    חייל קרבי במסגרת שלא שובץ כלל. זו עזרה מייעצת בלבד — לא חוסמת. */
 function personCategory(name, pfNames){ return pfNames.has(name) ? "PF" : "PMS"; }
 function computeRosterCompliance(roster, pfNames, shedPool){
-  const days = ROSTER_EDIT_DAYS;   // ראשון–רביעי + "חמישי" (מייצג משמרת סופ"ש)
-  const tally = {};   // name -> {duty, rest, lead, course, basic}
-  const bump = (name) => (tally[name] = tally[name] || {duty:0, rest:0, lead:0, course:0, basic:0});
+  const days = ROSTER_ROTATING_DAYS;   // א׳–ד׳ בלבד — משמרת הסופ"ש (ה׳–ש׳) אינה נספרת כשיבוץ
+  // פקיד כלים לפי המקצוע — תמיד "נח", פטור ממכסות התורנות
+  const toolsClerkPool = new Set((shedPool||[]).filter(p=>p && p.name && p.profession==="פקיד כלים").map(p=>p.name));
+  const tally = {};   // name -> {duty, rest, lead, course, basic, tools}
+  const bump = (name) => (tally[name] = tally[name] || {duty:0, rest:0, lead:0, course:0, basic:0, tools:0});
   days.forEach(day=>{
     const d = roster.days[day]; if(!d) return;
     // תפקידי "תורן" (לא נח)
-    [d.lead, d.deputyLead, d.driver, d.tools].forEach(n=>{ if(n){ bump(n).duty++; } });
+    [d.lead, d.deputyLead, d.driver].forEach(n=>{ if(n){ bump(n).duty++; } });
+    // פקיד כלים — נספר כנח (תמיד), לא כתורנות
+    if(d.tools){ const t=bump(d.tools); t.rest++; t.tools++; }
     if(d.lead) bump(d.lead).lead++;
     (d.fixedAug||[]).forEach(n=>{ if(n) bump(n).duty++; });
     (d.pf||[]).forEach(p=>{ if(p && p.name){ const t=bump(p.name); t.duty++; if(p.course) t.course++; } });
@@ -7809,19 +7813,24 @@ function computeRosterCompliance(roster, pfNames, shedPool){
   Object.keys(tally).forEach(name=>{
     const t = tally[name];
     const total = t.duty + t.rest;
-    const cat = t.lead ? "ר\"צ" : personCategory(name, pfNames);
+    const isToolsClerk = t.tools>0 || toolsClerkPool.has(name);
+    const cat = isToolsClerk ? "פקיד כלים" : (t.lead ? "ר\"צ" : personCategory(name, pfNames));
     let ok = true; const reasons = [];
-    if(t.course && t.rest>0){ ok=false; reasons.push("בקורס — לא אמור לקבל נח"); }
-    if(t.lead){
-      if(total < 1 || total > 2){ ok=false; reasons.push(`ר"צ: ${total} תורנויות (צריך 1–2)`); }
-    } else if(t.basic){
-      if(total !== 1){ ok=false; reasons.push(`תורנות בסיסית: ${total} (צריך 1)`); }
-    } else if(cat==="PF"){
-      if(total !== 2){ ok=false; reasons.push(`PF: ${total} תורנויות (צריך 2)`); }
-      else if(t.rest < 1 && !t.course){ ok=false; reasons.push("PF: אף אחת מהתורנויות אינה נח"); }
-    } else { // PMS
-      if(total !== 3){ ok=false; reasons.push(`PMS: ${total} תורנויות (צריך 3)`); }
-      else if(t.rest < 1 && !t.course){ ok=false; reasons.push("PMS: אף אחת מהתורנויות אינה נח"); }
+    if(isToolsClerk){
+      // פקיד כלים — תמיד נח, פטור ממכסות ולא נבדק
+    } else {
+      if(t.course && t.rest>0){ ok=false; reasons.push("בקורס — לא אמור לקבל נח"); }
+      if(t.lead){
+        if(total < 1 || total > 2){ ok=false; reasons.push(`ר"צ: ${total} תורנויות (צריך 1–2)`); }
+      } else if(t.basic){
+        if(total !== 1){ ok=false; reasons.push(`תורנות בסיסית: ${total} (צריך 1)`); }
+      } else if(cat==="PF"){
+        if(total !== 2){ ok=false; reasons.push(`PF: ${total} תורנויות (צריך 2)`); }
+        else if(t.rest < 1 && !t.course){ ok=false; reasons.push("PF: אף אחת מהתורנויות אינה נח"); }
+      } else { // PMS
+        if(total !== 3){ ok=false; reasons.push(`PMS: ${total} תורנויות (צריך 3)`); }
+        else if(t.rest < 1 && !t.course){ ok=false; reasons.push("PMS: אף אחת מהתורנויות אינה נח"); }
+      }
     }
     rows.push({name, cat, duty:t.duty, rest:t.rest, total, course:!!t.course, ok, reasons});
   });

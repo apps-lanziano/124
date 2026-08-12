@@ -66,6 +66,26 @@ const out = await page.evaluate(async ()=>{
       const row = c3.rows.find(x=>x.name==="תום");
       return row && !row.ok && /בסיסית/.test(row.reasons.join(" "));
     })(),
+    // משמרת סופ"ש (חמישי) לא נספרת: PF עם 2 בחול + עוד שיבוץ בסופ"ש → עדיין תקין
+    _weekendNotCounted: (()=>{
+      const r4 = empty();
+      r4.days["ראשון"].pf = [{name:"פלג"}];
+      r4.days["שני"].pfRest = ["פלג"];      // 2 (אחת נח) → תקין
+      r4.days["חמישי"].pf = [{name:"פלג"}]; // סופ"ש — לא אמור להיספר
+      const c4 = computeRosterCompliance(r4, pf, pool);
+      const row = c4.rows.find(x=>x.name==="פלג");
+      return row && row.ok && row.total===2;   // חמישי לא הוסיף
+    })(),
+    // פקיד כלים — תמיד נח, פטור ממכסות (גם אם שובץ כלים בכל הימים)
+    _toolsClerkAlwaysRest: (()=>{
+      const r5 = empty();
+      r5.days["ראשון"].tools = "פקיד";
+      r5.days["שני"].tools   = "פקיד";
+      r5.days["שלישי"].tools = "פקיד";
+      const c5 = computeRosterCompliance(r5, pf, pool);
+      const row = c5.rows.find(x=>x.name==="פקיד");
+      return row && row.ok && row.cat==="פקיד כלים" && row.rest===3 && row.duty===0;
+    })(),
   };
 });
 
@@ -79,6 +99,8 @@ record("אפור: פקיד כלים לא נספר", out.grayExcludesClerk, Strin
 record("אפור: מי ששובץ לא מופיע כאפור", out.grayExcludesScheduled, String(out.grayExcludesScheduled));
 record("בקורס ששובץ נח → חורג", out._courseTest, String(out._courseTest));
 record("תורנות בסיסית + עוד תורנות → חורג", out._basicTest, String(out._basicTest));
+record("משמרת סופ״ש (חמישי) לא נספרת כשיבוץ", out._weekendNotCounted, String(out._weekendNotCounted));
+record("פקיד כלים תמיד נח, פטור ממכסות", out._toolsClerkAlwaysRest, String(out._toolsClerkAlwaysRest));
 
 await closeBrowser();
 
