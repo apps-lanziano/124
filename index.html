@@ -13521,9 +13521,10 @@ async function renderToolsPage(){
       <small>${urgent.map(t=>escapeHTML(t.name)).join(" · ")}</small>
     </div>`;
   }
-  // מיון: פג תוקף → קרוב לפוג → בתיקון → בתוקף
-  const order = {r:0, y:1, n:2, g:3};
-  withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
+  // מיון לפי התוקף המתקרב: הכי דחוף קודם (פג תוקף → קרוב לפוג → רחוק),
+  // וכלים בתיקון/בלי תאריך תוקף יורדים לתחתית. תאריך זהה — לפי שם.
+  const expKey = t => (t.expiry && !t.inRepair) ? new Date(t.expiry+"T00:00:00").getTime() : Infinity;
+  withStatus.sort((a,b)=> expKey(a)-expKey(b) || (a.name||"").localeCompare(b.name||"","he"));
   const filtered = q ? withStatus.filter(t=>(t.name||"").toLowerCase().includes(q) || (t.serial||"").toLowerCase().includes(q)) : withStatus;
   if(filtered.length===0){
     box.innerHTML = banner + `<div class="empty-state"><div class="ic">🔍</div><h3>לא נמצאו כלים</h3><p>נסה חיפוש אחר לפי שם הכלי או המספר הסידורי.</p></div>`;
