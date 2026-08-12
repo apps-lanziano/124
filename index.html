@@ -6577,7 +6577,12 @@ async function renderRosterView(){
       <div class="${boardWeekSlot==="current"?"on":""}" onclick="setBoardWeek('current')">נוכחי</div>
       <div class="${boardWeekSlot==="next"?"on":""}" onclick="setBoardWeek('next')">שבוע הבא</div>
     </div>`;
-  const head = mgrBanners + weekSel + `<div class="roster-segs">
+  // כשמ"ע צופה ב"שבוע שעבר"/"שבוע הבא" — כפתור לקבוע אותו כ"לוח נוכחי"
+  // (שחזור בטוח: מעתיק את השבוע המוצג ל-current, בלי לגעת בשאר).
+  const restoreBar = (isRosterManager && boardWeekSlot!=="current" && anyData)
+    ? `<button class="m-btn ghost" style="width:100%;margin-bottom:10px;border:1.5px solid var(--red-line);color:var(--red-deep)"
+         onclick="restoreWeekToCurrent('${boardWeekSlot}')">↩️ קבע את הלוח הזה כ״לוח נוכחי״</button>` : "";
+  const head = mgrBanners + weekSel + restoreBar + `<div class="roster-segs">
       <div class="${rosterView==="board"?"on":""}" onclick="setRosterView('board')">לוח</div>
       <div class="${rosterView==="day"?"on":""}" onclick="setRosterView('day')">יום</div>
       <div class="${rosterView==="mine"?"on":""}" onclick="setRosterView('mine')">רק אני</div>
@@ -6597,6 +6602,19 @@ async function renderRosterView(){
      : rosterMineHtml(r, todayForBoard));
   initRosterSwipe();
   if(isRosterManager){ updateRosterMgrBadges(); maybeArchiveRoster(); }
+}
+/* שחזור: קובע את השבוע המוצג (שעבר/הבא) כ"לוח הנוכחי" הפעיל. מעתיק רק
+   ל-current — לא נוגע ב"שבוע הבא" ולא ב"שבוע שעבר", כך שכלום לא אובד. */
+async function restoreWeekToCurrent(slot){
+  const label = slot==="prev" ? "שבוע שעבר" : "שבוע הבא";
+  if(!confirm(`לקבוע את הלוח של "${label}" כלוח הנוכחי הפעיל?\n\n• הלוח הנוכחי הקיים יוחלף בו.\n• "${label}" עצמו לא ישתנה.\n• מכאן ההתראה היומית תקרא מהלוח הזה.`)) return;
+  const src = await getDutyRoster(slot);
+  src.weekKey = todayKey();
+  const ok = await saveDutyRosterV2(src, "current");
+  if(ok === false){ toast("⚠️ השחזור נכשל — בדוק חיבור ונסה שוב"); return; }
+  rosterCache = null; boardWeekSlot = "current";
+  await renderRosterView();
+  toast("הלוח הנוכחי עודכן ✓");
 }
 /* בחירת השבוע המוצג + החלקה ימינה/שמאלה על הלוח. */
 function setBoardWeek(slot){ boardWeekSlot = slot; renderRosterView(); }
@@ -6691,10 +6709,24 @@ async function renderRosterArchiveList(){
       <button class="m-btn ghost" style="margin-top:10px" onclick="archiveNow()">שמור את הלוח הנוכחי עכשיו</button></div>`;
     return;
   }
-  box.innerHTML = _archiveRows.map((a,i)=>`<div class="arc-row" onclick="viewArchivedRoster(${i})">
-      <div><b>שבוע ${escapeHTML(a.label)}</b><small>נשמר ${new Date(a.savedAt).toLocaleDateString("he-IL",{day:"numeric",month:"long"})}</small></div>
-      <span class="rpick-go">›</span></div>`).join("") +
+  box.innerHTML = _archiveRows.map((a,i)=>`<div class="arc-row">
+      <div onclick="viewArchivedRoster(${i})" style="flex:1;cursor:pointer"><b>שבוע ${escapeHTML(a.label)}</b><small>נשמר ${new Date(a.savedAt).toLocaleDateString("he-IL",{day:"numeric",month:"long"})}</small></div>
+      <button class="m-btn ghost" style="flex:0 0 auto;font-size:11px;padding:6px 9px" onclick="restoreArchivedToCurrent(${i})">↩️ שחזר לנוכחי</button>
+      <span class="rpick-go" onclick="viewArchivedRoster(${i})" style="cursor:pointer">›</span></div>`).join("") +
     `<button class="m-btn ghost" style="width:100%;margin-top:10px" onclick="archiveNow()">📌 שמור את הלוח הנוכחי עכשיו</button>`;
+}
+/* שחזור לוח מהארכיון אל "הלוח הנוכחי" — לא נוגע בשבוע הבא/שעבר. */
+async function restoreArchivedToCurrent(i){
+  const a = _archiveRows[i]; if(!a || !a.roster) return;
+  if(!confirm(`לשחזר את הלוח של שבוע ${a.label} כלוח הנוכחי הפעיל?\n\n• הלוח הנוכחי הקיים יוחלף בו.\n• "שבוע הבא" לא ישתנה.`)) return;
+  const src = migrateRosterToV2(a.roster);
+  src.weekKey = todayKey();
+  const ok = await saveDutyRosterV2(src, "current");
+  if(ok === false){ toast("⚠️ השחזור נכשל"); return; }
+  rosterCache = null; boardWeekSlot = "current";
+  document.getElementById("roster-archive-modal").classList.remove("open");
+  await renderRosterView();
+  toast(`הלוח של שבוע ${a.label} שוחזר לנוכחי ✓`);
 }
 async function archiveNow(){
   const key = isoOfDate(thisWeekSunday());
