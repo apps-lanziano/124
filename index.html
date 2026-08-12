@@ -2047,9 +2047,15 @@ nav{
             <option value="all">סככה: הכל</option>
           </select>
         </div>
-        <select class="m-input" id="vo-license-type-filter" style="margin-bottom:10px" onchange="renderVoLicenses()">
-          <option value="all">הסמכה/רישיון: הכל</option>
-        </select>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <select class="m-input" id="vo-license-group" style="margin-bottom:0;flex:1" onchange="renderVoLicenses()">
+            <option value="shed">תצוגה: לפי סככה (שם → פירוט)</option>
+            <option value="type">תצוגה: לפי סוג הסמכה</option>
+          </select>
+          <select class="m-input" id="vo-license-type-filter" style="margin-bottom:0;flex:1" onchange="renderVoLicenses()">
+            <option value="all">הסמכה/רישיון: הכל</option>
+          </select>
+        </div>
         <div id="vo-licenses-list"></div>
       </div>
     </section>
@@ -14661,6 +14667,56 @@ function groupLicensesByTypeHtml(withStatus, showShedAndActions, sortMode){
   });
   return html;
 }
+/* תצוגה לפי סככה: שמות מקובצים לפי מסגרת, כל שם נפתח בלחיצה ומציג את
+   כל הרישיונות וההסמכות שלו — כמו כרטיס אדם בהסמכות המקצועיות. */
+function groupLicensesByShedHtml(withStatus, showActions, sortMode){
+  const worst = list => list.some(l=>l.st.cls==="r") ? "r" : list.some(l=>l.st.cls==="y") ? "y" : "g";
+  const worstLbl = {r:"🔴 יש פג תוקף", y:"🟡 עומד לפוג", g:"🟢 הכל בתוקף"};
+  const shedName = id => (SHEDS.find(s=>s.id===id)||{}).name || id || "ללא סככה";
+  const shedOrder = id => { const i = SHEDS.findIndex(s=>s.id===id); return i===-1 ? 999 : i; };
+  // סככה -> אדם -> רשימת רישיונות
+  const byShed = {};
+  withStatus.forEach(l=>{
+    const sid = l.shedId || "";
+    (byShed[sid] = byShed[sid] || {})[l.person] = (byShed[sid][l.person] || []);
+    byShed[sid][l.person].push(l);
+  });
+  const sortPeople = (a,b)=>{
+    if(sortMode==="az") return a.name.localeCompare(b.name,"he");
+    if(sortMode==="expiry"){
+      const ea = a.list.map(l=>l.expiry||"9999-99-99").sort()[0];
+      const eb = b.list.map(l=>l.expiry||"9999-99-99").sort()[0];
+      return ea.localeCompare(eb);
+    }
+    const rank = {r:0, y:1, g:2};   // דחיפות
+    return rank[worst(a.list)]-rank[worst(b.list)] || a.name.localeCompare(b.name,"he");
+  };
+  let html = "";
+  Object.keys(byShed).sort((a,b)=> shedOrder(a)-shedOrder(b)).forEach(sid=>{
+    const people = Object.keys(byShed[sid]).map(name=>({name, list:byShed[sid][name]})).sort(sortPeople);
+    const totalLic = people.reduce((n,p)=>n+p.list.length,0);
+    html += `<div class="cmd-section-title">🏠 ${escapeHTML(shedName(sid))} <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${people.length} שמות · ${totalLic}</span></div>`;
+    html += people.map(p=>{
+      const w = worst(p.list);
+      const rows = p.list.slice().sort((a,b)=>(a.expiry||"9999-99-99").localeCompare(b.expiry||"9999-99-99")).map(l=>`
+        <div class="cert-chip-row">
+          <span class="cert-chip-name">${licenseTypeEmoji(l.type)} ${escapeHTML(l.type)}</span>
+          <span class="pill ${l.st.cls}" style="font-size:9px">${l.st.tag}</span>
+          ${showActions?`<button class="cert-chip-edit" onclick="event.stopPropagation();openVoLicenseEdit('${l.id}')">✏️</button><button class="cert-chip-del" onclick="event.stopPropagation();removeVoLicense('${l.id}')">✕</button>`:''}
+        </div>`).join("");
+      return `<div class="cert-sum-card" onclick="this.classList.toggle('open')">
+        <div class="cert-sum-head">
+          <div class="avatar" style="width:40px;height:40px;font-size:14px">${initials(p.name)}</div>
+          <div class="cert-sum-name"><b>${escapeHTML(p.name)}</b><span>${p.list.length} רישיונות/הסמכות · ${worstLbl[w]}</span></div>
+          <span class="pill ${w}" style="font-size:10px;white-space:nowrap">${p.list.length}</span>
+          <div class="cert-sum-chev">‹</div>
+        </div>
+        <div class="cert-sum-detail"><div class="cert-sum-detail-inner">${rows}</div></div>
+      </div>`;
+    }).join("");
+  });
+  return html;
+}
 async function populateVoLicensePerson(){
   const sel = document.getElementById("vo-license-person");
   let html = '<option value="">— בחר חייל —</option>';
@@ -14775,7 +14831,10 @@ async function renderVoLicenses(){
     box.innerHTML = `<div class="empty-state"><div class="ic">🔍</div><h3>אין תוצאות</h3><p>נסה לשנות את החיפוש או הסינון</p></div>`;
     return;
   }
-  box.innerHTML = groupLicensesByTypeHtml(withStatus, true, sortMode);
+  const groupMode = document.getElementById("vo-license-group")?.value || "shed";
+  box.innerHTML = groupMode==="type"
+    ? groupLicensesByTypeHtml(withStatus, true, sortMode)
+    : groupLicensesByShedHtml(withStatus, true, sortMode);
 }
 
 /* ============================================================
