@@ -36,6 +36,8 @@ function classify(docId) {
   if (docId.endsWith("_faults_list")) return "fault";
   if (docId.includes("_rollcall_active")) return "rollcall";
   if (docId.endsWith("_daily_rollcall_report")) return "morning_rollcall";
+  // אילוצים/החלפות שממתינים לאישור מ״ע תורנויות (מסמך duty_requests של מסגרת)
+  if (docId.endsWith("_duty_requests")) return "duty_naat";
   return null;
 }
 
@@ -65,6 +67,22 @@ function decide({docId, before, after}) {
     newItems = after.filter((x) => x && x.id && !beforeIds.has(x.id));
     if (!newItems.length) return null;
     shedId = "maint";
+  } else if (kind === "duty_naat") {
+    // התראה ל-מ״ע תורנויות: פריט (החלפה/אילוץ) שרק עכשיו נכנס לסטטוס
+    // שממתין לאישורו — naat (החלפה שהמפקד אישר) או naat_c (אילוץ שמפקד
+    // הזין אחרי חלון ההזנה). שולחים רק על מעבר חדש לסטטוס הזה, לא על כל
+    // כתיבה למסמך. הטוקנים נשמרים ב-push_tokens_naat (גלובלי, רק מ״ע).
+    if (!Array.isArray(after)) return null;
+    const awaitsNaat = (s) => s === "naat" || s === "naat_c";
+    const beforeById = new Map(
+        (Array.isArray(before) ? before : []).map((x) => [x && x.id, x]));
+    newItems = after.filter((x) => {
+      if (!x || !x.id || !awaitsNaat(x.status)) return false;
+      const prev = beforeById.get(x.id);
+      return !prev || !awaitsNaat(prev.status);
+    });
+    if (!newItems.length) return null;
+    shedId = "naat";
   } else {
     shedId = docId.replace(/_(messages_list|safety_events|boards_list|training_list|faults_list)$/, "");
     const afterArr = Array.isArray(after) ? after : [];
@@ -85,6 +103,7 @@ function decide({docId, before, after}) {
     binui_fault: "🚧 תקלת בינוי חדשה",
     rollcall: "🚨 נכס · " + shedName,
     morning_rollcall: "📋 מסדר בוקר · " + shedName,
+    duty_naat: "🔄 אישורי מ״ע תורנויות",
   };
   const title = KIND_TITLES[kind];
   const body = kind === "rollcall" ? "הופעל נכס — יש לסמן נוכחות עכשיו"
@@ -92,10 +111,12 @@ function decide({docId, before, after}) {
     : kind === "message" ? String(item.text || "").slice(0, 140)
     : kind === "board" ? String(item.label || "")
     : kind === "binui_fault" ? (item.shedName ? item.shedName + ": " : "") + String(item.title || "")
+    : kind === "duty_naat" ? `${newItems.length} פריטים ממתינים לאישורך`
     : String(item.title || item.fname || "");
 
   // מסדר בוקר/תקלה רגילה/תקלת בינוי נשלחים רק למפקדים — לא לכל הצוות
-  // (בשונה מהודעה/קרא-וחתום/לוח/הדרכה, שמגיעים לכולם)
+  // (בשונה מהודעה/קרא-וחתום/לוח/הדרכה, שמגיעים לכולם). אישורי מ״ע נשלחים
+  // לכל הטוקנים שרשומים ב-push_tokens_naat — שם ממילא נרשמים רק מ״ע תורנויות.
   const commandersOnly = kind === "morning_rollcall" || kind === "fault" || kind === "binui_fault";
 
   return {kind, shedId, shedName, title, body, count: kind==="morning_rollcall" ? (after.absentCount||0) : (newItems.length || 1), commandersOnly};

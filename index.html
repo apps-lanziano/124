@@ -6597,10 +6597,14 @@ async function renderRosterView(){
     initRosterSwipe();
     return;
   }
+  // שיתוף לוח יומי בוואטסאפ — למ"ע/מפקד, בשבוע הנוכחי (היום הרלוונטי)
+  const dailyShareDay = rosterView==="day" ? rosterDaySel : todayHebrewDay();
+  const dailyShare = ((isRosterManager || userRole==="מפקד") && boardWeekSlot==="current")
+    ? `<button class="m-btn ghost" style="width:100%;margin-top:10px" onclick="shareDailyDutyWA('${dailyShareDay}')">📲 שלח לוח יומי בוואטסאפ</button>` : "";
   box.innerHTML = head +
     (rosterView==="board" ? rosterBoardHtml(r, todayForBoard, undefined, boardWeekSlot)
      : rosterView==="day" ? rosterDayHtml(r, rosterDaySel, todayForBoard)
-     : rosterMineHtml(r, todayForBoard));
+     : rosterMineHtml(r, todayForBoard)) + dailyShare;
   initRosterSwipe();
   if(isRosterManager){ updateRosterMgrBadges(); maybeArchiveRoster(); }
 }
@@ -7283,8 +7287,17 @@ async function submitRequest(){
   if(editing){
     const r = list.find(x=>x.id===editing);
     if(!r){ toast("האילוץ לא נמצא"); return; }
-    ["day","replacement","fromDate","toDate","from","reason"].forEach(k=>delete r[k]);  // ניקוי שאריות
+    ["day","replacement","fromDate","toDate","from","reason","note"].forEach(k=>delete r[k]);  // ניקוי שאריות
     Object.assign(r, patch); r.editedTs = Date.now();
+    // מפקד עורך אילוץ (למשל אחרי שמ"ע דחה) — נשלח מחדש לאישור מ"ע אם עדיין
+    // מאוחר (אחרי ג' 10:00 לשבוע הבא). אחרת מאושר. כך אישור-חוזר עובד.
+    if(reqEditByCommander && CONSTRAINT_DATED_TYPES.includes(patch.type)){
+      delete r.decidedBy; delete r.decidedTs;
+      if(soldierEntryBlocked(patch.fromDate)){ r.status="naat_c"; r.cmdrBy=user; r.cmdrTs=Date.now(); }
+      else { r.status="approved"; r.decidedBy=user; r.decidedTs=Date.now(); }
+      r.byCommander = true;
+      var _editNaat = r.status==="naat_c";
+    }
   } else {
     const req = {id:"req_"+Date.now(), by: behalf || user, shed:currentShed.id, status:"pending", ts:Date.now(), ...patch};
     if(behalf){
@@ -7310,7 +7323,7 @@ async function submitRequest(){
   if(document.getElementById("requests-inbox-modal").classList.contains("open")) await renderRequestsInbox();
   if(document.getElementById("my-requests-modal").classList.contains("open")) await renderMyRequestsList();
   renderCommanderConstraints(); updateAlertBell();
-  if(wasEdit) toast("האילוץ עודכן ✓");
+  if(wasEdit) toast(typeof _editNaat!=="undefined" && _editNaat ? "האילוץ עודכן ונשלח מחדש לאישור מ״ע תורנויות" : "האילוץ עודכן ✓");
   else if(behalfName){ toast(typeof _behalfNaat!=="undefined" && _behalfNaat
       ? `האילוץ של ${behalfName} נשמר — ממתין לאישור מ״ע תורנויות`
       : `האילוץ של ${behalfName} נשמר ואושר ✓`); }
@@ -8593,6 +8606,31 @@ function waShare(text){
   const url = "https://wa.me/?text=" + encodeURIComponent(text);
   window.open(url, "_blank");
 }
+/* לוח צוות תורן יומי לוואטסאפ — בפריסת עמודה מסודרת (תפקיד: שמות). */
+async function shareDailyDutyWA(dayName){
+  const r = await getDutyRoster("current");
+  const day = dayName || todayHebrewDay();
+  const key = rosterEditKey(day);
+  const d = r.days[key] || emptyRosterDay(isWeekendDay(key));
+  const dateIso = rosterDayLockDates(day, "current")[0];
+  const dateStr = new Date((dateIso||todayKey())+"T00:00:00").toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long"});
+  const L = [`🗓️ *לוח צוות תורן — ${dateStr}*`, "━━━━━━━━━━━"];
+  const line = (label, val) => { const v = Array.isArray(val) ? val.filter(Boolean) : (val?[val]:[]); if(v.length) L.push(`${label}: ${v.join(", ")}`); };
+  line("ר״צ", d.lead);
+  line("ל/ר״צ", d.deputyLead);
+  line("מתגבר", d.fixedAug);
+  line("נהג", d.driver);
+  line("פקיד כלים", d.tools);
+  line("PF", (d.pf||[]).map(p=>p.name + (p.course?" (קורס)":"")));
+  if(isWeekendDay(key)) L.push("סופ״ש — משמרת רצופה, ללא נחים");
+  else line(`נחים (${r.restWindow||ROSTER_DEFAULT_REST_WINDOW})`, d.pfRest);
+  line("מילואים", d.reserve);
+  line("PMS", d.pms);
+  line("תורנות בסיסית", (d.basic||[]).map(b=>`${b.name}${b.type?` (${b.type})`:""}`));
+  if(r.squadronDuty) L.push(`תורן טייסת: ${rosterSquadronDutyName(r.squadronDuty)}`);
+  if(L.length<=2) L.push("— אין שיבוץ ליום זה —");
+  waShare(L.join("\n"));
+}
 function openWaPrompt(kind, payload){
   const modal = document.getElementById("wa-modal");
   const go = document.getElementById("wa-go");
@@ -8901,7 +8939,21 @@ async function savePushToken(token){
     const map = (await sGetRaw(key)) || {};
     map[token] = { name:user, role:enteredRole, ts:Date.now() };
     await sSetRaw(key, map);
+    await syncNaatPushToken();
   }catch(e){ console.error("savePushToken", e); }
+}
+/* רישום טוקן מ"ע תורנויות במסמך גלובלי (push_tokens_naat) — כדי שהשרת
+   ישלח פוש למ"ע כשמגיע פריט לאישורו (החלפה/אילוץ מאוחר), מכל מסגרת. */
+async function syncNaatPushToken(){
+  if(!fcmToken) return;
+  try{
+    const key = "push_tokens_naat";
+    const map = (await sGetRaw(key)) || {};
+    if(isRosterManager) map[fcmToken] = { name:user, ts:Date.now() };
+    else if(map[fcmToken]) delete map[fcmToken];
+    else return;
+    await sSetRaw(key, map);
+  }catch(e){ console.error("syncNaatPushToken", e); }
 }
 // רענון ה-badge כשחוזרים לאפליקציה
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && user) updateBadges(); });
@@ -13365,7 +13417,8 @@ async function renderToolsPage(){
     <div class="cert-sum-card" style="cursor:default">
       <div class="cert-sum-head">
         <div class="avatar" style="width:40px;height:40px;font-size:18px">🧰</div>
-        <div class="cert-sum-name"><b>${escapeHTML(t.name)}</b><span>${t.serial?("מספר סידורי: "+escapeHTML(t.serial)):"ללא מספר סידורי"}</span></div>
+        <div class="cert-sum-name"><b>${escapeHTML(t.name)}</b>
+          <span>${t.serial?("מספר סידורי: "+escapeHTML(t.serial)):"ללא מספר סידורי"}${(t.expiry && !t.inRepair)?` · 🗓️ תוקף עד ${new Date(t.expiry+"T00:00:00").toLocaleDateString("he-IL")}`:""}</span></div>
         <span class="pill ${t.st.cls}" style="font-size:10px;white-space:nowrap">${t.st.tag}</span>
         ${isCmdr?`<button class="reminder-btn" onclick="openToolReminder('${t.id}')" title="קביעת תזכורת">🔔</button><button class="cert-chip-edit" onclick="toggleToolInRepair('${t.id}')" title="${t.inRepair?'החזר למעקב תוקף':'סמן כבתיקון'}">${t.inRepair?'↩️':'🔧'}</button><button class="cert-chip-edit" onclick="openToolEdit('${t.id}')">✏️</button><button class="cert-chip-del" onclick="removeToolById('${t.id}')">✕</button>`:''}
       </div>

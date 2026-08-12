@@ -62,6 +62,36 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
     JSON.stringify(shedIds));
 }
 
+// 6. אישורי מ״ע תורנויות — פריט שנכנס לסטטוס naat/naat_c שולח התראה ל-"naat"
+{
+  // classify מזהה את מסמך ה-duty_requests של המסגרת
+  record("classify: duty_requests מזוהה כ-duty_naat",
+    classify("shed1_duty_requests")==="duty_naat" && classify("dept_duty_requests")==="duty_naat",
+    String(classify("shed1_duty_requests")));
+
+  // החלפה שהמפקד אישר → naat (מעבר חדש) — שולח ל-מ״ע (shedId=naat)
+  const swap = {id:"s1", type:"swap", status:"naat", by:"חייל א", cmdrBy:"מפקד"};
+  const d = decide({ docId:"shed1_duty_requests", before:[{...swap, status:"pending"}], after:[swap] });
+  record("החלפה שעברה ל-naat → decide שולחת ל-מ״ע (shedId=naat)",
+    d!==null && d.kind==="duty_naat" && d.shedId==="naat" && d.commandersOnly===false && d.count===1,
+    JSON.stringify(d));
+
+  // אילוץ מפקד מאוחר → naat_c (פריט חדש לגמרי) — גם שולח
+  const cons = {id:"c1", type:"vacation", status:"naat_c", by:"חייל ב", byCommander:true};
+  const d2 = decide({ docId:"shed2_duty_requests", before:[], after:[cons] });
+  record("אילוץ מאוחר חדש (naat_c) → decide שולחת ל-מ״ע",
+    d2!==null && d2.kind==="duty_naat" && d2.shedId==="naat", JSON.stringify(d2));
+
+  // מ״ע אישר (naat → approved) — לא אמור לשלוח שוב
+  const d3 = decide({ docId:"shed1_duty_requests", before:[swap], after:[{...swap, status:"approved"}] });
+  record("אישור מ״ע (naat→approved) לא מייצר התראה חוזרת", d3===null, JSON.stringify(d3));
+
+  // כתיבה שלא משנה סטטוס ממתין (למשל pending נשאר pending) — לא שולח
+  const p = {id:"p1", type:"swap", status:"pending", by:"חייל ג"};
+  const d4 = decide({ docId:"shed1_duty_requests", before:[p], after:[{...p, note:"x"}] });
+  record("שינוי לא-רלוונטי במסמך אילוצים לא מייצר התראת מ״ע", d4===null, JSON.stringify(d4));
+}
+
 console.log("\n=== SUMMARY ===");
 let allPass = true;
 for(const r of results){
