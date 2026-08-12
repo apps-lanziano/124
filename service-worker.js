@@ -1,4 +1,4 @@
-const CACHE_NAME = "tayeset124-v24";
+const CACHE_NAME = "tayeset124-v25";
 const APP_SHELL = [
   "./index.html",
   "./manifest.json",
@@ -40,21 +40,27 @@ function fetchWithTimeout(req, ms=8000){
   });
 }
 
-// דף האפליקציה עצמו: תמיד קודם מהרשת (כדי שעדכון שדחפנו יגיע מיד),
-// ורק אם אין רשת/הרשת תקועה — נופלים למטמון (שימוש לא מקוון)
+// דף האפליקציה עצמו: stale-while-revalidate — מגישים מיד מהמטמון (טעינה
+// מיידית, בלי להמתין להורדת ~940KB בכל פתיחה), ובמקביל מרעננים ברקע. עדכון
+// גרסה שדחפנו לא "נתקע": הוא מגיע דרך גרסת ה-Service Worker (CACHE_NAME
+// מתעדכן בכל פריסה → SW חדש נכנס ל-waiting → כפתור "גרסה חדשה זמינה").
+// טעינה ראשונה בלבד (אין עדיין מטמון) ממתינה לרשת.
 self.addEventListener("fetch", event => {
   const req = event.request;
   const isAppDoc = req.mode === "navigate" || req.url.endsWith("index.html");
 
   if (isAppDoc) {
     event.respondWith(
-      fetchWithTimeout(req)
-        .then(res => {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put("./index.html", copy));
-          return res;
-        })
-        .catch(() => caches.match("./index.html"))
+      caches.match("./index.html").then(cached => {
+        const fromNet = fetchWithTimeout(req)
+          .then(res => {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put("./index.html", copy));
+            return res;
+          })
+          .catch(() => cached);
+        return cached || fromNet;
+      })
     );
     return;
   }

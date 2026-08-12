@@ -10,8 +10,14 @@
 <meta name="apple-mobile-web-app-title" content="טייסת 124">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/emblem-124.png">
+<!-- preconnect לשרתי הגופנים ול-CDN של Firebase — פותח את החיבור מראש כדי לקצר את זמן הטעינה הראשונה -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<!-- טעינת הגופן ללא חסימת רינדור: media=print + onload מחזיר ל-all רק אחרי שהורד,
+     כך שהמסך מצויר מיד עם גופן המערכת (display=swap מחליף חלק) ולא ממתין לרשת -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800;900&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800;900&display=swap"></noscript>
 <style>
 :root{
   /* עיצוב קודם (לפני 2026-08-04), לשחזור מהיר אם צריך:
@@ -40,7 +46,7 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{
-  font-family:'Assistant',sans-serif;
+  font-family:'Assistant',-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
   background:var(--bg);
   color:var(--ink);
   direction:rtl;text-align:right;
