@@ -849,6 +849,19 @@ nav{
 .rc.course{background:#e3f0fb;color:#1c5f96;box-shadow:inset 0 0 0 1px #b7d8f2}
 .rc.res{background:var(--gold-soft);color:#7a6420;box-shadow:inset 0 0 0 1px #f0e5c4}
 .rc small{font-weight:600;opacity:.75}
+/* חיפוש חייל בלוח: כשמסומן שם, כל התאים דוהים חוץ מהמיקומים שלו */
+.roster-grid.hl-on .rc{opacity:.28;filter:grayscale(.4)}
+.roster-grid.hl-on .rc.rc-hl{opacity:1;filter:none;background:#1c5f96;color:#fff;box-shadow:0 0 0 2px #fff,0 0 0 4px #1c5f96;position:relative;z-index:1}
+.roster-search{margin-bottom:10px;position:relative}
+.roster-search-in{display:flex;gap:6px;align-items:center}
+.roster-search-in input{flex:1;min-width:0;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit;background:var(--card);color:var(--ink)}
+.roster-search-clr{border:1px solid var(--line);background:var(--card);color:var(--ink-2);border-radius:10px;padding:9px 12px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.roster-search-res{position:absolute;top:100%;inset-inline:0;margin-top:4px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);max-height:240px;overflow:auto;z-index:20}
+.roster-search-res div{padding:9px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:8px}
+.roster-search-res div:last-child{border-bottom:0}
+.roster-search-res div:hover{background:var(--bg)}
+.roster-search-res small{color:var(--ink-3);font-weight:600}
+.roster-search-note{margin-top:6px;font-size:12px;font-weight:700;text-align:center}
 .rq{font-size:8.5px;font-weight:800;padding:1px 5px;border-radius:5px;background:rgba(0,0,0,.1);margin-inline-start:4px}
 .rnone{font-size:9.5px;color:var(--ink-3);font-style:italic;font-weight:600}
 .rnone-b{padding:12px;text-align:center;font-size:12px;color:var(--ink-3);font-weight:600}
@@ -6478,6 +6491,22 @@ function rosterDayAssigned(d){
   return names;
 }
 function rosterDayCount(d){ return rosterDayAssigned(d).length; }
+/* שמות שנספרים כ"פעילות" ליום — לספירת שיבוצים בעורך. שונה מ-
+   rosterDayAssigned: (א) תורנות בסיסית אינה נספרת כשיבוץ, ו-(ב) מי
+   שנמצא באותו יום בתורנות בסיסית — גם שאר שיבוציו באותו יום לא נספרים
+   (שיבוץ תוך כדי בסיסית). משמרת הסופ"ש ממילא לא נספרת (הספירה רק א׳–ד׳). */
+function rosterDayActivityNames(d){
+  if(!d) return [];
+  const onBasic = new Set((d.basic||[]).map(b=>b&&b.name).filter(Boolean));
+  const names = [];
+  const push = n => { if(n && !onBasic.has(n) && !names.includes(n)) names.push(n); };
+  push(d.lead); push(d.deputyLead); push(d.driver); push(d.tools);
+  (d.fixedAug||[]).forEach(push);
+  (d.pf||[]).forEach(p=>push(p && p.name));
+  (d.pms||[]).forEach(push);
+  (d.reserve||[]).forEach(push);
+  return names;
+}
 
 /* שני לוחות: "current" (board_roster) — השבוע הפעיל שההתראה היומית
    קוראת; ו-"next" (board_roster_next) — לוח עתידי שמ"ע תורנויות בונה
@@ -6600,12 +6629,90 @@ async function renderRosterView(){
   const dailyShareDay = rosterView==="day" ? rosterDaySel : todayHebrewDay();
   const dailyShare = ((isRosterManager || userRole==="מפקד") && boardWeekSlot==="current")
     ? `<button class="m-btn ghost" style="width:100%;margin-top:10px" onclick="shareDailyDutyWA('${dailyShareDay}')">📲 שלח לוח יומי בוואטסאפ</button>` : "";
-  box.innerHTML = head +
+  // מ"ע תורנויות: חיפוש חייל מעל הלוח — רישום ידני או בחירה מהבנק,
+  // ולחיצה מבליטה את כל המיקומים שלו בלוח. רק בתצוגת "לוח".
+  const searchBar = (isRosterManager && rosterView==="board")
+    ? `<div class="roster-search">
+         <div class="roster-search-in">
+           <input id="roster-search-inp" placeholder="🔎 חיפוש חייל בלוח — הקלד שם או בחר מהבנק" value="${escapeHTML(rosterSearchName)}"
+                  oninput="rosterSearchInput()" onfocus="rosterSearchInput()" onblur="setTimeout(hideRosterSearchRes,180)" autocomplete="off">
+           <button class="roster-search-clr" id="roster-search-clr" onclick="clearRosterSearch()" ${rosterSearchName?"":`style="display:none"`}>נקה</button>
+         </div>
+         <div class="roster-search-res" id="roster-search-res" style="display:none"></div>
+         <div class="roster-search-note" id="roster-search-note"></div>
+       </div>` : "";
+  box.innerHTML = head + searchBar +
     (rosterView==="board" ? rosterBoardHtml(r, todayForBoard, undefined, boardWeekSlot)
      : rosterView==="day" ? rosterDayHtml(r, rosterDaySel, todayForBoard)
      : rosterMineHtml(r, todayForBoard)) + dailyShare;
   initRosterSwipe();
-  if(isRosterManager){ updateRosterMgrBadges(); maybeArchiveRoster(); }
+  if(isRosterManager){
+    updateRosterMgrBadges(); maybeArchiveRoster();
+    if(!rosterSearchBank){ try{ rosterSearchBank = rosterFlattenBank(await fetchAllPersonnelByShed()); }catch(e){ rosterSearchBank = []; } }
+    if(rosterSearchName && rosterView==="board") applyRosterHighlight(rosterSearchName);
+  }
+}
+
+/* ===== חיפוש חייל בלוח (מ"ע תורנויות) ===== */
+let rosterSearchName = "";      // השם המודגש כרגע (ריק = אין הדגשה)
+let rosterSearchBank = null;    // מאגר שמות שטוח מכל הסככות (נטען פעם אחת)
+let rosterSearchRows = [];      // תוצאות החיפוש המוצגות כרגע (לפי אינדקס)
+function rosterFlattenBank(byShed){
+  const seen = new Set(), out = [];
+  SHEDS.forEach(s=>(byShed[s.id]||[]).forEach(p=>{
+    if(!p || !p.name) return;
+    if(p.release && p.release <= todayKey()) return;   // משוחרר — לא בחיפוש
+    if(seen.has(p.name)) return;
+    seen.add(p.name); out.push({name:p.name, shed:s.name});
+  }));
+  out.sort((a,b)=>a.name.localeCompare(b.name,"he"));
+  return out;
+}
+function rosterSearchInput(){
+  const inp = document.getElementById("roster-search-inp");
+  const resBox = document.getElementById("roster-search-res");
+  if(!inp || !resBox) return;
+  const q = (inp.value||"").trim();
+  const bank = rosterSearchBank || [];
+  rosterSearchRows = q ? bank.filter(x=>x.name.includes(q)).slice(0,40) : bank.slice(0,40);
+  resBox.innerHTML = rosterSearchRows.length
+    ? rosterSearchRows.map((x,i)=>`<div onclick="rosterSearchPick(${i})"><span>${escapeHTML(x.name)}</span><small>${escapeHTML(x.shed)}</small></div>`).join("")
+    : `<div style="cursor:default;color:var(--ink-3)">אין שם תואם בבנק — אפשר להקליד ידנית וללחוץ Enter</div>`;
+  resBox.style.display = "block";
+  // Enter על טקסט חופשי — מדגיש את מה שהוקלד גם אם אינו בבנק (רישום ידני)
+  inp.onkeydown = e=>{ if(e.key==="Enter"){ e.preventDefault(); if(q){ rosterSearchName=q; hideRosterSearchRes(); applyRosterHighlight(q); toggleRosterSearchClr(); } } };
+}
+function hideRosterSearchRes(){ const b=document.getElementById("roster-search-res"); if(b) b.style.display="none"; }
+function toggleRosterSearchClr(){ const c=document.getElementById("roster-search-clr"); if(c) c.style.display = rosterSearchName ? "" : "none"; }
+function rosterSearchPick(i){
+  const row = rosterSearchRows[i]; if(!row) return;
+  rosterSearchName = row.name;
+  const inp = document.getElementById("roster-search-inp"); if(inp) inp.value = row.name;
+  hideRosterSearchRes(); toggleRosterSearchClr();
+  applyRosterHighlight(row.name);
+}
+function clearRosterSearch(){
+  rosterSearchName = "";
+  const inp = document.getElementById("roster-search-inp"); if(inp) inp.value = "";
+  hideRosterSearchRes(); toggleRosterSearchClr();
+  applyRosterHighlight("");
+}
+/* מדגיש את כל התאים של החייל בלוח: דוהה את השאר, ומציין כמה מיקומים נמצאו */
+function applyRosterHighlight(name){
+  const grid = document.querySelector("#roster-view .roster-grid");
+  const note = document.getElementById("roster-search-note");
+  if(!grid){ if(note) note.textContent=""; return; }
+  grid.querySelectorAll(".rc.rc-hl").forEach(el=>el.classList.remove("rc-hl"));
+  if(!name){ grid.classList.remove("hl-on"); if(note) note.textContent=""; return; }
+  let hits = 0;
+  grid.querySelectorAll(".rc[data-rn]").forEach(el=>{
+    if(el.getAttribute("data-rn")===name){ el.classList.add("rc-hl"); hits++; }
+  });
+  grid.classList.add("hl-on");
+  if(note){
+    note.textContent = hits ? `🔎 ${escapeHTML(name)} — מודגש ב-${hits} מיקומים בלוח` : `🔎 ${escapeHTML(name)} — אינו משובץ בלוח השבוע`;
+    note.style.color = hits ? "#1c5f96" : "var(--ink-3)";
+  }
 }
 /* שחזור: קובע את השבוע המוצג (שעבר/הבא) כ"לוח הנוכחי" הפעיל. מעתיק רק
    ל-current — לא נוגע ב"שבוע הבא" ולא ב"שבוע שעבר", כך שכלום לא אובד. */
@@ -6858,8 +6965,8 @@ function rosterBoardHtml(r, today, mode, weekSlot){
       const isToday = rosterEditKey(today)===d;
       return `<td class="${cls||""} ${isToday?"now":""}">${fn(r.days[d], d) || ""}</td>`;
     }).join("") + `</tr>`;
-  const chips = (arr, cls) => (arr||[]).map(n=>`<span class="rc ${n===user?"me":(cls||"")}">${escapeHTML(nm(n))}</span>`).join("");
-  const one = (n, cls) => n ? `<span class="rc ${n===user?"me":(cls||"duty")}">${escapeHTML(nm(n))}</span>` : "";
+  const chips = (arr, cls) => (arr||[]).map(n=>`<span class="rc ${n===user?"me":(cls||"")}" data-rn="${escapeHTML(n)}">${escapeHTML(nm(n))}</span>`).join("");
+  const one = (n, cls) => n ? `<span class="rc ${n===user?"me":(cls||"duty")}" data-rn="${escapeHTML(n)}">${escapeHTML(nm(n))}</span>` : "";
 
   let html = `<table class="roster-grid ${fit?"fit":"wide"}"><thead><tr><th class="rlbl wk">${r.weekNumber?("שבוע "+r.weekNumber):"שבוע"}</th>${th}</tr></thead><tbody>`;
   html += row("ר״צ", "", d=>one(d.lead));
@@ -6868,13 +6975,13 @@ function rosterBoardHtml(r, today, mode, weekSlot){
   html += row("נהג", "", d=>one(d.driver));
   html += row("כלים", "", d=>one(d.tools));
   html += row("PF", "pfz", d=>(d.pf||[]).map(p=>
-    `<span class="rc ${p.name===user?"me":pfClass(p)}">${escapeHTML(nm(p.name))}</span>`).join(""));
+    `<span class="rc ${p.name===user?"me":pfClass(p)}" data-rn="${escapeHTML(p.name)}">${escapeHTML(nm(p.name))}</span>`).join(""));
   html += row(`נחים<br><small>${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</small>`, "restz",
     d=> d.pfRest === null ? `<span class="rnone">רצוף</span>` : chips(d.pfRest, "rest"));
   html += row("מילואים", "", d=>chips(d.reserve, "res"));
   html += row("PMS", "pmsz", d=>chips(d.pms, "pms"));
   html += row("תורנות", "", d=>(d.basic||[]).map(b=>
-    `<span class="rc ${b.name===user?"me":""}">${escapeHTML(nm(b.name))}<small> ${escapeHTML(b.type||"")}</small></span>`).join(""));
+    `<span class="rc ${b.name===user?"me":""}" data-rn="${escapeHTML(b.name)}">${escapeHTML(nm(b.name))}<small> ${escapeHTML(b.type||"")}</small></span>`).join(""));
   // תורן טייסת — ערך שבועי אחד, לכן תא ממוזג על פני כל העמודות (כמו בגיליון)
   html += `<tr><td class="rlbl sqz">תורן טייסת</td>` +
     `<td class="sqz sq-cell" colspan="${cols.length}">${r.squadronDuty ? escapeHTML(rosterSquadronDutyName(r.squadronDuty)) : "—"}</td></tr>`;
@@ -8038,10 +8145,11 @@ function renderRosterPickList(){
   const q = (document.getElementById("roster-pick-search").value||"").trim();
   const d = rosterDraft.days[rosterEdDay];
   const assigned = new Set(rosterDayAssigned(d));
-  // ספירת "שובץ N/Q" — רק ראשון–רביעי. חמישי הוא חלק ממשמרת הסופ"ש
-  // ואינו נספר כפעילות נפרדת (אחרת חייל היה מקבל 3 במקום 2).
+  // ספירת "שובץ N/Q" — רק ראשון–רביעי (משמרת הסופ"ש לא נספרת). תורנות
+  // בסיסית אינה נספרת, וגם שיבוץ שנעשה תוך כדי בסיסית לא נספר (ר'
+  // rosterDayActivityNames).
   const rotCount = {};
-  ROSTER_ROTATING_DAYS.forEach(day=>{ rosterDayAssigned(rosterDraft.days[day]).forEach(n=>{ rotCount[n]=(rotCount[n]||0)+1; }); });
+  ROSTER_ROTATING_DAYS.forEach(day=>{ rosterDayActivityNames(rosterDraft.days[day]).forEach(n=>{ rotCount[n]=(rotCount[n]||0)+1; }); });
   const nextSlot = rosterEditSlot==="next";
   rosterPickRows = [];
   SHEDS.forEach(s=>{
