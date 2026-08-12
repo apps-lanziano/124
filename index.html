@@ -952,7 +952,6 @@ nav{
 .reminder-chip-row{display:flex;gap:8px;margin-bottom:12px}
 .reminder-chip{flex:1;padding:10px 6px;border-radius:11px;border:1.5px solid var(--line);background:#fff;color:var(--ink-2);font-family:'Assistant';font-weight:700;font-size:12.5px;cursor:pointer;transition:all .2s}
 .reminder-chip:active{transform:scale(.96)}
-.reminder-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink-2);cursor:pointer;font-size:14px;flex-shrink:0;display:grid;place-items:center}
 /* trends dashboard */
 .trend-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
 .trend-kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 8px;text-align:center;box-shadow:var(--shadow)}
@@ -13420,16 +13419,10 @@ async function renderToolsPage(){
         <div class="cert-sum-name"><b>${escapeHTML(t.name)}</b>
           <span>${t.serial?("מספר סידורי: "+escapeHTML(t.serial)):"ללא מספר סידורי"}${(t.expiry && !t.inRepair)?` · 🗓️ תוקף עד ${new Date(t.expiry+"T00:00:00").toLocaleDateString("he-IL")}`:""}</span></div>
         <span class="pill ${t.st.cls}" style="font-size:10px;white-space:nowrap">${t.st.tag}</span>
-        ${isCmdr?`<button class="reminder-btn" onclick="openToolReminder('${t.id}')" title="קביעת תזכורת">🔔</button><button class="cert-chip-edit" onclick="toggleToolInRepair('${t.id}')" title="${t.inRepair?'החזר למעקב תוקף':'סמן כבתיקון'}">${t.inRepair?'↩️':'🔧'}</button><button class="cert-chip-edit" onclick="openToolEdit('${t.id}')">✏️</button><button class="cert-chip-del" onclick="removeToolById('${t.id}')">✕</button>`:''}
+        ${isCmdr?`<button class="cert-chip-edit" onclick="toggleToolInRepair('${t.id}')" title="${t.inRepair?'החזר למעקב תוקף':'סמן כבתיקון'}">${t.inRepair?'↩️':'🔧'}</button><button class="cert-chip-edit" onclick="openToolEdit('${t.id}')">✏️</button><button class="cert-chip-del" onclick="removeToolById('${t.id}')">✕</button>`:''}
       </div>
     </div>`).join("");
   box.innerHTML = banner + cards;
-}
-async function openToolReminder(id){
-  const tools = await getTools();
-  const t = tools.find(x=>x.id===id);
-  if(!t) return;
-  openReminderSheet("🔧 " + t.name + (t.serial?(" · מספר "+t.serial):""));
 }
 
 /* ===== VEHICLE TRACKING (מעקב רכבים) — v25 =====
