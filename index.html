@@ -2725,7 +2725,7 @@ nav{
   <!-- החלפות לאישור מ"ע תורנויות -->
   <div class="modal-bg" id="naat-swaps-modal">
     <div class="modal">
-      <h3>🔄 החלפות לאישור מ״ע</h3>
+      <h3>🔄 אישורי מ״ע — החלפות ואילוצים</h3>
       <div class="m-sub" id="naat-swaps-sub"></div>
       <div id="naat-swaps-list" style="max-height:56vh;overflow-y:auto"></div>
       <div class="modal-actions" style="margin-top:10px">
@@ -2827,8 +2827,8 @@ nav{
       <h3>🔔 מרכז התראות</h3>
       <div class="m-sub">כל מה שדורש תשומת לב במסגרת שלך</div>
       <div class="cmd-tabs" id="alerts-tabs" style="margin-bottom:10px">
-        <button class="cmd-tab active" onclick="switchAlertsTab('all',this)">הכול</button>
-        <button class="cmd-tab" onclick="switchAlertsTab('mine',this)">🔔 התזכורות שלי</button>
+        <button class="cmd-tab active" onclick="switchAlertsTab('all',this)" id="alerts-tab-all">הכול</button>
+        <button class="cmd-tab" onclick="switchAlertsTab('mine',this)" id="alerts-tab-mine">🔔 התזכורות שלי</button>
       </div>
       <div id="alerts-body" style="max-height:56vh;overflow-y:auto;margin-bottom:12px"></div>
       <button class="m-btn ghost" onclick="document.getElementById('alerts-modal').classList.remove('open')" style="width:100%">סגור</button>
@@ -6545,6 +6545,7 @@ function setRosterView(v, day){
 async function renderRosterView(){
   const box = document.getElementById("roster-view");
   if(!box) return;
+  await maybeRotateWeek();     // מעבר שבוע אוטומטי (שבת בחצות) לפני הרינדור
   // הלוח מציג שבוע לפי boardWeekSlot (שעבר/נוכחי/הבא). רק "נוכחי" נשמר
   // במטמון (הוא מה שנקרא הכי הרבה); שעבר/הבא נטענים לפי דרישה.
   const r = boardWeekSlot==="current"
@@ -6564,7 +6565,7 @@ async function renderRosterView(){
         <span class="rb-ic">🔮</span><span class="rb-tx"><b>בניית לוח עתידי</b><small>הכנת השבוע הבא מראש</small></span></button>
     </div>
     <button class="roster-banner swp" onclick="openNaatSwaps()" style="width:100%;margin-bottom:10px">
-        <span class="rb-ic">🔄</span><span class="rb-tx"><b>החלפות לאישור מ״ע<span id="roster-naat-badge" class="rb-badge hidden"></span></b><small>בקשות החלפה שהמפקד אישר — ממתינות להחלתך על הלוח</small></span></button>
+        <span class="rb-ic">🔄</span><span class="rb-tx"><b>אישורי מ״ע<span id="roster-naat-badge" class="rb-badge hidden"></span></b><small>החלפות שהמפקד אישר + אילוצים שהוזנו אחרי ג׳ 10:00 — לאישורך</small></span></button>
     <button class="roster-banner cns" onclick="openConstraintsBoard()" style="width:100%;margin-bottom:10px">
         <span class="rb-ic">📋</span><span class="rb-tx"><b>לוח אילוצים מרוכז<span id="roster-cns-badge" class="rb-badge hidden"></span></b><small>מי זמין ומי לא — כל האילוצים במקום אחד</small></span></button>
     <button class="roster-banner arc" onclick="openRosterArchive()" style="width:100%;margin-bottom:10px">
@@ -6644,7 +6645,7 @@ async function updateRosterMgrBadges(){
   const badge = document.getElementById("roster-naat-badge");
   if(badge){
     try{
-      const n = (await fetchSwapsPendingNaat()).length;
+      const n = await naatPendingTotal();
       if(n>0){ badge.textContent = n; badge.classList.remove("hidden"); } else badge.classList.add("hidden");
     }catch(e){ badge.classList.add("hidden"); }
   }
@@ -6691,6 +6692,34 @@ async function maybeArchiveRoster(){
     arc.unshift({key, label: weekRangeLabel(), savedAt: new Date().toISOString(), roster: cur});
     await saveRosterArchive(arc.slice(0, 8));    // לפחות 6, עד 8
   }catch(e){ console.error("maybeArchiveRoster", e); }
+}
+/* מעבר שבוע אוטומטי — בשבת בחצות (תחילת ראשון): הלוח העתידי הופך לנוכחי,
+   הנוכחי הקודם עובר ל"שבוע שעבר", והעתידי מתפנה. מבוצע ע"י מ"ע (הראשון
+   שפותח את האפליקציה אחרי גבול השבוע), אידמפוטנטי לפי שבוע — לא ירוץ
+   פעמיים ולא באמצע שבוע. אם אין לוח עתידי — לא נוגעים בנוכחי (לא מוחקים
+   לריק), רק מסמנים שהשבוע טופל. */
+let _rotateTried = false;
+async function maybeRotateWeek(){
+  if(_rotateTried || !isRosterManager) return;
+  _rotateTried = true;
+  try{
+    const sun = isoOfDate(thisWeekSunday());
+    const rotated = await sGetRaw("board_rotated_week");
+    if(rotated === sun) return;                    // כבר טופל השבוע הזה
+    if(!rotated){ await sSetRaw("board_rotated_week", sun); return; }  // הפעלה ראשונה — רק מסמנים
+    // עברנו לשבוע חדש (rotated ישן מ-sun) — מבצעים רוטציה אם יש לוח עתידי
+    const next = await getDutyRoster("next");
+    if(WEEK_DAYS_HE.some(d=>rosterDayCount(next.days[d])>0)){
+      const cur = await getDutyRoster("current");
+      if(WEEK_DAYS_HE.some(d=>rosterDayCount(cur.days[d])>0)) await saveDutyRosterV2(cur, "prev");
+      next.weekKey = todayKey();
+      await saveDutyRosterV2(next, "current");
+      await saveDutyRosterV2(migrateRosterToV2(null), "next");   // מתפנה לשבוע הבא
+      rosterCache = null; boardWeekSlot = "current";
+      toast("🔄 מעבר שבוע — הלוח העתידי הפך ללוח הנוכחי");
+    }
+    await sSetRaw("board_rotated_week", sun);
+  }catch(e){ console.error("maybeRotateWeek", e); }
 }
 async function openRosterArchive(){
   if(!isRosterManager){ toast("רק מ״ע תורנויות 🔒"); return; }
@@ -7258,8 +7287,18 @@ async function submitRequest(){
     Object.assign(r, patch); r.editedTs = Date.now();
   } else {
     const req = {id:"req_"+Date.now(), by: behalf || user, shed:currentShed.id, status:"pending", ts:Date.now(), ...patch};
-    if(behalf){ req.status="approved"; req.decidedBy=user; req.decidedTs=Date.now(); req.byCommander=true; }
+    if(behalf){
+      req.byCommander = true;
+      // מפקד שמזין אילוץ אחרי חלון ההזנה (ג' 10:00) לשבוע הבא — צריך גם
+      // אישור מ"ע תורנויות (הלוח כבר בבנייה), ולא מאושר מיד.
+      if(CONSTRAINT_DATED_TYPES.includes(type) && soldierEntryBlocked(patch.fromDate)){
+        req.status = "naat_c"; req.cmdrBy = user; req.cmdrTs = Date.now();
+      } else {
+        req.status = "approved"; req.decidedBy = user; req.decidedTs = Date.now();
+      }
+    }
     list.push(req);
+    var _behalfNaat = req.status === "naat_c";
   }
   const ok = await saveDutyRequests(list);
   if(ok===false){ toast("⚠️ השמירה נכשלה — נסה שוב"); return; }
@@ -7272,7 +7311,9 @@ async function submitRequest(){
   if(document.getElementById("my-requests-modal").classList.contains("open")) await renderMyRequestsList();
   renderCommanderConstraints(); updateAlertBell();
   if(wasEdit) toast("האילוץ עודכן ✓");
-  else if(behalfName){ toast(`האילוץ של ${behalfName} נשמר ואושר ✓`); }
+  else if(behalfName){ toast(typeof _behalfNaat!=="undefined" && _behalfNaat
+      ? `האילוץ של ${behalfName} נשמר — ממתין לאישור מ״ע תורנויות`
+      : `האילוץ של ${behalfName} נשמר ואושר ✓`); }
   else { toast("האילוץ נשלח לאישור המפקד ✓"); renderToday(); }
 }
 
@@ -7436,27 +7477,79 @@ async function fetchSwapsPendingNaat(){
   }));
   return out.sort((a,b)=>(a.cmdrTs||a.ts||0)-(b.cmdrTs||b.ts||0));
 }
+/* אילוצים שמפקד הזין אחרי חלון ההזנה (ג' 10:00) — ממתינים לאישור מ"ע. */
+async function fetchConstraintsPendingNaat(){
+  const out = [];
+  await Promise.all(SHEDS.map(async s=>{
+    const list = (await sGetIn(s.id,"duty_requests")) || [];
+    list.forEach(r=>{ if(r.status==="naat_c" && CONSTRAINT_DATED_TYPES.includes(r.type)) out.push({...r, _shed:s.id}); });
+  }));
+  return out.sort((a,b)=>(a.cmdrTs||a.ts||0)-(b.cmdrTs||b.ts||0));
+}
+/* סך הפריטים שממתינים לאישור מ"ע (החלפות + אילוצים מאוחרים). */
+async function naatPendingTotal(){
+  const [s, c] = await Promise.all([fetchSwapsPendingNaat(), fetchConstraintsPendingNaat()]);
+  return s.length + c.length;
+}
 async function openNaatSwaps(){
-  if(!isRosterManager){ toast("רק מ״ע תורנויות יכול לאשר החלפות 🔒"); return; }
+  if(!isRosterManager){ toast("רק מ״ע תורנויות יכול לאשר 🔒"); return; }
   await renderNaatSwaps();
   document.getElementById("naat-swaps-modal").classList.add("open");
 }
-let naatSwapRows = [];
+let naatSwapRows = [], naatConstraintRows = [];
 async function renderNaatSwaps(){
   naatSwapRows = await fetchSwapsPendingNaat();
+  naatConstraintRows = await fetchConstraintsPendingNaat();
+  const total = naatSwapRows.length + naatConstraintRows.length;
   document.getElementById("naat-swaps-sub").textContent =
-    naatSwapRows.length ? `${naatSwapRows.length} החלפות ממתינות לאישורך` : "אין החלפות ממתינות";
+    total ? `${total} פריטים ממתינים לאישורך` : "אין פריטים ממתינים";
   const box = document.getElementById("naat-swaps-list");
-  box.innerHTML = naatSwapRows.length ? naatSwapRows.map((r,i)=>{
-    const shed = (SHEDS.find(s=>s.id===r._shed)||{}).name || r._shed;
-    return `<div class="req-card">
-      <div class="req-top"><span class="req-who">${escapeHTML(r.by)} · ${escapeHTML(shed)}</span>
-        <span class="req-body">${reqBodyText(r)}</span></div>
-      <div class="req-reason">אישר: ${escapeHTML(r.cmdrBy||"מפקד")}</div>
-      <div class="req-acts">
-        <button class="m-btn ok" onclick="naatApproveSwap(${i})">אשר והחל על הלוח</button>
-        <button class="m-btn ghost" onclick="naatRejectSwap(${i})">דחה</button></div></div>`;
-  }).join("") : `<div class="empty-state" style="padding:24px"><div class="ic">✓</div><h3>אין החלפות ממתינות</h3></div>`;
+  let html = "";
+  if(naatSwapRows.length){
+    html += `<div class="req-sec">🔄 החלפות תורנות</div>` + naatSwapRows.map((r,i)=>{
+      const shed = (SHEDS.find(s=>s.id===r._shed)||{}).name || r._shed;
+      return `<div class="req-card">
+        <div class="req-top"><span class="req-who">${escapeHTML(r.by)} · ${escapeHTML(shed)}</span>
+          <span class="req-body">${reqBodyText(r)}</span></div>
+        <div class="req-reason">אישר: ${escapeHTML(r.cmdrBy||"מפקד")}</div>
+        <div class="req-acts">
+          <button class="m-btn ok" onclick="naatApproveSwap(${i})">אשר והחל על הלוח</button>
+          <button class="m-btn ghost" onclick="naatRejectSwap(${i})">דחה</button></div></div>`;
+    }).join("");
+  }
+  if(naatConstraintRows.length){
+    html += `<div class="req-sec">📌 אילוצים שמפקד הזין אחרי ג׳ 10:00</div>` + naatConstraintRows.map((r,i)=>{
+      const shed = (SHEDS.find(s=>s.id===r._shed)||{}).name || r._shed;
+      return `<div class="req-card">
+        <div class="req-top"><span class="req-who">${escapeHTML(r.by)} · ${escapeHTML(shed)}</span>
+          <span class="req-body">${reqBodyText(r)}</span></div>
+        <div class="req-reason">הזין: ${escapeHTML(r.cmdrBy||"מפקד")}</div>
+        <div class="req-acts">
+          <button class="m-btn ok" onclick="naatApproveConstraint(${i})">אשר אילוץ</button>
+          <button class="m-btn ghost" onclick="naatRejectConstraint(${i})">דחה</button></div></div>`;
+    }).join("");
+  }
+  box.innerHTML = html || `<div class="empty-state" style="padding:24px"><div class="ic">✓</div><h3>אין פריטים ממתינים</h3></div>`;
+}
+async function naatApproveConstraint(idx){
+  const r = naatConstraintRows[idx]; if(!r) return;
+  const list = (await sGetIn(r._shed,"duty_requests")) || [];
+  const rr = list.find(x=>x.id===r.id); if(!rr || rr.status!=="naat_c") return;
+  rr.status="approved"; rr.decidedBy=user; rr.decidedTs=Date.now();
+  const ok = await sSetIn(r._shed,"duty_requests",list);
+  if(ok===false){ toast("⚠️ השמירה נכשלה"); return; }
+  rosterCache = null;
+  await renderNaatSwaps(); updateRosterMgrBadges();
+  toast("האילוץ אושר ✓");
+}
+async function naatRejectConstraint(idx){
+  const r = naatConstraintRows[idx]; if(!r) return;
+  const list = (await sGetIn(r._shed,"duty_requests")) || [];
+  const rr = list.find(x=>x.id===r.id); if(rr){ rr.status="rejected"; rr.note="נדחה ע״י מ״ע תורנויות"; }
+  const ok = await sSetIn(r._shed,"duty_requests",list);
+  if(ok===false){ toast("⚠️ השמירה נכשלה"); return; }
+  await renderNaatSwaps(); updateRosterMgrBadges();
+  toast("האילוץ נדחה");
 }
 async function naatApproveSwap(idx){
   const r = naatSwapRows[idx]; if(!r) return;
@@ -12163,8 +12256,8 @@ async function computeAlerts(){
      שממתינות לאישורו (מכל הטייסת), בלי התראות ניהול-מסגרת. */
   if(isRosterManager && userRole!=="מפקד"){
     try{
-      const naat = await fetchSwapsPendingNaat();
-      if(naat.length) alerts.push({icon:"🔄", text:`${naat.length} החלפות ממתינות לאישורך`, level:"high", nav:"__naatswaps"});
+      const n = await naatPendingTotal();
+      if(n) alerts.push({icon:"🔄", text:`${n} פריטים ממתינים לאישורך`, level:"high", nav:"__naatswaps"});
     }catch(e){ console.error("naat alert", e); }
     return alerts;
   }
@@ -12199,10 +12292,10 @@ async function computeAlerts(){
     if(pend.length) alerts.push({icon:"📨", text:`${pend.length} בקשות ממתינות לאישורך`, level:"high", nav:"__requests"});
     const crossB = await fetchSwapsForShedB();
     if(crossB.length) alerts.push({icon:"↔️", text:`${crossB.length} החלפות בין-מסגרתיות לאישורך`, level:"high", nav:"__requests"});
-    // מ"ע תורנויות — החלפות שהמפקדים אישרו וממתינות להחלתו על הלוח
+    // מ"ע תורנויות — החלפות/אילוצים מאוחרים שממתינים להחלתו/אישורו
     if(isRosterManager){
-      const naat = await fetchSwapsPendingNaat();
-      if(naat.length) alerts.push({icon:"🔄", text:`${naat.length} החלפות ממתינות לאישורך (מ״ע)`, level:"high", nav:"__naatswaps"});
+      const n = await naatPendingTotal();
+      if(n) alerts.push({icon:"🔄", text:`${n} פריטים ממתינים לאישורך (מ״ע)`, level:"high", nav:"__naatswaps"});
     }
   }
 
@@ -12343,6 +12436,12 @@ async function updateAlertBell(precomputed){
     const high = alerts.filter(a=>a.level==="high").length;
     if(total>0){ badge.textContent = total>9?"9+":total; badge.classList.remove("hidden"); badge.classList.toggle("high", high>0); }
     else badge.classList.add("hidden");
+    // המספר בפעמון = התראות + תזכורות. מוצג מפוצל בין הלשוניות כדי שהמספר
+    // יתאים תמיד למה שרואים בפנים (סכום שתי הלשוניות).
+    const tabAll = document.getElementById("alerts-tab-all");
+    const tabMine = document.getElementById("alerts-tab-mine");
+    if(tabAll) tabAll.textContent = `הכול${alerts.length?` (${alerts.length})`:""}`;
+    if(tabMine) tabMine.textContent = `🔔 התזכורות שלי${dueReminders?` (${dueReminders})`:""}`;
   }catch(e){
     console.error("updateAlertBell failed", e);
     badge.classList.add("hidden");
