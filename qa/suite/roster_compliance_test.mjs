@@ -18,9 +18,10 @@ const out = await page.evaluate(async ()=>{
     {name:"תום", role:"חייל"},   // PMS (אין PF)
     {name:"גיא", role:"חייל"},   // PMS שלא ישובץ => אפור
     {name:"פקיד", role:"חייל", profession:"פקיד כלים"},  // לא נספר לאפור
-    {name:"מיל א", role:"חייל", reserve:true},   // מילואים — צריך פעילות אחת
-    {name:"מיל ב", role:"חייל", reserve:true},   // מילואים שלא שובץ → חריג
-    {name:"נהג א", role:"חייל", profession:"נהג מקצועי"},  // נהג — כמו מילואים
+    {name:"מיל א", role:"חייל", reserve:true},   // מילואים — לא נעקב כלל
+    {name:"נהג א", role:"חייל", profession:"נהג מקצועי"},  // נהג — לא נעקב כלל
+    {name:"מפקד א", role:"מפקד"},   // מפקד/מנהל — לא נעקב כלל
+    {name:"טייס א", role:"חייל", profession:"מטיס"},  // מטיס — לא נעקב כלל
   ];
   const empty = () => migrateRosterToV2(null);
   const r = empty();
@@ -80,30 +81,32 @@ const out = await page.evaluate(async ()=>{
       const row = c4.rows.find(x=>x.name==="תום");
       return row && row.ok && row.cat==="תורנות בסיסית";
     })(),
-    // מילואים: שובץ פעם אחת → תקין; לא שובץ כלל → חריג "לא שובץ"
-    _reserveScheduledOk: (()=>{
+    // מילואים לא נעקב כלל — לא בשורות ולא באפור (שובץ או לא)
+    _reserveNotTracked: (()=>{
       const r5 = empty();
-      r5.days["ראשון"].reserve = ["מיל א"];
+      r5.days["ראשון"].reserve = ["מיל א"];       // שובץ
       const c5 = computeRosterCompliance(r5, pf, pool);
-      const a = c5.rows.find(x=>x.name==="מיל א");
-      const b = c5.rows.find(x=>x.name==="מיל ב");
-      return a && a.ok && a.cat==="מילואים" && b && !b.ok && /לא שובץ/.test(b.reasons.join(" "));
+      const cEmpty = computeRosterCompliance(empty(), pf, pool);  // לא שובץ
+      return !c5.rows.some(x=>x.name==="מיל א") && !c5.gray.some(g=>g.name==="מיל א")
+        && !cEmpty.rows.some(x=>x.name==="מיל א") && !cEmpty.gray.some(g=>g.name==="מיל א");
     })(),
-    // מילואים ששובץ פעמיים+ → עדיין תקין (אין התרעה על "מעבר")
-    _reserveMultipleOk: (()=>{
-      const r6 = empty();
-      r6.days["ראשון"].reserve = ["מיל א"];
-      r6.days["שני"].reserve = ["מיל א"];
-      r6.days["שלישי"].reserve = ["מיל א"];
-      const c6 = computeRosterCompliance(r6, pf, pool);
-      const a = c6.rows.find(x=>x.name==="מיל א");
-      return a && a.ok;
-    })(),
-    // נהג: כמו מילואים — לא שובץ כלל → חריג
-    _driverUnscheduled: (()=>{
+    // נהג לא נעקב כלל
+    _driverNotTracked: (()=>{
       const c7 = computeRosterCompliance(empty(), pf, pool);
-      const nahag = c7.rows.find(x=>x.name==="נהג א");
-      return nahag && !nahag.ok && nahag.cat==="נהג" && /לא שובץ/.test(nahag.reasons.join(" "));
+      return !c7.rows.some(x=>x.name==="נהג א") && !c7.gray.some(g=>g.name==="נהג א");
+    })(),
+    // מפקד/מנהל לא נעקב כלל (גם אם שובץ למשבצת מנהל)
+    _commanderNotTracked: (()=>{
+      const r8 = empty(); r8.days["ראשון"].manager = "מפקד א";
+      const c8 = computeRosterCompliance(r8, pf, pool);
+      return !c8.rows.some(x=>x.name==="מפקד א") && !c8.gray.some(g=>g.name==="מפקד א");
+    })(),
+    // מטיס לא נעקב כלל — גם לפי מקצוע וגם לפי שיבוץ למשבצת מטיס
+    _pilotNotTracked: (()=>{
+      const r9 = empty(); r9.days["שני"].pilot = "פלג";   // פלג משובץ כמטיס
+      const c9 = computeRosterCompliance(r9, pf, pool);
+      return !c9.rows.some(x=>x.name==="טייס א")          // לפי מקצוע
+        && !c9.rows.some(x=>x.name==="פלג");              // לפי משבצת מטיס
     })(),
     // חופש כל השבוע: לא מופיע כחריג ולא כאפור (אין איפה לצוות)
     _fullWeekVacation: (()=>{
@@ -149,9 +152,10 @@ record("אפור: מי ששובץ לא מופיע כאפור", out.grayExcludesS
 record("בקורס ששובץ נח → חורג", out._courseTest, String(out._courseTest));
 record("תורנות בסיסית לא נספרת כשיבוץ (לא מוסיפה למכסה)", out._basicNotCounted, String(out._basicNotCounted));
 record("חייל רק בבסיסית → לא חריג (תפוס)", out._basicOnlyOk, String(out._basicOnlyOk));
-record("מילואים: שובץ פעם אחת תקין, לא שובץ → חריג", out._reserveScheduledOk, String(out._reserveScheduledOk));
-record("מילואים: מספר שיבוצים → עדיין תקין (בלי התרעת מעבר)", out._reserveMultipleOk, String(out._reserveMultipleOk));
-record("נהג: לא שובץ כלל → חריג (כמו מילואים)", out._driverUnscheduled, String(out._driverUnscheduled));
+record("מילואים לא נעקב כלל (לא שורה ולא אפור)", out._reserveNotTracked, String(out._reserveNotTracked));
+record("נהג לא נעקב כלל", out._driverNotTracked, String(out._driverNotTracked));
+record("מפקד/מנהל לא נעקב כלל", out._commanderNotTracked, String(out._commanderNotTracked));
+record("מטיס לא נעקב כלל (מקצוע + משבצת)", out._pilotNotTracked, String(out._pilotNotTracked));
 record("חופש כל השבוע → לא חריג ולא אפור", out._fullWeekVacation, String(out._fullWeekVacation));
 record("משמרת סופ״ש (חמישי) לא נספרת כשיבוץ", out._weekendNotCounted, String(out._weekendNotCounted));
 record("פקיד כלים תמיד נח, פטור ממכסות", out._toolsClerkAlwaysRest, String(out._toolsClerkAlwaysRest));
