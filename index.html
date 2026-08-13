@@ -856,6 +856,10 @@ nav{
 .rc.course{background:#e3f0fb;color:#1c5f96;box-shadow:inset 0 0 0 1px #b7d8f2}
 .rc.res{background:var(--gold-soft);color:#7a6420;box-shadow:inset 0 0 0 1px #f0e5c4}
 .rc small{font-weight:600;opacity:.75}
+/* תפקיד שמתחלף בסופ"ש (מנהל/מתגבר) — שני חלקי המשמרת עם תגית ה׳ / ו׳–ש׳ */
+.rc-wk{display:block;margin:1px 0}
+.rc-wk-t{display:inline-block;font-size:8px;font-weight:800;color:var(--ink-3);background:var(--bg);border-radius:4px;padding:0 4px;margin-inline-end:3px;vertical-align:middle}
+.roster-grid.fit .rc-wk-t{font-size:7px;padding:0 2px}
 /* חיפוש חייל בלוח: כשמסומן שם, כל התאים דוהים חוץ מהמיקומים שלו */
 .roster-grid.hl-on .rc{opacity:.28;filter:grayscale(.4)}
 .roster-grid.hl-on .rc.rc-hl{opacity:1;filter:none;background:#1c5f96;color:#fff;box-shadow:0 0 0 2px #fff,0 0 0 4px #1c5f96;position:relative;z-index:1}
@@ -6442,7 +6446,11 @@ function fmtHeShort(iso){
 }
 
 function emptyRosterDay(isWeekend){
-  return {manager:"", lead:"", deputyLead:"", pilot:"", driver:"", tools:"", fixedAug:[],
+  // managerWknd/fixedAugWknd — עזר-עריכה בלבד ליום "חמישי": הערך למשמרת
+  // שישי–שבת (התפקידים האלה מתחלפים בתוך הסופ"ש). לא נשמרים כשדה ליום —
+  // בשמירה הם נכתבים ל-ימי שישי/שבת עצמם (ר' saveDutyRosterV2).
+  return {manager:"", managerWknd:"", lead:"", deputyLead:"", pilot:"", driver:"", tools:"",
+    fixedAug:[], fixedAugWknd:[],
     pf:[], pfRest: isWeekend ? null : [], pms:[], pmsRest:[], reserve:[], basic:[], duty:[], rest:[]};
 }
 function isWeekendDay(day){ return ROSTER_WEEKEND_DAYS.includes(day); }
@@ -6542,7 +6550,14 @@ async function saveDutyRosterV2(roster, slot){
   WEEK_DAYS_HE.forEach(day=>{
     const src = roster.days[rosterEditKey(day)] || emptyRosterDay(isWeekendDay(day));
     const d = JSON.parse(JSON.stringify(src));
-    if(isWeekendDay(day)) d.pfRest = null;            // משמרת רצופה — אין נחים
+    // תפקידים שמתחלפים בסופ"ש: חמישי = משמרת א׳ (manager/fixedAug), שישי+שבת
+    // = משמרת ב׳ (managerWknd/fixedAugWknd). שאר הימים ושאר התפקידים כרגיל.
+    if(day==="שישי" || day==="שבת"){
+      d.manager = src.managerWknd || "";
+      d.fixedAug = Array.isArray(src.fixedAugWknd) ? src.fixedAugWknd.slice() : [];
+    }
+    delete d.managerWknd; delete d.fixedAugWknd;       // עזר-עריכה — לא נשמר כשדה ליום
+    if(isWeekendDay(day)) d.pfRest = null;             // משמרת רצופה — אין נחים
     d.duty = rosterDayAssigned(d);
     d.rest = (d.pfRest || []).concat(d.pmsRest || []);
     out.days[day] = d;
@@ -6992,12 +7007,23 @@ function rosterBoardHtml(r, today, mode, weekSlot){
     }).join("") + `</tr>`;
   const chips = (arr, cls) => (arr||[]).map(n=>`<span class="rc ${n===user?"me":(cls||"")}" data-rn="${escapeHTML(n)}">${escapeHTML(nm(n))}</span>`).join("");
   const one = (n, cls) => n ? `<span class="rc ${n===user?"me":(cls||"duty")}" data-rn="${escapeHTML(n)}">${escapeHTML(nm(n))}</span>` : "";
+  // תפקיד שמתחלף בסופ"ש: בעמודת "ה׳–ש׳" מציג את שני חלקי המשמרת (חמישי /
+  // שישי–שבת) עם תגית קטנה. אם שני החלקים זהים — פעם אחת בלבד.
+  const friDay = r.days["שישי"] || {};
+  const wkndSplit = (thuVal, friVal, isList) => {
+    const norm = v => isList ? (v||[]).filter(Boolean) : (v?[v]:[]);
+    const thu = norm(thuVal), fri = norm(friVal);
+    const cells = a => (isList ? chips(a) : (a[0]?one(a[0]):""));
+    if(thu.join("|")===fri.join("|")) return cells(thu);
+    const part = (lbl,a) => a.length ? `<div class="rc-wk"><span class="rc-wk-t">${lbl}</span>${cells(a)}</div>` : "";
+    return part("ה׳",thu) + part("ו׳–ש׳",fri);
+  };
 
   let html = `<table class="roster-grid ${fit?"fit":"wide"}"><thead><tr><th class="rlbl wk">${r.weekNumber?("שבוע "+r.weekNumber):"שבוע"}</th>${th}</tr></thead><tbody>`;
-  html += row("מנהל", "", d=>one(d.manager));
+  html += row("מנהל", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.manager, friDay.manager, false) : one(d.manager));
   html += row("ר״צ", "", d=>one(d.lead));
   html += row("ל/ ר״צ", "", d=>one(d.deputyLead));
-  html += row("מתגבר", "", d=>chips(d.fixedAug));
+  html += row("מתגבר", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.fixedAug, friDay.fixedAug, true) : chips(d.fixedAug));
   html += row("מטיס", "", d=>one(d.pilot));
   html += row("נהג", "", d=>one(d.driver));
   html += row("כלים", "", d=>one(d.tools));
@@ -7743,9 +7769,22 @@ function rosterDayHtml(r, day, today){
   const rowIf = (k, v) => v ? `<div class="rrow"><div class="rrow-k">${k}</div><div class="rrow-v">${v}</div></div>` : "";
   const one = n => n ? `<span class="rc ${n===user?"me":"duty"}">${escapeHTML(n)}</span>` : "";
   const list = (arr, cls) => (arr||[]).map(n=>`<span class="rc ${n===user?"me":(cls||"")}">${escapeHTML(n)}</span>`).join("");
+  // בסופ"ש: מנהל ומתגבר מתחלפים — חמישי מול שישי–שבת
+  const isWk = key==="חמישי";
+  const friDay = r.days["שישי"] || {};
+  const wkndInline = (thuV, friV, isList) => {
+    const norm = v => isList ? (v||[]).filter(Boolean) : (v?[v]:[]);
+    const thu = norm(thuV), fri = norm(friV);
+    const cell = a => isList ? list(a) : (a[0]?one(a[0]):"");
+    if(thu.join("|")===fri.join("|")) return cell(thu);
+    const part = (lbl,a) => a.length ? `<span class="rc-wk"><span class="rc-wk-t">${lbl}</span>${cell(a)}</span>` : "";
+    return part("ה׳",thu) + part("ו׳–ש׳",fri);
+  };
 
-  let skel = rowIf("מנהל", one(d.manager)) + rowIf("ר״צ", one(d.lead)) + rowIf("ל/ ר״צ", one(d.deputyLead)) +
-    rowIf("מתגבר", list(d.fixedAug)) + rowIf("מטיס", one(d.pilot)) + rowIf("נהג", one(d.driver)) + rowIf("כלים", one(d.tools));
+  let skel = rowIf("מנהל", isWk ? wkndInline(d.manager, friDay.manager, false) : one(d.manager)) +
+    rowIf("ר״צ", one(d.lead)) + rowIf("ל/ ר״צ", one(d.deputyLead)) +
+    rowIf("מתגבר", isWk ? wkndInline(d.fixedAug, friDay.fixedAug, true) : list(d.fixedAug)) +
+    rowIf("מטיס", one(d.pilot)) + rowIf("נהג", one(d.driver)) + rowIf("כלים", one(d.tools));
   let html = `<div class="roster-daystrip">${strip}</div>`;
   if(isWeekendDay(key)) html += `<div class="roster-wknd">משמרת רצופה — חמישי, שישי ושבת. אותו צוות, בלי חילוף ובלי נחים.</div>`;
   html += blk("שלד", null, skel);
@@ -7770,13 +7809,19 @@ function rosterMineHtml(r, today){
   [...ROSTER_ROTATING_DAYS, "חמישי"].forEach(day=>{
     const d = r.days[day];
     const roles = [];
-    if(d.manager===user) roles.push("מנהל");
+    if(d.manager===user) roles.push(day==="חמישי"?"מנהל · ה׳":"מנהל");
     if(d.lead===user) roles.push("ר״צ");
     if(d.deputyLead===user) roles.push("ל/ ר״צ");
     if(d.pilot===user) roles.push("מטיס");
     if(d.driver===user) roles.push("נהג");
     if(d.tools===user) roles.push("פקיד כלים");
-    if((d.fixedAug||[]).includes(user)) roles.push("מתגבר");
+    if((d.fixedAug||[]).includes(user)) roles.push(day==="חמישי"?"מתגבר · ה׳":"מתגבר");
+    // בסופ"ש מנהל/מתגבר מתחלפים — גם משמרת שישי–שבת (מהיום "שישי")
+    if(day==="חמישי"){
+      const fri = r.days["שישי"] || {};
+      if(fri.manager===user) roles.push("מנהל · ו׳–ש׳");
+      if((fri.fixedAug||[]).includes(user)) roles.push("מתגבר · ו׳–ש׳");
+    }
     const me = (d.pf||[]).find(p=>p.name===user);
     if(me) roles.push(me.course ? "PF · בקורס עד 20:00" : (me.reserve ? "PF · מילואים" : "PF"));
     if((d.reserve||[]).includes(user)) roles.push("מילואים");
@@ -7987,6 +8032,13 @@ async function openRosterEditor(aiDays, slot){
   rosterPfNames = await fetchPfNames();
   rosterConstraints = await fetchApprovedConstraintsByName();
   rosterDraft = await getDutyRoster(rosterEditSlot);
+  // שחזור עזר-העריכה לפיצול הסופ"ש: הערך למשמרת שישי–שבת נשמר על ימי
+  // שישי/שבת עצמם — מרכיבים אותו חזרה על יום העריכה "חמישי".
+  {
+    const thu = rosterDraft.days["חמישי"], fri = rosterDraft.days["שישי"] || {};
+    thu.managerWknd = fri.manager || "";
+    thu.fixedAugWknd = Array.isArray(fri.fixedAug) ? fri.fixedAug.slice() : [];
+  }
   // חוק אצבע: מי שעשה שבת בלוח הנוכחי — לא לשבץ בראשון של השבוע הבא.
   // בבניית לוח עתידי נצבע אותם צהוב בבנק האנשים.
   rosterPrevSat = new Set();
@@ -8071,9 +8123,16 @@ function renderRosterEditor(){
 
   let html = "";
   if(wknd) html += `<div class="roster-wknd">משמרת רצופה — כל שינוי כאן חל על חמישי, שישי ושבת. אין שורת נחים.</div>`;
+  // בסופ"ש (חמישי): מנהל ומתגבר מתחלפים — חמישי מול שישי–שבת (שני שדות)
+  const managerRows = wknd
+    ? slot("מנהל · ה׳","manager",false) + slot("מנהל · ו׳–ש׳","managerWknd",false)
+    : slot("מנהל","manager",false);
+  const augRows = wknd
+    ? listRow("מתגבר · ה׳","fixedAug") + listRow("מתגבר · ו׳–ש׳","fixedAugWknd")
+    : listRow("מתגבר","fixedAug");
   html += `<div class="rblk"><div class="rblk-h"><span>שלד</span><span class="rblk-c">חובה *</span></div>
-    ${slot("מנהל","manager",false)}${slot("ר״צ","lead",true)}${slot("ל/ ר״צ","deputyLead",false)}
-    ${listRow("מתגבר","fixedAug")}${slot("מטיס","pilot",false)}${slot("נהג","driver",false)}${slot("כלים","tools",true)}</div>`;
+    ${managerRows}${slot("ר״צ","lead",true)}${slot("ל/ ר״צ","deputyLead",false)}
+    ${augRows}${slot("מטיס","pilot",false)}${slot("נהג","driver",false)}${slot("כלים","tools",true)}</div>`;
 
   html += `<div class="rblk"><div class="rblk-h"><span>PF</span><span class="rblk-c">${(d.pf||[]).length}</span></div>
     <div class="rpool">${(d.pf||[]).map((p,i)=>
@@ -8202,15 +8261,15 @@ function rosterRemoveFromList(f,i){ rosterDraft.days[rosterEdDay][f].splice(i,1)
    רק מוצג במפורש כדי שיהיה בחירה מודעת. */
 /* משבצות שמאפשרות בחירה מרובה (רשימות). משבצות שלד יחידניות (ר״צ/נהג
    וכו') נשארות בחירה בודדת. */
-const ROSTER_MULTI_FIELDS = ["pf","basic","fixedAug","pfRest","pmsRest","reserve","pms"];
+const ROSTER_MULTI_FIELDS = ["pf","basic","fixedAug","fixedAugWknd","pfRest","pmsRest","reserve","pms"];
 let rosterPickMulti = false;
 let rosterPickSel = new Set();
 function openRosterPick(field){
   rosterPickCtx = {field};
   rosterPickMulti = ROSTER_MULTI_FIELDS.includes(field);
   rosterPickSel = new Set();
-  const labels = {manager:"מנהל", lead:"ר״צ", deputyLead:"ל/ ר״צ", pilot:"מטיס", driver:"נהג", tools:"פקיד כלים",
-    fixedAug:"מתגבר", pf:"PF", pfRest:"נחים", reserve:"מילואים", pms:"PMS", pmsRest:"PMS נחים", basic:"תורנות בסיסית"};
+  const labels = {manager:"מנהל · ה׳", managerWknd:"מנהל · ו׳–ש׳", lead:"ר״צ", deputyLead:"ל/ ר״צ", pilot:"מטיס", driver:"נהג", tools:"פקיד כלים",
+    fixedAug:"מתגבר · ה׳", fixedAugWknd:"מתגבר · ו׳–ש׳", pf:"PF", pfRest:"נחים", reserve:"מילואים", pms:"PMS", pmsRest:"PMS נחים", basic:"תורנות בסיסית"};
   document.getElementById("roster-pick-title").textContent = "משבצת: " + (labels[field]||field);
   document.getElementById("roster-pick-sub").textContent =
     (rosterEdDay==="חמישי" ? "חמישי–שבת" : rosterEdDay) +
@@ -8865,7 +8924,9 @@ async function shareDailyDutyWA(dayName){
   const r = await getDutyRoster("current");
   const day = dayName || todayHebrewDay();
   const key = rosterEditKey(day);
-  const d = r.days[key] || emptyRosterDay(isWeekendDay(key));
+  // קוראים את היום עצמו (לא את מפתח-העריכה) כדי שבשישי/שבת יופיעו המנהל/מתגבר
+  // של משמרת שישי–שבת, ולא של חמישי (התפקידים האלה מתחלפים בסופ"ש).
+  const d = r.days[day] || r.days[key] || emptyRosterDay(isWeekendDay(key));
   const dateIso = rosterDayLockDates(day, "current")[0];
   const dateStr = new Date((dateIso||todayKey())+"T00:00:00").toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long"});
   const L = [`🗓️ *לוח צוות תורן — ${dateStr}*`, "━━━━━━━━━━━"];
