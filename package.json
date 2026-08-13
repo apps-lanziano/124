@@ -3,10 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "qa": "node qa/run_daily.mjs"
+    "qa": "node qa/run_daily.mjs",
+    "build": "node build/build.mjs"
   },
   "devDependencies": {
+    "clean-css": "^5.3.3",
+    "firebase-admin": "^13.0.0",
     "playwright": "^1.49.0",
-    "firebase-admin": "^13.0.0"
+    "terser": "^5.50.0"
   }
 }
