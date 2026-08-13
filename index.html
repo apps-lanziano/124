@@ -4098,7 +4098,7 @@ function personDept(p){
   return p.officerTag === "קצין" ? OFFICERS_DEPT : (p.dept || "");
 }
 /* מקצועות לחייל בניהול צוות של הסככות (לא רלוונטי ליוזר "מחלקות") — תיוג בלבד */
-const PROFESSIONS = ["טכנאי דרג א'", "פקיד כלים"];
+const PROFESSIONS = ["טכנאי דרג א'", "פקיד כלים", "מטיס"];
 /* קודי בעלי-התפקיד (מנהל מערכת / קצין טכני / אחראי תקציבים / מ״ע / הדרכה) הוסרו
    מהמקור מטעמי אבטחה — כמו קודי המסגרות. הניתוב שלהם נעשה מהשרת (מסמכי authprofile)
    אחרי כניסה מוצלחת, בדיוק כמו קודי המסגרות. */
@@ -7876,6 +7876,13 @@ function computeRosterCompliance(roster, pfNames, shedPool, constraints, slot){
   const toolsClerkPool = new Set(pool.filter(p=>p && p.name && p.profession==="פקיד כלים").map(p=>p.name));
   const driverPool = new Set(pool.filter(p=>p && p.name && (p.profession==="נהג מקצועי" || p.profession==="נהג")).map(p=>p.name));
   const reservePool = new Set(pool.filter(p=>p && p.name && p.reserve).map(p=>p.name));
+  const commanderPool = new Set(pool.filter(p=>p && p.name && p.role==="מפקד").map(p=>p.name));
+  const pilotPool = new Set(pool.filter(p=>p && p.name && (p.profession==="מטיס" || p.profession==="טייס")).map(p=>p.name));
+  // מי ששובץ אי-פעם למשבצת מנהל/מטיס (כולל הסופ"ש) — נחשב מנהל/מטיס גם אם
+  // לא סומן ככזה בכוח האדם
+  const managerSlot = new Set(), pilotSlot = new Set();
+  WEEK_DAYS_HE.forEach(day=>{ const dd = roster.days[day]; if(!dd) return;
+    if(dd.manager) managerSlot.add(dd.manager); if(dd.pilot) pilotSlot.add(dd.pilot); });
   // חייל שהזין חופש המכסה את כל ימות העבודה (א׳–ד׳) — אין איפה לשבצו, לא חריג
   const onVacationAllWeek = name => {
     const vac = ((constraints && constraints[name]) || []).filter(req=>req.type==="vacation");
@@ -7885,6 +7892,13 @@ function computeRosterCompliance(roster, pfNames, shedPool, constraints, slot){
       return dates.some(iso=>vac.some(req=>constraintCoversDate(req, iso)));
     });
   };
+  // קבוצות שאינן נכללות כלל בדו"ח החריגות (לא שורה, לא אפור):
+  //  · מפקדים/מנהלים · מטיסים · מילואים · נהגים (כמו מילואים) · בחופש מלא
+  const untracked = name =>
+    commanderPool.has(name) || managerSlot.has(name) ||
+    pilotPool.has(name) || pilotSlot.has(name) ||
+    reservePool.has(name) || driverPool.has(name) ||
+    onVacationAllWeek(name);
 
   const tally = {};   // name -> {duty, rest, lead, course, basic, tools, driver}
   const bump = (name) => (tally[name] = tally[name] || {duty:0, rest:0, lead:0, course:0, basic:0, tools:0, driver:0});
@@ -7906,32 +7920,16 @@ function computeRosterCompliance(roster, pfNames, shedPool, constraints, slot){
     (d.pfRest||[]).forEach(n=>{ if(n) bump(n).rest++; });
     (d.pmsRest||[]).forEach(n=>{ if(n) bump(n).rest++; });
   });
-  // מוודאים שכל מילואימניק/נהג בכוח האדם נבדק גם אם לא שובץ כלל — כדי
-  // שנוכל להתריע "לא שובץ" (הם צריכים פעילות אחת לפחות).
-  pool.forEach(p=>{
-    if(!p || !p.name || p.role==="מפקד") return;
-    if(p.release && p.release<=todayKey()) return;
-    if(reservePool.has(p.name) || driverPool.has(p.name)) bump(p.name);
-  });
-
   const rows = [];
   Object.keys(tally).forEach(name=>{
-    if(onVacationAllWeek(name)) return;   // בחופש כל השבוע — לא חריג
+    if(untracked(name)) return;            // מפקד/מנהל/מטיס/מילואים/נהג/חופש מלא — לא נעקב כלל
     const t = tally[name];
     const total = t.duty + t.rest;
     const isToolsClerk = t.tools>0 || toolsClerkPool.has(name);
-    const isReserve = reservePool.has(name);
-    const isDriver = !isReserve && (t.driver>0 || driverPool.has(name));
     const basicOnly = t.basic>0 && t.duty===0 && t.rest===0;
     let cat, ok = true; const reasons = [];
     if(isToolsClerk){
       cat = "פקיד כלים";                    // תמיד נח, פטור ממכסות
-    } else if(isReserve){
-      cat = "מילואים";                      // צריך פעילות אחת — מתריע רק אם לא שובץ כלל
-      if(total===0 && t.basic===0){ ok=false; reasons.push("מילואים — לא שובץ (צריך פעילות אחת)"); }
-    } else if(isDriver){
-      cat = "נהג";                          // כמו מילואים — צריך פעילות אחת בלבד
-      if(total===0 && t.basic===0){ ok=false; reasons.push("נהג — לא שובץ (צריך פעילות אחת)"); }
     } else if(basicOnly){
       cat = "תורנות בסיסית";                // עושה בסיסית — תפוס, לא חריג
     } else {
@@ -7950,13 +7948,12 @@ function computeRosterCompliance(roster, pfNames, shedPool, constraints, slot){
     rows.push({name, cat, duty:t.duty, rest:t.rest, total, course:!!t.course, ok, reasons});
   });
 
-  // אפור — חיילים קרביים במסגרת שלא שובצו כלל (מילואים/נהג/פקיד כלים
-  // מטופלים בשורות עצמן; מי שבחופש כל השבוע לא נחשב חריג)
+  // אפור — חיילים קרביים במסגרת שלא שובצו כלל. הקבוצות שאינן נעקבות
+  // (מפקד/מנהל/מטיס/מילואים/נהג/פקיד כלים/חופש מלא) מוחרגות גם מכאן.
   const scheduled = new Set(Object.keys(tally));
   const gray = pool
     .filter(p=>p && p.name && !scheduled.has(p.name))
-    .filter(p=> p.role!=="מפקד" && !p.reserve && p.profession!=="פקיד כלים"
-      && !driverPool.has(p.name) && !onVacationAllWeek(p.name) && !(p.release && p.release<=todayKey()))
+    .filter(p=> !untracked(p.name) && p.profession!=="פקיד כלים" && !(p.release && p.release<=todayKey()))
     .map(p=>({name:p.name, cat: personCategory(p.name, pfNames)}));
 
   return {
