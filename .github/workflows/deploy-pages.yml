@@ -1,0 +1,55 @@
+name: פריסת GitHub Pages (ממוזער)
+
+# בונה גרסת ייצור ממוזערת (build/build.mjs) ומפרסם אותה ל-GitHub Pages.
+# המקור index.html נשאר קריא ומתועד; מה שמתפרסם הוא dist/ הממוזער בלבד.
+#
+# ⚠️ דורמנטי כברירת מחדל: כל ה-job מותנה במשתנה מאגר PAGES_ACTIONS_DEPLOY=true.
+# כל עוד הוא לא הוגדר, ה-workflow לא עושה כלום — וההגשה מהענף (main root)
+# ממשיכה כרגיל, בלי סיכון להפלת האתר החי. הפעלה (חד-פעמית):
+#   1) Settings → Secrets and variables → Actions → Variables →
+#      New variable: PAGES_ACTIONS_DEPLOY = true
+#   2) Settings → Pages → Build and deployment → Source: GitHub Actions
+# מרגע זה כל push ל-main מפרסם את הגרסה הממוזערת. לחזרה אחורה: החזרת
+# Source ל-"Deploy from a branch" (main / root) מחזירה להגשת המקור.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    if: vars.PAGES_ACTIONS_DEPLOY == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: התקנת תלויות הבנייה
+        run: npm install --no-audit --no-fund
+      - name: בניית dist ממוזער
+        run: node build/build.mjs
+      # שער בטיחות: ודא שהגרסה הממוזערת נטענת בלי שגיאות לפני פרסום
+      - name: בדיקת עשן על הגרסה הממוזערת
+        run: |
+          npx playwright install --with-deps chromium
+          node build/verify-dist.mjs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deploy
+        uses: actions/deploy-pages@v4
