@@ -6441,7 +6441,7 @@ function fmtHeShort(iso){
 }
 
 function emptyRosterDay(isWeekend){
-  return {lead:"", deputyLead:"", driver:"", tools:"", fixedAug:[],
+  return {manager:"", lead:"", deputyLead:"", pilot:"", driver:"", tools:"", fixedAug:[],
     pf:[], pfRest: isWeekend ? null : [], pms:[], pmsRest:[], reserve:[], basic:[], duty:[], rest:[]};
 }
 function isWeekendDay(day){ return ROSTER_WEEKEND_DAYS.includes(day); }
@@ -6460,6 +6460,7 @@ function migrateRosterToV2(raw){
     const day2 = emptyRosterDay(isWeekendDay(day));
     if(d){
       if(Array.isArray(d.pf)){                       // כבר v2
+        day2.manager = d.manager||""; day2.pilot = d.pilot||"";
         day2.lead = d.lead||""; day2.deputyLead = d.deputyLead||"";
         day2.driver = d.driver||""; day2.tools = d.tools||"";
         day2.fixedAug = Array.isArray(d.fixedAug)? d.fixedAug.slice() : [];
@@ -6494,7 +6495,7 @@ function migrateRosterToV2(raw){
 function rosterDayAssigned(d){
   const names = [];
   const push = n => { if(n && !names.includes(n)) names.push(n); };
-  push(d.lead); push(d.deputyLead); push(d.driver); push(d.tools);
+  push(d.manager); push(d.lead); push(d.deputyLead); push(d.pilot); push(d.driver); push(d.tools);
   (d.fixedAug||[]).forEach(push);
   (d.pf||[]).forEach(p=>push(p && p.name));
   (d.pms||[]).forEach(push);
@@ -6512,7 +6513,7 @@ function rosterDayActivityNames(d){
   const onBasic = new Set((d.basic||[]).map(b=>b&&b.name).filter(Boolean));
   const names = [];
   const push = n => { if(n && !onBasic.has(n) && !names.includes(n)) names.push(n); };
-  push(d.lead); push(d.deputyLead); push(d.driver); push(d.tools);
+  push(d.manager); push(d.lead); push(d.deputyLead); push(d.pilot); push(d.driver); push(d.tools);
   (d.fixedAug||[]).forEach(push);
   (d.pf||[]).forEach(p=>push(p && p.name));
   (d.pms||[]).forEach(push);
@@ -6826,7 +6827,18 @@ async function maybeRotateWeek(){
   _rotateTried = true;
   try{
     const sun = isoOfDate(thisWeekSunday());
-    const rotated = await sGetRaw("board_rotated_week");
+    // קריאת דגל הרוטציה עמידה לכשל-רשת חולף (כמו onceFlagDone): קריאה בודדת
+    // שנכשלת עלולה להיראות כמו "טרם טופל" ולהריץ רוטציה שדורסת את הלוח הנוכחי
+    // בלוח העתידי (ראו migrateLegacyShed2, commit 4ec3d73). אם לא הצלחנו לוודא
+    // את הדגל — מדלגים הפעם (ומאפשרים ניסיון חוזר בהמשך הסשן) במקום לנחש.
+    let rotated = null;
+    for(let attempt=0; attempt<3; attempt++){
+      fbReadFailed = false;
+      rotated = await sGetRaw("board_rotated_week");
+      if(rotated !== null || !fbReadFailed) break;
+      await new Promise(r=>setTimeout(r, 300*(attempt+1)));
+    }
+    if(fbReadFailed){ console.error("maybeRotateWeek: כשל קריאת דגל הרוטציה — מדלג הפעם"); _rotateTried = false; return; }
     if(rotated === sun) return;                    // כבר טופל השבוע הזה
     if(!rotated){ await sSetRaw("board_rotated_week", sun); return; }  // הפעלה ראשונה — רק מסמנים
     // עברנו לשבוע חדש (rotated ישן מ-sun) — מבצעים רוטציה אם יש לוח עתידי
@@ -6981,17 +6993,22 @@ function rosterBoardHtml(r, today, mode, weekSlot){
   const one = (n, cls) => n ? `<span class="rc ${n===user?"me":(cls||"duty")}" data-rn="${escapeHTML(n)}">${escapeHTML(nm(n))}</span>` : "";
 
   let html = `<table class="roster-grid ${fit?"fit":"wide"}"><thead><tr><th class="rlbl wk">${r.weekNumber?("שבוע "+r.weekNumber):"שבוע"}</th>${th}</tr></thead><tbody>`;
+  html += row("מנהל", "", d=>one(d.manager));
   html += row("ר״צ", "", d=>one(d.lead));
   html += row("ל/ ר״צ", "", d=>one(d.deputyLead));
   html += row("מתגבר", "", d=>chips(d.fixedAug));
+  html += row("מטיס", "", d=>one(d.pilot));
   html += row("נהג", "", d=>one(d.driver));
   html += row("כלים", "", d=>one(d.tools));
   html += row("PF", "pfz", d=>(d.pf||[]).map(p=>
     `<span class="rc ${p.name===user?"me":pfClass(p)}" data-rn="${escapeHTML(p.name)}">${escapeHTML(nm(p.name))}</span>`).join(""));
-  html += row(`נחים<br><small>${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</small>`, "restz",
+  html += row(`נחים PF<br><small>${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</small>`, "restz",
     d=> d.pfRest === null ? `<span class="rnone">רצוף</span>` : chips(d.pfRest, "rest"));
-  html += row("מילואים", "", d=>chips(d.reserve, "res"));
   html += row("PMS", "pmsz", d=>chips(d.pms, "pms"));
+  // PMS נחים — מופיע רק כשיש שם שיבוץ בפועל באחד מימי השבוע
+  if(cols.some(x=> r.days[x] && (r.days[x].pmsRest||[]).length))
+    html += row("PMS נחים", "restz", d=>chips(d.pmsRest, "rest"));
+  html += row("מילואים", "", d=>chips(d.reserve, "res"));
   html += row("תורנות", "", d=>(d.basic||[]).map(b=>
     `<span class="rc ${b.name===user?"me":""}" data-rn="${escapeHTML(b.name)}">${escapeHTML(nm(b.name))}<small> ${escapeHTML(b.type||"")}</small></span>`).join(""));
   // תורן טייסת — ערך שבועי אחד, לכן תא ממוזג על פני כל העמודות (כמו בגיליון)
@@ -7025,8 +7042,10 @@ function closeRosterFull(){
 function rosterMyRoles(d, name){
   if(!d) return [];
   const roles = [];
+  if(d.manager===name) roles.push("מנהל");
   if(d.lead===name) roles.push("ראש צוות");
   if(d.deputyLead===name) roles.push("ל/ ראש צוות");
+  if(d.pilot===name) roles.push("מטיס");
   if(d.driver===name) roles.push("נהג");
   if(d.tools===name) roles.push("פקיד כלים");
   if((d.fixedAug||[]).includes(name)) roles.push("מתגבר");
@@ -7563,7 +7582,7 @@ async function applySwapToBoard(day, by, repl){
   const key = rosterEditKey(day);
   const d = roster.days[key]; if(!d) return false;
   if(!rosterDayAssigned(d).includes(by)) return false;   // התורן כבר לא בלוח — אולי כבר הוחלף
-  ["lead","deputyLead","driver","tools"].forEach(f=>{ if(d[f]===by) d[f]=repl; });
+  ["manager","lead","deputyLead","pilot","driver","tools"].forEach(f=>{ if(d[f]===by) d[f]=repl; });
   d.fixedAug = (d.fixedAug||[]).map(n=> n===by?repl:n);
   d.pf = (d.pf||[]).map(p=> p.name===by ? {...p, name:repl} : p);
   d.basic = (d.basic||[]).map(b=> b.name===by ? {...b, name:repl} : b);
@@ -7723,8 +7742,8 @@ function rosterDayHtml(r, day, today){
   const one = n => n ? `<span class="rc ${n===user?"me":"duty"}">${escapeHTML(n)}</span>` : "";
   const list = (arr, cls) => (arr||[]).map(n=>`<span class="rc ${n===user?"me":(cls||"")}">${escapeHTML(n)}</span>`).join("");
 
-  let skel = rowIf("ר״צ", one(d.lead)) + rowIf("ל/ ר״צ", one(d.deputyLead)) +
-    rowIf("מתגבר", list(d.fixedAug)) + rowIf("נהג", one(d.driver)) + rowIf("כלים", one(d.tools));
+  let skel = rowIf("מנהל", one(d.manager)) + rowIf("ר״צ", one(d.lead)) + rowIf("ל/ ר״צ", one(d.deputyLead)) +
+    rowIf("מתגבר", list(d.fixedAug)) + rowIf("מטיס", one(d.pilot)) + rowIf("נהג", one(d.driver)) + rowIf("כלים", one(d.tools));
   let html = `<div class="roster-daystrip">${strip}</div>`;
   if(isWeekendDay(key)) html += `<div class="roster-wknd">משמרת רצופה — חמישי, שישי ושבת. אותו צוות, בלי חילוף ובלי נחים.</div>`;
   html += blk("שלד", null, skel);
@@ -7736,6 +7755,7 @@ function rosterDayHtml(r, day, today){
         (d.pfRest||[]).length ? `<div class="rpool">${list(d.pfRest,"rest")}</div>` : "", "restz");
   html += blk("מילואים", (d.reserve||[]).length, (d.reserve||[]).length ? `<div class="rpool">${list(d.reserve,"res")}</div>` : "");
   html += blk("PMS", (d.pms||[]).length, (d.pms||[]).length ? `<div class="rpool">${list(d.pms,"pms")}</div>` : "", "pmsz");
+  html += blk("PMS נחים", (d.pmsRest||[]).length, (d.pmsRest||[]).length ? `<div class="rpool">${list(d.pmsRest,"rest")}</div>` : "", "restz");
   html += blk("תורנות בסיסית", (d.basic||[]).length, (d.basic||[]).length
     ? (d.basic||[]).map(b=>rowIf(escapeHTML(b.type||""), `<span class="rc ${b.name===user?"me":""}">${escapeHTML(b.name)}</span>`)).join("") : "");
   if(r.squadronDuty) html += `<div class="roster-sq">תורן טייסת — ${escapeHTML(rosterSquadronDutyName(r.squadronDuty))}</div>`;
@@ -7748,8 +7768,10 @@ function rosterMineHtml(r, today){
   [...ROSTER_ROTATING_DAYS, "חמישי"].forEach(day=>{
     const d = r.days[day];
     const roles = [];
+    if(d.manager===user) roles.push("מנהל");
     if(d.lead===user) roles.push("ר״צ");
     if(d.deputyLead===user) roles.push("ל/ ר״צ");
+    if(d.pilot===user) roles.push("מטיס");
     if(d.driver===user) roles.push("נהג");
     if(d.tools===user) roles.push("פקיד כלים");
     if((d.fixedAug||[]).includes(user)) roles.push("מתגבר");
@@ -7798,44 +7820,78 @@ async function fetchPfNames(){
    מחזיר לכל שם: סיווג, ספירות, ומצב: ok (ירוק) / bad (אדום). "אפור" =
    חייל קרבי במסגרת שלא שובץ כלל. זו עזרה מייעצת בלבד — לא חוסמת. */
 function personCategory(name, pfNames){ return pfNames.has(name) ? "PF" : "PMS"; }
-function computeRosterCompliance(roster, pfNames, shedPool){
+function computeRosterCompliance(roster, pfNames, shedPool, constraints, slot){
   const days = ROSTER_ROTATING_DAYS;   // א׳–ד׳ בלבד — משמרת הסופ"ש (ה׳–ש׳) אינה נספרת כשיבוץ
-  // פקיד כלים לפי המקצוע — תמיד "נח", פטור ממכסות התורנות
-  const toolsClerkPool = new Set((shedPool||[]).filter(p=>p && p.name && p.profession==="פקיד כלים").map(p=>p.name));
-  const tally = {};   // name -> {duty, rest, lead, course, basic, tools}
-  const bump = (name) => (tally[name] = tally[name] || {duty:0, rest:0, lead:0, course:0, basic:0, tools:0});
+  slot = slot || "current";
+  constraints = constraints || {};
+  const pool = shedPool || [];
+  // סיווגים מיוחדים לפי המקצוע/דגל בכוח האדם:
+  const toolsClerkPool = new Set(pool.filter(p=>p && p.name && p.profession==="פקיד כלים").map(p=>p.name));
+  const driverPool = new Set(pool.filter(p=>p && p.name && (p.profession==="נהג מקצועי" || p.profession==="נהג")).map(p=>p.name));
+  const reservePool = new Set(pool.filter(p=>p && p.name && p.reserve).map(p=>p.name));
+  // חייל שהזין חופש המכסה את כל ימות העבודה (א׳–ד׳) — אין איפה לשבצו, לא חריג
+  const onVacationAllWeek = name => {
+    const vac = ((constraints && constraints[name]) || []).filter(req=>req.type==="vacation");
+    if(!vac.length) return false;
+    return days.every(day=>{
+      const dates = rosterDayLockDates(day, slot);
+      return dates.some(iso=>vac.some(req=>constraintCoversDate(req, iso)));
+    });
+  };
+
+  const tally = {};   // name -> {duty, rest, lead, course, basic, tools, driver}
+  const bump = (name) => (tally[name] = tally[name] || {duty:0, rest:0, lead:0, course:0, basic:0, tools:0, driver:0});
   days.forEach(day=>{
     const d = roster.days[day]; if(!d) return;
-    // תפקידי "תורן" (לא נח)
-    [d.lead, d.deputyLead, d.driver].forEach(n=>{ if(n){ bump(n).duty++; } });
-    // פקיד כלים — נספר כנח (תמיד), לא כתורנות
-    if(d.tools){ const t=bump(d.tools); t.rest++; t.tools++; }
+    // תורנות בסיסית: אינה נספרת כשיבוץ, וגם שאר שיבוצי אותו אדם באותו יום
+    // אינם נספרים (שיבוץ תוך כדי בסיסית).
+    const onBasic = new Set((d.basic||[]).map(b=>b&&b.name).filter(Boolean));
+    const addDuty = n => { if(n && !onBasic.has(n)) bump(n).duty++; };
+    addDuty(d.manager); addDuty(d.lead); addDuty(d.deputyLead); addDuty(d.pilot);
+    if(d.driver){ const t=bump(d.driver); if(!onBasic.has(d.driver)) t.duty++; t.driver++; }
+    if(d.tools){ const t=bump(d.tools); t.rest++; t.tools++; }   // פקיד כלים — תמיד נח, לא תורנות
     if(d.lead) bump(d.lead).lead++;
-    (d.fixedAug||[]).forEach(n=>{ if(n) bump(n).duty++; });
-    (d.pf||[]).forEach(p=>{ if(p && p.name){ const t=bump(p.name); t.duty++; if(p.course) t.course++; } });
-    (d.reserve||[]).forEach(n=>{ if(n){ const t=bump(n); t.duty++; t.reserve=(t.reserve||0)+1; } });   // מילואים — מתפקד כ-PF
-    (d.pms||[]).forEach(n=>{ if(n) bump(n).duty++; });
-    (d.basic||[]).forEach(b=>{ if(b && b.name){ bump(b.name).duty++; bump(b.name).basic++; } });
-    // נח
+    (d.fixedAug||[]).forEach(addDuty);
+    (d.pf||[]).forEach(p=>{ if(p && p.name && !onBasic.has(p.name)){ const t=bump(p.name); t.duty++; if(p.course) t.course++; } });
+    (d.reserve||[]).forEach(addDuty);
+    (d.pms||[]).forEach(addDuty);
+    (d.basic||[]).forEach(b=>{ if(b && b.name) bump(b.name).basic++; });
     (d.pfRest||[]).forEach(n=>{ if(n) bump(n).rest++; });
     (d.pmsRest||[]).forEach(n=>{ if(n) bump(n).rest++; });
+  });
+  // מוודאים שכל מילואימניק/נהג בכוח האדם נבדק גם אם לא שובץ כלל — כדי
+  // שנוכל להתריע "לא שובץ" (הם צריכים פעילות אחת לפחות).
+  pool.forEach(p=>{
+    if(!p || !p.name || p.role==="מפקד") return;
+    if(p.release && p.release<=todayKey()) return;
+    if(reservePool.has(p.name) || driverPool.has(p.name)) bump(p.name);
   });
 
   const rows = [];
   Object.keys(tally).forEach(name=>{
+    if(onVacationAllWeek(name)) return;   // בחופש כל השבוע — לא חריג
     const t = tally[name];
     const total = t.duty + t.rest;
     const isToolsClerk = t.tools>0 || toolsClerkPool.has(name);
-    const cat = isToolsClerk ? "פקיד כלים" : (t.lead ? "ר\"צ" : personCategory(name, pfNames));
-    let ok = true; const reasons = [];
+    const isReserve = reservePool.has(name);
+    const isDriver = !isReserve && (t.driver>0 || driverPool.has(name));
+    const basicOnly = t.basic>0 && t.duty===0 && t.rest===0;
+    let cat, ok = true; const reasons = [];
     if(isToolsClerk){
-      // פקיד כלים — תמיד נח, פטור ממכסות ולא נבדק
+      cat = "פקיד כלים";                    // תמיד נח, פטור ממכסות
+    } else if(isReserve){
+      cat = "מילואים";                      // צריך פעילות אחת — מתריע רק אם לא שובץ כלל
+      if(total===0 && t.basic===0){ ok=false; reasons.push("מילואים — לא שובץ (צריך פעילות אחת)"); }
+    } else if(isDriver){
+      cat = "נהג";                          // כמו מילואים — צריך פעילות אחת בלבד
+      if(total===0 && t.basic===0){ ok=false; reasons.push("נהג — לא שובץ (צריך פעילות אחת)"); }
+    } else if(basicOnly){
+      cat = "תורנות בסיסית";                // עושה בסיסית — תפוס, לא חריג
     } else {
+      cat = t.lead ? "ר\"צ" : personCategory(name, pfNames);
       if(t.course && t.rest>0){ ok=false; reasons.push("בקורס — לא אמור לקבל נח"); }
       if(t.lead){
         if(total < 1 || total > 2){ ok=false; reasons.push(`ר"צ: ${total} תורנויות (צריך 1–2)`); }
-      } else if(t.basic){
-        if(total !== 1){ ok=false; reasons.push(`תורנות בסיסית: ${total} (צריך 1)`); }
       } else if(cat==="PF"){
         if(total !== 2){ ok=false; reasons.push(`PF: ${total} תורנויות (צריך 2)`); }
         else if(t.rest < 1 && !t.course){ ok=false; reasons.push("PF: אף אחת מהתורנויות אינה נח"); }
@@ -7847,11 +7903,13 @@ function computeRosterCompliance(roster, pfNames, shedPool){
     rows.push({name, cat, duty:t.duty, rest:t.rest, total, course:!!t.course, ok, reasons});
   });
 
-  // אפור — חיילים קרביים במסגרת שלא שובצו כלל השבוע
+  // אפור — חיילים קרביים במסגרת שלא שובצו כלל (מילואים/נהג/פקיד כלים
+  // מטופלים בשורות עצמן; מי שבחופש כל השבוע לא נחשב חריג)
   const scheduled = new Set(Object.keys(tally));
-  const gray = (shedPool||[])
+  const gray = pool
     .filter(p=>p && p.name && !scheduled.has(p.name))
-    .filter(p=> p.role!=="מפקד" && !p.reserve && p.profession!=="פקיד כלים" && !(p.release && p.release<=todayKey()))
+    .filter(p=> p.role!=="מפקד" && !p.reserve && p.profession!=="פקיד כלים"
+      && !driverPool.has(p.name) && !onVacationAllWeek(p.name) && !(p.release && p.release<=todayKey()))
     .map(p=>({name:p.name, cat: personCategory(p.name, pfNames)}));
 
   return {
@@ -8012,8 +8070,8 @@ function renderRosterEditor(){
   let html = "";
   if(wknd) html += `<div class="roster-wknd">משמרת רצופה — כל שינוי כאן חל על חמישי, שישי ושבת. אין שורת נחים.</div>`;
   html += `<div class="rblk"><div class="rblk-h"><span>שלד</span><span class="rblk-c">חובה *</span></div>
-    ${slot("ר״צ","lead",true)}${slot("ל/ ר״צ","deputyLead",false)}
-    ${listRow("מתגבר","fixedAug")}${slot("נהג","driver",false)}${slot("כלים","tools",true)}</div>`;
+    ${slot("מנהל","manager",false)}${slot("ר״צ","lead",true)}${slot("ל/ ר״צ","deputyLead",false)}
+    ${listRow("מתגבר","fixedAug")}${slot("מטיס","pilot",false)}${slot("נהג","driver",false)}${slot("כלים","tools",true)}</div>`;
 
   html += `<div class="rblk"><div class="rblk-h"><span>PF</span><span class="rblk-c">${(d.pf||[]).length}</span></div>
     <div class="rpool">${(d.pf||[]).map((p,i)=>
@@ -8063,7 +8121,7 @@ function renderRosterCompliance(){
   const box = document.getElementById("roster-ed-compliance");
   if(!box) return;
   const pool = (currentShed && rosterAllPersonnel && rosterAllPersonnel[currentShed.id]) || [];
-  const c = computeRosterCompliance(rosterDraft, rosterPfNames, pool);
+  const c = computeRosterCompliance(rosterDraft, rosterPfNames, pool, rosterConstraints, rosterEditSlot);
   const bad = c.rows.filter(r=>!r.ok);
   const chip = (n,cls,lbl)=>`<span class="rcmp-chip ${cls}">${cls==="g"?"🟢":cls==="r"?"🔴":"⚪"} ${lbl}: ${n}</span>`;
   let html = `<div class="rcmp-bar" onclick="toggleRosterCompliance()">
@@ -8149,7 +8207,7 @@ function openRosterPick(field){
   rosterPickCtx = {field};
   rosterPickMulti = ROSTER_MULTI_FIELDS.includes(field);
   rosterPickSel = new Set();
-  const labels = {lead:"ר״צ", deputyLead:"ל/ ר״צ", driver:"נהג", tools:"פקיד כלים",
+  const labels = {manager:"מנהל", lead:"ר״צ", deputyLead:"ל/ ר״צ", pilot:"מטיס", driver:"נהג", tools:"פקיד כלים",
     fixedAug:"מתגבר", pf:"PF", pfRest:"נחים", reserve:"מילואים", pms:"PMS", pmsRest:"PMS נחים", basic:"תורנות בסיסית"};
   document.getElementById("roster-pick-title").textContent = "משבצת: " + (labels[field]||field);
   document.getElementById("roster-pick-sub").textContent =
@@ -8744,16 +8802,19 @@ async function shareDailyDutyWA(dayName){
   const dateStr = new Date((dateIso||todayKey())+"T00:00:00").toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long"});
   const L = [`🗓️ *לוח צוות תורן — ${dateStr}*`, "━━━━━━━━━━━"];
   const line = (label, val) => { const v = Array.isArray(val) ? val.filter(Boolean) : (val?[val]:[]); if(v.length) L.push(`${label}: ${v.join(", ")}`); };
+  line("מנהל", d.manager);
   line("ר״צ", d.lead);
   line("ל/ר״צ", d.deputyLead);
   line("מתגבר", d.fixedAug);
+  line("מטיס", d.pilot);
   line("נהג", d.driver);
   line("פקיד כלים", d.tools);
   line("PF", (d.pf||[]).map(p=>p.name + (p.course?" (קורס)":"")));
   if(isWeekendDay(key)) L.push("סופ״ש — משמרת רצופה, ללא נחים");
-  else line(`נחים (${r.restWindow||ROSTER_DEFAULT_REST_WINDOW})`, d.pfRest);
-  line("מילואים", d.reserve);
+  else line(`נחים PF (${r.restWindow||ROSTER_DEFAULT_REST_WINDOW})`, d.pfRest);
   line("PMS", d.pms);
+  line("PMS נחים", d.pmsRest);
+  line("מילואים", d.reserve);
   line("תורנות בסיסית", (d.basic||[]).map(b=>`${b.name}${b.type?` (${b.type})`:""}`));
   if(r.squadronDuty) L.push(`תורן טייסת: ${rosterSquadronDutyName(r.squadronDuty)}`);
   if(L.length<=2) L.push("— אין שיבוץ ליום זה —");
