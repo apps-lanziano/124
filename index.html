@@ -856,10 +856,10 @@ nav{
 .rc.course{background:#e3f0fb;color:#1c5f96;box-shadow:inset 0 0 0 1px #b7d8f2}
 .rc.res{background:var(--gold-soft);color:#7a6420;box-shadow:inset 0 0 0 1px #f0e5c4}
 .rc small{font-weight:600;opacity:.75}
-/* תפקיד שמתחלף בסופ"ש (מנהל/מתגבר) — שני חלקי המשמרת עם תגית ה׳ / ו׳–ש׳ */
-.rc-wk{display:block;margin:1px 0}
-.rc-wk-t{display:inline-block;font-size:8px;font-weight:800;color:var(--ink-3);background:var(--bg);border-radius:4px;padding:0 4px;margin-inline-end:3px;vertical-align:middle}
-.roster-grid.fit .rc-wk-t{font-size:7px;padding:0 2px}
+/* תפקיד שמתחלף בסופ"ש (מנהל/מתגבר) — תגית זעירה בתוך הצ'יפ (ה׳ / ו׳–ש׳),
+   כך שהתא נשאר בגובה של צ'יפ רגיל ולא חורג משאר המשבצות */
+.rc-wk-t{font-size:8px;font-weight:800;opacity:.7;margin-inline-end:3px}
+.roster-grid.fit .rc-wk-t{font-size:7px;margin-inline-end:2px}
 /* חיפוש חייל בלוח: כשמסומן שם, כל התאים דוהים חוץ מהמיקומים שלו */
 .roster-grid.hl-on .rc{opacity:.28;filter:grayscale(.4)}
 .roster-grid.hl-on .rc.rc-hl{opacity:1;filter:none;background:#1c5f96;color:#fff;box-shadow:0 0 0 2px #fff,0 0 0 4px #1c5f96;position:relative;z-index:1}
@@ -2127,6 +2127,7 @@ nav{
           <h2>תקלות בינוי 🚧</h2>
           <p>ריכוז דיווחי ליקויי בינוי מכל המסגרות · מ״ע אחזקה</p>
         </div>
+        <button class="add-btn" onclick="openAddBinuiFault()">+ תקלה</button>
       </div>
       <div id="md-binui-list"></div>
     </section>
@@ -6603,6 +6604,9 @@ async function renderRosterView(){
   const box = document.getElementById("roster-view");
   if(!box) return;
   await maybeRotateWeek();     // מעבר שבוע אוטומטי (שבת בחצות) לפני הרינדור
+  // "שבוע הבא" הוא תכנון פרטי של מ״ע תורנויות עד לפרסום — שאר היוזרים
+  // רואים רק שבוע שעבר + נוכחי. אם מישהו שאינו מ״ע נמצא על "הבא" — מחזירים לנוכחי.
+  if(boardWeekSlot==="next" && !isRosterManager) boardWeekSlot = "current";
   // הלוח מציג שבוע לפי boardWeekSlot (שעבר/נוכחי/הבא). רק "נוכחי" נשמר
   // במטמון (הוא מה שנקרא הכי הרבה); שעבר/הבא נטענים לפי דרישה.
   const r = boardWeekSlot==="current"
@@ -6630,10 +6634,11 @@ async function renderRosterView(){
   // "תורן טייסת" מוצג כשורה בתוך הלוח (מתחת ל"תורנות"), לא כבאנר נפרד;
   // בתצוגות "יום"/"רק אני" נשאר באנר קצר כי אין שם טבלה.
   // בורר שבוע — שעבר / נוכחי / הבא (אפשר גם להחליק ימינה/שמאלה על הלוח)
+  // "שבוע הבא" מוצג רק למ״ע תורנויות (תכנון פרטי עד לפרסום)
   const weekSel = `<div class="roster-weeksel">
       <div class="${boardWeekSlot==="prev"?"on":""}" onclick="setBoardWeek('prev')">שבוע שעבר</div>
       <div class="${boardWeekSlot==="current"?"on":""}" onclick="setBoardWeek('current')">נוכחי</div>
-      <div class="${boardWeekSlot==="next"?"on":""}" onclick="setBoardWeek('next')">שבוע הבא</div>
+      ${isRosterManager ? `<div class="${boardWeekSlot==="next"?"on":""}" onclick="setBoardWeek('next')">שבוע הבא</div>` : ""}
     </div>`;
   // כשמ"ע צופה ב"שבוע שעבר"/"שבוע הבא" — כפתור לקבוע אותו כ"לוח נוכחי"
   // (שחזור בטוח: מעתיק את השבוע המוצג ל-current, בלי לגעת בשאר).
@@ -6757,10 +6762,15 @@ async function restoreWeekToCurrent(slot){
   toast("הלוח הנוכחי עודכן ✓");
 }
 /* בחירת השבוע המוצג + החלקה ימינה/שמאלה על הלוח. */
-function setBoardWeek(slot){ boardWeekSlot = slot; renderRosterView(); }
+function setBoardWeek(slot){
+  if(slot==="next" && !isRosterManager) slot = "current";   // "הבא" רק למ״ע תורנויות
+  boardWeekSlot = slot; renderRosterView();
+}
 function rosterWeekShift(delta){
-  const order = ["prev","current","next"];
-  const i = Math.min(2, Math.max(0, order.indexOf(boardWeekSlot) + delta));
+  // שאר היוזרים מנווטים רק בין "שעבר" ל"נוכחי"; "הבא" זמין רק למ״ע תורנויות
+  const order = isRosterManager ? ["prev","current","next"] : ["prev","current"];
+  const cur = Math.max(0, order.indexOf(boardWeekSlot));
+  const i = Math.min(order.length-1, Math.max(0, cur + delta));
   if(order[i] !== boardWeekSlot){ boardWeekSlot = order[i]; renderRosterView(); }
 }
 let _rosterSwipeBound = false;
@@ -7010,13 +7020,14 @@ function rosterBoardHtml(r, today, mode, weekSlot){
   // תפקיד שמתחלף בסופ"ש: בעמודת "ה׳–ש׳" מציג את שני חלקי המשמרת (חמישי /
   // שישי–שבת) עם תגית קטנה. אם שני החלקים זהים — פעם אחת בלבד.
   const friDay = r.days["שישי"] || {};
+  // תפקיד שמתחלף בסופ"ש: כל חלק מוצג כצ'יפ רגיל עם תגית זעירה בתוכו (ה׳ /
+  // ו׳–ש׳) — כך גובה התא זהה לתאים אחרים ולא חורג. ערך זהה = צ'יפ אחד.
   const wkndSplit = (thuVal, friVal, isList) => {
     const norm = v => isList ? (v||[]).filter(Boolean) : (v?[v]:[]);
     const thu = norm(thuVal), fri = norm(friVal);
-    const cells = a => (isList ? chips(a) : (a[0]?one(a[0]):""));
-    if(thu.join("|")===fri.join("|")) return cells(thu);
-    const part = (lbl,a) => a.length ? `<div class="rc-wk"><span class="rc-wk-t">${lbl}</span>${cells(a)}</div>` : "";
-    return part("ה׳",thu) + part("ו׳–ש׳",fri);
+    if(thu.join("|")===fri.join("|")) return isList ? chips(thu) : (thu[0]?one(thu[0]):"");
+    const tagged = (lbl,a) => a.map(n=>`<span class="rc ${n===user?"me":""}" data-rn="${escapeHTML(n)}"><span class="rc-wk-t">${lbl}</span>${escapeHTML(nm(n))}</span>`).join("");
+    return tagged("ה׳",thu) + tagged("ו׳–ש׳",fri);
   };
 
   let html = `<table class="roster-grid ${fit?"fit":"wide"}"><thead><tr><th class="rlbl wk">${r.weekNumber?("שבוע "+r.weekNumber):"שבוע"}</th>${th}</tr></thead><tbody>`;
@@ -7775,10 +7786,9 @@ function rosterDayHtml(r, day, today){
   const wkndInline = (thuV, friV, isList) => {
     const norm = v => isList ? (v||[]).filter(Boolean) : (v?[v]:[]);
     const thu = norm(thuV), fri = norm(friV);
-    const cell = a => isList ? list(a) : (a[0]?one(a[0]):"");
-    if(thu.join("|")===fri.join("|")) return cell(thu);
-    const part = (lbl,a) => a.length ? `<span class="rc-wk"><span class="rc-wk-t">${lbl}</span>${cell(a)}</span>` : "";
-    return part("ה׳",thu) + part("ו׳–ש׳",fri);
+    if(thu.join("|")===fri.join("|")) return isList ? list(thu) : (thu[0]?one(thu[0]):"");
+    const tagged = (lbl,a) => a.map(n=>`<span class="rc ${n===user?"me":""}"><span class="rc-wk-t">${lbl}</span>${escapeHTML(n)}</span>`).join("");
+    return tagged("ה׳",thu) + tagged("ו׳–ש׳",fri);
   };
 
   let skel = rowIf("מנהל", isWk ? wkndInline(d.manager, friDay.manager, false) : one(d.manager)) +
@@ -8414,23 +8424,23 @@ async function saveRosterDraftNext(){
   toast("הטיוטה נשמרה — אפשר להמשיך לערוך ✓");
 }
 /* פרסום הלוח העתידי: מקדם את הטיוטה ללוח הפעיל (current) כך שכולם רואים
-   אותו וההתראה היומית קוראת ממנו. שומר גם עותק ב-next. */
+   אותו וההתראה היומית קוראת ממנו, ומרוקן את "שבוע הבא" עד לתכנון הבא —
+   כך שאף אחד (פרט למ״ע תורנויות בזמן תכנון) לא רואה לוח עתידי לא-מפורסם. */
 async function publishFutureRoster(){
-  if(!confirm("להפוך את הטיוטה ללוח הנוכחי הפעיל?\n\n• הטיוטה נשמרת גם תחת \"שבוע הבא\" ולא נמחקת.\n• השבוע הנוכחי הקודם עובר ל\"שבוע שעבר\".\n• מכאן ההתראה היומית תקרא מהלוח הזה.")) return;
+  if(!confirm("להפוך את הטיוטה ללוח הנוכחי הפעיל?\n\n• השבוע הנוכחי הקודם עובר ל\"שבוע שעבר\".\n• \"שבוע הבא\" יתרוקן עד לתכנון הבא.\n• מכאן ההתראה היומית תקרא מהלוח הזה.")) return;
   rosterDraft.weekKey = todayKey();
-  // בלי לדרוס ובלי לאבד: הנוכחי הקודם → "שבוע שעבר", הטיוטה → "נוכחי",
-  // והטיוטה נשמרת כמות שהיא גם תחת "שבוע הבא" (לא נמחקת).
+  // הנוכחי הקודם → "שבוע שעבר", הטיוטה → "נוכחי", ו"שבוע הבא" מתרוקן.
   const oldCurrent = await getDutyRoster("current");
   const hadCurrent = WEEK_DAYS_HE.some(d=>rosterDayCount(oldCurrent.days[d])>0);
   if(hadCurrent) await saveDutyRosterV2(oldCurrent, "prev");
-  await saveDutyRosterV2(rosterDraft, "next");               // הטיוטה נשמרת — לא נמחקת
   const ok = await saveDutyRosterV2(rosterDraft, "current"); // הופך ללוח הפעיל
   if(ok === false){ toast("⚠️ הפרסום נכשל — בדוק חיבור ונסה שוב"); return; }
+  await saveDutyRosterV2(migrateRosterToV2(null), "next");   // מרוקן את "שבוע הבא"
   rosterCache = null;
   boardWeekSlot = "current";
   document.getElementById("duty-roster-modal").classList.remove("open");
   await renderRosterView();
-  toast("הלוח פורסם וכעת פעיל ✓ — הטיוטה נשמרה");
+  toast("הלוח פורסם וכעת פעיל ✓ — \"שבוע הבא\" התרוקן");
 }
 /* תצוגה מקדימה — מציגה את הטיוטה בדיוק כמו הלוח השבועי אחרי הפרסום
    (אותו rosterBoardHtml, מסך מלא עם זום), לפני שמפרסמים. */
@@ -9649,6 +9659,8 @@ async function saveBinuiFault(){
     closeAddBinuiFault();
     toast("תקלת הבינוי דווחה 🚧");
     renderBinuiFaults();
+    // מ״ע אחזקה פותח תקלה ממסך הריכוז — מרעננים גם את הקנבן שלו
+    if(document.getElementById("scr-binui-admin")?.classList.contains("active")) renderBinuiFaultsAdmin();
     openWaPrompt("binui", {title, by:user});
   }catch(e){ toast("⚠️ שגיאה בשליחה"); console.error(e); }
   finally{ btn.textContent="שליחת דיווח"; btn.disabled=false; }
@@ -12579,12 +12591,6 @@ async function renderTrends(boxId){
         </div>`).join("")}</div>`
     : `<div class="cd-clear">✅ אין פריטים שדורשים טיפול — הכל בתוקף</div>`;
 
-  // --- פעולות מהירות ---
-  const qa = [{ic:"📢",l:"הודעה",go:"openMsgMgmt()"}];
-  if(showMorning){ qa.push({ic:"🌅",l:"מטלות בוקר",go:"go('scr-morning',document.getElementById('nav-morning'))"}); qa.push({ic:"🔒",l:"סגירת יום",go:"go('scr-closeday',null)"}); }
-  else { if(showCerts) qa.push({ic:"🎓",l:"הסמכות",go:"goCertsPage()"}); qa.push({ic:"📅",l:"תורנויות",go:"go('scr-board',null)"}); }
-  qa.push({ic:"👥",l:"צוות",go:"openTeamMgmt()"});
-  const qaHtml = qa.map(a=>`<button class="cd-q" onclick="${a.go}"><span class="cd-qi">${a.ic}</span><span>${escapeHTML(a.l)}</span></button>`).join("");
 
   box.innerHTML = `
     <div class="cd">
@@ -12608,8 +12614,6 @@ async function renderTrends(boxId){
         <div class="cd-shead"><h3>מדדים במבט אחד</h3>${bannersBtnHtml}</div>
         <div class="cd-kgrid">${kpiHtml}</div>
       </div>
-
-      <div class="cd-qbar" style="grid-template-columns:repeat(${qa.length},1fr)">${qaHtml}</div>
     </div>
   `;
   renderLiveBadge();   // מחוון ה-LIVE משקף את מצב החיבור (משותף/בעיית רשת/לא מקוון)

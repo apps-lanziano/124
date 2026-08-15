@@ -43,7 +43,7 @@ const out = await page.evaluate(async ()=>{
   const nowNext = await getDutyRoster("next");
   r.promotedToCurrent = nowCur.days["ראשון"].lead === "עתידי א";
   r.oldMovedToPrev = nowPrev.days["ראשון"].lead === "נוכחי א";
-  r.nextPreserved = nowNext.days["ראשון"].lead === "עתידי א";   // הטיוטה לא נמחקת
+  r.nextCleared = WEEK_DAYS_HE.every(d=>rosterDayCount(nowNext.days[d])===0);   // "שבוע הבא" מתרוקן אחרי פרסום
   r.backToCurrentView = boardWeekSlot==="current";
 
   return r;
@@ -56,7 +56,7 @@ record("מעבר ל\"שבוע הבא\" מציג את הטיוטה", out.nextShow
 record("החלקה חזרה לנוכחי", out.swipedBack, String(out.swipedBack));
 record("פרסום: הטיוטה הופכת ל\"נוכחי\"", out.promotedToCurrent, String(out.promotedToCurrent));
 record("פרסום: הנוכחי הקודם עבר ל\"שבוע שעבר\" (לא נדרס)", out.oldMovedToPrev, String(out.oldMovedToPrev));
-record("פרסום: הטיוטה נשמרת (לא נמחקת מ\"שבוע הבא\")", out.nextPreserved, String(out.nextPreserved));
+record("פרסום: \"שבוע הבא\" מתרוקן עד לתכנון הבא", out.nextCleared, String(out.nextCleared));
 record("אחרי פרסום חוזרים לתצוגת \"נוכחי\"", out.backToCurrentView, String(out.backToCurrentView));
 
 await closeBrowser();
