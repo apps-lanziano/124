@@ -882,6 +882,24 @@ nav{
    כך שהתא נשאר בגובה של צ'יפ רגיל ולא חורג משאר המשבצות */
 .rc-wk-t{font-size:8px;font-weight:800;opacity:.7;margin-inline-end:3px}
 .roster-grid.fit .rc-wk-t{font-size:7px;margin-inline-end:2px}
+/* ===== תצוגת כרטיסי-יום (לחיילים) ===== */
+.rcd{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;box-shadow:var(--shadow);animation:rise .4s backwards}
+.rcd.today{border-color:var(--red);box-shadow:0 0 0 2px var(--red-line),var(--shadow)}
+.rcd-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.rcd-h b{font-size:15px;font-weight:800}
+.rcd-h i{font-size:11.5px;color:var(--ink-3);font-style:normal}
+.rcd-now{background:var(--red);color:#fff;font-size:10px;font-weight:800;padding:1px 7px;border-radius:99px}
+.rcd-me{margin-inline-start:auto;font-size:11px;font-weight:800;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.rcd-me.duty{background:var(--red-soft);color:var(--red)}
+.rcd-me.rest{background:#eaf3e6;color:#3f6b32}
+.rcd-wknd{font-size:11px;color:#7a6420;background:var(--gold-soft);border-radius:8px;padding:5px 9px;margin-bottom:8px}
+.rcd-body{display:flex;flex-direction:column;gap:1px}
+.rcd-row{display:grid;grid-template-columns:62px 1fr;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--bg)}
+.rcd-row:first-child{border-top:0}
+.rcd-k{font-size:11.5px;font-weight:700;color:var(--ink-3)}
+.rcd-v{display:flex;gap:4px;flex-wrap:wrap}
+.rcd-v .rc{font-size:12px;padding:3px 9px}
+.rcd-empty{font-size:12px;color:var(--ink-3);font-style:italic;padding:6px 0}
 /* חיפוש חייל בלוח: כשמסומן שם, כל התאים דוהים חוץ מהמיקומים שלו */
 .roster-grid.hl-on .rc{opacity:.28;filter:grayscale(.4)}
 .roster-grid.hl-on .rc.rc-hl{opacity:1;filter:none;background:#1c5f96;color:#fff;box-shadow:0 0 0 2px #fff,0 0 0 4px #1c5f96;position:relative;z-index:1}
@@ -6592,7 +6610,8 @@ async function saveDutyRosterV2(roster, slot){
    שלוש תצוגות: "לוח" (נאמן לגיליון — שורות תפקיד מול עמודות ימים),
    "יום" (יום אחד בפריסה קריאה), ו"רק אני" (הימים שבהם אני משובץ).
    שם קצר בתצוגת הלוח כדי שהעמודות יישארו צרות; בתצוגת היום שם מלא. */
-let rosterView = "board";      // board | day | mine
+let rosterView = "board";      // cards | board | day | mine
+let _rosterViewInit = false;   // ברירת מחדל לפי תפקיד — חיילים מקבלים "כרטיסים"
 let boardWeekSlot = "current"; // prev | current | next — איזה שבוע מוצג בלוח
 let rosterDaySel = null;       // היום שנבחר בתצוגת "יום"
 let rosterCache = null;
@@ -6626,6 +6645,9 @@ async function renderRosterView(){
   const box = document.getElementById("roster-view");
   if(!box) return;
   await maybeRotateWeek();     // מעבר שבוע אוטומטי (שבת בחצות) לפני הרינדור
+  // ברירת מחדל לפי תפקיד: חיילים מתחילים בתצוגת "כרטיסים" (קריאה בנייד),
+  // מ״ע/מפקד ב"לוח" (טבלה מלאה). המשתמש יכול להחליף בכל רגע.
+  if(!_rosterViewInit){ _rosterViewInit = true; if(!isRosterManager && userRole!=="מפקד") rosterView = "cards"; }
   // "שבוע הבא" הוא תכנון פרטי של מ״ע תורנויות עד לפרסום — שאר היוזרים
   // רואים רק שבוע שעבר + נוכחי. אם מישהו שאינו מ״ע נמצא על "הבא" — מחזירים לנוכחי.
   if(boardWeekSlot==="next" && !isRosterManager) boardWeekSlot = "current";
@@ -6668,6 +6690,7 @@ async function renderRosterView(){
     ? `<button class="m-btn ghost" style="width:100%;margin-bottom:10px;border:1.5px solid var(--red-line);color:var(--red-deep)"
          onclick="restoreWeekToCurrent('${boardWeekSlot}')">↩️ קבע את הלוח הזה כ״לוח נוכחי״</button>` : "";
   const head = mgrBanners + weekSel + restoreBar + `<div class="roster-segs">
+      <div class="${rosterView==="cards"?"on":""}" onclick="setRosterView('cards')">כרטיסים</div>
       <div class="${rosterView==="board"?"on":""}" onclick="setRosterView('board')">לוח</div>
       <div class="${rosterView==="day"?"on":""}" onclick="setRosterView('day')">יום</div>
       <div class="${rosterView==="mine"?"on":""}" onclick="setRosterView('mine')">רק אני</div>
@@ -6698,7 +6721,8 @@ async function renderRosterView(){
          <div class="roster-search-note" id="roster-search-note"></div>
        </div>` : "";
   box.innerHTML = head + searchBar +
-    (rosterView==="board" ? rosterBoardHtml(r, todayForBoard, undefined, boardWeekSlot)
+    (rosterView==="cards" ? rosterCardsHtml(r, todayForBoard)
+     : rosterView==="board" ? rosterBoardHtml(r, todayForBoard, undefined, boardWeekSlot)
      : rosterView==="day" ? rosterDayHtml(r, rosterDaySel, todayForBoard)
      : rosterMineHtml(r, todayForBoard)) + dailyShare;
   initRosterSwipe();
@@ -7916,6 +7940,55 @@ function rosterMineHtml(r, today){
   if(!rows.length) return `<div class="empty-state"><div class="ic">✓</div>
     <h3>אינך משובץ השבוע</h3><p>אין לך תורנות בלוח הנוכחי</p></div>`;
   return `<div class="rmine-wrap">${rows.join("")}</div>`;
+}
+/* תצוגת "כרטיסים" — כרטיס גדול וקריא לכל יום בשבוע, מתאים לחיילים בנייד.
+   השם שלי מודגש, היום הנוכחי בולט, והסופ"ש מציג את הפיצול של מנהל/מתגבר. */
+function rosterCardsHtml(r, today){
+  const days = [...ROSTER_ROTATING_DAYS, "חמישי"];
+  const dateLbl = d => { const ds=rosterDayLockDates(d, boardWeekSlot); return d==="חמישי"?`${fmtHeShort(ds[0])}–${fmtHeShort(ds[2])}`:fmtHeShort(ds[0]); };
+  const chip = (n, cls) => n ? `<span class="rc ${n===user?"me":(cls||"duty")}">${escapeHTML(n)}</span>` : "";
+  const chips = (arr, cls) => (arr||[]).map(n=>chip(n, cls)).join("");
+  const fri = r.days["שישי"] || {};
+  const wkndPair = (thuV, friV, isList) => {
+    const norm = v => isList ? (v||[]).filter(Boolean) : (v?[v]:[]);
+    const thu = norm(thuV), f = norm(friV);
+    if(thu.join("|")===f.join("|")) return chips(thu);
+    const part = (lbl,a) => a.length ? `<span class="rc-wk"><span class="rc-wk-t">${lbl}</span>${chips(a)}</span>` : "";
+    return part("ה׳",thu) + part("ו׳–ש׳",f);
+  };
+  const rowIf = (k, v) => v ? `<div class="rcd-row"><span class="rcd-k">${k}</span><span class="rcd-v">${v}</span></div>` : "";
+
+  const cards = days.map(day=>{
+    const d = r.days[day] || emptyRosterDay(isWeekendDay(day));
+    const isWk = day==="חמישי";
+    const isToday = today && rosterEditKey(today)===day;
+    const myRoles = rosterMyRoles(d, user);
+    const iRest = (d.pfRest||[]).includes(user) || (d.pmsRest||[]).includes(user);
+    const meHint = myRoles.length ? `<span class="rcd-me duty">אתה תורן · ${escapeHTML(myRoles[0])}</span>`
+      : (iRest ? `<span class="rcd-me rest">אתה נח</span>` : "");
+    let rows = "";
+    rows += rowIf("מנהל", isWk ? wkndPair(d.manager, fri.manager, false) : chip(d.manager));
+    rows += rowIf("ר״צ", chip(d.lead));
+    rows += rowIf("ל/ ר״צ", chip(d.deputyLead));
+    rows += rowIf("מתגבר", isWk ? wkndPair(d.fixedAug, fri.fixedAug, true) : chips(d.fixedAug));
+    rows += rowIf("מטיס", chip(d.pilot));
+    rows += rowIf("נהג", chip(d.driver));
+    rows += rowIf("כלים", chip(d.tools));
+    rows += rowIf("PF", (d.pf||[]).map(p=>`<span class="rc ${p.name===user?"me":pfClass(p)}">${escapeHTML(p.name)}${pfTagHtml(p)}</span>`).join(""));
+    if(!isWk) rows += rowIf("נחים", chips(d.pfRest, "rest"));
+    rows += rowIf("PMS", chips(d.pms, "pms"));
+    rows += rowIf("PMS נחים", chips(d.pmsRest, "rest"));
+    rows += rowIf("מילואים", chips(d.reserve, "res"));
+    rows += rowIf("תורנות", (d.basic||[]).map(b=>`<span class="rc ${b.name===user?"me":""}">${escapeHTML(b.name)}${b.type?` <small>${escapeHTML(b.type)}</small>`:""}</span>`).join(""));
+    if(!rows) rows = `<div class="rcd-empty">— אין שיבוץ ליום זה —</div>`;
+    return `<div class="rcd ${isToday?"today":""}">
+      <div class="rcd-h"><b>${isWk?"סופ״ש · ה׳–ש׳":escapeHTML(day)}</b><i>${dateLbl(day)}</i>${isToday?'<span class="rcd-now">היום</span>':""}${meHint}</div>
+      ${isWk?`<div class="rcd-wknd">משמרת רצופה — חמישי, שישי ושבת</div>`:""}
+      <div class="rcd-body">${rows}</div>
+    </div>`;
+  }).join("");
+  const sq = r.squadronDuty ? `<div class="roster-wkbar" style="margin-top:2px">🏠 תורן טייסת השבוע — <b>${escapeHTML(rosterSquadronDutyName(r.squadronDuty))}</b></div>` : "";
+  return cards + sq;
 }
 async function fetchAllPersonnelByShed(){
   const map = {};
