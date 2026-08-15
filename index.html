@@ -4098,7 +4098,7 @@ function personDept(p){
   return p.officerTag === "קצין" ? OFFICERS_DEPT : (p.dept || "");
 }
 /* מקצועות לחייל בניהול צוות של הסככות (לא רלוונטי ליוזר "מחלקות") — תיוג בלבד */
-const PROFESSIONS = ["טכנאי דרג א'", "פקיד כלים", "מטיס"];
+const PROFESSIONS = ["טכנאי דרג א'", "פקיד כלים", "מטיס", "נהג"];
 /* קודי בעלי-התפקיד (מנהל מערכת / קצין טכני / אחראי תקציבים / מ״ע / הדרכה) הוסרו
    מהמקור מטעמי אבטחה — כמו קודי המסגרות. הניתוב שלהם נעשה מהשרת (מסמכי authprofile)
    אחרי כניסה מוצלחת, בדיוק כמו קודי המסגרות. */
@@ -9796,8 +9796,8 @@ function openTeamMgmt(){
     if(personDept(me) === OFFICERS_DEPT) officerSel.value = "קצין";
   }
   officerSel.style.display = isDeptUnit ? "" : "none";
-  profSel.style.display = isDeptUnit ? "none" : "";
-  if(!isDeptUnit) profSel.innerHTML = '<option value="">— ללא מקצוע —</option>' + PROFESSIONS.map(p=>`<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`).join("");
+  profSel.style.display = "";   // מקצוע זמין בכל המסגרות (כולל מחלקות)
+  profSel.innerHTML = '<option value="">— ללא מקצוע —</option>' + PROFESSIONS.map(p=>`<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`).join("");
   fillMentorSelect(null);
   document.getElementById("team-modal").classList.add("open");
   tmShowForm(false);   // ברירת מחדל: מציג את הצוות, הטופס מוסתר עד לחיצה על "הוסף"
@@ -9978,7 +9978,7 @@ async function saveTeamMember(){
   const isDeptUnit = !!(currentShed && currentShed.isDept);
   const dept = isDeptUnit ? document.getElementById("tm-dept").value.trim() : "";
   const officerTag = isDeptUnit ? document.getElementById("tm-officer").value : "";
-  const profession = isDeptUnit ? "" : document.getElementById("tm-profession").value;
+  const profession = document.getElementById("tm-profession").value;   // מקצוע בכל המסגרות
   const mentor = document.getElementById("tm-mentor").value;
   const customFields = collectCustomFieldValues();
   if(name.length<2){ toast("נא להזין שם"); return; }
@@ -10012,7 +10012,7 @@ async function saveTeamMember(){
       p.name=name; p.role=role; p.bday=bday||"2000-01-01";
       if(release) p.release=release; else delete p.release;
       if(isDeptUnit){ if(dept) p.dept=dept; else delete p.dept; if(officerTag) p.officerTag=officerTag; else delete p.officerTag; }
-      else if(profession) p.profession=profession; else delete p.profession;
+      if(profession) p.profession=profession; else delete p.profession;
       if(mentor) p.mentor=mentor; else delete p.mentor;
       if(Object.keys(customFields).length) p.customFields=customFields; else delete p.customFields;
       if(reserve){ p.reserve=true; if(!p.refresh) p.refresh=todayISO(); } else { delete p.reserve; delete p.refresh; }
@@ -10026,7 +10026,7 @@ async function saveTeamMember(){
     if(release) member.release=release;
     if(reserve){ member.reserve=true; member.refresh=todayISO(); }
     if(isDeptUnit){ if(dept) member.dept=dept; if(officerTag) member.officerTag=officerTag; }
-    else if(profession) member.profession=profession;
+    if(profession) member.profession=profession;
     if(mentor) member.mentor=mentor;
     if(Object.keys(customFields).length) member.customFields=customFields;
     applyPin(member);
@@ -10506,7 +10506,8 @@ function ueSyncFields(){
   const shed = SHEDS.find(x=>x.id===document.getElementById("ue-shed").value);
   const isDeptUnit = !!(shed && shed.isDept);
   document.getElementById("ue-dept-wrap").style.display = isDeptUnit ? "" : "none";
-  document.getElementById("ue-profession").style.display = isDeptUnit ? "none" : "";
+  // מקצוע זמין בכל המסגרות (כולל מחלקות) — כדי שאפשר יהיה לתייג מטיס/נהג בכל מקום
+  document.getElementById("ue-profession").style.display = "";
 }
 
 async function saveUserEdit(){
@@ -10520,7 +10521,7 @@ async function saveUserEdit(){
   const release = document.getElementById("ue-release").value;
   const dept = isDeptUnit ? document.getElementById("ue-dept").value.trim() : "";
   const officerTag = isDeptUnit ? document.getElementById("ue-officer").value : "";
-  const profession = isDeptUnit ? "" : document.getElementById("ue-profession").value;
+  const profession = document.getElementById("ue-profession").value;   // גם במחלקות
 
   // PIN — ריק = ללא שינוי; מסומן "הסר" = מחיקה; 4 ספרות = הגדרה/איפוס
   const pinInput = (document.getElementById("ue-pin").value||"").trim();
@@ -10548,11 +10549,10 @@ async function saveUserEdit(){
     if(isDeptUnit){
       if(dept) m.dept = dept; else delete m.dept;
       if(officerTag) m.officerTag = officerTag; else delete m.officerTag;
-      delete m.profession;
     } else {
-      if(profession) m.profession = profession; else delete m.profession;
       delete m.dept; delete m.officerTag;
     }
+    if(profession) m.profession = profession; else delete m.profession;   // מקצוע בכל המסגרות
     if(!m.joined) m.joined = todayKey();
     if(pinFields){
       if(pinFields.remove){ delete m.pinHash; delete m.pinSalt; delete m.pinAlgo; delete m.pinIter; delete m.pinSetBy; delete m.pinSetAt; }
