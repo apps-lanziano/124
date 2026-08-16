@@ -182,12 +182,36 @@ git push origin main
 
 ---
 
-## Firebase / Security
+## עולמות הסייבר / Security
 
-- Firestore סגור (403) — App Check enforced
-- Authentication: Firebase Auth (לא anonymous — נדחה על ידי App Check)
-- `FIREBASE_SA_KEY` — רק ב-GitHub Secrets, לא בקוד
-- אין לפרסם artifacts עם נתוני כוח-אדם אמיתיים
+> פרטים מלאים ב-`SECURITY.md`. כאן — מודל האיום ונקודות המפתח בלבד.
+
+### מודל האימות (2 שכבות — לא שוות בערך!)
+
+1. **קוד מסגרת** — `checkCode()` → חשבון Firebase `u<code>@sq124.app`, סיסמה נגזרת: `deriveAuthPassword(code) = "sq124:" + code`. **זה שער-המידע האמיתי:** ברגע שהקוד תקין → `markSessionAuthorized()` → `authorized:true` → `loadRuntimeLists()` טוען את *כל* הנתונים — **לפני** שהוקלד PIN.
+2. **PIN אישי** — `verifyPin()` **בצד הלקוח בלבד**. נעילת-מסך, **לא** שער-מידע. לא מגן על הדאטה ברמת השרת.
+
+### Firestore rules (`firestore.rules`, גרסה 3 פעילה)
+
+- דורש claim `authorized:true` (נקבע ב-Cloud Function `markAuthorized` — מוודאת server-side ש-`sign_in_provider==="password"`, לא anonymous).
+- `list` חסום תמיד (בלי שאיבה המונית). קריאה תמיד מסמך בודד לפי מפתח.
+- **אין הפרדת מסגרות** (בכוונה — v2 מושבתת). קוד תקין *אחד* (חייל או מפקד) = גישת קריאה/כתיבה לכל הטייסת.
+
+### App Check
+
+- **אכוף על Firestore.** מאותחל בלקוח (reCAPTCHA v3) *לפני* ההתחברות → כבר נשלח גם ל-Auth.
+- ⚠️ **לא אכוף על Authentication** — הפעלתו (הגדרת קונסולה, אפס קוד) חוסמת brute-force על הקוד. מומלץ.
+
+### חולשה ידועה / TODO
+
+- קוד מסגרת = **4 ספרות מספריות** (10,000 צירופים). הבלם היחיד לניחוש = App Check. חיזוק: קוד אלפאנומרי ארוך **או** אכיפת App Check על Auth.
+- נעילת-כניסה (`sq124_failCount`/`lockUntil`) = **localStorage בלבד** → עקיפה טריוויאלית. לא בלם אמיתי.
+
+### כללי ברזל
+
+- `FIREBASE_SA_KEY` — רק ב-GitHub Secrets, לא בקוד.
+- אין להטמיע App Check **debug token** בקוד (עוקף את ההגנה מכל מקור).
+- אין לפרסם artifacts עם נתוני כוח-אדם אמיתיים.
 
 ---
 
