@@ -23,8 +23,13 @@
      קונסולה לא נשלחים (עלולים להכיל שמות), ואין דגימת ביצועים. -->
 <script>
 (function(){
-  var SENTRY_KEY = "";                       // ריק = ניטור כבוי לגמרי
-  if(!SENTRY_KEY) return;
+  // כתובת ה-Loader Script מ-Sentry (Settings → Client Keys → Loader Script).
+  // Sentry מייצר אותה עם אזור הנתונים והגרסה הנכונים — הפרויקט הזה באזור
+  // אירופה (js-de), ולכן הנתונים נשארים באירופה. ריק = ניטור כבוי לגמרי.
+  var SENTRY_LOADER = "https://js-de.sentry-cdn.com/4d5a8a140f34b44c73939fc11af9bb7d.min.js";
+  if(!SENTRY_LOADER) return;
+  if(location.protocol === "file:") return;  // בדיקות QA נטענות מ-file:// — לא לטעון ניטור ולא לזהם את הפרויקט האמיתי בשגיאות-בדיקה
+
   window.sentryOnLoad = function(){
     try{
       Sentry.init({
@@ -44,7 +49,7 @@
     }catch(e){}
   };
   var s = document.createElement("script");
-  s.src = "https://js.sentry-cdn.com/" + SENTRY_KEY + ".min.js";   // Loader Script — Sentry מגיש את גרסת ה-SDK
+  s.src = SENTRY_LOADER;
   s.crossOrigin = "anonymous";
   document.head.appendChild(s);
 })();
