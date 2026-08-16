@@ -182,12 +182,88 @@ git push origin main
 
 ---
 
-## Firebase / Security
+## ניווט המפקד (סרגל תחתון + תפריט "עוד")
 
-- Firestore סגור (403) — App Check enforced
-- Authentication: Firebase Auth (לא anonymous — נדחה על ידי App Check)
-- `FIREBASE_SA_KEY` — רק ב-GitHub Secrets, לא בקוד
-- אין לפרסם artifacts עם נתוני כוח-אדם אמיתיים
+**מסך-שער "הדרכה"** (`scr-trainhub`, `renderTrainHub`) — מאחד הסמכות + קליטת חייל חדש + חומרי הדרכה. לא מחזיק נתונים, רק מנתב + מונה מצב לכל שורה.
+
+| פריט | מפקד סככה | חייל |
+|---|---|---|
+| הדרכה (`nav-trainhub`) | לשונית ✅ | — |
+| הסמכות (`nav-certs`) | — (דרך השער) | `sheet-certs` |
+| חומרי הדרכה | דרך השער | `nav-training` |
+| קליטת חייל חדש | דרך השער | `sheet-onboarding` (אם רלוונטי) |
+| כשירות חיילים | לשונית `nav-medchecks` ✅ | `sheet-medchecks` |
+| רכבים | `more-vehicles-item` ב"עוד" | לפי `isVehiclesResp` |
+
+`hasTrainHub` = מפקד **וגם** לא מחלקות **וגם** לא מסגרת תפקידית (מ״ע אחזקה/הדרכה). במסגרות בלי שער — כל פריט נשאר במקומו המקורי, כדי לא לנתק גישה.
+
+> ⚠️ **"סגירת יום" הוסר לגמרי** (מסך, מודל, פונקציות, פריט תפריט). לא להחזיר.
+
+---
+
+## Design System
+
+> מקור האמת: בלוק ה-`<style>` ב-`index.html`. כאן — הטוקנים לשימוש עקבי בכל מסך/רכיב חדש.
+
+**עקרון:** מובייל-פירסט, RTL עברית. `#app` = `max-width:480px` ממורכז, `100dvh`, app-shell (`overflow:hidden`). **אין מצב כהה.**
+
+### צבעים (משתני `:root`, מבוססי OKLCH)
+
+| קטגוריה | טוקנים |
+|---|---|
+| רקע/משטח | `--bg` (דף), `--card` (#fff כרטיסים), `--line` (גבולות) |
+| טקסט (היררכיה) | `--ink` → `--ink-2` → `--ink-3` |
+| זהות (אדום) | `--red` / `--red-2` / `--red-deep` + `--red-soft` / `--red-line` |
+| סטטוס/אקסנט | `--gold` / `--gold-soft` (אזהרה), `--green` / `--green-soft` (הצלחה) |
+
+### טיפוגרפיה
+
+- גופן יחיד: **Assistant** (משקלים 300–900, נטען מ-Google Fonts). כותרות היסטורית Heebo/Secular One.
+- כיוון RTL, `text-align:right`, `-webkit-font-smoothing:antialiased`.
+
+### צורה ותנועה
+
+- רדיוס: `--radius` = 16px (כפתורים/אינפוט ~13px).
+- צל: `--shadow` (עדין), `--shadow-lg` (מוגבה).
+- **מוסכמת אינטראקציה:** לחיצה = `transform:scale(.96)` ב-`:active` (בכל הרכיבים).
+
+### רכיבי מפתח
+
+- `.m-btn` — `.primary` = גרדיאנט אדום + צל; `.ghost` = לבן + `--line`. `.m-input` — פוקוס → גבול `--red`. `.m-file` — dashed.
+- נוספים: `.card`, `.role-chip`, `.nav-btn`, `.today-card`, `.alert-*`, `.roster-*`.
+
+---
+
+## עולמות הסייבר / Security
+
+> פרטים מלאים ב-`SECURITY.md`. כאן — מודל האיום ונקודות המפתח בלבד.
+
+### מודל האימות (2 שכבות — לא שוות בערך!)
+
+1. **קוד מסגרת** — `checkCode()` → חשבון Firebase `u<code>@sq124.app`, סיסמה נגזרת: `deriveAuthPassword(code) = "sq124:" + code`. **זה שער-המידע האמיתי:** ברגע שהקוד תקין → `markSessionAuthorized()` → `authorized:true` → `loadRuntimeLists()` טוען את *כל* הנתונים — **לפני** שהוקלד PIN.
+2. **PIN אישי** — `verifyPin()` **בצד הלקוח בלבד**. נעילת-מסך, **לא** שער-מידע. לא מגן על הדאטה ברמת השרת.
+
+### Firestore rules (`firestore.rules`, גרסה 3 פעילה)
+
+- דורש claim `authorized:true` (נקבע ב-Cloud Function `markAuthorized` — מוודאת server-side ש-`sign_in_provider==="password"`, לא anonymous).
+- `list` חסום תמיד (בלי שאיבה המונית). קריאה תמיד מסמך בודד לפי מפתח.
+- **אין הפרדת מסגרות** (בכוונה — v2 מושבתת). קוד תקין *אחד* (חייל או מפקד) = גישת קריאה/כתיבה לכל הטייסת.
+
+### App Check
+
+- **אכוף על Firestore.** מאותחל בלקוח (reCAPTCHA v3) *לפני* ההתחברות → כבר נשלח גם ל-Auth.
+- ⚠️ **לא אכוף על Authentication** — הפעלתו (הגדרת קונסולה, אפס קוד) חוסמת brute-force על הקוד. מומלץ.
+
+### חולשה ידועה / TODO
+
+- קוד מסגרת = **4 ספרות מספריות** (10,000 צירופים). הבלם היחיד לניחוש = App Check. חיזוק: קוד אלפאנומרי ארוך **או** אכיפת App Check על Auth.
+- נעילת-כניסה (`sq124_failCount`/`lockUntil`) = **localStorage בלבד** → עקיפה טריוויאלית. לא בלם אמיתי.
+
+### כללי ברזל
+
+- `FIREBASE_SA_KEY` — רק ב-GitHub Secrets, לא בקוד.
+- אין להטמיע App Check **debug token** בקוד (עוקף את ההגנה מכל מקור).
+- אין לפרסם artifacts עם נתוני כוח-אדם אמיתיים.
 
 ---
 
