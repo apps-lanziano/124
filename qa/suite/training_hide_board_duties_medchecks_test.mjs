@@ -36,7 +36,14 @@ async function loginAsShedCommander(shedId, shedName, extra={}){
     document.getElementById("login-pin").value = "1234";
     await doLogin();
     const hidden = id => document.getElementById(id).classList.contains("hidden");
-    return { boardHidden: hidden("nav-board"), dutiesHidden: hidden("sheet-duties"), medchecksHidden: hidden("sheet-medchecks") };
+    // "כשירות חיילים" חיה בשתי נקודות כניסה לפי התפקיד: לשונית בסרגל
+    // אצל מפקד סככה, ופריט בתפריט "עוד" אצל השאר. הבדיקה כאן היא על
+    // *נגישות* — מוסתר = שתי נקודות הכניסה סגורות.
+    return {
+      boardHidden: hidden("nav-board"),
+      dutiesHidden: hidden("sheet-duties"),
+      medchecksHidden: hidden("sheet-medchecks") && hidden("nav-medchecks"),
+    };
   }, {shedId, shedName, extra});
 }
 
