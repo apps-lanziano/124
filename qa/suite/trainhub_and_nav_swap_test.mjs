@@ -46,35 +46,56 @@ const hidden = id => page.evaluate(i=>{
   record("מפקד: \"חומרי הדרכה\" ירדו מ\"עוד\" (עברו לשער)", (await hidden("sheet-training"))===true, String(await hidden("sheet-training")));
   record("מפקד: \"קליטת חייל חדש\" ירדה מ\"עוד\" (עברה לשער)", (await hidden("sheet-onboarding"))===true, String(await hidden("sheet-onboarding")));
 
-  // מסך השער עצמו — נטען ומנתב לשלושת המסכים
+  // מסך ההדרכה — פריסת מיקוד: שורת צ'יפים + רשימת טיפול
   const hub = await page.evaluate(async ()=>{
     go("scr-trainhub", null);
-    await new Promise(r=>setTimeout(r,300));
+    await new Promise(r=>setTimeout(r,400));
     const box = document.getElementById("trainhub-list");
     const html = box ? box.innerHTML : "";
     return {
       open: document.getElementById("scr-trainhub").classList.contains("active"),
-      rows: box ? box.querySelectorAll(".hub-item").length : 0,
+      chips: box ? box.querySelectorAll(".th-chip").length : 0,
       hasCerts: /scr-certs/.test(html),
       hasOnb:   /scr-onboarding/.test(html),
       hasTrain: /scr-training/.test(html),
-      hasStat:  /hub-stat/.test(html),
+      // או שיש רשימת טיפול, או שיש מצב "הכל תקין" — לעולם לא ריק
+      hasBody:  /th-card/.test(html) || /th-clear/.test(html),
     };
   });
-  record("שער הדרכה: המסך נפתח", hub.open, String(hub.open));
-  record("שער הדרכה: שלוש שורות", hub.rows===3, String(hub.rows));
-  record("שער הדרכה: מנתב להסמכות", hub.hasCerts, String(hub.hasCerts));
-  record("שער הדרכה: מנתב לקליטת חייל חדש", hub.hasOnb, String(hub.hasOnb));
-  record("שער הדרכה: מנתב לחומרי הדרכה", hub.hasTrain, String(hub.hasTrain));
-  record("שער הדרכה: מונה מצב בכל שורה", hub.hasStat, String(hub.hasStat));
+  record("מסך הדרכה: המסך נפתח", hub.open, String(hub.open));
+  record("מסך הדרכה: שלושה צ'יפים בראש", hub.chips===3, String(hub.chips));
+  record("מסך הדרכה: מנתב להסמכות", hub.hasCerts, String(hub.hasCerts));
+  record("מסך הדרכה: מנתב לקליטת חייל חדש", hub.hasOnb, String(hub.hasOnb));
+  record("מסך הדרכה: מנתב לחומרי הדרכה", hub.hasTrain, String(hub.hasTrain));
+  record("מסך הדרכה: תוכן מתחת לצ'יפים (רשימה או \"הכל תקין\")", hub.hasBody, String(hub.hasBody));
 
-  // ניווט בפועל מהשער למסך ההסמכות
+  // רשימת הטיפול מזהה בפועל הסמכה שפג תוקפה — לא רק מרנדרת מבנה ריק
+  const live = await page.evaluate(async ()=>{
+    const certs = await getCerts();
+    certs.push({id:"th_exp", person:PERSONNEL.find(p=>p.role==="חייל").name,
+                name:"🟢 סף", expiry:"2020-01-01"});          // פג מזמן
+    await sSet("certs_list", certs);
+    await renderTrainHub();
+    const html = document.getElementById("trainhub-list").innerHTML;
+    return {
+      flagged: /פג לפני/.test(html),
+      urgent:  /th-pill r/.test(html),
+      chipHot: /th-chip hot/.test(html),
+      sectioned: /דורש טיפול/.test(html),
+    };
+  });
+  record("רשימת טיפול: הסמכה שפגה מזוהה", live.flagged, String(live.flagged));
+  record("רשימת טיפול: מסומנת כדחופה (אדום)", live.urgent, String(live.urgent));
+  record("רשימת טיפול: הצ'יפ מסומן כבוער", live.chipHot, String(live.chipHot));
+  record("רשימת טיפול: כותרת \"דורש טיפול\" מוצגת", live.sectioned, String(live.sectioned));
+
+  // ניווט בפועל מהמסך למסך ההסמכות
   const nav = await page.evaluate(async ()=>{
     go("scr-certs", null);
     await new Promise(r=>setTimeout(r,250));
     return document.getElementById("scr-certs").classList.contains("active");
   });
-  record("שער הדרכה: ניווט להסמכות עובד", nav, String(nav));
+  record("מסך הדרכה: ניווט להסמכות עובד", nav, String(nav));
 }
 
 // ===== 3. חייל — לא מושפע =====

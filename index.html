@@ -681,17 +681,47 @@ nav{
 .fault-detail-desc{background:#fdfafa;border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;line-height:1.7;color:var(--ink-2);margin:10px 0}
 /* ===== ADMIN GRID (commander) ===== */
 .admin-grid{display:grid;gap:10px}
-/* שער "הדרכה" — שורות ניווט למסכי עולם ההדרכה, עם מונה מצב לכל שורה */
-.hub-item{display:flex;align-items:center;gap:13px;width:100%;margin-bottom:10px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 13px;box-shadow:var(--shadow);cursor:pointer;transition:transform .2s;font-family:'Assistant';text-align:right;color:inherit}
-.hub-item:active{transform:scale(.98)}
-.hub-item .hub-ic{width:44px;height:44px;border-radius:12px;background:var(--red-soft);display:grid;place-items:center;font-size:21px;flex-shrink:0}
-.hub-item .hub-tx{flex:1;min-width:0}
-.hub-item .hub-tx b{font-size:15px;font-weight:700;display:block;color:var(--ink)}
-.hub-item .hub-tx span{font-size:12px;color:var(--ink-3);font-weight:300;display:block}
-.hub-item .hub-stat{font-size:11.5px;font-weight:800;border-radius:9px;padding:5px 9px;flex-shrink:0;white-space:nowrap}
-.hub-item .hs-r{background:var(--red-soft);color:var(--red-deep);border:1px solid var(--red-line)}
-.hub-item .hs-y{background:var(--gold-soft);color:#8a6800;border:1px solid var(--cd-gold-line,#f0dfa8)}
-.hub-item .hs-g{background:var(--green-soft);color:#04703f;border:1px solid var(--cd-green-line,#bfe9cf)}
+/* ===== מסך "הדרכה" — פריסת מיקוד =====
+   שלוש הדלתות (הסמכות / קליטה / חומרים) מכווצות לשורת צ'יפים בראש,
+   וכל שאר המסך הוא רשימת הטיפול החיה: מי פג תוקף, מי מתקרב לדדליין
+   PF, ומי תקוע בקליטה — ממוין לפי דחיפות. */
+.th-chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.th-chip{display:grid;gap:3px;justify-items:center;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:11px 5px;box-shadow:var(--shadow);cursor:pointer;transition:transform .2s;
+  font-family:'Assistant';text-align:center;color:inherit}
+.th-chip:active{transform:scale(.96)}
+.th-chip .ic{font-size:20px;line-height:1}
+.th-chip .lb{font-size:11px;font-weight:800;color:var(--ink);line-height:1.2}
+.th-chip .n{font-size:10px;font-weight:700;color:var(--ink-3)}
+.th-chip.hot{border-color:var(--red-line);background:var(--red-soft)}
+.th-chip.hot .n{color:var(--red-deep)}
+
+.th-sec{font-size:10.5px;font-weight:800;letter-spacing:.09em;color:var(--ink-3);
+  display:flex;align-items:center;gap:8px;margin:0 2px 8px}
+.th-sec::after{content:"";flex:1;height:1px;background:var(--line)}
+
+.th-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
+.th-row{display:flex;align-items:center;gap:11px;padding:11px 13px;width:100%;
+  border-bottom:1px solid var(--line);cursor:pointer;transition:background .2s;
+  font-family:'Assistant';text-align:right;background:none;color:inherit}
+.th-row:last-child{border-bottom:none}
+.th-row:active{background:var(--red-soft)}
+.th-av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;
+  font-size:11.5px;font-weight:800;letter-spacing:-.02em}
+.th-av.r{background:var(--red-soft);color:var(--red-deep);border:1.5px solid var(--red-line)}
+.th-av.y{background:var(--gold-soft);color:#8a6800;border:1.5px solid var(--cd-gold-line,#f0dfa8)}
+.th-tx{flex:1;min-width:0}
+.th-tx b{font-size:13px;font-weight:800;display:block;line-height:1.3;color:var(--ink)}
+.th-tx span{font-size:11px;color:var(--ink-2);display:block;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.th-pill{font-size:10.5px;font-weight:800;border-radius:8px;padding:3px 8px;flex-shrink:0;white-space:nowrap}
+.th-pill.r{background:var(--red-soft);color:var(--red-deep);border:1px solid var(--red-line)}
+.th-pill.y{background:var(--gold-soft);color:#8a6800;border:1px solid var(--cd-gold-line,#f0dfa8)}
+.th-clear{text-align:center;padding:22px 14px;color:#04703f;font-size:13px;font-weight:700;
+  background:var(--green-soft);border:1px solid var(--cd-green-line,#bfe9cf);
+  border-radius:var(--radius);margin-bottom:16px}
+.th-clear small{display:block;font-weight:400;color:var(--ink-2);font-size:11.5px;margin-top:3px}
 .admin-card{display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);cursor:pointer;transition:transform .2s;font-family:'Assistant';text-align:right}
 .admin-card:active{transform:scale(.98)}
 .admin-card .a-ic{font-size:24px;margin-bottom:6px}
@@ -5493,53 +5523,120 @@ async function recordDailyHistory(){
 }
 
 /* ============ הדרכה (TRAINING HUB) ============
-   מסך-שער לעולם ההדרכה. אינו מחזיק נתונים משלו — מנתב לשלושת המסכים
-   הקיימים (הסמכות / קליטת חייל חדש / חומרי הדרכה), ומציג לכל אחד מונה
-   מצב חי, כדי שהמפקד ידע לאן להיכנס עוד לפני שנכנס.
-   כל מונה עטוף ב-try בנפרד: מסגרת שחסר בה אחד המקורות עדיין מקבלת
-   מסך תקין עם שאר השורות, במקום שער ריק. */
+   מסך "הדרכה" בפריסת מיקוד. שלוש הדלתות (הסמכות / קליטת חייל חדש /
+   חומרי הדרכה) מכווצות לשורת צ'יפים בראש, וכל שאר המסך הוא רשימת
+   הטיפול החיה. אינו מחזיק נתונים משלו — הכל נגזר ממה שכבר מחושב:
+   getCerts() (תוקף), pfStatus() (דדליין 45 יום), stage7Status()
+   (מסלול שנה לשלב 10), ו-isOnboarding()+onboardingDone (קליטה).
+   כל מקור עטוף ב-try בנפרד: מסגרת שחסר בה אחד מהם עדיין מקבלת מסך
+   תקין עם שאר השורות, במקום מסך ריק. */
+function thInitials(name){
+  const parts = String(name||"").trim().split(/\s+/).filter(Boolean);
+  const a = (parts[0]||"")[0] || "?";
+  const b = (parts[1]||"")[0] || "";
+  return b ? a+"״"+b : a;
+}
 async function renderTrainHub(){
   const box = document.getElementById("trainhub-list");
   if(!box) return;
 
   const today = new Date(); today.setHours(0,0,0,0);
+  const dayDiff = iso => Math.round((new Date(iso+"T00:00:00")-today)/86400000);
 
-  // הסמכות — אותה חלוקה כמו בדשבורד: פג תוקף / פג בתוך 30 יום
+  let certs = [];
+  try{ certs = await getCerts(); }catch(e){ console.error("trainhub certs", e); }
+
+  /* now = דורש טיפול היום · soon = בקרוב (30 יום).
+     sev ממיין בתוך כל קבוצה: קטן יותר = דחוף יותר. */
+  const now = [], soon = [];
   let certExpired = 0, certSoon = 0;
+
+  // --- הסמכות שפג/עומד לפוג תוקפן ---
   try{
-    (await getCerts()).forEach(c=>{
-      if(!c.expiry) return;
-      const d = Math.round((new Date(c.expiry+"T00:00:00")-today)/86400000);
-      if(d<0) certExpired++;
-      else if(d<=30) certSoon++;
+    certs.forEach(c=>{
+      if(!c.expiry || !c.person) return;
+      const d = dayDiff(c.expiry);
+      const nm = (typeof certCleanName==="function") ? certCleanName(c.name) : c.name;
+      if(d < 0){
+        certExpired++;
+        now.push({who:c.person, sub:`${nm} — פג לפני ${Math.abs(d)} ימים`,
+                  pill:"פג תוקף", cls:"r", sev:d, go:"go('scr-certs',null)"});
+      } else if(d <= 30){
+        certSoon++;
+        soon.push({who:c.person, sub:`${nm} — פג בעוד ${d} ימים`,
+                   pill:d+" ימים", cls:"y", sev:d, go:"go('scr-certs',null)"});
+      }
     });
-  }catch(e){ console.error("trainhub certs", e); }
+  }catch(e){ console.error("trainhub cert scan", e); }
 
-  // קליטה — כמה חיילים נמצאים כרגע בתהליך קליטה
+  // --- דדליין PF ומסלול שלב 7 → שלב 10 ---
   let onbCount = 0;
-  try{ onbCount = PERSONNEL.filter(p=>isOnboarding(p)).length; }catch(e){ console.error("trainhub onboarding", e); }
+  try{
+    const people = PERSONNEL.filter(p=>p && p.role==="חייל" && !p.reserve);
+    for(const p of people){
+      const pf = (typeof pfStatus==="function") ? pfStatus(p, certs) : null;
+      if(pf && pf.cls==="r")      now.push({who:p.name, sub:"הסמכת PF — "+pf.tag, pill:"PF", cls:"r", sev:-999, go:"go('scr-onboarding',null)"});
+      else if(pf && pf.cls==="y") now.push({who:p.name, sub:"הסמכת PF — "+pf.tag, pill:"PF", cls:"y", sev:10, go:"go('scr-onboarding',null)"});
 
-  // חומרי הדרכה — כמה פריטים זמינים למסגרת
+      const st7 = (typeof stage7Status==="function") ? stage7Status(p, certs) : null;
+      if(st7 && st7.cls==="y") soon.push({who:p.name, sub:"🟣 "+st7.tag, pill:"שלב 10", cls:"y", sev:40, go:"go('scr-certs',null)"});
+    }
+
+    // --- קליטה שלא הושלמה ---
+    const inOnb = people.filter(p=>isOnboarding(p));
+    onbCount = inOnb.length;
+    if(inOnb.length){
+      const tpl = await getOnboardingTemplate();
+      const items = (tpl && Array.isArray(tpl.items)) ? tpl.items : [];
+      inOnb.forEach(p=>{
+        const done = Array.isArray(p.onboardingDone) ? p.onboardingDone : [];
+        const open = items.filter(t=>!done.includes(t)).length;
+        if(!open) return;
+        const d = daysSinceJoined(p);
+        now.push({who:p.name, sub:`קליטה — ${open} מטלות פתוחות${d!=null?", יום "+d:""}`,
+                  pill:open+" פתוחות", cls:"y", sev:20, go:"go('scr-onboarding',null)"});
+      });
+    }
+  }catch(e){ console.error("trainhub people scan", e); }
+
   let trainCount = 0;
   try{ trainCount = ((await sGet("training_list")) || []).length; }catch(e){ console.error("trainhub training", e); }
 
-  const items = [
-    { ic:"🎓", title:"הסמכות", sub:"תוקף וחידוש לכל חייל", go:"go('scr-certs',null)",
-      stat: certExpired ? {t:certExpired+" פגו תוקף", c:"r"}
-          : certSoon    ? {t:certSoon+" מתקרבים", c:"y"}
-          :               {t:"הכל בתוקף", c:"g"} },
-    { ic:"👤", title:"קליטת חייל חדש", sub:"חונך, מטלות והסמכות, קאונטר PF", go:"go('scr-onboarding',null)",
-      stat: onbCount ? {t:onbCount+" בקליטה", c:"y"} : {t:"אין קליטות", c:"g"} },
-    { ic:"📚", title:"חומרי הדרכה", sub:"מהמנהל הטייסתי", go:"go('scr-training',null)",
-      stat: {t:trainCount+" פריטים", c:"g"} },
-  ];
+  now.sort((a,b)=>a.sev-b.sev);
+  soon.sort((a,b)=>a.sev-b.sev);
 
-  box.innerHTML = items.map(i=>`
-    <button class="hub-item" onclick="${i.go}">
-      <span class="hub-ic">${i.ic}</span>
-      <span class="hub-tx"><b>${escapeHTML(i.title)}</b><span>${escapeHTML(i.sub)}</span></span>
-      <span class="hub-stat hs-${i.stat.c}">${escapeHTML(i.stat.t)}</span>
-    </button>`).join("");
+  const rowHtml = r => `
+    <button class="th-row" onclick="${r.go}">
+      <span class="th-av ${r.cls}">${escapeHTML(thInitials(r.who))}</span>
+      <span class="th-tx"><b>${escapeHTML(r.who)}</b><span>${escapeHTML(r.sub)}</span></span>
+      <span class="th-pill ${r.cls}">${escapeHTML(r.pill)}</span>
+    </button>`;
+
+  const chips = `
+    <div class="th-chips">
+      <button class="th-chip${certExpired?" hot":""}" onclick="go('scr-certs',null)">
+        <span class="ic">🎓</span><span class="lb">הסמכות</span>
+        <span class="n">${certExpired ? certExpired+" פגו" : certSoon ? certSoon+" מתקרבים" : "בתוקף"}</span>
+      </button>
+      <button class="th-chip" onclick="go('scr-onboarding',null)">
+        <span class="ic">👤</span><span class="lb">קליטה</span>
+        <span class="n">${onbCount ? onbCount+" פעילות" : "אין"}</span>
+      </button>
+      <button class="th-chip" onclick="go('scr-training',null)">
+        <span class="ic">📚</span><span class="lb">חומרים</span>
+        <span class="n">${trainCount}</span>
+      </button>
+    </div>`;
+
+  const nowHtml = now.length
+    ? `<div class="th-sec">דורש טיפול · ${now.length}</div><div class="th-card">${now.map(rowHtml).join("")}</div>`
+    : `<div class="th-clear">✅ אין פריטים שדורשים טיפול<small>כל ההסמכות בתוקף והקליטות מעודכנות</small></div>`;
+
+  const soonHtml = soon.length
+    ? `<div class="th-sec">בקרוב · 30 יום</div><div class="th-card">${soon.map(rowHtml).join("")}</div>`
+    : "";
+
+  box.innerHTML = chips + nowHtml + soonHtml;
 }
 
 /* ============ נע"תים (NAATIM — areas of responsibility) ============ */
