@@ -25,16 +25,17 @@ const out = await page.evaluate(async ()=>{
   r.weekendSplit = html.includes("מנהל חמישי") && html.includes("מנהל שישבת") && html.includes("ו׳–ש׳");
   r.hasRoles = html.includes("ר״צ") && html.includes("PF");
 
-  // ברירת מחדל לפי תפקיד: חייל → כרטיסים
+  // ברירת מחדל לפי תפקיד: חייל → "לוח יומי" (view=day), שמציג כרטיסים
   _rosterViewInit = false; rosterView = "board";
   user = me; userRole = "חייל"; isRosterManager = false;
   await saveDutyRosterV2(roster, "current"); rosterCache = null;
   boardWeekSlot = "current";
   await renderRosterView();
-  r.soldierDefaultCards = rosterView === "cards";
+  r.soldierDefaultDay = rosterView === "day";
   r.cardsRendered = document.getElementById("roster-view").innerHTML.includes("rcd-h");
-  // לשונית "כרטיסים" קיימת בבורר
-  r.hasCardsTab = document.getElementById("roster-view").innerHTML.includes(">כרטיסים<");
+  const segs = document.getElementById("roster-view").innerHTML;
+  r.tabsCorrect = segs.includes(">לוח שבועי<") && segs.includes(">לוח יומי<") && segs.includes(">רק אני<");
+  r.noCardsTab = !segs.includes(">כרטיסים<");
 
   return r;
 });
@@ -45,9 +46,10 @@ record("השם שלי מודגש בכרטיס", out.myNameHighlighted, String(ou
 record("תגית 'היום' על היום הנוכחי", out.todayBadge, String(out.todayBadge));
 record("פיצול סופ״ש (מנהל ה׳ מול ו׳–ש׳)", out.weekendSplit, String(out.weekendSplit));
 record("תפקידים מוצגים בכרטיס", out.hasRoles, String(out.hasRoles));
-record("חייל: ברירת מחדל = כרטיסים", out.soldierDefaultCards, String(out.soldierDefaultCards));
-record("תצוגת הכרטיסים מרונדרת בפועל", out.cardsRendered, String(out.cardsRendered));
-record("לשונית 'כרטיסים' בבורר התצוגות", out.hasCardsTab, String(out.hasCardsTab));
+record("חייל: ברירת מחדל = 'לוח יומי'", out.soldierDefaultDay, String(out.soldierDefaultDay));
+record("'לוח יומי' מרנדר כרטיסים בפועל", out.cardsRendered, String(out.cardsRendered));
+record("לשוניות: לוח שבועי / לוח יומי / רק אני", out.tabsCorrect, String(out.tabsCorrect));
+record("לשונית 'כרטיסים' הוסרה", out.noCardsTab, String(out.noCardsTab));
 
 await closeBrowser();
 
