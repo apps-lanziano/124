@@ -10,6 +10,45 @@
 <meta name="apple-mobile-web-app-title" content="טייסת 124">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/emblem-124.png">
+<!-- ============================================================
+     Sentry — ניטור שגיאות בצד המשתמש (מסך לבן/קריסה בשטח)
+     ------------------------------------------------------------
+     כבוי לחלוטין עד שמזינים מפתח ב-SENTRY_KEY: כשהערך ריק שום דבר
+     לא נטען ואין שום בקשת רשת — אפס השפעה על 150 המשתמשים. הפעלה:
+       1) פותחים פרויקט חינמי ב-sentry.io (פלטפורמה: Browser JavaScript)
+       2) Settings → Client Keys (DSN) → מעתיקים את ה-DSN, שנראה כך:
+          https://<KEY>@oXXXX.ingest.sentry.io/YYYYY
+       3) מדביקים את החלק <KEY> בלבד (לפני ה-@) במשתנה SENTRY_KEY למטה.
+     פרטיות (קריטי — נתוני כוח-אדם): sendDefaultPii=false, פירורי
+     קונסולה לא נשלחים (עלולים להכיל שמות), ואין דגימת ביצועים. -->
+<script>
+(function(){
+  var SENTRY_KEY = "";                       // ריק = ניטור כבוי לגמרי
+  if(!SENTRY_KEY) return;
+  window.sentryOnLoad = function(){
+    try{
+      Sentry.init({
+        sendDefaultPii: false,               // לא לשלוח כתובות/עוגיות/מזהי משתמש
+        tracesSampleRate: 0,                  // רק שגיאות, בלי מדידת ביצועים
+        beforeBreadcrumb: function(bc){       // אל תשמור תוכן קונסולה — עלול להכיל שמות חיילים
+          return (bc && bc.category === "console") ? null : bc;
+        },
+        beforeSend: function(event){          // ניקוי אחרון של מזהים אישיים
+          try{
+            if(event.request){ delete event.request.cookies; delete event.request.headers; }
+            if(event.user){ delete event.user.email; delete event.user.ip_address; }
+          }catch(e){}
+          return event;
+        }
+      });
+    }catch(e){}
+  };
+  var s = document.createElement("script");
+  s.src = "https://js.sentry-cdn.com/" + SENTRY_KEY + ".min.js";   // Loader Script — Sentry מגיש את גרסת ה-SDK
+  s.crossOrigin = "anonymous";
+  document.head.appendChild(s);
+})();
+</script>
 <!-- preconnect לשרתי הגופנים ול-CDN של Firebase — פותח את החיבור מראש כדי לקצר את זמן הטעינה הראשונה -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
