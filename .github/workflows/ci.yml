@@ -1,0 +1,51 @@
+name: בדיקות (CI)
+
+# רץ את כל חבילת הבדיקות (qa/suite/*.mjs) בכל דחיפה ובכל Pull Request —
+# כדי שאף שינוי לא יגיע ל-main בלי שכל הבדיקות ירוקות. הבדיקות רצות עם
+# אחסון מדומה בזיכרון וחסימת רשת מלאה (ר' qa/lib/harness.mjs), ולכן אינן
+# דורשות Firebase או שום Secret — הן בטוחות לריצה על התשתית של GitHub.
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+  workflow_dispatch:
+
+# מבטל ריצה קודמת על אותו ענף אם נדחף commit חדש — חוסך זמן runner.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: התקנת Playwright ודפדפן
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: הרצת חבילת הבדיקות
+        run: |
+          fail=0
+          pass=0
+          for f in qa/suite/*.mjs; do
+            if node "$f" > /tmp/qa_test.log 2>&1; then
+              echo "✅ $f"
+              pass=$((pass+1))
+            else
+              echo "::error::בדיקה נכשלה: $f"
+              # שלוש שורות ה-❌ הראשונות, או זנב הפלט אם אין
+              grep '❌' /tmp/qa_test.log | head -3 || tail -20 /tmp/qa_test.log
+              fail=$((fail+1))
+            fi
+          done
+          echo "---------------------------------------------"
+          echo "עברו: $pass · נכשלו: $fail"
+          exit $fail
