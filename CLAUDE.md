@@ -182,6 +182,39 @@ git push origin main
 
 ---
 
+## Design System
+
+> מקור האמת: בלוק ה-`<style>` ב-`index.html`. כאן — הטוקנים לשימוש עקבי בכל מסך/רכיב חדש.
+
+**עקרון:** מובייל-פירסט, RTL עברית. `#app` = `max-width:480px` ממורכז, `100dvh`, app-shell (`overflow:hidden`). **אין מצב כהה.**
+
+### צבעים (משתני `:root`, מבוססי OKLCH)
+
+| קטגוריה | טוקנים |
+|---|---|
+| רקע/משטח | `--bg` (דף), `--card` (#fff כרטיסים), `--line` (גבולות) |
+| טקסט (היררכיה) | `--ink` → `--ink-2` → `--ink-3` |
+| זהות (אדום) | `--red` / `--red-2` / `--red-deep` + `--red-soft` / `--red-line` |
+| סטטוס/אקסנט | `--gold` / `--gold-soft` (אזהרה), `--green` / `--green-soft` (הצלחה) |
+
+### טיפוגרפיה
+
+- גופן יחיד: **Assistant** (משקלים 300–900, נטען מ-Google Fonts). כותרות היסטורית Heebo/Secular One.
+- כיוון RTL, `text-align:right`, `-webkit-font-smoothing:antialiased`.
+
+### צורה ותנועה
+
+- רדיוס: `--radius` = 16px (כפתורים/אינפוט ~13px).
+- צל: `--shadow` (עדין), `--shadow-lg` (מוגבה).
+- **מוסכמת אינטראקציה:** לחיצה = `transform:scale(.96)` ב-`:active` (בכל הרכיבים).
+
+### רכיבי מפתח
+
+- `.m-btn` — `.primary` = גרדיאנט אדום + צל; `.ghost` = לבן + `--line`. `.m-input` — פוקוס → גבול `--red`. `.m-file` — dashed.
+- נוספים: `.card`, `.role-chip`, `.nav-btn`, `.today-card`, `.alert-*`, `.roster-*`.
+
+---
+
 ## עולמות הסייבר / Security
 
 > פרטים מלאים ב-`SECURITY.md`. כאן — מודל האיום ונקודות המפתח בלבד.
