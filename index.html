@@ -681,6 +681,17 @@ nav{
 .fault-detail-desc{background:#fdfafa;border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;line-height:1.7;color:var(--ink-2);margin:10px 0}
 /* ===== ADMIN GRID (commander) ===== */
 .admin-grid{display:grid;gap:10px}
+/* שער "הדרכה" — שורות ניווט למסכי עולם ההדרכה, עם מונה מצב לכל שורה */
+.hub-item{display:flex;align-items:center;gap:13px;width:100%;margin-bottom:10px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 13px;box-shadow:var(--shadow);cursor:pointer;transition:transform .2s;font-family:'Assistant';text-align:right;color:inherit}
+.hub-item:active{transform:scale(.98)}
+.hub-item .hub-ic{width:44px;height:44px;border-radius:12px;background:var(--red-soft);display:grid;place-items:center;font-size:21px;flex-shrink:0}
+.hub-item .hub-tx{flex:1;min-width:0}
+.hub-item .hub-tx b{font-size:15px;font-weight:700;display:block;color:var(--ink)}
+.hub-item .hub-tx span{font-size:12px;color:var(--ink-3);font-weight:300;display:block}
+.hub-item .hub-stat{font-size:11.5px;font-weight:800;border-radius:9px;padding:5px 9px;flex-shrink:0;white-space:nowrap}
+.hub-item .hs-r{background:var(--red-soft);color:var(--red-deep);border:1px solid var(--red-line)}
+.hub-item .hs-y{background:var(--gold-soft);color:#8a6800;border:1px solid var(--cd-gold-line,#f0dfa8)}
+.hub-item .hs-g{background:var(--green-soft);color:#04703f;border:1px solid var(--cd-green-line,#bfe9cf)}
 .admin-card{display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);cursor:pointer;transition:transform .2s;font-family:'Assistant';text-align:right}
 .admin-card:active{transform:scale(.98)}
 .admin-card .a-ic{font-size:24px;margin-bottom:6px}
@@ -1696,23 +1707,18 @@ nav{
     </section>
 
     <!-- ===== DAY CLOSE (feature 5) ===== -->
-    <section class="screen" id="scr-closeday">
+    <!-- ===== הדרכה (TRAINING HUB) =====
+         מסך-שער שמאחד את עולם ההדרכה: הסמכות, קליטת חייל חדש וחומרי
+         הדרכה. אינו מחזיק נתונים משלו — רק מנתב לשלושת המסכים הקיימים,
+         עם מונה מצב לכל אחד כדי שהמפקד ידע לאן להיכנס לפני שנכנס. -->
+    <section class="screen" id="scr-trainhub">
       <div class="sec-head">
         <div>
-          <h2>סגירת יום 🌙</h2>
-          <p>צ'קליסט סוף משמרת. כל חייל יכול לסמן ביצוע.</p>
+          <h2>הדרכה 🎓</h2>
+          <p>הסמכות, קליטת חיילים חדשים וחומרי הדרכה — במקום אחד.</p>
         </div>
-        <button class="add-btn hidden" id="close-mgmt-btn" onclick="openCloseMgmt()">⚙️ ניהול משימות</button>
       </div>
-      <div class="all-done-banner" id="close-all-done" style="background:linear-gradient(135deg,#1e2a4a,#2d4373)">
-        ✅ כל משימות סגירת היום הושלמו!
-        <small>המתחם מאובטח ומוכן. לילה טוב 🌙</small>
-      </div>
-      <div class="progress-wrap">
-        <div class="progress-top"><b>התקדמות סגירה</b><span id="close-progress-label">0 מתוך 0</span></div>
-        <div class="progress-bar"><div class="progress-fill" id="close-progress-fill"></div></div>
-      </div>
-      <div id="close-list"></div>
+      <div id="trainhub-list"></div>
     </section>
 
     <!-- ===== נע"תים (NAATIM) ===== -->
@@ -2255,7 +2261,9 @@ nav{
     <button class="nav-btn active" id="nav-safety" data-scr="scr-safety" onclick="go('scr-safety',this)"><span class="ic">📄</span><span>קרא וחתום</span><span class="nav-badge hidden" id="badge-safety">0</span></button>
     <button class="nav-btn" id="nav-morning" data-scr="scr-morning" onclick="go('scr-morning',this)"><span class="ic">✅</span><span>מטלות</span><span class="nav-badge hidden" id="badge-morning">0</span></button>
     <button class="nav-btn" id="nav-board" data-scr="scr-board" onclick="go('scr-board',this)"><span class="ic">📅</span><span>תורנויות</span></button>
-    <button class="nav-btn" id="nav-certs" data-scr="scr-certs" onclick="go('scr-certs',this)"><span class="ic">🎓</span><span>הסמכות</span></button>
+    <button class="nav-btn hidden" id="nav-certs" data-scr="scr-certs" onclick="go('scr-certs',this)"><span class="ic">🎓</span><span>הסמכות</span></button>
+    <button class="nav-btn hidden" id="nav-trainhub" data-scr="scr-trainhub" onclick="go('scr-trainhub',this)"><span class="ic">🎓</span><span>הדרכה</span></button>
+    <button class="nav-btn hidden" id="nav-medchecks" data-scr="scr-medchecks" onclick="go('scr-medchecks',this)"><span class="ic">🪖</span><span>כשירות חיילים</span></button>
     <button class="nav-btn hidden" id="nav-training" data-scr="scr-training" onclick="go('scr-training',this)"><span class="ic">📚</span><span>חומרי הדרכה</span></button>
     <button class="nav-btn hidden" id="nav-tools" data-scr="scr-tools" onclick="go('scr-tools',this)"><span class="ic">🧰</span><span>חדר כלים</span></button>
     <button class="nav-btn hidden" id="nav-vehicles" data-scr="scr-vehicles" onclick="go('scr-vehicles',this)"><span class="ic">🚙</span><span>רכבים</span></button>
@@ -2408,12 +2416,12 @@ nav{
       <div class="sheet-top"><b>עוד</b><button class="sheet-x" onclick="document.getElementById('more-sheet').classList.remove('open')" aria-label="סגור">✕</button></div>
       <div class="sheet-item" id="sheet-naatim" onclick="closeMoreAnd('scr-naatim')"><div class="s-ic">🗂️</div><div class="s-tx"><b>נע"תים</b><span>תחומי אחריות ובדיקה שבועית</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-duties" onclick="closeMoreAnd('scr-duties')"><div class="s-ic">🔄</div><div class="s-tx"><b>תורנויות</b><span>שיבוץ שמי שבועי</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item" id="sheet-closeday" onclick="closeMoreAnd('scr-closeday')"><div class="s-ic">🌙</div><div class="s-tx"><b>סגירת יום</b><span>צ'קליסט סוף משמרת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="sheet-certs" onclick="closeMoreAnd('scr-certs')"><div class="s-ic">🎓</div><div class="s-tx"><b>הסמכות</b><span>תוקף וחידוש הסמכות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-training" onclick="closeMoreAnd('scr-training')"><div class="s-ic">📚</div><div class="s-tx"><b>חומרי הדרכה</b><span>מהמנהל הטייסתי</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-medchecks" onclick="closeMoreAnd('scr-medchecks')"><div class="s-ic">🪖</div><div class="s-tx"><b>כשירות חיילים</b><span>שמיעה ומטווח — תוקף וחידוש</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-calendar" onclick="closeMoreAnd('scr-calendar')"><div class="s-ic">📅</div><div class="s-tx"><b>לוח שנה מאוחד</b><span>הסמכות, כיול כלים, טסט רכב ותורנויות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="sheet-onboarding" onclick="closeMoreAnd('scr-onboarding')"><div class="s-ic">🎓</div><div class="s-tx"><b>קליטת חייל חדש</b><span>חונך, מטלות והסמכות, קאונטר PF</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-vehicles-item" onclick="closeMoreAnd('scr-vehicles')"><div class="s-ic">🚙</div><div class="s-tx"><b>רכבים</b><span>מעקב טסטים וטיפולים</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="sheet-users" onclick="closeMoreAnd('scr-users')"><div class="s-ic">👑</div><div class="s-tx"><b>משתמשים</b><span>כל המשתמשים בכל המסגרות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-team-item" onclick="closeMoreAndFn(openTeamMgmt)"><div class="s-ic">👥</div><div class="s-tx"><b>ניהול צוות</b><span>הוספה, עריכה, ימי הולדת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-tasks-item" onclick="closeMoreAndFn(openTaskMgmt)"><div class="s-ic">🧰</div><div class="s-tx"><b>עריכת מטלות בוקר</b><span>הוספה ושינוי מטלות</span></div><span class="s-chev">‹</span></div>
@@ -3382,22 +3390,6 @@ nav{
   </div>
 
   <!-- CLOSE-DAY MGMT MODAL (feature 5) -->
-  <div class="modal-bg" id="closemgmt-modal">
-    <div class="modal">
-      <h3>🌙 ניהול משימות סגירת יום</h3>
-      <div class="m-sub">הוספה והסרה של משימות סגירה. משפיע על כל הצוות.</div>
-      <div id="closemgmt-list" style="max-height:40vh;overflow-y:auto;margin-bottom:12px"></div>
-      <div class="team-add-form">
-        <input class="m-input" id="ct-title" type="text" placeholder="שם המשימה" style="margin-bottom:8px">
-        <input class="m-input" id="ct-desc" type="text" placeholder="תיאור (אופציונלי)" style="margin-bottom:10px">
-        <button class="m-btn primary" onclick="addCloseTask()" style="width:100%">➕ הוסף משימה</button>
-      </div>
-      <div class="modal-actions" style="margin-top:12px">
-        <button class="m-btn ghost" onclick="document.getElementById('closemgmt-modal').classList.remove('open')" style="flex:1">סגור</button>
-      </div>
-    </div>
-  </div>
-
   <!-- NAATIM ADD MODAL -->
   <div class="modal-bg" id="naatim-modal">
     <div class="modal">
@@ -4677,10 +4669,9 @@ async function applyLoginUiForRole(person){
     addBtn.classList.add("hidden");
     if(repBtn) repBtn.classList.add("hidden");
   }
-  // חומרי הדרכה — ללשונית קבועה בבאנר התחתון (ליד הסמכות) לחיילים; למפקד
-  // נשאר נגיש מתפריט "עוד" כמו קודם, כדי לא להוסיף עוד לשונית לבאנר שלו
+  // חומרי הדרכה — לשונית קבועה בסרגל לחיילים. אצל מפקד הפריט חי בתוך
+  // מסך-השער "הדרכה" (ראו בלוק "עולם ההדרכה" למטה) ולכן אינו לשונית.
   document.getElementById("nav-training").classList.toggle("hidden", userRole === "מפקד");
-  document.getElementById("sheet-training").classList.toggle("hidden", userRole !== "מפקד");
   // "היום שלי" — מסך פתיחה לחיילים בלבד. כדי לפנות לו מקום בסרגל, הסמכות
   // עוברת לתפריט "עוד" אצל חיילים (לבקשת המשתמש); אצל מפקד נשאר כרגיל.
   const isSoldier = userRole !== "מפקד";
@@ -4690,18 +4681,19 @@ async function applyLoginUiForRole(person){
   document.getElementById("safety-search").value = "";
   document.getElementById("tools-search").value = "";
   document.getElementById("nav-tools").classList.toggle("hidden", !isToolsResp);
-  document.getElementById("nav-vehicles").classList.toggle("hidden", !isVehiclesResp);
+  // רכבים ירדו מהסרגל לתפריט "עוד" — הלשונית שהתפנתה ניתנה ל"כשירות חיילים",
+  // שנצרך יומיומית יותר. ההרשאה (isVehiclesResp) לא השתנתה, רק מיקום הכניסה.
+  document.getElementById("nav-vehicles").classList.add("hidden");
+  document.getElementById("more-vehicles-item").classList.toggle("hidden", !isVehiclesResp);
   document.getElementById("tools-add-btn").classList.toggle("hidden", !isToolsResp);
   document.getElementById("vehicles-add-btn").classList.toggle("hidden", !isVehiclesResp);
   if(userRole === "מפקד"){
-    document.getElementById("close-mgmt-btn").classList.remove("hidden");
     document.getElementById("naatim-mgmt-btn").classList.remove("hidden");
     document.getElementById("cert-add-btn").classList.remove("hidden");
     document.getElementById("more-team-item").classList.remove("hidden");
     document.getElementById("more-tasks-item").classList.remove("hidden");
     document.getElementById("more-binui-item").classList.remove("hidden");
   } else {
-    document.getElementById("close-mgmt-btn").classList.add("hidden");
     document.getElementById("naatim-mgmt-btn").classList.add("hidden");
     document.getElementById("cert-add-btn").classList.add("hidden");
     document.getElementById("more-team-item").classList.add("hidden");
@@ -4714,12 +4706,28 @@ async function applyLoginUiForRole(person){
   // "קליטת חייל חדש" בתפריט "עוד" — מפקד רואה תמיד (ניהול תבנית + רשימת קולטים),
   // חייל/חונך רואים רק אם רלוונטי אליהם אישית (בקליטה בעצמם, או חונכים מישהו שכן)
   const onbRelevant = userRole==="מפקד" || isOnboarding(person) || PERSONNEL.some(p=>isOnboarding(p) && p.mentor===user);
-  document.getElementById("sheet-onboarding").classList.toggle("hidden", isDeptUnit || !onbRelevant);
   document.getElementById("nav-morning").classList.toggle("hidden", isDeptUnit);
   document.getElementById("sheet-naatim").classList.toggle("hidden", isDeptUnit);
-  document.getElementById("sheet-closeday").classList.toggle("hidden", isDeptUnit);
-  // הסמכות יורדת מהסרגל לחיילים (עברה ל"עוד") וגם למפקד מחלקות
-  document.getElementById("nav-certs").classList.toggle("hidden", isSoldier || (isDeptUnit && userRole==="מפקד"));
+
+  /* ── עולם ההדרכה ─────────────────────────────────────────────────────
+     מפקד סככה מקבל לשונית "הדרכה" — מסך-שער שמאחד הסמכות + קליטת חייל
+     חדש + חומרי הדרכה. שלושת הפריטים יורדים ממקומם הקודם (הסמכות מהסרגל,
+     השניים האחרים מתפריט "עוד") כי נכנסים אליהם דרך השער.
+     במחלקות ובמסגרות התפקידיות (מ״ע אחזקה / הדרכה) אין שער — ושם כל פריט
+     נשאר בדיוק איפה שהיה, כדי לא לנתק גישה קיימת. */
+  const isFuncUnit = !!(currentShed && (currentShed.isMaint || currentShed.isTraining));
+  const hasTrainHub = userRole==="מפקד" && !isDeptUnit && !isFuncUnit;
+  document.getElementById("nav-trainhub").classList.toggle("hidden", !hasTrainHub);
+  // הסמכות: לחייל דרך "עוד" (sheet-certs), למפקד סככה דרך השער — בשני
+  // המקרים לא לשונית בסרגל.
+  document.getElementById("nav-certs").classList.add("hidden");
+  document.getElementById("sheet-training").classList.toggle("hidden", isSoldier || hasTrainHub);
+  document.getElementById("sheet-onboarding").classList.toggle("hidden", isDeptUnit || !onbRelevant || hasTrainHub);
+
+  /* כשירות חיילים — עולה לסרגל אצל מפקד (מחליפה את "רכבים"); אצל חייל
+     נשארת בתפריט "עוד" כמו קודם. */
+  const medInNav = userRole==="מפקד" && !isFuncUnit;
+  document.getElementById("nav-medchecks").classList.toggle("hidden", !medInNav);
   if(isDeptUnit && userRole==="מפקד") document.getElementById("more-tasks-item").classList.add("hidden");
   // בסככות (לא במחלקות) — תקלות וימי הולדת עוברים מהבאר התחתון לתפריט "עוד" כדי לצמצם עומס
   document.getElementById("nav-faults").classList.toggle("hidden", !isDeptUnit);
@@ -4742,8 +4750,7 @@ async function applyLoginUiForRole(person){
       "nav-morning",      // מטלות בוקר
       "more-tasks-item",  // עריכת מטלות בוקר
       "more-binui-item",  // דיווח תקלות בינוי — קיים מסך ריכוז ועריכה
-      "sheet-closeday",   // סגירת יום
-      "close-mgmt-btn",
+      "more-vehicles-item", // רכבים בתפריט "עוד" — קיים מעקב טייסתי מלא
       "nav-faults",       // דיווח תקלות
       "more-faults-item",
       "sheet-naatim",     // נע"תים
@@ -4762,7 +4769,8 @@ async function applyLoginUiForRole(person){
   const isTrainingUnit = !!(currentShed && currentShed.isTraining);
   document.getElementById("nav-board").classList.toggle("hidden", isTrainingUnit);
   document.getElementById("sheet-duties").classList.toggle("hidden", isTrainingUnit);
-  document.getElementById("sheet-medchecks").classList.toggle("hidden", isTrainingUnit);
+  // "כשירות חיילים" בתפריט "עוד" — רק למי שלא קיבל אותה כלשונית בסרגל
+  document.getElementById("sheet-medchecks").classList.toggle("hidden", isTrainingUnit || medInNav);
 
   /* אחראי הדרכה ומ״ע אחזקה — דשבורד המפקד ("תמונת מצב — מפקד") מוסר לגמרי.
      הוא הציג מגמות וחתימות של המסגרת התפקידית הזעירה שלהן בלבד — לצד
@@ -4872,6 +4880,9 @@ function logout(){
   document.getElementById("nav-tools").classList.add("hidden");
   document.getElementById("nav-vehicles").classList.add("hidden");
   document.getElementById("nav-training").classList.add("hidden");
+  document.getElementById("nav-trainhub").classList.add("hidden");
+  document.getElementById("nav-medchecks").classList.add("hidden");
+  document.getElementById("more-vehicles-item").classList.add("hidden");
   document.getElementById("add-event-btn").classList.add("hidden");
   { const rb=document.getElementById("safety-report-btn"); if(rb) rb.classList.add("hidden"); }
   document.getElementById("more-team-item").classList.add("hidden");
@@ -4899,7 +4910,7 @@ function go(id, btn){
   if(id==="scr-faults") renderFaults();
   if(id==="scr-binui-faults") renderBinuiFaults();
   if(id==="scr-admin") renderAdminDashboard();
-  if(id==="scr-closeday") renderCloseDay();
+  if(id==="scr-trainhub") renderTrainHub();
   if(id==="scr-naatim") renderNaatim();
   if(id==="scr-onboarding") renderOnboardingScreen();
   if(id==="scr-calendar") renderCalendarPage();
@@ -5481,88 +5492,54 @@ async function recordDailyHistory(){
   await sSet("history_morning", hist);
 }
 
-/* ============ DAY CLOSE (feature 5) ============ */
-async function getCloseTasks(){
-  const t = await sGet("cfg_close_tasks");
-  return (t && Array.isArray(t)) ? t : [];
-}
-async function renderCloseDay(){
-  const tasks = await getCloseTasks();
-  const key = "team_close_"+todayKey();
-  const done = (await sGet(key)) || {};
-  const list = document.getElementById("close-list");
-  if(!list) return;
-  const isCmdr = userRole === "מפקד";
+/* ============ הדרכה (TRAINING HUB) ============
+   מסך-שער לעולם ההדרכה. אינו מחזיק נתונים משלו — מנתב לשלושת המסכים
+   הקיימים (הסמכות / קליטת חייל חדש / חומרי הדרכה), ומציג לכל אחד מונה
+   מצב חי, כדי שהמפקד ידע לאן להיכנס עוד לפני שנכנס.
+   כל מונה עטוף ב-try בנפרד: מסגרת שחסר בה אחד המקורות עדיין מקבלת
+   מסך תקין עם שאר השורות, במקום שער ריק. */
+async function renderTrainHub(){
+  const box = document.getElementById("trainhub-list");
+  if(!box) return;
 
-  // empty state
-  if(tasks.length === 0){
-    list.innerHTML = `<div class="empty-state"><div class="ic">🌙</div><h3>אין עדיין משימות סגירה</h3><p>${isCmdr?'הוסף משימות באמצעות "⚙️ ניהול משימות"':'המפקד טרם הגדיר משימות סגירה'}</p></div>`;
-    document.getElementById("close-progress-label").textContent = "0 מתוך 0";
-    document.getElementById("close-progress-fill").style.width = "0%";
-    document.getElementById("close-all-done").style.display = "none";
-    return;
-  }
+  const today = new Date(); today.setHours(0,0,0,0);
 
-  list.innerHTML = "";
-  let count = 0;
-  tasks.forEach((t,i)=>{
-    const rec = done[t.id];
-    const isDone = !!rec;
-    if(isDone) count++;
-    const el = document.createElement("div");
-    el.className = "card task-row" + (isDone?" done":"");
-    el.onclick = ()=>toggleCloseTask(t.id);
-    const doneBy = isDone ? `<p class="done-by">✓ בוצע ע"י ${escapeHTML(rec.by)} · ${rec.time}</p>` : (t.desc?`<p>${escapeHTML(t.desc)}</p>`:"");
-    el.innerHTML = `<div class="task-num" style="background:#e8edf7;color:#2d4373;border-color:#c7d3ea">${i+1}</div>
-      <div class="task-info"><h3>${escapeHTML(t.title)}</h3>${doneBy}</div>
-      <div class="task-check">✓</div>`;
-    list.appendChild(el);
-  });
-  const pct = tasks.length ? (count/tasks.length)*100 : 0;
-  const fill = document.getElementById("close-progress-fill");
-  fill.style.width = pct+"%"; fill.classList.toggle("full", pct===100);
-  document.getElementById("close-progress-label").textContent = count+" מתוך "+tasks.length;
-  document.getElementById("close-all-done").style.display = pct===100 ? "block":"none";
-}
+  // הסמכות — אותה חלוקה כמו בדשבורד: פג תוקף / פג בתוך 30 יום
+  let certExpired = 0, certSoon = 0;
+  try{
+    (await getCerts()).forEach(c=>{
+      if(!c.expiry) return;
+      const d = Math.round((new Date(c.expiry+"T00:00:00")-today)/86400000);
+      if(d<0) certExpired++;
+      else if(d<=30) certSoon++;
+    });
+  }catch(e){ console.error("trainhub certs", e); }
 
-/* close-day task management (commander) */
-function openCloseMgmt(){ document.getElementById("closemgmt-modal").classList.add("open"); renderCloseMgmt(); }
-async function renderCloseMgmt(){
-  const tasks = await getCloseTasks();
-  const box = document.getElementById("closemgmt-list");
-  box.innerHTML = tasks.length ? tasks.map((t,i)=>`
-    <div class="mgmt-row">
-      <div class="task-num" style="width:30px;height:30px;font-size:13px;background:#e8edf7;color:#2d4373;border-color:#c7d3ea">${i+1}</div>
-      <div class="mr-body"><b>${escapeHTML(t.title)}</b>${t.desc?`<span>${escapeHTML(t.desc)}</span>`:""}</div>
-      <button class="mr-del" onclick="removeCloseTask(${i})">🗑️</button>
-    </div>`).join("") : '<div style="text-align:center;color:var(--ink-3);font-size:13px;padding:14px">אין עדיין משימות</div>';
-}
-async function addCloseTask(){
-  const title = document.getElementById("ct-title").value.trim();
-  const desc = document.getElementById("ct-desc").value.trim();
-  if(title.length<2){ toast("נא להזין שם משימה"); return; }
-  const tasks = await getCloseTasks();
-  tasks.push({id:"c"+Date.now(), title, desc});
-  await sSet("cfg_close_tasks", tasks);
-  document.getElementById("ct-title").value=""; document.getElementById("ct-desc").value="";
-  renderCloseMgmt(); renderCloseDay();
-  toast("המשימה נוספה ✓");
-}
-async function removeCloseTask(i){
-  const tasks = await getCloseTasks();
-  if(!confirm(`להסיר את "${tasks[i].title}"?`)) return;
-  tasks.splice(i,1);
-  await sSet("cfg_close_tasks", tasks);
-  renderCloseMgmt(); renderCloseDay();
-  toast("המשימה הוסרה");
-}
-async function toggleCloseTask(id){
-  const key = "team_close_"+todayKey();
-  const done = (await sGet(key)) || {};
-  if(done[id]) delete done[id];
-  else done[id] = {by:user, time:new Date().toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})};
-  await sSet(key, done);
-  renderCloseDay();
+  // קליטה — כמה חיילים נמצאים כרגע בתהליך קליטה
+  let onbCount = 0;
+  try{ onbCount = PERSONNEL.filter(p=>isOnboarding(p)).length; }catch(e){ console.error("trainhub onboarding", e); }
+
+  // חומרי הדרכה — כמה פריטים זמינים למסגרת
+  let trainCount = 0;
+  try{ trainCount = ((await sGet("training_list")) || []).length; }catch(e){ console.error("trainhub training", e); }
+
+  const items = [
+    { ic:"🎓", title:"הסמכות", sub:"תוקף וחידוש לכל חייל", go:"go('scr-certs',null)",
+      stat: certExpired ? {t:certExpired+" פגו תוקף", c:"r"}
+          : certSoon    ? {t:certSoon+" מתקרבים", c:"y"}
+          :               {t:"הכל בתוקף", c:"g"} },
+    { ic:"👤", title:"קליטת חייל חדש", sub:"חונך, מטלות והסמכות, קאונטר PF", go:"go('scr-onboarding',null)",
+      stat: onbCount ? {t:onbCount+" בקליטה", c:"y"} : {t:"אין קליטות", c:"g"} },
+    { ic:"📚", title:"חומרי הדרכה", sub:"מהמנהל הטייסתי", go:"go('scr-training',null)",
+      stat: {t:trainCount+" פריטים", c:"g"} },
+  ];
+
+  box.innerHTML = items.map(i=>`
+    <button class="hub-item" onclick="${i.go}">
+      <span class="hub-ic">${i.ic}</span>
+      <span class="hub-tx"><b>${escapeHTML(i.title)}</b><span>${escapeHTML(i.sub)}</span></span>
+      <span class="hub-stat hs-${i.stat.c}">${escapeHTML(i.stat.t)}</span>
+    </button>`).join("");
 }
 
 /* ============ נע"תים (NAATIM — areas of responsibility) ============ */

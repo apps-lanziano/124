@@ -30,7 +30,7 @@ async function applyIdentity(p, shed, role){
 
     if(currentShed && (currentShed.isMaint || currentShed.isTraining)){
       ["nav-tools","tools-add-btn","nav-vehicles","vehicles-add-btn","nav-certs","cert-add-btn",
-       "nav-morning","more-tasks-item","more-binui-item","sheet-closeday","close-mgmt-btn",
+       "nav-morning","more-tasks-item","more-binui-item","more-vehicles-item",
        "nav-faults","more-faults-item","sheet-naatim","naatim-mgmt-btn"
       ].forEach(id=>document.getElementById(id).classList.add("hidden"));
     }
