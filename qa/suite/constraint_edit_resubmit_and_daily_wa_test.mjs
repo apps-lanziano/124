@@ -31,7 +31,10 @@ const out = await page.evaluate(async ()=>{
   const e1 = (await getDutyRequests()).find(x=>x.id==="e1");
   // אם עדיין מאוחר (חלון ננעל) → naat_c וממתין למ"ע; אחרת approved
   r.resubmitStatus = locked ? e1.status==="naat_c" : e1.status==="approved";
-  r.oldDecideCleared = locked ? (e1.decidedBy===undefined) : (e1.decidedBy==="מפקד");
+  // כשמאוחר → decidedBy מנוקה (ממתין למ"ע). כשלא מאוחר → מוחלף במפקד המאשר
+  // הנוכחי (user), והאישור הישן "מ״ע ישן" נמחק. משווים מול user כדי לא להיות
+  // תלויים בשם קשיח או ביום ההרצה.
+  r.oldDecideCleared = locked ? (e1.decidedBy===undefined) : (e1.decidedBy===user);
   r.stillCommander = e1.byCommander===true;
 
   // נכנס לתור אישור מ"ע כשמאוחר

@@ -8730,21 +8730,27 @@ function imgZoomReset(wrapId, imgId, lblId){
    מתחת לרוחב-התוכן של הטבלה — ולכן במסך המלא הלוח נפתח רחב מדי ואי אפשר
    למזער. כאן משתמשים ב-transform: scale עם שכבת "sizer" שנותנת את תחום
    הגלילה: ברירת המחדל היא "התאמה למסך" (כל הלוח נראה), ואפשר להגדיל לקריאה. */
-let _rosterFullZoom = 1, _rosterFitScale = 1, _rosterNatW = 0, _rosterNatH = 0;
+let _rosterFullZoom = 1, _rosterFitScale = 1, _rosterMinScale = 1, _rosterNatW = 0, _rosterNatH = 0;
 function rosterFullMeasure(){
   const wrap = document.getElementById("roster-full-wrap");
   const table = document.querySelector("#roster-full-inner table");
   if(!wrap || !table) return;
   _rosterNatW = table.offsetWidth; _rosterNatH = table.offsetHeight;
-  const avail = wrap.clientWidth - 20;   // מרווח קטן מהקצוות
+  const avail  = wrap.clientWidth  - 20;   // מרווח קטן מהקצוות
+  const availH = wrap.clientHeight - 20;
+  // ברירת המחדל: התאמה לרוחב (100% בתווית)
   _rosterFitScale = Math.max(0.2, Math.min(1, avail / (_rosterNatW || 1)));
+  // מינימום הזום: התאמה גם לרוחב וגם לגובה — כך שכל הלוח נכנס למסך אחד
+  // (הלוח גבוה מאוד, לכן חייבים לאפשר הקטנה מתחת להתאמת-הרוחב).
+  const fitBoth = Math.min(avail / (_rosterNatW || 1), availH / (_rosterNatH || 1));
+  _rosterMinScale = Math.max(0.15, Math.min(_rosterFitScale, fitBoth));
 }
 function rosterFullZoomApply(z, cx, cy){
   const wrap = document.getElementById("roster-full-wrap");
   const sizer = document.getElementById("roster-full-sizer");
   const inner = document.getElementById("roster-full-inner");
   if(!wrap || !sizer || !inner) return;
-  const min = _rosterFitScale, max = Math.max(_rosterFitScale*4, 2);
+  const min = _rosterMinScale, max = Math.max(_rosterFitScale*4, 2);
   z = Math.max(min, Math.min(max, z));
   const old = _rosterFullZoom || 1;
   const r = wrap.getBoundingClientRect();
