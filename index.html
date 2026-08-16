@@ -6645,9 +6645,9 @@ async function renderRosterView(){
   const box = document.getElementById("roster-view");
   if(!box) return;
   await maybeRotateWeek();     // מעבר שבוע אוטומטי (שבת בחצות) לפני הרינדור
-  // ברירת מחדל לפי תפקיד: חיילים מתחילים בתצוגת "כרטיסים" (קריאה בנייד),
-  // מ״ע/מפקד ב"לוח" (טבלה מלאה). המשתמש יכול להחליף בכל רגע.
-  if(!_rosterViewInit){ _rosterViewInit = true; if(!isRosterManager && userRole!=="מפקד") rosterView = "cards"; }
+  // ברירת מחדל לפי תפקיד: חיילים מתחילים ב"לוח יומי" (כרטיסי יום — קריא בנייד),
+  // מ״ע/מפקד ב"לוח שבועי" (טבלה מלאה). המשתמש יכול להחליף בכל רגע.
+  if(!_rosterViewInit){ _rosterViewInit = true; if(!isRosterManager && userRole!=="מפקד") rosterView = "day"; }
   // "שבוע הבא" הוא תכנון פרטי של מ״ע תורנויות עד לפרסום — שאר היוזרים
   // רואים רק שבוע שעבר + נוכחי. אם מישהו שאינו מ״ע נמצא על "הבא" — מחזירים לנוכחי.
   if(boardWeekSlot==="next" && !isRosterManager) boardWeekSlot = "current";
@@ -6690,9 +6690,8 @@ async function renderRosterView(){
     ? `<button class="m-btn ghost" style="width:100%;margin-bottom:10px;border:1.5px solid var(--red-line);color:var(--red-deep)"
          onclick="restoreWeekToCurrent('${boardWeekSlot}')">↩️ קבע את הלוח הזה כ״לוח נוכחי״</button>` : "";
   const head = mgrBanners + weekSel + restoreBar + `<div class="roster-segs">
-      <div class="${rosterView==="cards"?"on":""}" onclick="setRosterView('cards')">כרטיסים</div>
-      <div class="${rosterView==="board"?"on":""}" onclick="setRosterView('board')">לוח</div>
-      <div class="${rosterView==="day"?"on":""}" onclick="setRosterView('day')">יום</div>
+      <div class="${rosterView==="board"?"on":""}" onclick="setRosterView('board')">לוח שבועי</div>
+      <div class="${rosterView==="day"?"on":""}" onclick="setRosterView('day')">לוח יומי</div>
       <div class="${rosterView==="mine"?"on":""}" onclick="setRosterView('mine')">רק אני</div>
     </div>
     ${(r.squadronDuty && rosterView!=="board")?`<div class="roster-wkbar">🏠 תורן טייסת השבוע — <b>${escapeHTML(rosterSquadronDutyName(r.squadronDuty))}</b></div>`:""}`;
@@ -6705,7 +6704,7 @@ async function renderRosterView(){
     return;
   }
   // שיתוף לוח יומי בוואטסאפ — למ"ע/מפקד, בשבוע הנוכחי (היום הרלוונטי)
-  const dailyShareDay = rosterView==="day" ? rosterDaySel : todayHebrewDay();
+  const dailyShareDay = todayHebrewDay();   // שיתוף יומי = לוח היום
   const dailyShare = ((isRosterManager || userRole==="מפקד") && boardWeekSlot==="current")
     ? `<button class="m-btn ghost" style="width:100%;margin-top:10px" onclick="shareDailyDutyWA('${dailyShareDay}')">📲 שלח לוח יומי בוואטסאפ</button>` : "";
   // מ"ע תורנויות: חיפוש חייל מעל הלוח — רישום ידני או בחירה מהבנק,
@@ -6721,9 +6720,8 @@ async function renderRosterView(){
          <div class="roster-search-note" id="roster-search-note"></div>
        </div>` : "";
   box.innerHTML = head + searchBar +
-    (rosterView==="cards" ? rosterCardsHtml(r, todayForBoard)
-     : rosterView==="board" ? rosterBoardHtml(r, todayForBoard, undefined, boardWeekSlot)
-     : rosterView==="day" ? rosterDayHtml(r, rosterDaySel, todayForBoard)
+    (rosterView==="board" ? rosterBoardHtml(r, todayForBoard, undefined, boardWeekSlot)
+     : rosterView==="day" ? rosterCardsHtml(r, todayForBoard)   // "לוח יומי" = כרטיסי יום
      : rosterMineHtml(r, todayForBoard)) + dailyShare;
   initRosterSwipe();
   if(isRosterManager){
@@ -7855,55 +7853,6 @@ async function naatRejectSwap(idx){
   toast("ההחלפה נדחתה");
 }
 
-/* תצוגת "יום" — שמות מלאים, ומגבלות זמינות כטקסט. */
-function rosterDayHtml(r, day, today){
-  const key = rosterEditKey(day);
-  const d = r.days[key] || emptyRosterDay(isWeekendDay(key));
-  const dLbl = x => { const ds=rosterDayLockDates(x,boardWeekSlot); return x==="חמישי"?`${fmtHeShort(ds[0])}–${fmtHeShort(ds[2])}`:fmtHeShort(ds[0]); };
-  const strip = [...ROSTER_ROTATING_DAYS, "חמישי"].map(x=>{
-    const wknd = x==="חמישי";
-    const mine = rosterDayAssigned(r.days[x]).includes(user);
-    return `<div class="${x===key?"on":""} ${mine?"mine":""} ${wknd?"wk":""}" onclick="setRosterView('day','${x}')">${wknd?"ה׳–ש׳":DAY_LETTER[x]}<small>${dLbl(x)}</small></div>`;
-  }).join("");
-  const blk = (title, count, inner, cls) => inner ? `<div class="rblk">
-      <div class="rblk-h ${cls||""}"><span>${title}</span>${count!==null?`<span class="rblk-c">${count}</span>`:""}</div>
-      ${inner}</div>` : "";
-  const rowIf = (k, v) => v ? `<div class="rrow"><div class="rrow-k">${k}</div><div class="rrow-v">${v}</div></div>` : "";
-  const one = n => n ? `<span class="rc ${n===user?"me":"duty"}">${escapeHTML(n)}</span>` : "";
-  const list = (arr, cls) => (arr||[]).map(n=>`<span class="rc ${n===user?"me":(cls||"")}">${escapeHTML(n)}</span>`).join("");
-  // בסופ"ש: מנהל ומתגבר מתחלפים — חמישי מול שישי–שבת
-  const isWk = key==="חמישי";
-  const friDay = r.days["שישי"] || {};
-  const wkndInline = (thuV, friV, isList) => {
-    const norm = v => isList ? (v||[]).filter(Boolean) : (v?[v]:[]);
-    const thu = norm(thuV), fri = norm(friV);
-    if(thu.join("|")===fri.join("|")) return isList ? list(thu) : (thu[0]?one(thu[0]):"");
-    const tagged = (lbl,a) => a.map(n=>`<span class="rc ${n===user?"me":""}"><span class="rc-wk-t">${lbl}</span>${escapeHTML(n)}</span>`).join("");
-    return tagged("ה׳",thu) + tagged("ו׳–ש׳",fri);
-  };
-
-  let skel = rowIf("מנהל", isWk ? wkndInline(d.manager, friDay.manager, false) : one(d.manager)) +
-    rowIf("ר״צ", one(d.lead)) + rowIf("ל/ ר״צ", one(d.deputyLead)) +
-    rowIf("מתגבר", isWk ? wkndInline(d.fixedAug, friDay.fixedAug, true) : list(d.fixedAug)) +
-    rowIf("מטיס", one(d.pilot)) + rowIf("נהג", one(d.driver)) + rowIf("כלים", one(d.tools));
-  let html = `<div class="roster-daystrip">${strip}</div>`;
-  if(isWeekendDay(key)) html += `<div class="roster-wknd">משמרת רצופה — חמישי, שישי ושבת. אותו צוות, בלי חילוף ובלי נחים.</div>`;
-  html += blk("שלד", null, skel);
-  html += blk("PF", (d.pf||[]).length, (d.pf||[]).length ? `<div class="rpool">` + (d.pf||[]).map(p=>
-    `<span class="rc ${p.name===user?"me":pfClass(p)}">${escapeHTML(p.name)}${pfTagHtml(p)}</span>`).join("") + `</div>` : "");
-  html += d.pfRest === null
-    ? `<div class="rblk"><div class="rblk-h restz"><span>נחים</span></div><div class="rnone-b">אין נחים — משמרת רצופה</div></div>`
-    : blk(`נחים · ${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}`, (d.pfRest||[]).length,
-        (d.pfRest||[]).length ? `<div class="rpool">${list(d.pfRest,"rest")}</div>` : "", "restz");
-  html += blk("מילואים", (d.reserve||[]).length, (d.reserve||[]).length ? `<div class="rpool">${list(d.reserve,"res")}</div>` : "");
-  html += blk("PMS", (d.pms||[]).length, (d.pms||[]).length ? `<div class="rpool">${list(d.pms,"pms")}</div>` : "", "pmsz");
-  html += blk("PMS נחים", (d.pmsRest||[]).length, (d.pmsRest||[]).length ? `<div class="rpool">${list(d.pmsRest,"rest")}</div>` : "", "restz");
-  html += blk("תורנות בסיסית", (d.basic||[]).length, (d.basic||[]).length
-    ? (d.basic||[]).map(b=>rowIf(escapeHTML(b.type||""), `<span class="rc ${b.name===user?"me":""}">${escapeHTML(b.name)}</span>`)).join("") : "");
-  if(r.squadronDuty) html += `<div class="roster-sq">תורן טייסת — ${escapeHTML(rosterSquadronDutyName(r.squadronDuty))}</div>`;
-  return html;
-}
-
 /* תצוגת "רק אני" — עונה ישירות על "מתי אני תורן השבוע". */
 function rosterMineHtml(r, today){
   const rows = [];
@@ -7975,7 +7924,7 @@ function rosterCardsHtml(r, today){
     rows += rowIf("נהג", chip(d.driver));
     rows += rowIf("כלים", chip(d.tools));
     rows += rowIf("PF", (d.pf||[]).map(p=>`<span class="rc ${p.name===user?"me":pfClass(p)}">${escapeHTML(p.name)}${pfTagHtml(p)}</span>`).join(""));
-    if(!isWk) rows += rowIf("נחים", chips(d.pfRest, "rest"));
+    if(!isWk) rows += rowIf(`נחים · ${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}`, chips(d.pfRest, "rest"));
     rows += rowIf("PMS", chips(d.pms, "pms"));
     rows += rowIf("PMS נחים", chips(d.pmsRest, "rest"));
     rows += rowIf("מילואים", chips(d.reserve, "res"));
@@ -7987,8 +7936,8 @@ function rosterCardsHtml(r, today){
       <div class="rcd-body">${rows}</div>
     </div>`;
   }).join("");
-  const sq = r.squadronDuty ? `<div class="roster-wkbar" style="margin-top:2px">🏠 תורן טייסת השבוע — <b>${escapeHTML(rosterSquadronDutyName(r.squadronDuty))}</b></div>` : "";
-  return cards + sq;
+  // תורן טייסת השבוע מוצג ממילא בבאנר של ה-head בתצוגות שאינן "לוח שבועי"
+  return cards;
 }
 async function fetchAllPersonnelByShed(){
   const map = {};
