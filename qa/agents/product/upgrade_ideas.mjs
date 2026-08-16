@@ -1,5 +1,5 @@
 /* ============================================================
-   רעיונות לשדרוג — "סוכן 6"
+   אגף מוצר · רעיונות לשדרוג
    ------------------------------------------------------------
    הבדל מהותי משאר הסוכנים: כל סוכן אחר בודק *עובדה* אוטומטית
    (הקוד עשה X, המסך נטען, הסיסמה חשופה). רעיון לשדרוג הוא שיפוט —
@@ -15,3 +15,23 @@
    רחב יותר. אין כרגע רעיון פתוח ברשימה.
    ============================================================ */
 export const IDEAS = [];
+
+const agent = {
+  id: 'product/upgrade-ideas',
+  name: 'רעיונות לשדרוג',
+  kind: 'human',
+  domain: 'product',
+  privacy: 'public',
+  async run(){
+    // shape שונה מממצא רגיל (sev="idea" במקום high/med/low/info) —
+    // report.mjs מרנדר את התחום הזה בפורמט ייעודי, לא לפי חומרה.
+    const findings = IDEAS.map(idea => ({ sev:"idea", title:idea.title, detail:idea.detail, effort:idea.effort }));
+    return { summary:{ count: IDEAS.length }, findings };
+  }
+};
+export default agent;
+
+if(import.meta.url === `file://${process.argv[1]}`){
+  const r = await agent.run();
+  console.log(JSON.stringify(r, null, 2));
+}

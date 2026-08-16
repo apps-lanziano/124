@@ -1,5 +1,5 @@
 /* ============================================================
-   סוכן 5 — נתונים חיים מ-Firebase
+   אגף נתונים · נתונים חיים מ-Firebase
    ------------------------------------------------------------
    הסוכנים האחרים בודקים את *הקוד*. הסוכן הזה בודק את *הנתונים
    האמיתיים* של הטייסת, ולכן הוא היחיד שיכול לתפוס דברים כמו:
@@ -9,29 +9,26 @@
      · לוח צוות שלא עודכן שבועות
 
    ⚠️ פרטיות — קריטי:
-   המאגר הזה ציבורי. לכן הסוכן הזה **לעולם אינו מוציא שמות של
-   אנשים** — רק מספרים ושמות מסגרות. בנוסף, הפלט שלו נשמר בקובץ
-   נפרד שאינו נכנס למאגר (qa/reports/live_*.json ב-.gitignore),
-   ומגיע רק לדוח האישי.
+   `privacy:"personal"` למטה הוא ההצהרה שקובעת את זה — לא ניחוש
+   לפי שם הסוכן. המטה (report.mjs) מפריד לפי השדה הזה, אף פעם
+   לא לפי מחרוזת. המאגר ציבורי, ולכן הסוכן הזה **לעולם אינו
+   מוציא שמות של אנשים** — רק מספרים ושמות מסגרות. הפלט שלו
+   מגיע רק לדוח האישי (qa/reports/latest_personal.md, מוחרג
+   מגיט), ולעולם לא לדוח הציבורי או ל-state.json של המגמות.
 
    הרשאה: משתנה הסביבה FIREBASE_SA_KEY (מפתח שירות, קריאה בלבד).
    בלי המשתנה — הסוכן מדלג בשקט ולא מכשיל את הריצה.
    ============================================================ */
+import { SHED_LIST } from '../../lib/config.mjs';
+import { FIRESTORE_COLLECTION } from '../../lib/config.mjs';
 
-const COLLECTION = "sq124";
-const SHEDS = [
-  {id:"shed1", name:"סככה 1"}, {id:"shed2", name:"סככה 2"}, {id:"shed3", name:"סככה 3"},
-  {id:"shed4", name:"סככה 4"}, {id:"shed5", name:"סככה 5"},
-  {id:"dept", name:"מחלקות"}, {id:"maint", name:"מ״ע אחזקה"}, {id:"training", name:"הדרכה"},
-];
+async function scan(){
+  const findings = [];
+  const add = (sev, title, detail) => findings.push({sev, area:"נתונים חיים", title, detail});
 
-const findings = [];
-function add(sev, title, detail){ findings.push({sev, area:"נתונים חיים", title, detail}); }
-
-export async function run(){
   const raw = process.env.FIREBASE_SA_KEY;
   if(!raw || !raw.trim()){
-    return { name:"נתונים חיים", skipped:true, summary:{}, findings:[{
+    return { skipped:true, summary:{}, findings:[{
       sev:"info", area:"נתונים חיים", title:"בדיקת הנתונים החיים לא רצה",
       detail:"לא הוגדר מפתח גישה ל-Firebase. הבדיקה על הקוד רצה כרגיל; "+
              "כדי לבדוק גם את הנתונים האמיתיים יש להוסיף את המפתח (ר' qa/README.md)."
@@ -47,7 +44,7 @@ export async function run(){
       : admin.default.initializeApp({ credential: admin.default.credential.cert(creds) });
     db = admin.default.firestore(app);
   }catch(e){
-    return { name:"נתונים חיים", summary:{}, findings:[{
+    return { summary:{}, findings:[{
       sev:"high", area:"נתונים חיים", title:"החיבור ל-Firebase נכשל",
       detail:"לא הצלחתי להתחבר עם המפתח שהוגדר. ייתכן שהמפתח פג, נמחק, או הוגדר לא נכון. פירוט: "+String(e && e.message).slice(0,200)
     }]};
@@ -56,7 +53,7 @@ export async function run(){
   /* קריאת מסמך בודד לפי מפתח — בדיוק כמו שהאפליקציה עושה */
   const get = async key => {
     try{
-      const snap = await db.collection(COLLECTION).doc(key.replace(/[\/\.\#\$\[\]]/g,"_")).get();
+      const snap = await db.collection(FIRESTORE_COLLECTION).doc(key.replace(/[\/\.\#\$\[\]]/g,"_")).get();
       return snap.exists ? snap.data().v : null;
     }catch{ return null; }
   };
@@ -67,7 +64,7 @@ export async function run(){
      "מחיקת משתמשים". בטוח לפרסום: רק מונים ומצב מסמך לכל מסגרת. */
   try{
     const parts = [];
-    for(const shed of SHEDS){
+    for(const shed of SHED_LIST){
       const raw = await get(shed.id+"_cfg_personnel");
       const n = Array.isArray(raw) ? raw.length : (raw===null ? "missing" : "notarr");
       const pins = Array.isArray(raw) ? raw.filter(p=>p && p.pinHash).length : 0;
@@ -89,7 +86,7 @@ export async function run(){
   {
     const adminEvents = await arr("admin_events");
     const gaps = [];
-    for(const shed of SHEDS){
+    for(const shed of SHED_LIST){
       const local = await arr(shed.id+"_safety_events");
       const ids = new Set(local.map(e=>e && e.id));
       const missing = adminEvents.filter(e=>e && e.id && !ids.has(e.id));
@@ -101,7 +98,7 @@ export async function run(){
         ". המשמעות: אנשי המסגרות האלה לא רואים את הפריט ולא יכולים לחתום עליו.");
     } else if(adminEvents.length){
       add("info","כל פריטי הקרא-וחתום הגיעו לכל המסגרות",
-        `נבדקו ${adminEvents.length} פריטים מול ${SHEDS.length} מסגרות — אין פערים.`);
+        `נבדקו ${adminEvents.length} פריטים מול ${SHED_LIST.length} מסגרות — אין פערים.`);
     }
   }
 
@@ -109,7 +106,7 @@ export async function run(){
   {
     const adminTraining = await arr("admin_training");
     const gaps = [];
-    for(const shed of SHEDS){
+    for(const shed of SHED_LIST){
       const local = await arr(shed.id+"_training_list");
       const ids = new Set(local.map(e=>e && e.id));
       const missing = adminTraining.filter(e=>e && e.id && !ids.has(e.id));
@@ -121,13 +118,13 @@ export async function run(){
   /* ---------- 3. מסגרות שלא יקבלו התראות ---------- */
   {
     const none = [];
-    for(const shed of SHEDS){
+    for(const shed of SHED_LIST){
       const tokens = await get("push_tokens_"+shed.id);
       const n = tokens && typeof tokens === "object" ? Object.keys(tokens).length : 0;
       if(n === 0) none.push(shed.name);
     }
     if(none.length){
-      add(none.length === SHEDS.length ? "high" : "med",
+      add(none.length === SHED_LIST.length ? "high" : "med",
         "מסגרות שלא מקבלות התראות כלל",
         `${none.join(", ")} — אין באף מכשיר במסגרות האלה אישור להתראות. `+
         `כל פרסום שיישלח אליהן לא ייצור התראה בטלפון. `+
@@ -141,7 +138,7 @@ export async function run(){
   {
     const rows = [];
     let totalPeople = 0, totalNoPin = 0;
-    for(const shed of SHEDS){
+    for(const shed of SHED_LIST){
       const people = await arr(shed.id+"_cfg_personnel");
       const active = people.filter(p=>p && !(p.release && p.release <= new Date().toISOString().slice(0,10)));
       const noPin = active.filter(p=>!p.pinHash).length;
@@ -159,7 +156,7 @@ export async function run(){
   /* ---------- 5. לוח צוות שלא עודכן ---------- */
   {
     const stale = [];
-    for(const shed of SHEDS){
+    for(const shed of SHED_LIST){
       const boards = await arr(shed.id+"_boards_list");
       if(!boards.length){ stale.push(`${shed.name}: אין לוח כלל`); continue; }
       const newest = boards[0];
@@ -176,7 +173,7 @@ export async function run(){
   /* ---------- 6. שלמות נתונים ---------- */
   {
     const problems = [];
-    for(const shed of SHEDS){
+    for(const shed of SHED_LIST){
       const people = await arr(shed.id+"_cfg_personnel");
       const names = people.map(p=>p && p.name).filter(Boolean);
       const dupes = names.length - new Set(names).size;
@@ -190,15 +187,21 @@ export async function run(){
   }
 
   const bySev = s => findings.filter(f=>f.sev===s).length;
-  return {
-    name: "נתונים חיים",
-    summary: { high:bySev("high"), med:bySev("med"), info:bySev("info") },
-    findings,
-  };
+  return { summary:{ high:bySev("high"), med:bySev("med"), info:bySev("info") }, findings };
 }
 
+const agent = {
+  id: 'data/live-firebase',
+  name: 'נתונים חיים',
+  kind: 'live',
+  domain: 'data',
+  privacy: 'personal',
+  run: scan,
+};
+export default agent;
+
 if(import.meta.url === `file://${process.argv[1]}`){
-  const r = await run();
+  const r = await agent.run();
   console.log(JSON.stringify(r, null, 2));
   process.exit(r.findings.some(f=>f.sev==="high") ? 1 : 0);
 }

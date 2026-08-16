@@ -7,16 +7,10 @@
    הלוגיקה של האפליקציה רצה באמת, ולא מוחלפת בבדיקה.
    ============================================================ */
 import { launchBrowser, APP_URL as APP_URL_RESOLVED } from './pw.mjs';
+import { SHED_LIST } from './config.mjs';
 
 export const APP_URL = APP_URL_RESOLVED;
-
-export const SHED_LIST = [
-  {id:"shed1", name:"סככה 1"}, {id:"shed2", name:"סככה 2"}, {id:"shed3", name:"סככה 3"},
-  {id:"shed4", name:"סככה 4"}, {id:"shed5", name:"סככה 5"},
-  {id:"dept", name:"מחלקות", isDept:true},
-  {id:"maint", name:"מ״ע אחזקה", isMaint:true},
-  {id:"training", name:"הדרכה", isTraining:true},
-];
+export { SHED_LIST };
 
 export const ALL_SCREENS = [
   "scr-safety","scr-morning","scr-duties","scr-calendar","scr-onboarding","scr-faults","scr-binui-faults","scr-board",
