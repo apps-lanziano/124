@@ -68,6 +68,8 @@
      --bg:#faf9f9; --red:#b30f26; --red-2:#d8112e; --red-deep:#7d0a1b;
      --radius:18px; --shadow:0 1px 2px rgba(125,10,27,.04),0 6px 18px -6px rgba(125,10,27,.08);
      --shadow-lg:0 8px 30px -8px rgba(125,10,27,.25); גופן: Heebo + Secular One לכותרות. */
+  /* עיצוב קודם (לפני 2026-08-18, רענון "מינימלי רך + לוח נתונים"):
+     --shadow:0 2px 10px rgba(0,0,0,.05); בלי --radius-sm/--status-*/--sky/--green-line/--gold-line. */
   --bg:oklch(.965 .008 75);
   --card:#ffffff;
   --ink:#1a1114;
@@ -81,12 +83,24 @@
   --red-line:#f7d6db;
   --gold:#b98900;
   --gold-soft:#fffaeb;
+  --gold-line:#f0dfa8;
   --green:#079455;
   --green-soft:#ecfdf3;
+  --green-line:#bfe9cf;
+  --sky:oklch(.5 .11 250);
+  --sky-soft:#eef4ff;
+  --sky-line:#cfe0ff;
+  /* אליאסים סמנטיים — "אדום-סטטוס" (שורת התרעה/חריגה) נבדל מ"אדום-מותג",
+     כדי לצמצם שימוש-יתר באדום המותג בפאנלים שאינם באמת דחופים */
+  --status-red:var(--red-2);
+  --status-gold:var(--gold);
+  --status-green:var(--green);
   --radius:16px;
-  --shadow:0 2px 10px rgba(0,0,0,.05);
+  --radius-sm:11px;
+  --shadow:0 1px 2px rgba(0,0,0,.03);
   --shadow-lg:0 8px 26px rgba(0,0,0,.09);
 }
+.tnum{font-variant-numeric:tabular-nums}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{
@@ -135,7 +149,8 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 
 .sec-head{margin-bottom:14px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.sec-head h2{font-size:20px;font-weight:800;color:var(--ink)}
+.sec-head h2{font-size:20px;font-weight:300;color:var(--ink)}
+h1,h2{font-weight:300}
 .sec-head h2::after{content:"";display:block;width:38px;height:4px;border-radius:99px;background:linear-gradient(90deg,var(--red),var(--red-2));margin-top:6px}
 .sec-head p{font-size:13px;color:var(--ink-2);margin-top:8px;font-weight:300}
 .add-btn{
@@ -193,8 +208,8 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
 .login-note{margin-top:16px;font-size:12px;color:var(--ink-3);font-weight:300;text-align:center;max-width:300px;line-height:1.6;position:relative}
 
 /* ---------- SAFETY (image events) ---------- */
-.doc-item{display:flex;gap:13px;align-items:center;cursor:pointer;transition:transform .2s;border-right:4px solid var(--gold);padding:12px}
-.doc-item.is-read{border-right-color:#a6f4c5}
+.doc-item{display:flex;gap:13px;align-items:center;cursor:pointer;transition:transform .2s;border-inline-start:3px solid var(--gold);padding:12px}
+.doc-item.is-read{border-inline-start-color:#a6f4c5}
 .doc-item:active{transform:scale(.985)}
 .doc-thumb{
   width:58px;height:58px;border-radius:13px;flex-shrink:0;object-fit:cover;border:1px solid var(--line);background:var(--gold-soft);
@@ -418,7 +433,7 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
 /* ---------- COMMANDER ---------- */
 .cmd-kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:15px;box-shadow:var(--shadow)}
-.kpi b{font-size:26px;font-weight:900;display:block;line-height:1}
+.kpi b{font-size:26px;font-weight:900;display:block;line-height:1;font-variant-numeric:tabular-nums}
 .kpi span{font-size:12px;color:var(--ink-2);font-weight:400;display:block;margin-top:6px}
 .kpi.good b{color:var(--green)} .kpi.warn b{color:var(--gold)} .kpi.bad b{color:var(--red)} .kpi.info b{color:var(--red-deep)}
 .cmd-table{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
@@ -432,8 +447,8 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
 .mc-status-row{display:flex;flex-wrap:wrap;gap:6px;padding:0 13px 12px}
 .mc-status-row .pill{flex:1;min-width:70px;text-align:center;padding:6px 6px}
 .med-tabs{display:flex;gap:8px;margin-bottom:12px}
-.med-tab{flex:1;padding:10px 8px;border-radius:11px;border:1px solid var(--line);background:var(--card);color:var(--ink-2);font-weight:700;font-size:13px;cursor:pointer;transition:.15s}
-.med-tab.active{background:var(--red);color:#fff;border-color:var(--red)}
+.med-tab{flex:1;padding:10px 8px;border-radius:var(--radius-sm);border:1.5px solid var(--line);background:var(--card);color:var(--ink-2);font-weight:700;font-size:13px;cursor:pointer;transition:.15s}
+.med-tab.active{border-color:var(--red);background:var(--red-soft);color:var(--red)}
 .med-card{display:flex;align-items:center;gap:11px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin-bottom:9px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .med-name{flex:1;line-height:1.35}.med-name b{font-size:14px;display:block}.med-name span{font-size:11px;color:var(--ink-3)}
 .cmd-section-title{font-size:14px;font-weight:800;color:var(--ink-2);margin:18px 0 10px;display:flex;align-items:center;gap:8px}
@@ -653,7 +668,8 @@ nav{
 .sheet-x:active{background:var(--red-soft);color:var(--red)}
 .sheet-item{display:flex;align-items:center;gap:14px;padding:15px 12px;border-radius:14px;cursor:pointer;transition:background .2s}
 .sheet-item:active{background:var(--red-soft)}
-.sheet-item .s-ic{width:44px;height:44px;border-radius:12px;background:var(--red-soft);display:grid;place-items:center;font-size:21px;flex-shrink:0}
+.sheet-item .s-ic{width:44px;height:44px;border-radius:12px;background:var(--red-soft);display:grid;place-items:center;font-size:21px;flex-shrink:0;color:var(--red)}
+.sheet-item .s-ic svg{width:22px;height:22px}
 .sheet-item .s-tx{flex:1}
 .sheet-item .s-tx b{font-size:15px;font-weight:700;display:block}
 .sheet-item .s-tx span{font-size:12px;color:var(--ink-3);font-weight:300}
@@ -673,17 +689,17 @@ nav{
 .msg-card .m-body small{font-size:11.5px;color:var(--ink-3);font-weight:300;display:block;margin-top:3px}
 .msg-card .m-del{background:rgba(0,0,0,.06);border:none;color:var(--ink-2);font-size:16px;font-weight:700;cursor:pointer;flex-shrink:0;padding:6px 10px;line-height:1;border-radius:10px;min-width:34px;min-height:32px}
 .msg-card .m-del:active{background:var(--red-soft);color:var(--red)}
-.msg-type-btn{flex:1;padding:10px 4px;border:1.5px solid var(--line);background:#fff;border-radius:11px;font-family:'Assistant';font-weight:600;font-size:12.5px;cursor:pointer;transition:all .2s}
+.msg-type-btn{flex:1;padding:10px 4px;border:1.5px solid var(--line);background:#fff;border-radius:var(--radius-sm);font-family:'Assistant';font-weight:700;font-size:12.5px;cursor:pointer;transition:all .2s}
 .msg-type-btn.active{border-color:var(--red);background:var(--red-soft);color:var(--red)}
 .msg-existing-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:13px}
 .msg-existing-item .mx-txt{flex:1;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msg-existing-item button{background:var(--red-soft);color:var(--red);border:none;border-radius:8px;padding:5px 10px;font-family:'Assistant';font-weight:700;font-size:12px;cursor:pointer}
 /* ===== FAULTS (feature 10) ===== */
 .faults-filter{display:flex;gap:8px;margin-bottom:14px}
-.fault-fbtn{flex:1;padding:9px;border:1.5px solid var(--line);background:#fff;border-radius:11px;font-family:'Assistant';font-weight:700;font-size:12.5px;cursor:pointer;transition:all .2s;color:var(--ink-2)}
+.fault-fbtn{flex:1;padding:9px;border:1.5px solid var(--line);background:#fff;border-radius:var(--radius-sm);font-family:'Assistant';font-weight:700;font-size:12.5px;cursor:pointer;transition:all .2s;color:var(--ink-2)}
 .fault-fbtn.active{border-color:var(--red);background:var(--red-soft);color:var(--red)}
-.fault-item{display:flex;gap:12px;align-items:flex-start;padding:14px;cursor:pointer;border-right:4px solid var(--gold)}
-.fault-item.closed{border-right-color:var(--green);opacity:.75}
+.fault-item{display:flex;gap:12px;align-items:flex-start;padding:14px;cursor:pointer;border-inline-start:3px solid var(--gold)}
+.fault-item.closed{border-inline-start-color:var(--green);opacity:.75}
 .fault-item .f-ic{width:44px;height:44px;border-radius:12px;background:var(--gold-soft);display:grid;place-items:center;font-size:20px;flex-shrink:0}
 .fault-item.closed .f-ic{background:var(--green-soft)}
 .fault-item .f-body{flex:1;min-width:0}
@@ -735,6 +751,7 @@ nav{
   font-family:'Assistant';text-align:center;color:inherit}
 .th-chip:active{transform:scale(.96)}
 .th-chip .ic{font-size:20px;line-height:1}
+.th-chip .ic svg{width:19px;height:19px;color:var(--red)}
 .th-chip .lb{font-size:11px;font-weight:800;color:var(--ink);line-height:1.2}
 .th-chip .n{font-size:10px;font-weight:700;color:var(--ink-3)}
 .th-chip.hot{border-color:var(--red-line);background:var(--red-soft)}
@@ -829,8 +846,8 @@ nav{
 .my-week .mw-dot.duty{background:var(--red)}
 .my-week .mw-dot.rest{background:var(--green)}
 .today-stats{display:flex;gap:8px;margin-bottom:10px}
-.today-stats .ts{flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center;box-shadow:var(--shadow)}
-.today-stats .ts b{display:block;font-size:20px;font-weight:800;color:var(--ink)}
+.today-stats .ts{flex:1;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px;text-align:center;box-shadow:var(--shadow)}
+.today-stats .ts b{display:block;font-size:20px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
 .today-stats .ts.g b{color:var(--green)} .today-stats .ts.y b{color:var(--gold)} .today-stats .ts.r b{color:var(--red)}
 .today-stats .ts span{font-size:11px;color:var(--ink-3);font-weight:600}
 .today-qa{display:flex;gap:8px;margin-bottom:12px}
@@ -1105,7 +1122,7 @@ nav{
 .trend-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
 .trend-kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 8px;text-align:center;box-shadow:var(--shadow)}
 .trend-kpi>span{font-size:11px;color:var(--ink-2);font-weight:500;display:block;margin-top:8px}
-.tk-num{font-size:30px;font-weight:900;line-height:1}
+.tk-num{font-size:30px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
 .tk-num.g{color:var(--green)} .tk-num.r{color:var(--red)}
 .tk-ring{width:66px;height:66px;border-radius:50%;margin:0 auto;display:grid;place-items:center;background:conic-gradient(var(--red) calc(var(--pct)*1%),#f0e6e8 0);position:relative}
 .tk-ring::before{content:"";position:absolute;inset:6px;background:var(--card);border-radius:50%}
@@ -1116,12 +1133,12 @@ nav{
   padding:20px 20px 18px;position:relative;overflow:hidden;box-shadow:var(--shadow);margin-bottom:18px}
 .db-hero-top{display:flex;justify-content:space-between;align-items:flex-start;position:relative;gap:10px}
 .db-eyebrow{font-size:11.5px;color:var(--ink-3);font-weight:500}
-.db-title{font-size:19px;font-weight:800;margin-top:3px;color:var(--ink)}
+.db-title{font-size:19px;font-weight:300;margin-top:3px;color:var(--ink)}
 .db-date{font-size:12px;color:var(--ink-3);margin-top:2px}
 .db-score{text-align:center;flex-shrink:0}
 .db-gauge{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;position:relative}
 .db-gauge:after{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--card)}
-.db-gauge b{position:relative;z-index:1;font-size:17px;font-weight:800;color:var(--ink)}
+.db-gauge b{position:relative;z-index:1;font-size:17px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
 .db-gauge-label{font-size:10.5px;margin-top:5px;color:var(--ink-3)}
 .db-strip{display:flex;gap:8px;margin-top:16px;position:relative;flex-wrap:wrap}
 .db-chip{background:var(--bg);border:1px solid var(--line);border-radius:11px;color:var(--ink-2);
@@ -1132,7 +1149,7 @@ nav{
 
 .db-feed{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
 .db-feed-item{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px 13px;
-  display:flex;align-items:center;gap:11px;box-shadow:var(--shadow);border-inline-start:4px solid var(--ink-3);cursor:pointer}
+  display:flex;align-items:center;gap:11px;box-shadow:var(--shadow);border-inline-start:3px solid var(--ink-3);cursor:pointer}
 .db-feed-item.r{border-inline-start-color:var(--red)}
 .db-feed-item.y{border-inline-start-color:var(--gold)}
 .db-feed-ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:15px;flex-shrink:0;background:var(--red-soft)}
@@ -1153,7 +1170,7 @@ nav{
   display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
 .db-ring{width:50px;height:50px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;position:relative}
 .db-ring:before{content:"";position:absolute;inset:5px;background:var(--card);border-radius:50%}
-.db-ring b{position:relative;font-size:12px;font-weight:800}
+.db-ring b{position:relative;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
 .db-ring-body b{display:block;font-size:12.5px;font-weight:700}
 .db-ring-body span{font-size:11px;color:var(--ink-3)}
 
@@ -1176,7 +1193,7 @@ nav{
 .db-board-ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:14px;background:var(--sky-soft,#eef4ff)}
 .db-board-dot{width:8px;height:8px;border-radius:50%;margin-top:4px}
 .db-board-dot.g{background:var(--green)} .db-board-dot.y{background:var(--gold)} .db-board-dot.r{background:var(--red)}
-.db-board-num{font-size:20px;font-weight:800;margin-top:9px}
+.db-board-num{font-size:20px;font-weight:800;margin-top:9px;font-variant-numeric:tabular-nums}
 .db-board-label{font-size:11px;color:var(--ink-3);margin-top:1px}
 
 .db-actions-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -1211,7 +1228,7 @@ nav{
 
 /* ===== קונסולת מפקד (dashboard v2) ===== */
 .cd{--cd-mono:"SF Mono",ui-monospace,"Menlo","Consolas",monospace;--cd-seg-empty:#e7dadd;
-  --cd-gold-line:#f0dfa8;--cd-green-line:#bfe9cf;
+  --cd-gold-line:var(--gold-line);--cd-green-line:var(--green-line);
   display:flex;flex-direction:column;gap:15px}
 .cd .cd-topbar{display:flex;align-items:center;justify-content:space-between}
 .cd .cd-unit{display:flex;align-items:center;gap:11px;min-width:0}
@@ -1229,7 +1246,7 @@ nav{
 .cd .cd-gauge svg{transform:rotate(-90deg);display:block}
 .cd .cd-trk{stroke:var(--line)}
 .cd .cd-val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.cd .cd-val b{font-family:var(--cd-mono);font-size:25px;font-weight:800;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
+.cd .cd-val b{font-family:var(--cd-mono);font-size:25px;font-weight:900;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
 .cd .cd-val span{font-size:9px;letter-spacing:.1em;color:var(--ink-3);font-weight:700;margin-top:2px}
 .cd .cd-cbody{flex:1;min-width:0}
 .cd .cd-cbody .cd-l{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
@@ -1237,7 +1254,7 @@ nav{
 .cd .cd-cbody .cd-v .cd-warn{color:var(--gold)}
 .cd .cd-seg{display:flex;gap:3px;margin-top:11px}
 .cd .cd-seg i{height:7px;border-radius:3px;flex:1}
-.cd .cd-seg-g{background:var(--green)} .cd .cd-seg-y{background:var(--gold)} .cd .cd-seg-r{background:var(--red-2)} .cd .cd-seg-o{background:var(--cd-seg-empty)}
+.cd .cd-seg-g{background:var(--status-green)} .cd .cd-seg-y{background:var(--status-gold)} .cd .cd-seg-r{background:var(--status-red)} .cd .cd-seg-o{background:var(--cd-seg-empty)}
 .cd .cd-legend{display:flex;gap:12px;margin-top:9px;font-size:10px;color:var(--ink-3);font-weight:600}
 .cd .cd-legend span{display:flex;align-items:center;gap:4px}
 .cd .cd-legend i{width:7px;height:7px;border-radius:2px}
@@ -1319,7 +1336,7 @@ nav{
 .sr-head h3{font-size:16px;font-weight:800;margin:0}
 .sr-head p{font-size:12px;color:var(--ink-3);margin:4px 0 0}
 .sr-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 4px}
-.sr-stat{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 4px;text-align:center}
+.sr-stat{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 4px;text-align:center}
 .sr-stat b{font-size:18px;font-weight:800;display:block;font-variant-numeric:tabular-nums}
 .sr-stat b.g{color:var(--green)}
 .sr-stat span{font-size:10px;color:var(--ink-3);font-weight:600}
@@ -1355,8 +1372,8 @@ nav{
 .pb-info b{font-size:15px;font-weight:800;display:block;color:var(--ink)}
 .pb-info span{font-size:12px;color:var(--ink-3);font-weight:300}
 .pb-stats{display:flex;gap:8px}
-.pb-stat{text-align:center;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:7px 11px;min-width:56px}
-.pb-stat b{font-size:16px;font-weight:900;display:block;line-height:1;color:var(--ink)}
+.pb-stat{text-align:center;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-sm);padding:7px 11px;min-width:56px}
+.pb-stat b{font-size:16px;font-weight:900;display:block;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
 .pb-stat span{font-size:9.5px;color:var(--ink-3);display:block;margin-top:2px}
 /* audit log */
 .audit-row{padding:10px 4px;border-bottom:1px solid var(--line)}
@@ -1472,8 +1489,8 @@ nav{
 .shed-card .drill-hint{font-size:11px;color:var(--red);font-weight:700}
 /* drill modal */
 .drill-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}
-.drill-stat{text-align:center;background:#fdfafa;border:1px solid var(--line);border-radius:11px;padding:11px 4px}
-.drill-stat b{font-size:19px;font-weight:900;display:block;color:var(--red-deep)}
+.drill-stat{text-align:center;background:#fdfafa;border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 4px}
+.drill-stat b{font-size:19px;font-weight:900;display:block;color:var(--red-deep);font-variant-numeric:tabular-nums}
 .drill-stat span{font-size:10px;color:var(--ink-3);display:block;margin-top:3px}
 .drill-sec{font-size:12.5px;font-weight:800;color:var(--ink-2);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
 .drill-people{font-size:13px;line-height:1.7;color:var(--ink);font-weight:500}
@@ -1482,10 +1499,10 @@ nav{
 .shed-card-head h3{font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px}
 .shed-card-head .shed-num{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--red-deep),var(--red-2));color:#fff;display:grid;place-items:center;font-weight:900;font-size:14px}
 .shed-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.shed-stat{text-align:center;background:#fdfafa;border:1px solid var(--line);border-radius:11px;padding:9px 4px}
-.shed-stat b{font-size:16px;font-weight:900;display:block;line-height:1.1}
+.shed-stat{text-align:center;background:#fdfafa;border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 4px}
+.shed-stat b{font-size:16px;font-weight:900;display:block;line-height:1.1;font-variant-numeric:tabular-nums}
 .shed-stat span{font-size:9.5px;color:var(--ink-3);font-weight:500;display:block;margin-top:3px}
-.shed-stat.ok b{color:var(--green)} .shed-stat.warn b{color:var(--gold)} .shed-stat.bad b{color:var(--red)} .shed-stat.info b{color:var(--red-deep)}
+.shed-stat.ok b{color:var(--status-green)} .shed-stat.warn b{color:var(--status-gold)} .shed-stat.bad b{color:var(--status-red)} .shed-stat.info b{color:var(--red-deep)}
 .shed-morning-line{margin-top:10px;font-size:12px;font-weight:700;padding:7px 12px;border-radius:10px;text-align:center}
 .shed-morning-line.ok{background:var(--green-soft);color:var(--green)}
 .shed-morning-line.partial{background:var(--gold-soft);color:var(--gold)}
@@ -1513,6 +1530,80 @@ nav{
 </style>
 </head>
 <body>
+<!-- ============================================================
+     ספריית אייקונים (SVG sprite) — מחליפה את שכבת האמוג'ים.
+     סגנון: viewBox 0 0 48 48, stroke=currentColor, stroke-width 2.4,
+     round caps/joins, בהשראת ה-SVG הקיימים בבאנרי ההדרכה.
+     שימוש: icon('name','extra-class') ב-JS, או <use href="#ic-name">
+     ישירות ב-HTML סטטי. הגודל/הצבע נשלטים ב-CSS דרך .icon/.ic svg. -->
+<svg style="position:absolute;width:0;height:0" aria-hidden="true">
+<defs>
+<symbol id="ic-home" viewBox="0 0 48 48"><path d="M8 22L24 9l16 13"/><path d="M12 19v20h9v-11h6v11h9V19"/></symbol>
+<symbol id="ic-commander" viewBox="0 0 48 48"><path d="M12 26l12-9 12 9"/><path d="M12 35l12-9 12 9"/></symbol>
+<symbol id="ic-doc" viewBox="0 0 48 48"><rect x="11" y="7" width="26" height="34" rx="2.5"/><path d="M17 17h14M17 23h14"/><path d="M16 32q3-3 6 0t6 0t6 0"/></symbol>
+<symbol id="ic-tasks" viewBox="0 0 48 48"><rect x="9" y="8" width="30" height="32" rx="3"/><path d="M15 18l3 3 6-6M15 28l3 3 6-6"/><path d="M28 19h8M28 29h8"/></symbol>
+<symbol id="ic-calendar" viewBox="0 0 48 48"><rect x="8" y="11" width="32" height="29" rx="3"/><path d="M8 20h32M16 7v8M32 7v8"/></symbol>
+<symbol id="ic-cert" viewBox="0 0 48 48"><circle cx="24" cy="18" r="11"/><path d="M18 27l-4 13 10-5 10 5-4-13"/></symbol>
+<symbol id="ic-training" viewBox="0 0 48 48"><path d="M24 14c-4-4-10-5-15-4v24c5-1 11 0 15 4c4-4 10-5 15-4V10c-5-1-11 0-15 4z"/><path d="M24 14v24"/></symbol>
+<symbol id="ic-onboarding" viewBox="0 0 48 48"><circle cx="19" cy="15" r="7"/><path d="M7 41c0-8 5-13 12-13"/><path d="M36 15h8M40 11v8"/></symbol>
+<symbol id="ic-fitness" viewBox="0 0 48 48"><path d="M24 39C11 30 6 22 8 15c2-6 9-8 13-3l3 4 3-4c4-5 11-3 13 3 2 7-3 15-16 24z"/><path d="M13 22h5l3 6 4-11 3 5h7"/></symbol>
+<symbol id="ic-library" viewBox="0 0 48 48"><path d="M9 10h9v30H9zM20 10h9v30h-9zM31 10h9v30h-9z"/></symbol>
+<symbol id="ic-toolbox" viewBox="0 0 48 48"><path d="M8 20h32v16H8z"/><path d="M18 20v-5a6 6 0 0 1 12 0v5"/><path d="M8 27h32"/></symbol>
+<symbol id="ic-vehicle" viewBox="0 0 48 48"><path d="M8 27l3-9c1-3 4-5 7-5h12c3 0 6 2 7 5l3 9"/><path d="M6 27h36v7H6z"/><circle cx="15" cy="34" r="3.5"/><circle cx="33" cy="34" r="3.5"/></symbol>
+<symbol id="ic-fault" viewBox="0 0 48 48"><path d="M31 9a9 9 0 0 0-12 11L9 30l6 6 10-10a9 9 0 0 0 11-12l-6 6-5-5z"/></symbol>
+<symbol id="ic-cake" viewBox="0 0 48 48"><path d="M10 26h28v13H10z"/><path d="M10 33h28"/><path d="M16 26v-5c0-2 2-2 2-4s-2-2-2-4M24 26v-5c0-2 2-2 2-4s-2-2-2-4M32 26v-5c0-2 2-2 2-4s-2-2-2-4"/></symbol>
+<symbol id="ic-more" viewBox="0 0 48 48"><circle cx="14" cy="24" r="3" fill="currentColor" stroke="none"/><circle cx="24" cy="24" r="3" fill="currentColor" stroke="none"/><circle cx="34" cy="24" r="3" fill="currentColor" stroke="none"/></symbol>
+<symbol id="ic-institution" viewBox="0 0 48 48"><path d="M8 20l16-11 16 11"/><path d="M10 20v18h28V20"/><path d="M18 26v10M24 26v10M30 26v10"/></symbol>
+<symbol id="ic-chart" viewBox="0 0 48 48"><path d="M9 40V26M18 40V18M27 40V30M36 40V12"/><path d="M6 40h36"/></symbol>
+<symbol id="ic-maintenance" viewBox="0 0 48 48"><circle cx="24" cy="24" r="7"/><path d="M24 6v6M24 36v6M6 24h6M36 24h6M11 11l4 4M33 33l4 4M37 11l-4 4M15 33l-4 4"/></symbol>
+<symbol id="ic-grid" viewBox="0 0 48 48"><rect x="8" y="8" width="15" height="15" rx="3"/><rect x="25" y="8" width="15" height="15" rx="3"/><rect x="8" y="25" width="15" height="15" rx="3"/><rect x="25" y="25" width="15" height="15" rx="3"/></symbol>
+<symbol id="ic-construction" viewBox="0 0 48 48"><path d="M24 8l9 28H15z"/><path d="M12 40h24M18 26h12M20 18h8"/></symbol>
+<symbol id="ic-people" viewBox="0 0 48 48"><circle cx="17" cy="17" r="6"/><path d="M6 40c0-7 5-12 11-12s11 5 11 12"/><circle cx="34" cy="19" r="5"/><path d="M26 40c1-6 4-9 9-9s9 4 9 9"/></symbol>
+<symbol id="ic-budget" viewBox="0 0 48 48"><circle cx="24" cy="24" r="15"/><path d="M24 15v18M29 19c0-3-3-4-5-4-3 0-6 1-6 4s3 3.5 6 4c3 .5 6 1 6 4s-3 4-6 4c-2 0-5-1-5-4"/></symbol>
+<symbol id="ic-shield" viewBox="0 0 48 48"><path d="M24 6l15 6v11c0 11-7 18-15 19-8-1-15-8-15-19V12z"/></symbol>
+<symbol id="ic-reserves" viewBox="0 0 48 48"><circle cx="21" cy="16" r="6"/><path d="M11 40c0-7 4.5-12 10-12s10 5 10 12"/><path d="M37 12a9 9 0 0 1 0 13M37 12l-3-1M37 12l1 3"/></symbol>
+<symbol id="ic-plus" viewBox="0 0 48 48"><path d="M24 10v28M10 24h28"/></symbol>
+<symbol id="ic-edit" viewBox="0 0 48 48"><path d="M30 8l10 10-20 20H10V28z"/><path d="M26 12l10 10"/></symbol>
+<symbol id="ic-close" viewBox="0 0 48 48"><path d="M12 12l24 24M36 12L12 36"/></symbol>
+<symbol id="ic-save" viewBox="0 0 48 48"><path d="M10 8h22l8 8v24H10z"/><path d="M16 8v10h14V8M14 40v-12h20v12"/></symbol>
+<symbol id="ic-delete" viewBox="0 0 48 48"><path d="M10 14h28"/><path d="M17 14V9h14v5"/><path d="M14 14l2 26h16l2-26"/><path d="M20 20v14M28 20v14"/></symbol>
+<symbol id="ic-link" viewBox="0 0 48 48"><path d="M20 28l8-8"/><path d="M28 14l4-4a6 6 0 0 1 9 9l-4 4"/><path d="M20 34l-4 4a6 6 0 0 1-9-9l4-4"/></symbol>
+<symbol id="ic-search" viewBox="0 0 48 48"><circle cx="21" cy="21" r="11"/><path d="M29 29l10 10"/></symbol>
+<symbol id="ic-tag" viewBox="0 0 48 48"><path d="M9 9h16l14 14-16 16L9 25z"/><circle cx="17" cy="17" r="2.5" fill="currentColor" stroke="none"/></symbol>
+<symbol id="ic-folder" viewBox="0 0 48 48"><path d="M6 14a3 3 0 0 1 3-3h9l4 5h17a3 3 0 0 1 3 3v18a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3z"/></symbol>
+<symbol id="ic-note" viewBox="0 0 48 48"><rect x="11" y="7" width="26" height="34" rx="2.5"/><path d="M17 16h14M17 23h14M17 30h14M17 37h8"/></symbol>
+<symbol id="ic-ruler" viewBox="0 0 48 48"><rect x="6" y="20" width="36" height="8" rx="2"/><path d="M12 20v4M18 20v4M24 20v6M30 20v4M36 20v4"/></symbol>
+<symbol id="ic-camera" viewBox="0 0 48 48"><path d="M8 17h8l3-4h10l3 4h8v22H8z"/><circle cx="24" cy="28" r="7"/></symbol>
+<symbol id="ic-lock" viewBox="0 0 48 48"><rect x="12" y="21" width="24" height="19" rx="3"/><path d="M17 21v-6a7 7 0 0 1 14 0v6"/></symbol>
+<symbol id="ic-hourglass" viewBox="0 0 48 48"><path d="M13 8h22M13 40h22"/><path d="M15 8v6c0 5 4 8 9 10-5 2-9 5-9 10v6M33 8v6c0 5-4 8-9 10 5 2 9 5 9 10v6"/></symbol>
+<symbol id="ic-check" viewBox="0 0 48 48"><path d="M10 25l10 10 18-20"/></symbol>
+<symbol id="ic-warning" viewBox="0 0 48 48"><path d="M24 8l19 32H5z"/><path d="M24 21v9"/><circle cx="24" cy="34" r="1.6" fill="currentColor" stroke="none"/></symbol>
+<symbol id="ic-bell" viewBox="0 0 48 48"><path d="M24 8a10 10 0 0 0-10 10v6c0 5-3 7-3 9h26c0-2-3-4-3-9v-6a10 10 0 0 0-10-10z"/><path d="M20 37a4 4 0 0 0 8 0"/></symbol>
+<symbol id="ic-swap" viewBox="0 0 48 48"><path d="M38 20a14 14 0 0 0-26-7"/><path d="M12 8v9h9"/><path d="M10 28a14 14 0 0 0 26 7"/><path d="M36 40v-9h-9"/></symbol>
+<symbol id="ic-clock" viewBox="0 0 48 48"><circle cx="24" cy="24" r="16"/><path d="M24 14v10l7 5"/></symbol>
+<symbol id="ic-person" viewBox="0 0 48 48"><circle cx="24" cy="17" r="8"/><path d="M9 40c0-9 6.7-15 15-15s15 6 15 15"/></symbol>
+<symbol id="ic-checkcircle" viewBox="0 0 48 48"><circle cx="24" cy="24" r="16"/><path d="M16 25l6 6 11-13"/></symbol>
+<symbol id="ic-pin" viewBox="0 0 48 48"><path d="M24 4c8 0 14 6 14 14 0 10-14 26-14 26S10 28 10 18C10 10 16 4 24 4z"/><circle cx="24" cy="18" r="5"/></symbol>
+<symbol id="ic-package" viewBox="0 0 48 48"><path d="M6 15l18-9 18 9-18 9z"/><path d="M6 15v18l18 9V24z"/><path d="M42 15v18l-18 9V24z"/></symbol>
+<symbol id="ic-transfer" viewBox="0 0 48 48"><path d="M16 8v26M16 34l-7-7M16 34l7-7"/><path d="M32 40V14M32 14l-7 7M32 14l7 7"/></symbol>
+<symbol id="ic-announce" viewBox="0 0 48 48"><path d="M6 20v8h6l14 9V11l-14 9z"/><path d="M26 16a8 8 0 0 1 0 16"/><path d="M12 28l2 9h5l-2-9"/></symbol>
+<symbol id="ic-eye" viewBox="0 0 48 48"><path d="M4 24s8-13 20-13 20 13 20 13-8 13-20 13S4 24 4 24z"/><circle cx="24" cy="24" r="6"/></symbol>
+</defs>
+</svg>
+<script>
+/* icon(name, cls) — מרנדר <svg><use> לאייקון מה-sprite שמעל. cls אופציונלי
+   להוספת מחלקת CSS (למשל גודל/צבע ספציפיים להקשר). */
+function icon(name, cls){
+  return '<svg class="icon' + (cls ? ' ' + cls : '') + '"><use href="#ic-' + name + '"/></svg>';
+}
+</script>
+<style>
+.icon,.ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex-shrink:0;vertical-align:middle}
+.dot.blue{background:#2563eb} .dot.green{background:var(--green)} .dot.orange{background:#e07b1a}
+.dot.red{background:var(--red-2)} .dot.purple{background:#7c3aed} .dot.brown{background:#8a5a2e}
+.dot.black{background:#292019} .dot.yellow{background:#e0b400} .dot.white{background:#fff;border:1px solid var(--line)}
+</style>
 <div id="app">
 
   <!-- LOGIN -->
@@ -2330,29 +2421,29 @@ nav{
   <!-- NAV -->
   <button id="back-to-dash" onclick="go('scr-cmd',document.getElementById('nav-cmd'))" aria-label="חזרה לדשבורד" title="חזרה לדשבורד">→</button>
   <nav>
-    <button class="nav-btn hidden" id="nav-cmd" data-scr="scr-cmd" onclick="go('scr-cmd',this)"><span class="ic">🎖️</span><span>מפקד</span></button>
-    <button class="nav-btn hidden" id="nav-today" data-scr="scr-today" onclick="go('scr-today',this)"><span class="ic">🏠</span><span>היום שלי</span><span class="nav-badge hidden" id="badge-today">0</span></button>
-    <button class="nav-btn active" id="nav-safety" data-scr="scr-safety" onclick="go('scr-safety',this)"><span class="ic">📄</span><span>קרא וחתום</span><span class="nav-badge hidden" id="badge-safety">0</span></button>
-    <button class="nav-btn" id="nav-morning" data-scr="scr-morning" onclick="go('scr-morning',this)"><span class="ic">✅</span><span>מטלות</span><span class="nav-badge hidden" id="badge-morning">0</span></button>
-    <button class="nav-btn" id="nav-board" data-scr="scr-board" onclick="go('scr-board',this)"><span class="ic">📅</span><span>תורנויות</span></button>
-    <button class="nav-btn hidden" id="nav-certs" data-scr="scr-certs" onclick="go('scr-certs',this)"><span class="ic">🎓</span><span>הסמכות</span></button>
-    <button class="nav-btn hidden" id="nav-trainhub" data-scr="scr-trainhub" onclick="go('scr-trainhub',this)"><span class="ic">🎓</span><span>הדרכה</span></button>
-    <button class="nav-btn hidden" id="nav-medchecks" data-scr="scr-medchecks" onclick="go('scr-medchecks',this)"><span class="ic">🪖</span><span>כשירות חיילים</span></button>
-    <button class="nav-btn hidden" id="nav-training" data-scr="scr-training" onclick="go('scr-training',this)"><span class="ic">📚</span><span>חומרי הדרכה</span></button>
-    <button class="nav-btn hidden" id="nav-tools" data-scr="scr-tools" onclick="go('scr-tools',this)"><span class="ic">🧰</span><span>חדר כלים</span></button>
-    <button class="nav-btn hidden" id="nav-vehicles" data-scr="scr-vehicles" onclick="go('scr-vehicles',this)"><span class="ic">🚙</span><span>רכבים</span></button>
-    <button class="nav-btn" id="nav-faults" data-scr="scr-faults" onclick="go('scr-faults',this)"><span class="ic">🛠️</span><span>תקלות</span></button>
-    <button class="nav-btn" id="nav-bdays" data-scr="scr-bdays" onclick="go('scr-bdays',this)"><span class="ic">🎂</span><span>ימי הולדת</span></button>
-    <button class="nav-btn" id="nav-more" onclick="openMoreSheet()"><span class="ic">⋯</span><span>עוד</span></button>
-    <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic">🏛️</span><span>אחראי הדרכה</span></button>
-    <button class="nav-btn hidden" id="nav-vo-overview" data-scr="scr-vo-overview" onclick="go('scr-vo-overview',this)"><span class="ic">📊</span><span>סקירה</span></button>
-    <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic">🚙</span><span>רכבים</span></button>
-    <button class="nav-btn hidden" id="nav-maint-dept" data-scr="scr-maint-dept" onclick="go('scr-maint-dept',this)"><span class="ic">🔧</span><span>אחזקה</span></button>
-    <button class="nav-btn hidden" id="nav-morningcheck" data-scr="scr-morning-rollcall" onclick="go('scr-morning-rollcall',this)"><span class="ic">📋</span><span>מסדר בוקר</span></button>
-    <button class="nav-btn hidden" id="nav-binui-admin" data-scr="scr-binui-admin" onclick="go('scr-binui-admin',this)"><span class="ic">🚧</span><span>תקלות בינוי</span><span class="nav-badge hidden" id="badge-binui-admin">0</span></button>
-    <button class="nav-btn hidden" id="nav-vo-team" onclick="openVoTeamMgmt()"><span class="ic">👥</span><span>צוות</span></button>
-    <button class="nav-btn hidden" id="nav-budget-officer" data-scr="scr-budget-officer" onclick="go('scr-budget-officer',this)"><span class="ic">💰</span><span>תקציבים</span></button>
-    <button class="nav-btn hidden" id="nav-rollcall" data-scr="scr-rollcall" onclick="go('scr-rollcall',this)"><span class="ic">🛡️</span><span>נכס</span><span class="nav-badge hidden" id="badge-rollcall">0</span></button>
+    <button class="nav-btn hidden" id="nav-cmd" data-scr="scr-cmd" onclick="go('scr-cmd',this)"><span class="ic"><svg><use href="#ic-commander"/></svg></span><span>מפקד</span></button>
+    <button class="nav-btn hidden" id="nav-today" data-scr="scr-today" onclick="go('scr-today',this)"><span class="ic"><svg><use href="#ic-home"/></svg></span><span>היום שלי</span><span class="nav-badge hidden" id="badge-today">0</span></button>
+    <button class="nav-btn active" id="nav-safety" data-scr="scr-safety" onclick="go('scr-safety',this)"><span class="ic"><svg><use href="#ic-doc"/></svg></span><span>קרא וחתום</span><span class="nav-badge hidden" id="badge-safety">0</span></button>
+    <button class="nav-btn" id="nav-morning" data-scr="scr-morning" onclick="go('scr-morning',this)"><span class="ic"><svg><use href="#ic-tasks"/></svg></span><span>מטלות</span><span class="nav-badge hidden" id="badge-morning">0</span></button>
+    <button class="nav-btn" id="nav-board" data-scr="scr-board" onclick="go('scr-board',this)"><span class="ic"><svg><use href="#ic-calendar"/></svg></span><span>תורנויות</span></button>
+    <button class="nav-btn hidden" id="nav-certs" data-scr="scr-certs" onclick="go('scr-certs',this)"><span class="ic"><svg><use href="#ic-cert"/></svg></span><span>הסמכות</span></button>
+    <button class="nav-btn hidden" id="nav-trainhub" data-scr="scr-trainhub" onclick="go('scr-trainhub',this)"><span class="ic"><svg><use href="#ic-training"/></svg></span><span>הדרכה</span></button>
+    <button class="nav-btn hidden" id="nav-medchecks" data-scr="scr-medchecks" onclick="go('scr-medchecks',this)"><span class="ic"><svg><use href="#ic-fitness"/></svg></span><span>כשירות חיילים</span></button>
+    <button class="nav-btn hidden" id="nav-training" data-scr="scr-training" onclick="go('scr-training',this)"><span class="ic"><svg><use href="#ic-library"/></svg></span><span>חומרי הדרכה</span></button>
+    <button class="nav-btn hidden" id="nav-tools" data-scr="scr-tools" onclick="go('scr-tools',this)"><span class="ic"><svg><use href="#ic-toolbox"/></svg></span><span>חדר כלים</span></button>
+    <button class="nav-btn hidden" id="nav-vehicles" data-scr="scr-vehicles" onclick="go('scr-vehicles',this)"><span class="ic"><svg><use href="#ic-vehicle"/></svg></span><span>רכבים</span></button>
+    <button class="nav-btn" id="nav-faults" data-scr="scr-faults" onclick="go('scr-faults',this)"><span class="ic"><svg><use href="#ic-fault"/></svg></span><span>תקלות</span></button>
+    <button class="nav-btn" id="nav-bdays" data-scr="scr-bdays" onclick="go('scr-bdays',this)"><span class="ic"><svg><use href="#ic-cake"/></svg></span><span>ימי הולדת</span></button>
+    <button class="nav-btn" id="nav-more" onclick="openMoreSheet()"><span class="ic"><svg><use href="#ic-more"/></svg></span><span>עוד</span></button>
+    <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic"><svg><use href="#ic-institution"/></svg></span><span>אחראי הדרכה</span></button>
+    <button class="nav-btn hidden" id="nav-vo-overview" data-scr="scr-vo-overview" onclick="go('scr-vo-overview',this)"><span class="ic"><svg><use href="#ic-chart"/></svg></span><span>סקירה</span></button>
+    <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic"><svg><use href="#ic-vehicle"/></svg></span><span>רכבים</span></button>
+    <button class="nav-btn hidden" id="nav-maint-dept" data-scr="scr-maint-dept" onclick="go('scr-maint-dept',this)"><span class="ic"><svg><use href="#ic-maintenance"/></svg></span><span>אחזקה</span></button>
+    <button class="nav-btn hidden" id="nav-morningcheck" data-scr="scr-morning-rollcall" onclick="go('scr-morning-rollcall',this)"><span class="ic"><svg><use href="#ic-people"/></svg></span><span>מסדר בוקר</span></button>
+    <button class="nav-btn hidden" id="nav-binui-admin" data-scr="scr-binui-admin" onclick="go('scr-binui-admin',this)"><span class="ic"><svg><use href="#ic-construction"/></svg></span><span>תקלות בינוי</span><span class="nav-badge hidden" id="badge-binui-admin">0</span></button>
+    <button class="nav-btn hidden" id="nav-vo-team" onclick="openVoTeamMgmt()"><span class="ic"><svg><use href="#ic-people"/></svg></span><span>צוות</span></button>
+    <button class="nav-btn hidden" id="nav-budget-officer" data-scr="scr-budget-officer" onclick="go('scr-budget-officer',this)"><span class="ic"><svg><use href="#ic-budget"/></svg></span><span>תקציבים</span></button>
+    <button class="nav-btn hidden" id="nav-rollcall" data-scr="scr-rollcall" onclick="go('scr-rollcall',this)"><span class="ic"><svg><use href="#ic-shield"/></svg></span><span>נכס</span><span class="nav-badge hidden" id="badge-rollcall">0</span></button>
   </nav>
 
   <!-- DOC READER -->
@@ -2488,22 +2579,22 @@ nav{
     <div class="sheet">
       <div class="sheet-handle"></div>
       <div class="sheet-top"><b>עוד</b><button class="sheet-x" onclick="document.getElementById('more-sheet').classList.remove('open')" aria-label="סגור">✕</button></div>
-      <div class="sheet-item" id="sheet-naatim" onclick="closeMoreAnd('scr-naatim')"><div class="s-ic">🗂️</div><div class="s-tx"><b>נע"תים</b><span>תחומי אחריות ובדיקה שבועית</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item" id="sheet-duties" onclick="closeMoreAnd('scr-duties')"><div class="s-ic">🔄</div><div class="s-tx"><b>תורנויות</b><span>שיבוץ שמי שבועי</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="sheet-certs" onclick="closeMoreAnd('scr-certs')"><div class="s-ic">🎓</div><div class="s-tx"><b>הסמכות</b><span>תוקף וחידוש הסמכות</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item" id="sheet-training" onclick="closeMoreAnd('scr-training')"><div class="s-ic">📚</div><div class="s-tx"><b>חומרי הדרכה</b><span>מהמנהל הטייסתי</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item" id="sheet-medchecks" onclick="closeMoreAnd('scr-medchecks')"><div class="s-ic">🪖</div><div class="s-tx"><b>כשירות חיילים</b><span>שמיעה ומטווח — תוקף וחידוש</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item" id="sheet-calendar" onclick="closeMoreAnd('scr-calendar')"><div class="s-ic">📅</div><div class="s-tx"><b>לוח שנה מאוחד</b><span>הסמכות, כיול כלים, טסט רכב ותורנויות</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="sheet-onboarding" onclick="closeMoreAnd('scr-onboarding')"><div class="s-ic">🎓</div><div class="s-tx"><b>קליטת חייל חדש</b><span>חונך, מטלות והסמכות, קאונטר PF</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="more-vehicles-item" onclick="closeMoreAnd('scr-vehicles')"><div class="s-ic">🚙</div><div class="s-tx"><b>רכבים</b><span>מעקב טסטים וטיפולים</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="sheet-users" onclick="closeMoreAnd('scr-users')"><div class="s-ic">👑</div><div class="s-tx"><b>משתמשים</b><span>כל המשתמשים בכל המסגרות</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="more-team-item" onclick="closeMoreAndFn(openTeamMgmt)"><div class="s-ic">👥</div><div class="s-tx"><b>ניהול צוות</b><span>הוספה, עריכה, ימי הולדת</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="more-tasks-item" onclick="closeMoreAndFn(openTaskMgmt)"><div class="s-ic">🧰</div><div class="s-tx"><b>עריכת מטלות בוקר</b><span>הוספה ושינוי מטלות</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="more-faults-item" onclick="closeMoreAnd('scr-faults')"><div class="s-ic">🛠️</div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="more-bdays-item" onclick="closeMoreAnd('scr-bdays')"><div class="s-ic">🎂</div><div class="s-tx"><b>ימי הולדת</b><span>לוח ימי הולדת הצוות</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item" id="more-rollcall-item" onclick="closeMoreAnd('scr-rollcall')"><div class="s-ic">🛡️</div><div class="s-tx"><b>נכס</b><span>סימון תקינות וזמינות</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="more-binui-item" onclick="closeMoreAnd('scr-binui-faults')"><div class="s-ic">🚧</div><div class="s-tx"><b>תקלות בינוי</b><span>דיווח ליקויי מבנה, עם תמונה</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="more-maintdept-item" onclick="closeMoreAnd('scr-maint-dept')"><div class="s-ic">🔧</div><div class="s-tx"><b>אחזקה</b><span>הזמנת חומרים ומעקב כלים מוטוריים</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="sheet-naatim" onclick="closeMoreAnd('scr-naatim')"><div class="s-ic"><svg><use href="#ic-folder"/></svg></div><div class="s-tx"><b>נע"תים</b><span>תחומי אחריות ובדיקה שבועית</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="sheet-duties" onclick="closeMoreAnd('scr-duties')"><div class="s-ic"><svg><use href="#ic-calendar"/></svg></div><div class="s-tx"><b>תורנויות</b><span>שיבוץ שמי שבועי</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="sheet-certs" onclick="closeMoreAnd('scr-certs')"><div class="s-ic"><svg><use href="#ic-cert"/></svg></div><div class="s-tx"><b>הסמכות</b><span>תוקף וחידוש הסמכות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="sheet-training" onclick="closeMoreAnd('scr-training')"><div class="s-ic"><svg><use href="#ic-library"/></svg></div><div class="s-tx"><b>חומרי הדרכה</b><span>מהמנהל הטייסתי</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="sheet-medchecks" onclick="closeMoreAnd('scr-medchecks')"><div class="s-ic"><svg><use href="#ic-fitness"/></svg></div><div class="s-tx"><b>כשירות חיילים</b><span>שמיעה ומטווח — תוקף וחידוש</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="sheet-calendar" onclick="closeMoreAnd('scr-calendar')"><div class="s-ic"><svg><use href="#ic-calendar"/></svg></div><div class="s-tx"><b>לוח שנה מאוחד</b><span>הסמכות, כיול כלים, טסט רכב ותורנויות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="sheet-onboarding" onclick="closeMoreAnd('scr-onboarding')"><div class="s-ic"><svg><use href="#ic-onboarding"/></svg></div><div class="s-tx"><b>קליטת חייל חדש</b><span>חונך, מטלות והסמכות, קאונטר PF</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-vehicles-item" onclick="closeMoreAnd('scr-vehicles')"><div class="s-ic"><svg><use href="#ic-vehicle"/></svg></div><div class="s-tx"><b>רכבים</b><span>מעקב טסטים וטיפולים</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="sheet-users" onclick="closeMoreAnd('scr-users')"><div class="s-ic"><svg><use href="#ic-people"/></svg></div><div class="s-tx"><b>משתמשים</b><span>כל המשתמשים בכל המסגרות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-team-item" onclick="closeMoreAndFn(openTeamMgmt)"><div class="s-ic"><svg><use href="#ic-people"/></svg></div><div class="s-tx"><b>ניהול צוות</b><span>הוספה, עריכה, ימי הולדת</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-tasks-item" onclick="closeMoreAndFn(openTaskMgmt)"><div class="s-ic"><svg><use href="#ic-tasks"/></svg></div><div class="s-tx"><b>עריכת מטלות בוקר</b><span>הוספה ושינוי מטלות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-faults-item" onclick="closeMoreAnd('scr-faults')"><div class="s-ic"><svg><use href="#ic-fault"/></svg></div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-bdays-item" onclick="closeMoreAnd('scr-bdays')"><div class="s-ic"><svg><use href="#ic-cake"/></svg></div><div class="s-tx"><b>ימי הולדת</b><span>לוח ימי הולדת הצוות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="more-rollcall-item" onclick="closeMoreAnd('scr-rollcall')"><div class="s-ic"><svg><use href="#ic-shield"/></svg></div><div class="s-tx"><b>נכס</b><span>סימון תקינות וזמינות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-binui-item" onclick="closeMoreAnd('scr-binui-faults')"><div class="s-ic"><svg><use href="#ic-construction"/></svg></div><div class="s-tx"><b>תקלות בינוי</b><span>דיווח ליקויי מבנה, עם תמונה</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-maintdept-item" onclick="closeMoreAnd('scr-maint-dept')"><div class="s-ic"><svg><use href="#ic-maintenance"/></svg></div><div class="s-tx"><b>אחזקה</b><span>הזמנת חומרים ומעקב כלים מוטוריים</span></div><span class="s-chev">‹</span></div>
     </div>
   </div>
 
@@ -5659,15 +5750,15 @@ async function renderTrainHub(){
   const chips = `
     <div class="th-chips">
       <button class="th-chip${certExpired?" hot":""}" onclick="go('scr-certs',null)">
-        <span class="ic">🎓</span><span class="lb">הסמכות</span>
+        <span class="ic">${icon('cert')}</span><span class="lb">הסמכות</span>
         <span class="n">${certExpired ? certExpired+" פגו" : certSoon ? certSoon+" מתקרבים" : "בתוקף"}</span>
       </button>
       <button class="th-chip" onclick="go('scr-onboarding',null)">
-        <span class="ic">👤</span><span class="lb">קליטה</span>
+        <span class="ic">${icon('onboarding')}</span><span class="lb">קליטה</span>
         <span class="n">${onbCount ? onbCount+" פעילות" : "אין"}</span>
       </button>
       <button class="th-chip" onclick="go('scr-training',null)">
-        <span class="ic">📚</span><span class="lb">חומרים</span>
+        <span class="ic">${icon('library')}</span><span class="lb">חומרים</span>
         <span class="n">${trainCount}</span>
       </button>
     </div>`;
@@ -9320,9 +9411,56 @@ async function logAction(action, detail){
   }catch(e){ console.error("audit", e); }
 }
 let toastT;
+/* emojiIcon(str) — ממיר אמוג'י מוביל במחרוזת (אם קיים) לאייקון SVG, לשימוש
+   בכל מקום שמציג טקסט חופשי (toast, labels) ולא יכול להריץ ${icon()} כי הוא
+   נבנה כ-textContent/מחרוזת רגילה. מזהה גם התנגשויות מושגיות לפי הקשר
+   (🎓/🧰/🎖️ — תלוי מילות מפתח בהמשך הטקסט). מחזיר HTML מוכן ל-innerHTML. */
+var EMOJI_LEAD = [
+  ["⚠️","warning"],["⚠","warning"],["✅","checkcircle"],["✓","check"],["✗","close"],["✕","close"],
+  ["➕","plus"],["✏️","edit"],["✍️","edit"],["💾","save"],["🗑️","delete"],["🗑","delete"],
+  ["🔗","link"],["📎","link"],["🔍","search"],["🔎","search"],["🏷️","tag"],["🪪","tag"],
+  ["📝","note"],["🔢","note"],["📏","ruler"],["📷","camera"],["📸","camera"],["🖼️","camera"],
+  ["🔒","lock"],["🔓","lock"],["🔐","lock"],["🔑","lock"],["⏳","hourglass"],["🔔","bell"],
+  ["🚨","warning"],["🔄","swap"],["↔️","swap"],["🗓️","calendar"],["📅","calendar"],
+  ["🚙","vehicle"],["🚗","vehicle"],["🛂","vehicle"],["🔧","maintenance"],["⚙️","maintenance"],
+  ["🛠️","fault"],["🏠","home"],["📄","doc"],["🚧","construction"],["👥","people"],
+  ["📋","people"],["👑","people"],["👤","person"],["🧑","person"],["🪖","fitness"],["👂","fitness"],
+  ["🎂","cake"],["📌","pin"],["📍","pin"],["🌐","pin"],["📊","chart"],["📚","library"],
+  ["🎞️","training"],["🎥","training"],["🗃️","folder"],["🗄️","folder"],["🗂️","folder"],
+  ["📤","transfer"],["📥","transfer"],["📦","package"],["💰","budget"],["🧾","budget"],
+  ["💵","budget"],["🏦","budget"],["🏢","institution"],["🏛️","institution"],["🏫","institution"],
+  ["🛡️","shield"],["🎉","checkcircle"],["📜","cert"],["❌","close"],["🔚","close"],
+  ["📢","announce"],["👁️","eye"]
+];
+function emojiIcon(str){
+  str = String(str);
+  if(str.startsWith("🎓")){
+    var rest = str.slice(2).replace(/^\s+/,"");
+    var name = /קליטה|הסתגלות/.test(rest) ? "onboarding" : /הדרכה/.test(rest) && !/הסמכ/.test(rest) ? "training" : "cert";
+    return icon(name) + " " + escapeHTML(rest);
+  }
+  if(str.startsWith("🧰")){
+    var rest = str.slice(2).replace(/^\s+/,"");
+    return icon(/מטלות|משימ/.test(rest) ? "tasks" : "toolbox") + " " + escapeHTML(rest);
+  }
+  if(str.startsWith("🎖️")){
+    var rest = str.slice(3).replace(/^\s+/,"");
+    return icon(/מילואים/.test(rest) ? "reserves" : "commander") + " " + escapeHTML(rest);
+  }
+  for(var i=0;i<EMOJI_LEAD.length;i++){
+    var e = EMOJI_LEAD[i][0];
+    if(str.startsWith(e)){
+      return icon(EMOJI_LEAD[i][1]) + " " + escapeHTML(str.slice(e.length).replace(/^\s+/,""));
+    }
+  }
+  return escapeHTML(str);
+}
+/* dot(color) — נקודת-צבע קטנה (מחליפה את אמוג'י העיגולים הצבעוניים
+   ששימשו כמקרא/סטטוס — 🔵🟢🟠🔴🟣🟤⚫🟡⚪) */
+function dot(color){ return '<span class="dot ' + color + '"></span>'; }
 function toast(msg){
   const t = document.getElementById("toast");
-  t.textContent = msg; t.classList.add("show");
+  t.innerHTML = emojiIcon(msg); t.classList.add("show");
   clearTimeout(toastT);
   toastT = setTimeout(()=>t.classList.remove("show"), 2400);
 }
