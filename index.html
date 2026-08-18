@@ -9411,13 +9411,47 @@ async function checkPendingDigest(){
     if(p && (p.title || p.body)){ await idbDelKV("pending_digest"); showDigestPopup(p.title, p.body); }
   }catch(e){}
 }
+/* ===== ניווט מהקשה על התראה =====
+   ה-Service Worker (firebase-messaging-sw.js) שולח kind של ההתראה שהוקשה
+   דרך postMessage (אפליקציה פתוחה) או pending_nav ב-IndexedDB (פתיחה קרה).
+   הטבלה ממפה kind → מסך יעד (data-scr של כפתור הניווט); duty_naat הוא
+   מקרה מיוחד — פותח את מודל אישורי מ״ע תורנויות, לא מסך שלם. */
+const NOTIF_NAV_MAP = {
+  message: "scr-today",
+  board: "scr-board",
+  safety: "scr-safety",
+  reminder: "scr-safety",
+  training: "scr-training",
+  fault: "scr-faults",
+  binui_fault: "scr-binui-admin",
+  rollcall: "scr-rollcall",
+  morning_rollcall: "scr-morning-rollcall",
+  cert_reminder: "scr-certs",
+  reserve_reminder: "scr-certs",
+  vo_reminder: "scr-vo-overview",
+};
+function handleNotificationNav(kind){
+  try{
+    if(kind === "duty_naat"){ if(typeof openNaatSwaps==="function") openNaatSwaps(); return; }
+    const scr = NOTIF_NAV_MAP[kind];
+    if(!scr || !document.getElementById(scr)) return;
+    go(scr, document.querySelector('.nav-btn[data-scr="'+scr+'"]'));
+  }catch(e){}
+}
+async function checkPendingNav(){
+  try{
+    const p = await idbGetKV("pending_nav");
+    if(p && p.kind){ await idbDelKV("pending_nav"); handleNotificationNav(p.kind); }
+  }catch(e){}
+}
 if("serviceWorker" in navigator){
   navigator.serviceWorker.addEventListener("message", (e)=>{
     if(e.data && e.data.type === "SHOW_DIGEST") checkPendingDigest();
+    if(e.data && e.data.type === "NOTIFICATION_NAV" && e.data.kind) handleNotificationNav(e.data.kind);
   });
 }
-// פתיחה קרה: אם המשתמש הקיש על התראת הסקירה והאפליקציה נפתחה מחדש
-window.addEventListener("load", ()=>{ checkPendingDigest(); });
+// פתיחה קרה: אם המשתמש הקיש על התראה והאפליקציה נפתחה מחדש
+window.addEventListener("load", ()=>{ checkPendingDigest(); checkPendingNav(); });
 /* בקשת אישור התראות פעם אחת (נדרש באייפון כדי שה-badge יופיע). מופעל מתוך
    מחווה של המשתמש (כניסה), ורק אם האפליקציה מותקנת ועדיין לא נשאל/הוחלט. */
 async function ensureBadgePermission(){
