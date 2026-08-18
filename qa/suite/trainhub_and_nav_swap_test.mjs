@@ -1,10 +1,13 @@
 /* בקשת משתמש (צמצום תפריט "עוד" למפקד):
    (1) "סגירת יום" הוסר לגמרי — מסך, פריט תפריט וכפתור הניהול.
    (2) עולם ההדרכה מאוחד למסך-שער "הדרכה": הסמכות + קליטת חייל חדש +
-       חומרי הדרכה. השער מחליף את "הסמכות" בבאנר התחתון.
-   (3) בבאנר התחתון הוחלפו "רכבים" ו"כשירות חיילים": כשירות עלתה
-       ללשונית, רכבים ירדו לתפריט "עוד" (ההרשאה עצמה לא השתנתה).
-   (4) חייל לא מושפע — אצלו הכל נשאר במקום. */
+       חומרי הדרכה + קרא-וחתום. השער מחליף את "הסמכות" ואת "קרא-וחתום"
+       בבאנר התחתון (קרא-וחתום עולה כצ'יפ רביעי במסך ההדרכה).
+   (3) בבאנר התחתון הוחלפו "רכבים" ו"כשירות חיילים" קודם; עכשיו הוחלפו
+       שוב "כשירות חיילים" ו"לוח שנה מאוחד": לוח שנה עלה ללשונית,
+       כשירות חיילים ירדה לתפריט "עוד" (אצל כולם, כולל מפקד).
+   (4) חייל לא מושפע בכשירות/הסמכות/חומרים — אבל "קרא-וחתום" ("nav-safety")
+       נשאר גלוי אצלו כרגיל, כי אין לו שער הדרכה להעביר אליו. */
 import { newPage, closeBrowser, loginAsFramework } from '../lib/harness.mjs';
 
 const results = [];
@@ -39,10 +42,13 @@ const hidden = id => page.evaluate(i=>{
 
   record("מפקד: לשונית \"הדרכה\" גלויה", (await hidden("nav-trainhub"))===false, String(await hidden("nav-trainhub")));
   record("מפקד: \"הסמכות\" ירדה מהבאנר", (await hidden("nav-certs"))===true, String(await hidden("nav-certs")));
-  record("מפקד: \"כשירות חיילים\" עלתה לבאנר", (await hidden("nav-medchecks"))===false, String(await hidden("nav-medchecks")));
+  record("מפקד: \"קרא-וחתום\" ירדה מהבאנר (עברה לשער)", (await hidden("nav-safety"))===true, String(await hidden("nav-safety")));
+  record("מפקד: \"כשירות חיילים\" לא עלתה לבאנר", (await hidden("nav-medchecks"))===true, String(await hidden("nav-medchecks")));
+  record("מפקד: \"לוח שנה מאוחד\" עלה לבאנר", (await hidden("nav-calendar"))===false, String(await hidden("nav-calendar")));
   record("מפקד: \"רכבים\" ירדו מהבאנר", (await hidden("nav-vehicles"))===true, String(await hidden("nav-vehicles")));
   record("מפקד: \"רכבים\" זמינים בתפריט \"עוד\"", (await hidden("more-vehicles-item"))===false, String(await hidden("more-vehicles-item")));
-  record("מפקד: \"כשירות חיילים\" ירדה מ\"עוד\" (לא כפול)", (await hidden("sheet-medchecks"))===true, String(await hidden("sheet-medchecks")));
+  record("מפקד: \"כשירות חיילים\" זמינה ב\"עוד\"", (await hidden("sheet-medchecks"))===false, String(await hidden("sheet-medchecks")));
+  record("מפקד: \"לוח שנה מאוחד\" ירד מ\"עוד\" (לא כפול)", (await hidden("sheet-calendar"))===true, String(await hidden("sheet-calendar")));
   record("מפקד: \"חומרי הדרכה\" ירדו מ\"עוד\" (עברו לשער)", (await hidden("sheet-training"))===true, String(await hidden("sheet-training")));
   record("מפקד: \"קליטת חייל חדש\" ירדה מ\"עוד\" (עברה לשער)", (await hidden("sheet-onboarding"))===true, String(await hidden("sheet-onboarding")));
 
@@ -58,15 +64,17 @@ const hidden = id => page.evaluate(i=>{
       hasCerts: /scr-certs/.test(html),
       hasOnb:   /scr-onboarding/.test(html),
       hasTrain: /scr-training/.test(html),
+      hasSafety: /scr-safety/.test(html),
       // או שיש רשימת טיפול, או שיש מצב "הכל תקין" — לעולם לא ריק
       hasBody:  /th-card/.test(html) || /th-clear/.test(html),
     };
   });
   record("מסך הדרכה: המסך נפתח", hub.open, String(hub.open));
-  record("מסך הדרכה: שלושה צ'יפים בראש", hub.chips===3, String(hub.chips));
+  record("מסך הדרכה: ארבעה צ'יפים בראש", hub.chips===4, String(hub.chips));
   record("מסך הדרכה: מנתב להסמכות", hub.hasCerts, String(hub.hasCerts));
   record("מסך הדרכה: מנתב לקליטת חייל חדש", hub.hasOnb, String(hub.hasOnb));
   record("מסך הדרכה: מנתב לחומרי הדרכה", hub.hasTrain, String(hub.hasTrain));
+  record("מסך הדרכה: מנתב לקרא-וחתום", hub.hasSafety, String(hub.hasSafety));
   record("מסך הדרכה: תוכן מתחת לצ'יפים (רשימה או \"הכל תקין\")", hub.hasBody, String(hub.hasBody));
 
   // רשימת הטיפול מזהה בפועל הסמכה שפג תוקפה — לא רק מרנדרת מבנה ריק
@@ -106,6 +114,8 @@ const hidden = id => page.evaluate(i=>{
   record("חייל: \"הסמכות\" נשארה ב\"עוד\"", (await hidden("sheet-certs"))===false, String(await hidden("sheet-certs")));
   record("חייל: \"כשירות חיילים\" נשארה ב\"עוד\"", (await hidden("sheet-medchecks"))===false, String(await hidden("sheet-medchecks")));
   record("חייל: \"חומרי הדרכה\" נשאר לשונית בבאנר", (await hidden("nav-training"))===false, String(await hidden("nav-training")));
+  record("חייל: \"קרא-וחתום\" נשארה בבאנר (אין לו שער הדרכה)", (await hidden("nav-safety"))===false, String(await hidden("nav-safety")));
+  record("חייל: \"לוח שנה מאוחד\" לא עלה לבאנר", (await hidden("nav-calendar"))===true, String(await hidden("nav-calendar")));
 }
 
 // ===== 4. אין שגיאות JS =====
