@@ -32,21 +32,25 @@ const out = await page.evaluate(async ()=>{
   await deleteCalEvent(man[0].id);
   r.deleted = (await getManualEvents()).length===0;
 
-  // אילוץ/זימון מהיומן (מפקד) — פותח טופס בשם חייל עם התאריך הנבחר
-  calSelectedDate = "2026-08-25";
+  // אילוץ/זימון מהיומן (מפקד) — פותח טופס בשם חייל עם התאריך הנבחר.
+  // תאריך "היום" ולא קבוע-קשיח: תאריך עתידי קבוע חוצה בסופו של דבר לתוך
+  // חלון "שבוע הבא" (נעילת ג' 10:00) ואז מפקד-בשם-חייל דורש גם אישור מ"ע
+  // ולא מאושר מיד — "היום" תמיד בשבוע הנוכחי, שלא כפוף לנעילה הזו.
+  const targetDate = todayKey();
+  calSelectedDate = targetDate;
   openCalConstraint();
   r.constraintOpened = document.getElementById("request-modal").classList.contains("open")
-    && reqDraftFromDate==="2026-08-25" && reqDraftType==="vacation" && !!reqOnBehalf;
+    && reqDraftFromDate===targetDate && reqDraftType==="vacation" && !!reqOnBehalf;
 
   // שליחה → אילוץ מאושר מיידית שמסתנכרן למ"ע (נעילה בעורך כלל המסגרות)
   const who = reqOnBehalf;
-  document.getElementById("req-fromdate").value = "2026-08-25";
+  document.getElementById("req-fromdate").value = targetDate;
   document.getElementById("req-todate").value = "";
   await submitRequest();
-  const c = (await getDutyRequests()).find(x=>x.by===who && x.type==="vacation" && x.fromDate==="2026-08-25");
+  const c = (await getDutyRequests()).find(x=>x.by===who && x.type==="vacation" && x.fromDate===targetDate);
   r.constraintApproved = !!c && c.status==="approved" && c.byCommander===true;
   const map = await fetchApprovedConstraintsByName();
-  r.constraintSynced = Array.isArray(map[who]) && map[who].some(x=>x.fromDate==="2026-08-25");
+  r.constraintSynced = Array.isArray(map[who]) && map[who].some(x=>x.fromDate===targetDate);
 
   return r;
 });
