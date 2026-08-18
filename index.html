@@ -881,7 +881,7 @@ nav{
 .req-who{font-size:12px;font-weight:800;color:var(--ink);background:var(--bg);padding:2px 8px;border-radius:8px}
 .req-sec{font-size:11.5px;font-weight:800;color:var(--ink-3);margin:10px 2px 6px}
 .req-people{max-height:150px;overflow-y:auto;border:1px solid var(--line);border-radius:11px}
-.req-deadline{background:#eef4fb;border:1px solid #cfe0f2;border-radius:11px;padding:9px 11px;font-size:12px;color:#1c5f96;font-weight:600;margin-bottom:8px}
+.req-deadline{background:var(--sky-soft);border:1px solid var(--sky-line);border-radius:var(--radius-sm);padding:9px 11px;font-size:12px;color:var(--sky);font-weight:600;margin-bottom:8px}
 .req-deadline.closed{background:var(--red-soft);border-color:var(--red-line);color:var(--red-deep)}
 .req-body{flex:1;font-size:13px;font-weight:600;min-width:0}
 .req-reason{font-size:12px;color:var(--ink-2);background:var(--bg);border-radius:9px;padding:7px 9px;margin-top:7px}
@@ -898,7 +898,7 @@ nav{
   cursor:pointer;font-family:inherit;text-align:right;transition:transform .15s}
 .roster-banner:active{transform:scale(.98)}
 .roster-banner.cur{background:var(--red-soft);border-color:var(--red-line)}
-.roster-banner.fut{background:#eef4fb;border-color:#cfe0f2}
+.roster-banner.fut{background:var(--sky-soft);border-color:var(--sky-line)}
 .roster-banner.swp{background:#fff7ed;border-color:#f5d9b0}
 .roster-banner.arc{background:#f3f0fb;border-color:#ddd2f0}
 .roster-banner.arc .rb-tx b{color:#5b3fa0}
@@ -921,7 +921,7 @@ nav{
 .roster-banner .rb-tx{display:flex;flex-direction:column;line-height:1.25;min-width:0}
 .roster-banner .rb-tx b{font-size:13px;font-weight:800}
 .roster-banner.cur .rb-tx b{color:var(--red-deep)}
-.roster-banner.fut .rb-tx b{color:#1c5f96}
+.roster-banner.fut .rb-tx b{color:var(--sky)}
 .roster-banner.swp .rb-tx b{color:#9a5b12}
 .rb-badge{display:inline-block;min-width:18px;padding:0 5px;margin-inline-start:6px;border-radius:9px;
   background:var(--red);color:#fff;font-size:11px;font-weight:800;text-align:center;vertical-align:middle}
@@ -931,7 +931,7 @@ nav{
 .roster-segs div{flex:1;text-align:center;font-size:13px;font-weight:700;padding:8px 2px;border-radius:9px;color:var(--ink-3);cursor:pointer}
 .roster-segs div.on{background:var(--card);color:var(--red);box-shadow:0 1px 3px rgba(0,0,0,.09)}
 .roster-weeksel{display:flex;gap:6px;margin-bottom:10px}
-.roster-weeksel div{flex:1;text-align:center;font-size:12px;font-weight:800;padding:8px 2px;border-radius:10px;
+.roster-weeksel div{flex:1;text-align:center;font-size:12px;font-weight:800;padding:8px 2px;border-radius:var(--radius-sm);
   color:var(--ink-3);background:var(--bg);border:1px solid var(--line);cursor:pointer}
 .roster-weeksel div.on{background:var(--red-soft);color:var(--red-deep);border-color:var(--red-line)}
 .roster-wkbar{background:var(--red-soft);border:1px solid var(--red-line);border-radius:11px;
@@ -977,7 +977,7 @@ nav{
 .rc.me{background:var(--red);color:#fff;box-shadow:0 0 0 2px var(--red-line)}
 .rc.rest{background:#eaf3e6;color:#3f6b32}
 .rc.pms{background:#faeeee;color:#8a4444}
-.rc.course{background:#e3f0fb;color:#1c5f96;box-shadow:inset 0 0 0 1px #b7d8f2}
+.rc.course{background:var(--sky-soft);color:var(--sky);box-shadow:inset 0 0 0 1px var(--sky-line)}
 .rc.res{background:var(--gold-soft);color:#7a6420;box-shadow:inset 0 0 0 1px #f0e5c4}
 .rc small{font-weight:600;opacity:.75}
 /* תפקיד שמתחלף בסופ"ש (מנהל/מתגבר) — תגית זעירה בתוך הצ'יפ (ה׳ / ו׳–ש׳),
@@ -1004,7 +1004,7 @@ nav{
 .rcd-empty{font-size:12px;color:var(--ink-3);font-style:italic;padding:6px 0}
 /* חיפוש חייל בלוח: כשמסומן שם, כל התאים דוהים חוץ מהמיקומים שלו */
 .roster-grid.hl-on .rc{opacity:.28;filter:grayscale(.4)}
-.roster-grid.hl-on .rc.rc-hl{opacity:1;filter:none;background:#1c5f96;color:#fff;box-shadow:0 0 0 2px #fff,0 0 0 4px #1c5f96;position:relative;z-index:1}
+.roster-grid.hl-on .rc.rc-hl{opacity:1;filter:none;background:var(--sky);color:#fff;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--sky);position:relative;z-index:1}
 .roster-search{margin-bottom:10px;position:relative}
 .roster-search-in{display:flex;gap:6px;align-items:center}
 .roster-search-in input{flex:1;min-width:0;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit;background:var(--card);color:var(--ink)}
