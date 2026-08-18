@@ -730,7 +730,7 @@ nav{
    שלוש הדלתות (הסמכות / קליטה / חומרים) מכווצות לשורת צ'יפים בראש,
    וכל שאר המסך הוא רשימת הטיפול החיה: מי פג תוקף, מי מתקרב לדדליין
    PF, ומי תקוע בקליטה — ממוין לפי דחיפות. */
-.th-chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.th-chips{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px}
 .th-chip{display:grid;gap:3px;justify-items:center;background:var(--card);border:1px solid var(--line);
   border-radius:14px;padding:11px 5px;box-shadow:var(--shadow);cursor:pointer;transition:transform .2s;
   font-family:'Assistant';text-align:center;color:inherit}
@@ -2339,6 +2339,7 @@ nav{
     <button class="nav-btn hidden" id="nav-certs" data-scr="scr-certs" onclick="go('scr-certs',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg></span><span>הסמכות</span></button>
     <button class="nav-btn hidden" id="nav-trainhub" data-scr="scr-trainhub" onclick="go('scr-trainhub',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg></span><span>הדרכה</span></button>
     <button class="nav-btn hidden" id="nav-medchecks" data-scr="scr-medchecks" onclick="go('scr-medchecks',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15a8 8 0 0 1 16 0v2H4v-2Z"/><path d="M2 17h20M9 15v-3M15 15v-3"/></svg></span><span>כשירות חיילים</span></button>
+    <button class="nav-btn hidden" id="nav-calendar" data-scr="scr-calendar" onclick="go('scr-calendar',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg></span><span>לוח שנה</span></button>
     <button class="nav-btn hidden" id="nav-training" data-scr="scr-training" onclick="go('scr-training',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5V5.5Z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"/></svg></span><span>חומרי הדרכה</span></button>
     <button class="nav-btn hidden" id="nav-tools" data-scr="scr-tools" onclick="go('scr-tools',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="9" width="19" height="11" rx="2"/><path d="M8 9V6.5A2.5 2.5 0 0 1 10.5 4h3A2.5 2.5 0 0 1 16 6.5V9M2.5 14h19"/></svg></span><span>חדר כלים</span></button>
     <button class="nav-btn hidden" id="nav-vehicles" data-scr="scr-vehicles" onclick="go('scr-vehicles',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V12l2-4.5h12L20 12v4"/><path d="M4 16h16M6 16v2M18 16v2"/><circle cx="7.5" cy="16" r="1.6"/><circle cx="16.5" cy="16" r="1.6"/></svg></span><span>רכבים</span></button>
@@ -4786,23 +4787,26 @@ async function applyLoginUiForRole(person){
 
   /* ── עולם ההדרכה ─────────────────────────────────────────────────────
      מפקד סככה מקבל לשונית "הדרכה" — מסך-שער שמאחד הסמכות + קליטת חייל
-     חדש + חומרי הדרכה. שלושת הפריטים יורדים ממקומם הקודם (הסמכות מהסרגל,
-     השניים האחרים מתפריט "עוד") כי נכנסים אליהם דרך השער.
+     חדש + חומרי הדרכה + קרא-וחתום. ארבעת הפריטים יורדים ממקומם הקודם
+     (הסמכות וקרא-וחתום מהסרגל, השניים האחרים מתפריט "עוד") כי נכנסים
+     אליהם דרך השער — קרא-וחתום כצ'יפ נוסף במסך ההדרכה עצמו.
      במחלקות ובמסגרות התפקידיות (מ״ע אחזקה / הדרכה) אין שער — ושם כל פריט
      נשאר בדיוק איפה שהיה, כדי לא לנתק גישה קיימת. */
   const isFuncUnit = !!(currentShed && (currentShed.isMaint || currentShed.isTraining));
   const hasTrainHub = userRole==="מפקד" && !isDeptUnit && !isFuncUnit;
   document.getElementById("nav-trainhub").classList.toggle("hidden", !hasTrainHub);
+  document.getElementById("nav-safety").classList.toggle("hidden", hasTrainHub);
   // הסמכות: לחייל דרך "עוד" (sheet-certs), למפקד סככה דרך השער — בשני
   // המקרים לא לשונית בסרגל.
   document.getElementById("nav-certs").classList.add("hidden");
   document.getElementById("sheet-training").classList.toggle("hidden", isSoldier || hasTrainHub);
   document.getElementById("sheet-onboarding").classList.toggle("hidden", isDeptUnit || !onbRelevant || hasTrainHub);
 
-  /* כשירות חיילים — עולה לסרגל אצל מפקד (מחליפה את "רכבים"); אצל חייל
-     נשארת בתפריט "עוד" כמו קודם. */
-  const medInNav = userRole==="מפקד" && !isFuncUnit;
-  document.getElementById("nav-medchecks").classList.toggle("hidden", !medInNav);
+  /* לוח שנה מאוחד — עולה לסרגל אצל מפקד (מחליפה את "כשירות חיילים",
+     שיורדת לתפריט "עוד" אצל כולם — גם מפקד וגם חייל). */
+  const calInNav = userRole==="מפקד" && !isFuncUnit;
+  document.getElementById("nav-medchecks").classList.add("hidden");
+  document.getElementById("nav-calendar").classList.toggle("hidden", !calInNav);
   if(isDeptUnit && userRole==="מפקד") document.getElementById("more-tasks-item").classList.add("hidden");
   // בסככות (לא במחלקות) — תקלות וימי הולדת עוברים מהבאר התחתון לתפריט "עוד" כדי לצמצם עומס
   document.getElementById("nav-faults").classList.toggle("hidden", !isDeptUnit);
@@ -4844,8 +4848,10 @@ async function applyLoginUiForRole(person){
   const isTrainingUnit = !!(currentShed && currentShed.isTraining);
   document.getElementById("nav-board").classList.toggle("hidden", isTrainingUnit);
   document.getElementById("sheet-duties").classList.toggle("hidden", isTrainingUnit);
-  // "כשירות חיילים" בתפריט "עוד" — רק למי שלא קיבל אותה כלשונית בסרגל
-  document.getElementById("sheet-medchecks").classList.toggle("hidden", isTrainingUnit || medInNav);
+  // "כשירות חיילים" בתפריט "עוד" — אצל כולם (גם מפקד), חוץ ממסגרת "הדרכה" שלא רלוונטית לה
+  document.getElementById("sheet-medchecks").classList.toggle("hidden", isTrainingUnit);
+  // "לוח שנה מאוחד" בתפריט "עוד" — רק למי שלא קיבל אותו כלשונית בסרגל
+  document.getElementById("sheet-calendar").classList.toggle("hidden", calInNav);
 
   /* אחראי הדרכה ומ״ע אחזקה — דשבורד המפקד ("תמונת מצב — מפקד") מוסר לגמרי.
      הוא הציג מגמות וחתימות של המסגרת התפקידית הזעירה שלהן בלבד — לצד
@@ -4957,6 +4963,7 @@ function logout(){
   document.getElementById("nav-training").classList.add("hidden");
   document.getElementById("nav-trainhub").classList.add("hidden");
   document.getElementById("nav-medchecks").classList.add("hidden");
+  document.getElementById("nav-calendar").classList.add("hidden");
   document.getElementById("more-vehicles-item").classList.add("hidden");
   document.getElementById("add-event-btn").classList.add("hidden");
   { const rb=document.getElementById("safety-report-btn"); if(rb) rb.classList.add("hidden"); }
@@ -5647,6 +5654,19 @@ async function renderTrainHub(){
   let trainCount = 0;
   try{ trainCount = ((await sGet("training_list")) || []).length; }catch(e){ console.error("trainhub training", e); }
 
+  // --- קרא-וחתום: פריטים פעילים וחתימות חסרות (עבר לשער ההדרכה, ירד מהסרגל) ---
+  let safetyItems = 0, safetyMissing = 0;
+  try{
+    const events = await getEvents();
+    safetyItems = events.length;
+    if(events.length && PERSONNEL.length){
+      const sigsArrS = await Promise.all(PERSONNEL.map(p => sGetSigs(p.name)));
+      let totalSigs = 0;
+      sigsArrS.forEach(sigs=>{ totalSigs += events.filter(e=>sigs[e.id]).length; });
+      safetyMissing = Math.max(0, PERSONNEL.length*events.length - totalSigs);
+    }
+  }catch(e){ console.error("trainhub safety", e); }
+
   now.sort((a,b)=>a.sev-b.sev);
   soon.sort((a,b)=>a.sev-b.sev);
 
@@ -5670,6 +5690,10 @@ async function renderTrainHub(){
       <button class="th-chip" onclick="go('scr-training',null)">
         <span class="ic" style="color:#2563eb"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5V5.5Z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"/></svg></span><span class="lb">חומרים</span>
         <span class="n">${trainCount}</span>
+      </button>
+      <button class="th-chip${safetyMissing?" hot":""}" onclick="go('scr-safety',null)">
+        <span class="ic" style="color:#475569"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M9 13.5l2 2 4-4.5"/></svg></span><span class="lb">קרא וחתום</span>
+        <span class="n">${safetyMissing ? safetyMissing+" חסרות" : safetyItems ? "הכל נחתם" : "אין פריטים"}</span>
       </button>
     </div>`;
 
