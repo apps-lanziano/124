@@ -98,6 +98,7 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 #app{max-width:480px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;background:var(--bg);position:relative}
+svg.uic{width:1em;height:1em;display:inline-block;vertical-align:-0.15em;flex-shrink:0}
 
 /* ---------- HEADER ---------- */
 header{
@@ -1947,9 +1948,9 @@ nav{
       <!-- ADMIN quick actions -->
       <div class="cmd-section-title">⚙️ ניהול</div>
       <div class="admin-grid">
-        <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic">📋</span><b>תדריך בוקר</b><span>תדריך יומי לצוות</span></button>
-        <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
-        <button class="admin-card" onclick="openTrainingLinkAdd()"><span class="a-ic">🔗</span><b>קישור הדרכה</b><span>הוספת קישור לצוות שלי</span></button>
+        <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic" style="color:#475569"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4V3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5V4M9 11h6M9 15h6"/></svg></span><b>תדריך בוקר</b><span>תדריך יומי לצוות</span></button>
+        <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h3l6 4V6l-6 4H3Z"/><path d="M14 9.5a3 3 0 0 1 0 5"/></svg></span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
+        <button class="admin-card" onclick="openTrainingLinkAdd()"><span class="a-ic" style="color:#0284c7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15l6-6"/><path d="M10 6.5l1-1a3.5 3.5 0 0 1 5 5l-1 1M14 17.5l-1 1a3.5 3.5 0 0 1-5-5l1-1"/></svg></span><b>קישור הדרכה</b><span>הוספת קישור לצוות שלי</span></button>
       </div>
     </section>
 
@@ -1974,11 +1975,11 @@ nav{
       <!-- PANE: OVERVIEW -->
       <div class="admin-pane active" id="apane-overview">
         <div class="admin-actions-row">
-          <button class="admin-card" onclick="openAdminEvent()"><span class="a-ic">📄</span><b>פרסום קרא וחתום</b><span>לכל המסגרות</span></button>
-          <button class="admin-card" onclick="openAdminBoard()"><span class="a-ic">📅</span><b>העלאת לוח צוות</b><span>לכל המסגרות</span></button>
-          <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>פרסום הודעה</b><span>לכל המסגרות</span></button>
-          <button class="admin-card" onclick="openAdminAlerts()"><span class="a-ic">🔔</span><b>מרכז התראות</b><span>כל המסגרות</span></button>
-          <button class="admin-card" onclick="repairDistributionGaps()"><span class="a-ic">🩹</span><b>תיקון פערי הפצה</b><span>סנכרון קרא-וחתום/הדרכה שלא הגיעו לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openAdminEvent()"><span class="a-ic" style="color:#475569"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M9 13.5l2 2 4-4.5"/></svg></span><b>פרסום קרא וחתום</b><span>לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openAdminBoard()"><span class="a-ic" style="color:#2563eb"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg></span><b>העלאת לוח צוות</b><span>לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h3l6 4V6l-6 4H3Z"/><path d="M14 9.5a3 3 0 0 1 0 5"/></svg></span><b>פרסום הודעה</b><span>לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openAdminAlerts()"><span class="a-ic" style="color:#d97706"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.3 5.3 1.8 5.8H4.2C4.7 15.3 6 14 6 10Z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></svg></span><b>מרכז התראות</b><span>כל המסגרות</span></button>
+          <button class="admin-card" onclick="repairDistributionGaps()"><span class="a-ic" style="color:#e11d48"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="18" height="6" rx="3" transform="rotate(-30 12 12)"/><circle cx="9" cy="9.7" r="1.1"/><circle cx="15" cy="14.3" r="1.1"/></svg></span><b>תיקון פערי הפצה</b><span>סנכרון קרא-וחתום/הדרכה שלא הגיעו לכל המסגרות</span></button>
         </div>
         <div class="cmd-kpis" id="admin-overview-kpis">
           <div class="kpi info"><b id="akpi-personnel">—</b><span>סה״כ אנשי צוות</span></div>
@@ -2016,8 +2017,8 @@ nav{
       <!-- PANE: CERTS -->
       <div class="admin-pane" id="apane-certs">
         <div class="admin-actions-row">
-          <button class="admin-card" onclick="openAdminCertAdd()"><span class="a-ic">➕</span><b>הזנת הסמכה</b><span>לכל חייל בכל מסגרת</span></button>
-          <button class="admin-card" onclick="openCertBank()"><span class="a-ic">🗃️</span><b>בנק הסמכות</b><span>רשימה סטנדרטית</span></button>
+          <button class="admin-card" onclick="openAdminCertAdd()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span><b>הזנת הסמכה</b><span>לכל חייל בכל מסגרת</span></button>
+          <button class="admin-card" onclick="openCertBank()"><span class="a-ic" style="color:#6b7280"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M4.5 9v9a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/></svg></span><b>בנק הסמכות</b><span>רשימה סטנדרטית</span></button>
         </div>
         <div class="cmd-section-title">⏳ הסמכות שעומדות לפוג — כלל הטייסת</div>
         <div id="admin-cert-expiry"></div>
@@ -2059,14 +2060,14 @@ nav{
       <div class="admin-pane" id="apane-training">
         <div class="cmd-section-title">🎞️ מצגות</div>
         <div class="admin-actions-row">
-          <button class="admin-card" onclick="openTrainingUpload()" style="grid-column:1/-1"><span class="a-ic">📚</span><b>פרסום מצגת/מסמך</b><span>קובץ לכל המסגרות</span></button>
-          <button class="admin-card" onclick="openTrainingLinkAdd('presentations')" style="grid-column:1/-1"><span class="a-ic">🔗</span><b>הוספת קישור למצגת</b><span>קישור חיצוני לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openTrainingUpload()" style="grid-column:1/-1"><span class="a-ic" style="color:#2563eb"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5V5.5Z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"/></svg></span><b>פרסום מצגת/מסמך</b><span>קובץ לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openTrainingLinkAdd('presentations')" style="grid-column:1/-1"><span class="a-ic" style="color:#0284c7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15l6-6"/><path d="M10 6.5l1-1a3.5 3.5 0 0 1 5 5l-1 1M14 17.5l-1 1a3.5 3.5 0 0 1-5-5l1-1"/></svg></span><b>הוספת קישור למצגת</b><span>קישור חיצוני לכל המסגרות</span></button>
         </div>
         <div id="admin-training-list-presentations"></div>
 
         <div class="cmd-section-title" style="margin-top:18px">🎥 הדרכות מצולמות</div>
         <div class="admin-actions-row">
-          <button class="admin-card" onclick="openTrainingLinkAdd('recorded')" style="grid-column:1/-1"><span class="a-ic">🔗</span><b>הוספת קישור להדרכה מצולמת</b><span>קישור חיצוני לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openTrainingLinkAdd('recorded')" style="grid-column:1/-1"><span class="a-ic" style="color:#0284c7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15l6-6"/><path d="M10 6.5l1-1a3.5 3.5 0 0 1 5 5l-1 1M14 17.5l-1 1a3.5 3.5 0 0 1-5-5l1-1"/></svg></span><b>הוספת קישור להדרכה מצולמת</b><span>קישור חיצוני לכל המסגרות</span></button>
         </div>
         <div id="admin-training-list-recorded"></div>
       </div>
@@ -2074,7 +2075,7 @@ nav{
       <!-- PANE: RESERVES -->
       <div class="admin-pane" id="apane-reserves">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openReserveAdd()"><span class="a-ic">➕</span><b>הוספת איש מילואים</b><span>לכל חייל בכל מסגרת</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openReserveAdd()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span><b>הוספת איש מילואים</b><span>לכל חייל בכל מסגרת</span></button>
         </div>
         <div id="admin-reserves-list"></div>
       </div>
@@ -2106,9 +2107,9 @@ nav{
       <!-- ADMIN quick actions -->
       <div class="cmd-section-title">⚙️ ניהול</div>
       <div class="admin-grid">
-        <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic">📋</span><b>תדריך בוקר</b><span>תדריך יומי לצוות</span></button>
-        <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
-        <button class="admin-card" onclick="openTrainingLinkAdd()"><span class="a-ic">🔗</span><b>קישור הדרכה</b><span>הוספת קישור לצוות שלי</span></button>
+        <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic" style="color:#475569"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4V3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5V4M9 11h6M9 15h6"/></svg></span><b>תדריך בוקר</b><span>תדריך יומי לצוות</span></button>
+        <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h3l6 4V6l-6 4H3Z"/><path d="M14 9.5a3 3 0 0 1 0 5"/></svg></span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
+        <button class="admin-card" onclick="openTrainingLinkAdd()"><span class="a-ic" style="color:#0284c7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15l6-6"/><path d="M10 6.5l1-1a3.5 3.5 0 0 1 5 5l-1 1M14 17.5l-1 1a3.5 3.5 0 0 1-5-5l1-1"/></svg></span><b>קישור הדרכה</b><span>הוספת קישור לצוות שלי</span></button>
       </div>
     </section>
 
@@ -2131,7 +2132,7 @@ nav{
       <!-- PANE: VEHICLES (תפעוליים לפי סככה: מ"ע/טרקטור/פיקו/לפיד) -->
       <div class="admin-pane active" id="vopane-vehicles">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openVoVehicleAdd()"><span class="a-ic">➕</span><b>הוספת רכב</b><span>שיוך לסככה + כל פרטי המעקב</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openVoVehicleAdd()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span><b>הוספת רכב</b><span>שיוך לסככה + כל פרטי המעקב</span></button>
         </div>
         <div id="vo-vehicles-list"></div>
       </div>
@@ -2139,7 +2140,7 @@ nav{
       <!-- PANE: MAINTENANCE DEPT VEHICLES (שחורים+שכורים, ללא שיוך לסככה) -->
       <div class="admin-pane" id="vopane-maint">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openMaintVehicleAdd()"><span class="a-ic">➕</span><b>הוספת רכב צ'</b><span>רכבים שחורים ושכורים</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openMaintVehicleAdd()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span><b>הוספת רכב צ'</b><span>רכבים שחורים ושכורים</span></button>
         </div>
         <div id="vo-maint-list"></div>
       </div>
@@ -2147,8 +2148,8 @@ nav{
       <!-- PANE: LEASING VEHICLES (משוייכים לפי שם, מקובצים לפי סככה אוטומטית) -->
       <div class="admin-pane" id="vopane-leasing">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openLeasingVehicleAdd()"><span class="a-ic">➕</span><b>הוספת רכב ליסינג</b><span>לפי שם המחזיק</span></button>
-          <button class="admin-card" style="grid-column:1/-1" onclick="openLeasingImport()"><span class="a-ic">📥</span><b>ייבוא מרוכז מגיליון</b><span>הדבקת שורות מהאקסל — עדכון והוספה בבת אחת</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openLeasingVehicleAdd()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span><b>הוספת רכב ליסינג</b><span>לפי שם המחזיק</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openLeasingImport()"><span class="a-ic" style="color:#2563eb"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12h5l1.5 3h4l1.5-3h5"/><path d="M4.5 6.5h15L21 12v6.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5V12l1.5-5.5Z"/></svg></span><b>ייבוא מרוכז מגיליון</b><span>הדבקת שורות מהאקסל — עדכון והוספה בבת אחת</span></button>
         </div>
         <div id="vo-leasing-list"></div>
       </div>
@@ -2156,7 +2157,7 @@ nav{
       <!-- PANE: LICENSES -->
       <div class="admin-pane" id="vopane-licenses">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openVoLicenseAdd()"><span class="a-ic">➕</span><b>הוספת רישיון/הסמכה</b><span>לכל חייל בכל מסגרת</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openVoLicenseAdd()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span><b>הוספת רישיון/הסמכה</b><span>לכל חייל בכל מסגרת</span></button>
         </div>
         <div class="search-box">
           <span class="search-ic">🔍</span>
@@ -2226,7 +2227,7 @@ nav{
       <!-- PANE: MATERIALS ORDERS -->
       <div class="admin-pane active" id="mdpane-materials">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openMaterialAdd()"><span class="a-ic">➕</span><b>הוספת הזמנת חומר</b><span>פריט, כמות וסטטוס</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openMaterialAdd()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span><b>הוספת הזמנת חומר</b><span>פריט, כמות וסטטוס</span></button>
         </div>
         <div id="md-materials-list"></div>
       </div>
@@ -2234,7 +2235,7 @@ nav{
       <!-- PANE: MOTORIZED TOOLS -->
       <div class="admin-pane" id="mdpane-tools">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openMotorToolAdd()"><span class="a-ic">➕</span><b>הוספת כלי מוטורי</b><span>מספר סידורי + כיול/טיפול הבא</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openMotorToolAdd()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span><b>הוספת כלי מוטורי</b><span>מספר סידורי + כיול/טיפול הבא</span></button>
         </div>
         <div id="md-tools-list"></div>
       </div>
@@ -2275,7 +2276,7 @@ nav{
       <!-- PANE: ALLOCATIONS -->
       <div class="admin-pane" id="bopane-allocations">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openBoAllocationAdd()"><span class="a-ic">➕</span><b>הוספת הקצאה</b><span>מקור תקציב + סכום</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openBoAllocationAdd()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span><b>הוספת הקצאה</b><span>מקור תקציב + סכום</span></button>
         </div>
         <div id="bo-allocations-list"></div>
       </div>
@@ -2283,7 +2284,7 @@ nav{
       <!-- PANE: EXPENSES -->
       <div class="admin-pane" id="bopane-expenses">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openBoExpenseAdd()"><span class="a-ic">➕</span><b>הוספת הוצאה</b><span>סכום, קטגוריה ומקור</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openBoExpenseAdd()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span><b>הוספת הוצאה</b><span>סכום, קטגוריה ומקור</span></button>
         </div>
         <div id="bo-expenses-list"></div>
       </div>
@@ -2330,29 +2331,29 @@ nav{
   <!-- NAV -->
   <button id="back-to-dash" onclick="go('scr-cmd',document.getElementById('nav-cmd'))" aria-label="חזרה לדשבורד" title="חזרה לדשבורד">→</button>
   <nav>
-    <button class="nav-btn hidden" id="nav-cmd" data-scr="scr-cmd" onclick="go('scr-cmd',this)"><span class="ic">🎖️</span><span>מפקד</span></button>
-    <button class="nav-btn hidden" id="nav-today" data-scr="scr-today" onclick="go('scr-today',this)"><span class="ic">🏠</span><span>היום שלי</span><span class="nav-badge hidden" id="badge-today">0</span></button>
-    <button class="nav-btn active" id="nav-safety" data-scr="scr-safety" onclick="go('scr-safety',this)"><span class="ic">📄</span><span>קרא וחתום</span><span class="nav-badge hidden" id="badge-safety">0</span></button>
-    <button class="nav-btn" id="nav-morning" data-scr="scr-morning" onclick="go('scr-morning',this)"><span class="ic">✅</span><span>מטלות</span><span class="nav-badge hidden" id="badge-morning">0</span></button>
-    <button class="nav-btn" id="nav-board" data-scr="scr-board" onclick="go('scr-board',this)"><span class="ic">📅</span><span>תורנויות</span></button>
-    <button class="nav-btn hidden" id="nav-certs" data-scr="scr-certs" onclick="go('scr-certs',this)"><span class="ic">🎓</span><span>הסמכות</span></button>
-    <button class="nav-btn hidden" id="nav-trainhub" data-scr="scr-trainhub" onclick="go('scr-trainhub',this)"><span class="ic">🎓</span><span>הדרכה</span></button>
-    <button class="nav-btn hidden" id="nav-medchecks" data-scr="scr-medchecks" onclick="go('scr-medchecks',this)"><span class="ic">🪖</span><span>כשירות חיילים</span></button>
-    <button class="nav-btn hidden" id="nav-training" data-scr="scr-training" onclick="go('scr-training',this)"><span class="ic">📚</span><span>חומרי הדרכה</span></button>
-    <button class="nav-btn hidden" id="nav-tools" data-scr="scr-tools" onclick="go('scr-tools',this)"><span class="ic">🧰</span><span>חדר כלים</span></button>
-    <button class="nav-btn hidden" id="nav-vehicles" data-scr="scr-vehicles" onclick="go('scr-vehicles',this)"><span class="ic">🚙</span><span>רכבים</span></button>
-    <button class="nav-btn" id="nav-faults" data-scr="scr-faults" onclick="go('scr-faults',this)"><span class="ic">🛠️</span><span>תקלות</span></button>
-    <button class="nav-btn" id="nav-bdays" data-scr="scr-bdays" onclick="go('scr-bdays',this)"><span class="ic">🎂</span><span>ימי הולדת</span></button>
-    <button class="nav-btn" id="nav-more" onclick="openMoreSheet()"><span class="ic">⋯</span><span>עוד</span></button>
-    <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic">🏛️</span><span>אחראי הדרכה</span></button>
-    <button class="nav-btn hidden" id="nav-vo-overview" data-scr="scr-vo-overview" onclick="go('scr-vo-overview',this)"><span class="ic">📊</span><span>סקירה</span></button>
-    <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic">🚙</span><span>רכבים</span></button>
-    <button class="nav-btn hidden" id="nav-maint-dept" data-scr="scr-maint-dept" onclick="go('scr-maint-dept',this)"><span class="ic">🔧</span><span>אחזקה</span></button>
-    <button class="nav-btn hidden" id="nav-morningcheck" data-scr="scr-morning-rollcall" onclick="go('scr-morning-rollcall',this)"><span class="ic">📋</span><span>מסדר בוקר</span></button>
-    <button class="nav-btn hidden" id="nav-binui-admin" data-scr="scr-binui-admin" onclick="go('scr-binui-admin',this)"><span class="ic">🚧</span><span>תקלות בינוי</span><span class="nav-badge hidden" id="badge-binui-admin">0</span></button>
-    <button class="nav-btn hidden" id="nav-vo-team" onclick="openVoTeamMgmt()"><span class="ic">👥</span><span>צוות</span></button>
-    <button class="nav-btn hidden" id="nav-budget-officer" data-scr="scr-budget-officer" onclick="go('scr-budget-officer',this)"><span class="ic">💰</span><span>תקציבים</span></button>
-    <button class="nav-btn hidden" id="nav-rollcall" data-scr="scr-rollcall" onclick="go('scr-rollcall',this)"><span class="ic">🛡️</span><span>נכס</span><span class="nav-badge hidden" id="badge-rollcall">0</span></button>
+    <button class="nav-btn hidden" id="nav-cmd" data-scr="scr-cmd" onclick="go('scr-cmd',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.4 4.8L20 8.6l-4 3.9.9 5.5L12 15.6l-4.9 2.4.9-5.5-4-3.9 5.6-.8Z"/></svg></span><span>מפקד</span></button>
+    <button class="nav-btn hidden" id="nav-today" data-scr="scr-today" onclick="go('scr-today',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg></span><span>היום שלי</span><span class="nav-badge hidden" id="badge-today">0</span></button>
+    <button class="nav-btn active" id="nav-safety" data-scr="scr-safety" onclick="go('scr-safety',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M9 13.5l2 2 4-4.5"/></svg></span><span>קרא וחתום</span><span class="nav-badge hidden" id="badge-safety">0</span></button>
+    <button class="nav-btn" id="nav-morning" data-scr="scr-morning" onclick="go('scr-morning',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg></span><span>מטלות</span><span class="nav-badge hidden" id="badge-morning">0</span></button>
+    <button class="nav-btn" id="nav-board" data-scr="scr-board" onclick="go('scr-board',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg></span><span>תורנויות</span></button>
+    <button class="nav-btn hidden" id="nav-certs" data-scr="scr-certs" onclick="go('scr-certs',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg></span><span>הסמכות</span></button>
+    <button class="nav-btn hidden" id="nav-trainhub" data-scr="scr-trainhub" onclick="go('scr-trainhub',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg></span><span>הדרכה</span></button>
+    <button class="nav-btn hidden" id="nav-medchecks" data-scr="scr-medchecks" onclick="go('scr-medchecks',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15a8 8 0 0 1 16 0v2H4v-2Z"/><path d="M2 17h20M9 15v-3M15 15v-3"/></svg></span><span>כשירות חיילים</span></button>
+    <button class="nav-btn hidden" id="nav-training" data-scr="scr-training" onclick="go('scr-training',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5V5.5Z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"/></svg></span><span>חומרי הדרכה</span></button>
+    <button class="nav-btn hidden" id="nav-tools" data-scr="scr-tools" onclick="go('scr-tools',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="9" width="19" height="11" rx="2"/><path d="M8 9V6.5A2.5 2.5 0 0 1 10.5 4h3A2.5 2.5 0 0 1 16 6.5V9M2.5 14h19"/></svg></span><span>חדר כלים</span></button>
+    <button class="nav-btn hidden" id="nav-vehicles" data-scr="scr-vehicles" onclick="go('scr-vehicles',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V12l2-4.5h12L20 12v4"/><path d="M4 16h16M6 16v2M18 16v2"/><circle cx="7.5" cy="16" r="1.6"/><circle cx="16.5" cy="16" r="1.6"/></svg></span><span>רכבים</span></button>
+    <button class="nav-btn" id="nav-faults" data-scr="scr-faults" onclick="go('scr-faults',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></span><span>תקלות</span></button>
+    <button class="nav-btn" id="nav-bdays" data-scr="scr-bdays" onclick="go('scr-bdays',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7H4Z"/><path d="M4 17.5c1.2.9 2.3.9 3.5 0s2.3-.9 3.5 0 2.3.9 3.5 0 2.3-.9 3.5 0M8 8V5M8 5c-.9 0-1.6-.7-1.6-1.5S7.1 2 8 2s1.6.7 1.6 1.5S8.9 5 8 5Zm8 3V5"/></svg></span><span>ימי הולדת</span></button>
+    <button class="nav-btn" id="nav-more" onclick="openMoreSheet()"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></span><span>עוד</span></button>
+    <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V6l7-3 7 3v15"/><path d="M9 21v-5h6v5M9 10h.01M15 10h.01M9 14h.01M15 14h.01"/></svg></span><span>אחראי הדרכה</span></button>
+    <button class="nav-btn hidden" id="nav-vo-overview" data-scr="scr-vo-overview" onclick="go('scr-vo-overview',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M11 20V4M18 20v-7"/><path d="M2.5 20h19"/></svg></span><span>סקירה</span></button>
+    <button class="nav-btn hidden" id="nav-vehicle-officer" data-scr="scr-vehicle-officer" onclick="go('scr-vehicle-officer',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V12l2-4.5h12L20 12v4"/><path d="M4 16h16M6 16v2M18 16v2"/><circle cx="7.5" cy="16" r="1.6"/><circle cx="16.5" cy="16" r="1.6"/></svg></span><span>רכבים</span></button>
+    <button class="nav-btn hidden" id="nav-maint-dept" data-scr="scr-maint-dept" onclick="go('scr-maint-dept',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></span><span>אחזקה</span></button>
+    <button class="nav-btn hidden" id="nav-morningcheck" data-scr="scr-morning-rollcall" onclick="go('scr-morning-rollcall',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4V3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5V4M9 11h6M9 15h6"/></svg></span><span>מסדר בוקר</span></button>
+    <button class="nav-btn hidden" id="nav-binui-admin" data-scr="scr-binui-admin" onclick="go('scr-binui-admin',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l5 16H7L12 3Z"/><path d="M9 13h6M8 16h8"/></svg></span><span>תקלות בינוי</span><span class="nav-badge hidden" id="badge-binui-admin">0</span></button>
+    <button class="nav-btn hidden" id="nav-vo-team" onclick="openVoTeamMgmt()"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="3"/><circle cx="16" cy="9.5" r="2.5"/><path d="M2.5 20c0-3 2.7-5.2 6-5.2s6 2.2 6 5.2M15 14.8c2.6.3 4.5 2.2 4.5 5.2"/></svg></span><span>צוות</span></button>
+    <button class="nav-btn hidden" id="nav-budget-officer" data-scr="scr-budget-officer" onclick="go('scr-budget-officer',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 4h5l1.5 3h-8l1.5-3Z"/><path d="M7 7c-2 2.5-3 5-3 7.5C4 18.5 7.5 21 12 21s8-2.5 8-6.5c0-2.5-1-5-3-7.5"/><path d="M12 11v5M10.3 12.3c0 1 .8 1.4 1.7 1.4s1.7.4 1.7 1.4-1 1.5-1.7 1.5-1.5-.3-1.9-1"/></svg></span><span>תקציבים</span></button>
+    <button class="nav-btn hidden" id="nav-rollcall" data-scr="scr-rollcall" onclick="go('scr-rollcall',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.2 8.4-7 10-3.8-1.6-7-5-7-10V6l7-3Z"/></svg></span><span>נכס</span><span class="nav-badge hidden" id="badge-rollcall">0</span></button>
   </nav>
 
   <!-- DOC READER -->
@@ -2488,22 +2489,22 @@ nav{
     <div class="sheet">
       <div class="sheet-handle"></div>
       <div class="sheet-top"><b>עוד</b><button class="sheet-x" onclick="document.getElementById('more-sheet').classList.remove('open')" aria-label="סגור">✕</button></div>
-      <div class="sheet-item" id="sheet-naatim" onclick="closeMoreAnd('scr-naatim')"><div class="s-ic">🗂️</div><div class="s-tx"><b>נע"תים</b><span>תחומי אחריות ובדיקה שבועית</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item" id="sheet-duties" onclick="closeMoreAnd('scr-duties')"><div class="s-ic">🔄</div><div class="s-tx"><b>תורנויות</b><span>שיבוץ שמי שבועי</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="sheet-certs" onclick="closeMoreAnd('scr-certs')"><div class="s-ic">🎓</div><div class="s-tx"><b>הסמכות</b><span>תוקף וחידוש הסמכות</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item" id="sheet-training" onclick="closeMoreAnd('scr-training')"><div class="s-ic">📚</div><div class="s-tx"><b>חומרי הדרכה</b><span>מהמנהל הטייסתי</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item" id="sheet-medchecks" onclick="closeMoreAnd('scr-medchecks')"><div class="s-ic">🪖</div><div class="s-tx"><b>כשירות חיילים</b><span>שמיעה ומטווח — תוקף וחידוש</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item" id="sheet-calendar" onclick="closeMoreAnd('scr-calendar')"><div class="s-ic">📅</div><div class="s-tx"><b>לוח שנה מאוחד</b><span>הסמכות, כיול כלים, טסט רכב ותורנויות</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="sheet-onboarding" onclick="closeMoreAnd('scr-onboarding')"><div class="s-ic">🎓</div><div class="s-tx"><b>קליטת חייל חדש</b><span>חונך, מטלות והסמכות, קאונטר PF</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="more-vehicles-item" onclick="closeMoreAnd('scr-vehicles')"><div class="s-ic">🚙</div><div class="s-tx"><b>רכבים</b><span>מעקב טסטים וטיפולים</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="sheet-users" onclick="closeMoreAnd('scr-users')"><div class="s-ic">👑</div><div class="s-tx"><b>משתמשים</b><span>כל המשתמשים בכל המסגרות</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="more-team-item" onclick="closeMoreAndFn(openTeamMgmt)"><div class="s-ic">👥</div><div class="s-tx"><b>ניהול צוות</b><span>הוספה, עריכה, ימי הולדת</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="more-tasks-item" onclick="closeMoreAndFn(openTaskMgmt)"><div class="s-ic">🧰</div><div class="s-tx"><b>עריכת מטלות בוקר</b><span>הוספה ושינוי מטלות</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="more-faults-item" onclick="closeMoreAnd('scr-faults')"><div class="s-ic">🛠️</div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="more-bdays-item" onclick="closeMoreAnd('scr-bdays')"><div class="s-ic">🎂</div><div class="s-tx"><b>ימי הולדת</b><span>לוח ימי הולדת הצוות</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item" id="more-rollcall-item" onclick="closeMoreAnd('scr-rollcall')"><div class="s-ic">🛡️</div><div class="s-tx"><b>נכס</b><span>סימון תקינות וזמינות</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="more-binui-item" onclick="closeMoreAnd('scr-binui-faults')"><div class="s-ic">🚧</div><div class="s-tx"><b>תקלות בינוי</b><span>דיווח ליקויי מבנה, עם תמונה</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="more-maintdept-item" onclick="closeMoreAnd('scr-maint-dept')"><div class="s-ic">🔧</div><div class="s-tx"><b>אחזקה</b><span>הזמנת חומרים ומעקב כלים מוטוריים</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="sheet-naatim" onclick="closeMoreAnd('scr-naatim')"><div class="s-ic" style="color:#6b7280;background:#f1f2f4"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg></div><div class="s-tx"><b>נע"תים</b><span>תחומי אחריות ובדיקה שבועית</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="sheet-duties" onclick="closeMoreAnd('scr-duties')"><div class="s-ic" style="color:#0891b2;background:#e3f6fa"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h13l-3-3M20 17H7l3 3"/></svg></div><div class="s-tx"><b>תורנויות</b><span>שיבוץ שמי שבועי</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="sheet-certs" onclick="closeMoreAnd('scr-certs')"><div class="s-ic" style="color:#7c3aed;background:#f2ebfe"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg></div><div class="s-tx"><b>הסמכות</b><span>תוקף וחידוש הסמכות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="sheet-training" onclick="closeMoreAnd('scr-training')"><div class="s-ic" style="color:#2563eb;background:#e8f0fe"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5V5.5Z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"/></svg></div><div class="s-tx"><b>חומרי הדרכה</b><span>מהמנהל הטייסתי</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="sheet-medchecks" onclick="closeMoreAnd('scr-medchecks')"><div class="s-ic" style="color:#0d9488;background:#e3f7f5"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15a8 8 0 0 1 16 0v2H4v-2Z"/><path d="M2 17h20M9 15v-3M15 15v-3"/></svg></div><div class="s-tx"><b>כשירות חיילים</b><span>שמיעה ומטווח — תוקף וחידוש</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="sheet-calendar" onclick="closeMoreAnd('scr-calendar')"><div class="s-ic" style="color:#2563eb;background:#e8f0fe"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg></div><div class="s-tx"><b>לוח שנה מאוחד</b><span>הסמכות, כיול כלים, טסט רכב ותורנויות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="sheet-onboarding" onclick="closeMoreAnd('scr-onboarding')"><div class="s-ic" style="color:#7c3aed;background:#f2ebfe"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg></div><div class="s-tx"><b>קליטת חייל חדש</b><span>חונך, מטלות והסמכות, קאונטר PF</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-vehicles-item" onclick="closeMoreAnd('scr-vehicles')"><div class="s-ic" style="color:#0e7490;background:#e3f6fa"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V12l2-4.5h12L20 12v4"/><path d="M4 16h16M6 16v2M18 16v2"/><circle cx="7.5" cy="16" r="1.6"/><circle cx="16.5" cy="16" r="1.6"/></svg></div><div class="s-tx"><b>רכבים</b><span>מעקב טסטים וטיפולים</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="sheet-users" onclick="closeMoreAnd('scr-users')"><div class="s-ic" style="color:#a16207;background:#fdf3d8"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18h16l-1.3-8-4 3-2.7-6-2.7 6-4-3L4 18Z"/><path d="M4 20.5h16"/></svg></div><div class="s-tx"><b>משתמשים</b><span>כל המשתמשים בכל המסגרות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-team-item" onclick="closeMoreAndFn(openTeamMgmt)"><div class="s-ic" style="color:#0e7490;background:#e3f6fa"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="3"/><circle cx="16" cy="9.5" r="2.5"/><path d="M2.5 20c0-3 2.7-5.2 6-5.2s6 2.2 6 5.2M15 14.8c2.6.3 4.5 2.2 4.5 5.2"/></svg></div><div class="s-tx"><b>ניהול צוות</b><span>הוספה, עריכה, ימי הולדת</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-tasks-item" onclick="closeMoreAndFn(openTaskMgmt)"><div class="s-ic" style="color:#b45309;background:#fdf1e2"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="9" width="19" height="11" rx="2"/><path d="M8 9V6.5A2.5 2.5 0 0 1 10.5 4h3A2.5 2.5 0 0 1 16 6.5V9M2.5 14h19"/></svg></div><div class="s-tx"><b>עריכת מטלות בוקר</b><span>הוספה ושינוי מטלות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-faults-item" onclick="closeMoreAnd('scr-faults')"><div class="s-ic" style="color:#c2410c;background:#fdeee7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-bdays-item" onclick="closeMoreAnd('scr-bdays')"><div class="s-ic" style="color:#db2777;background:#fdeaf1"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7H4Z"/><path d="M4 17.5c1.2.9 2.3.9 3.5 0s2.3-.9 3.5 0 2.3.9 3.5 0 2.3-.9 3.5 0M8 8V5M8 5c-.9 0-1.6-.7-1.6-1.5S7.1 2 8 2s1.6.7 1.6 1.5S8.9 5 8 5Zm8 3V5"/></svg></div><div class="s-tx"><b>ימי הולדת</b><span>לוח ימי הולדת הצוות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="more-rollcall-item" onclick="closeMoreAnd('scr-rollcall')"><div class="s-ic" style="color:#a16207;background:#fdf3d8"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.2 8.4-7 10-3.8-1.6-7-5-7-10V6l7-3Z"/></svg></div><div class="s-tx"><b>נכס</b><span>סימון תקינות וזמינות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-binui-item" onclick="closeMoreAnd('scr-binui-faults')"><div class="s-ic" style="color:#ea580c;background:#fdeee7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l5 16H7L12 3Z"/><path d="M9 13h6M8 16h8"/></svg></div><div class="s-tx"><b>תקלות בינוי</b><span>דיווח ליקויי מבנה, עם תמונה</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-maintdept-item" onclick="closeMoreAnd('scr-maint-dept')"><div class="s-ic" style="color:#c2410c;background:#fdeee7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></div><div class="s-tx"><b>אחזקה</b><span>הזמנת חומרים ומעקב כלים מוטוריים</span></div><span class="s-chev">‹</span></div>
     </div>
   </div>
 
@@ -2781,10 +2782,10 @@ nav{
       <div class="m-sub">לאן להעלות את הלוח?</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
         <button class="admin-card" onclick="closeBoardScopeChoice();document.getElementById('board-input').click()">
-          <span class="a-ic">📍</span><b>למסגרת שלי בלבד</b><span>יופיע רק אצל הצוות שלי</span>
+          <span class="a-ic" style="color:#475569"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.3"/></svg></span><b>למסגרת שלי בלבד</b><span>יופיע רק אצל הצוות שלי</span>
         </button>
         <button class="admin-card" onclick="closeBoardScopeChoice();openAdminBoard()">
-          <span class="a-ic">🌐</span><b>לכלל המסגרות</b><span>יופיע אצל כל הטייסת + פוש והתראה</span>
+          <span class="a-ic" style="color:#475569"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.5 6 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-6-3.5-9s1-6.5 3.5-9Z"/></svg></span><b>לכלל המסגרות</b><span>יופיע אצל כל הטייסת + פוש והתראה</span>
         </button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
@@ -5118,7 +5119,7 @@ async function renderDocs(){
 
   if(events.length === 0){
     list.innerHTML = `<div class="empty-state">
-      <div class="ic">🗂️</div>
+      <div class="ic" style="color:#6b7280"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg></div>
       <h3>אין עדיין פריטים</h3>
       <p>${isCmdr?'העלה פריט חדש באמצעות כפתור "+ פריט"':'טרם פורסמו פריטים'}</p>
     </div>`;
@@ -5127,7 +5128,7 @@ async function renderDocs(){
   }
   const filtered = q ? events.filter(e=>(e.title||"").toLowerCase().includes(q) || (e.date||"").includes(q)) : events;
   if(filtered.length===0){
-    list.innerHTML = `<div class="empty-state"><div class="ic">🔍</div><h3>לא נמצאו פריטים</h3><p>נסה מונח חיפוש אחר</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="ic" style="color:#9ca3af"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg></div><h3>לא נמצאו פריטים</h3><p>נסה מונח חיפוש אחר</p></div>`;
     return;
   }
   filtered.forEach(ev=>{
@@ -5177,12 +5178,12 @@ async function renderVoDocs(){
   const q = (document.getElementById("safety-search")?.value || "").trim().toLowerCase();
   list.innerHTML = "";
   if(events.length===0){
-    list.innerHTML = `<div class="empty-state"><div class="ic">🗂️</div><h3>אין עדיין פריטים</h3><p>אחראי ההדרכה טרם פרסם פריטים לכלל הסככות</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="ic" style="color:#6b7280"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg></div><h3>אין עדיין פריטים</h3><p>אחראי ההדרכה טרם פרסם פריטים לכלל הסככות</p></div>`;
     return;
   }
   const filtered = q ? events.filter(e=>(e.title||"").toLowerCase().includes(q) || (e.date||"").includes(q)) : events;
   if(filtered.length===0){
-    list.innerHTML = `<div class="empty-state"><div class="ic">🔍</div><h3>לא נמצאו פריטים</h3><p>נסה מונח חיפוש אחר</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="ic" style="color:#9ca3af"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg></div><h3>לא נמצאו פריטים</h3><p>נסה מונח חיפוש אחר</p></div>`;
     return;
   }
   filtered.forEach(ev=>{
@@ -5659,15 +5660,15 @@ async function renderTrainHub(){
   const chips = `
     <div class="th-chips">
       <button class="th-chip${certExpired?" hot":""}" onclick="go('scr-certs',null)">
-        <span class="ic">🎓</span><span class="lb">הסמכות</span>
+        <span class="ic" style="color:#7c3aed"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg></span><span class="lb">הסמכות</span>
         <span class="n">${certExpired ? certExpired+" פגו" : certSoon ? certSoon+" מתקרבים" : "בתוקף"}</span>
       </button>
       <button class="th-chip" onclick="go('scr-onboarding',null)">
-        <span class="ic">👤</span><span class="lb">קליטה</span>
+        <span class="ic" style="color:#0e7490"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></svg></span><span class="lb">קליטה</span>
         <span class="n">${onbCount ? onbCount+" פעילות" : "אין"}</span>
       </button>
       <button class="th-chip" onclick="go('scr-training',null)">
-        <span class="ic">📚</span><span class="lb">חומרים</span>
+        <span class="ic" style="color:#2563eb"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5V5.5Z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"/></svg></span><span class="lb">חומרים</span>
         <span class="n">${trainCount}</span>
       </button>
     </div>`;
@@ -5722,7 +5723,7 @@ async function renderNaatim(){
     `<span>🗓️ שבוע נוכחי · מתאפס בכל יום ראשון</span>`;
 
   if(items.length===0){
-    list.innerHTML = `<div class="empty-state"><div class="ic">🗂️</div><h3>אין עדיין נע"תים</h3><p>${isCmdr?'הוסף תחום אחריות באמצעות "+ נע"ת"':'המפקד טרם הגדיר נע"תים'}</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="ic" style="color:#6b7280"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg></div><h3>אין עדיין נע"תים</h3><p>${isCmdr?'הוסף תחום אחריות באמצעות "+ נע"ת"':'המפקד טרם הגדיר נע"תים'}</p></div>`;
     return;
   }
 
@@ -6208,13 +6209,13 @@ async function renderRollcallPageVoTeam(box){
   const team = voTeam || [];
   let html = "";
   if(!voActive){
-    html += `<div class="empty-state"><div class="ic">🛡️</div><h3>אין נכס פעיל למחלקה</h3><p>לחץ על הכפתור כדי להפעיל נכס ולסמן עבור הנהגים</p></div>
+    html += `<div class="empty-state"><div class="ic" style="color:#a16207"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.2 8.4-7 10-3.8-1.6-7-5-7-10V6l7-3Z"/></svg></div><h3>אין נכס פעיל למחלקה</h3><p>לחץ על הכפתור כדי להפעיל נכס ולסמן עבור הנהגים</p></div>
       <button class="m-btn primary" style="width:100%;margin-top:10px" onclick="activateVoRollcall()">🚨 הפעל נכס למחלקה</button>`;
   } else {
     const done = team.filter(p=>vChk[p.id]).length;
     html += `<div class="cmd-section-title">📋 מעקב סימונים <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${done}/${team.length}</span></div>`;
     if(team.length===0){
-      html += `<div class="empty-state"><div class="ic">👥</div><h3>אין עדיין אנשי צוות</h3><p>הוסף נהגים דרך "ניהול צוות"</p></div>`;
+      html += `<div class="empty-state"><div class="ic" style="color:#0e7490"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="3"/><circle cx="16" cy="9.5" r="2.5"/><path d="M2.5 20c0-3 2.7-5.2 6-5.2s6 2.2 6 5.2M15 14.8c2.6.3 4.5 2.2 4.5 5.2"/></svg></div><h3>אין עדיין אנשי צוות</h3><p>הוסף נהגים דרך "ניהול צוות"</p></div>`;
     } else {
       const sorted = [...team].sort((a,b)=> (vChk[a.id]?1:0) - (vChk[b.id]?1:0));
       html += sorted.map(p=>`
@@ -6260,7 +6261,7 @@ async function renderRollcallPageShed(box){
   const myCheckedIn = !!myCheckin;
 
   if(!active){
-    let html = `<div class="empty-state"><div class="ic">🛡️</div><h3>אין נכס פעיל כרגע</h3><p>${isCmdr?'לחץ על הכפתור כדי להפעיל נכס ולבקש מכולם לסמן תקינות':'המפקד טרם הפעיל נכס'}</p></div>`;
+    let html = `<div class="empty-state"><div class="ic" style="color:#a16207"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.2 8.4-7 10-3.8-1.6-7-5-7-10V6l7-3Z"/></svg></div><h3>אין נכס פעיל כרגע</h3><p>${isCmdr?'לחץ על הכפתור כדי להפעיל נכס ולבקש מכולם לסמן תקינות':'המפקד טרם הפעיל נכס'}</p></div>`;
     if(isCmdr) html += `<button class="m-btn primary" style="width:100%;margin-top:10px" onclick="activateRollcall()">🚨 הפעל נכס</button>`;
     // גם כשאין נכס פעיל במסגרת שלו — אחראי ההדרכה עדיין רואה את מצב כלל המסגרות
     if(currentShed.isTraining && isCmdr) html += await buildSquadronRollcallRowsHtml();
@@ -6332,7 +6333,7 @@ async function renderBdays(){
   list.innerHTML = "";
   const source = isVo ? ((await sGetRaw("vo_personnel")) || []) : PERSONNEL;
   if(isVo && source.length===0){
-    list.innerHTML = `<div class="empty-state"><div class="ic">🎂</div><h3>אין עדיין אנשי צוות</h3><p>הוסף איש צוות באמצעות "+ איש צוות"</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="ic" style="color:#db2777"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7H4Z"/><path d="M4 17.5c1.2.9 2.3.9 3.5 0s2.3-.9 3.5 0 2.3.9 3.5 0 2.3-.9 3.5 0M8 8V5M8 5c-.9 0-1.6-.7-1.6-1.5S7.1 2 8 2s1.6.7 1.6 1.5S8.9 5 8 5Zm8 3V5"/></svg></div><h3>אין עדיין אנשי צוות</h3><p>הוסף איש צוות באמצעות "+ איש צוות"</p></div>`;
     return;
   }
   const withInfo = source.map(p=>({...p, ...bdayInfo(p)})).sort((a,b)=>a.days-b.days);
@@ -6461,7 +6462,7 @@ async function renderBoardArchive(){
   }
   if(boards.length === 0){
     html += `<div class="empty-state">
-      <div class="ic">📅</div>
+      <div class="ic" style="color:#2563eb"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg></div>
       <h3>אין צילומי לוח עדיין</h3>
       <p>${canManage ? "העלה לוח ראשון באמצעות הכפתור למעלה" : "מ\"ע תורנויות טרם העלה לוח"}</p>
     </div>`;
@@ -6815,7 +6816,7 @@ async function renderRosterView(){
     ${(r.squadronDuty && rosterView!=="board")?`<div class="roster-wkbar">🏠 תורן טייסת השבוע — <b>${escapeHTML(rosterSquadronDutyName(r.squadronDuty))}</b></div>`:""}`;
 
   if(!anyData){
-    box.innerHTML = head + `<div class="empty-state"><div class="ic">🗓️</div>
+    box.innerHTML = head + `<div class="empty-state"><div class="ic" style="color:#2563eb"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg></div>
       <h3>${boardWeekSlot==="prev"?"אין לוח לשבוע שעבר":boardWeekSlot==="next"?"לוח השבוע הבא טרם נבנה":"לוח הצוות טרם שובץ"}</h3>
       <p>${isRosterManager ? (boardWeekSlot==="next"?"השתמש בבאנר \"בניית לוח עתידי\"":"השתמש בבאנר \"עריכת לוח נוכחי\" כדי לשבץ את השבוע") : "מ״ע תורנויות טרם פרסם"}</p></div>`;
     initRosterSwipe();
@@ -7055,7 +7056,7 @@ async function renderRosterArchiveList(){
   document.getElementById("roster-archive-sub").textContent =
     _archiveRows.length ? `${_archiveRows.length} לוחות שמורים` : "אין עדיין לוחות בארכיון";
   if(!_archiveRows.length){
-    box.innerHTML = `<div class="empty-state" style="padding:24px"><div class="ic">🗄️</div>
+    box.innerHTML = `<div class="empty-state" style="padding:24px"><div class="ic" style="color:#6b7280"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M4.5 9v9a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/></svg></div>
       <h3>הארכיון ריק</h3><p>לוח יישמר אוטומטית ביום חמישי</p>
       <button class="m-btn ghost" style="margin-top:10px" onclick="archiveNow()">שמור את הלוח הנוכחי עכשיו</button></div>`;
     return;
@@ -7135,7 +7136,7 @@ function renderConstraintsBoard(){
   document.getElementById("cns-board-sub").textContent =
     names.length ? `${names.length} אנשים עם אילוצים` : "אין אילוצים פעילים";
   const box = document.getElementById("cns-board-body");
-  if(!names.length){ box.innerHTML = `<div class="empty-state" style="padding:24px"><div class="ic">✓</div><h3>אין אילוצים פעילים</h3><p>כולם זמינים לשיבוץ</p></div>`; return; }
+  if(!names.length){ box.innerHTML = `<div class="empty-state" style="padding:24px"><div class="ic" style="color:#16a34a"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l5 5L20 7"/></svg></div><h3>אין אילוצים פעילים</h3><p>כולם זמינים לשיבוץ</p></div>`; return; }
   const dt = c => c.date || (c.fromDate ? (!c.toDate||c.toDate===c.fromDate ? fmtHeShort(c.fromDate) : `${fmtHeShort(c.fromDate)}–${fmtHeShort(c.toDate)}`) : "");
   box.innerHTML = names.map(n=>{
     const shed = (SHEDS.find(s=>s.id===byName[n][0]._shed)||{}).name || "";
@@ -7310,9 +7311,9 @@ async function renderToday(){
 
     // 3) פעולות מהירות — תמיד זמינות
     html += `<div class="today-qa">
-      <button onclick="openNewRequest()"><span class="q-ic">📌</span>הזן אילוץ</button>
-      <button onclick="openNewRequest('swap')"><span class="q-ic">🔄</span>בקש החלפה</button>
-      <button onclick="go('scr-board',null)"><span class="q-ic">📅</span>לוח צוות</button>
+      <button onclick="openNewRequest()"><span class="q-ic" style="color:#b45309"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3.5 20.5 9.5 17 13l-1 5-2-2-5 5-1-1 5-5-2-2 5-1 3.5-3.5Z"/></svg></span>הזן אילוץ</button>
+      <button onclick="openNewRequest('swap')"><span class="q-ic" style="color:#0891b2"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h13l-3-3M20 17H7l3 3"/></svg></span>בקש החלפה</button>
+      <button onclick="go('scr-board',null)"><span class="q-ic" style="color:#2563eb"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg></span>לוח צוות</button>
     </div>`;
 
     // 4) פתוח עבורך — קרא-וחתום שלא נחתמו + הסמכות שלי שפגות
@@ -7399,7 +7400,7 @@ function openMyRequests(){
 async function renderMyRequestsList(){
   const box = document.getElementById("my-requests-list");
   const list = (await getDutyRequests()).filter(r=>r.by===user).sort((a,b)=>b.ts-a.ts);
-  if(!list.length){ box.innerHTML = `<div class="empty-state" style="padding:24px"><div class="ic">📨</div><h3>אין בקשות</h3><p>לחץ "בקשה חדשה" כדי לפתוח</p></div>`; return; }
+  if(!list.length){ box.innerHTML = `<div class="empty-state" style="padding:24px"><div class="ic" style="color:#2563eb"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12h5l1.5 3h4l1.5-3h5"/><path d="M4.5 6.5h15L21 12v6.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5V12l1.5-5.5Z"/></svg></div><h3>אין בקשות</h3><p>לחץ "בקשה חדשה" כדי לפתוח</p></div>`; return; }
   box.innerHTML = list.map(r=>reqCardHtml(r, false)).join("");
 }
 function reqStatusPill(s){
@@ -7769,7 +7770,7 @@ async function renderRequestsInbox(){
   if(crossB.length) html += `<div class="req-sec">↔️ החלפות בין-מסגרתיות לאישורך</div>` + crossB.map(swapShedBCardHtml).join("");
   const show = pending.concat(list.filter(r=>r.status!=="pending").slice(0,10));
   if(show.length) html += (crossB.length?`<div class="req-sec">בקשות המסגרת</div>`:"") + show.map(r=>reqCardHtml(r, true)).join("");
-  box.innerHTML = html || `<div class="empty-state" style="padding:24px"><div class="ic">✓</div><h3>אין בקשות</h3></div>`;
+  box.innerHTML = html || `<div class="empty-state" style="padding:24px"><div class="ic" style="color:#16a34a"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l5 5L20 7"/></svg></div><h3>אין בקשות</h3></div>`;
 }
 async function approveRequest(id){
   const list = await getDutyRequests();
@@ -7925,7 +7926,7 @@ async function renderNaatSwaps(){
           <button class="m-btn ghost" onclick="naatRejectConstraint(${i})">דחה</button></div></div>`;
     }).join("");
   }
-  box.innerHTML = html || `<div class="empty-state" style="padding:24px"><div class="ic">✓</div><h3>אין פריטים ממתינים</h3></div>`;
+  box.innerHTML = html || `<div class="empty-state" style="padding:24px"><div class="ic" style="color:#16a34a"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l5 5L20 7"/></svg></div><h3>אין פריטים ממתינים</h3></div>`;
 }
 async function naatApproveConstraint(idx){
   const r = naatConstraintRows[idx]; if(!r) return;
@@ -8004,7 +8005,7 @@ function rosterMineHtml(r, today){
         ${resting?`<div class="rmine-rest">נח · ${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</div>`:""}
       </div></div>`);
   });
-  if(!rows.length) return `<div class="empty-state"><div class="ic">✓</div>
+  if(!rows.length) return `<div class="empty-state"><div class="ic" style="color:#16a34a"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l5 5L20 7"/></svg></div>
     <h3>אינך משובץ השבוע</h3><p>אין לך תורנות בלוח הנוכחי</p></div>`;
   return `<div class="rmine-wrap">${rows.join("")}</div>`;
 }
@@ -9699,7 +9700,7 @@ async function renderFaults(){
   const list = document.getElementById("faults-list");
   const shown = faults.filter(f=> faultFilter==="all" ? true : faultFilter==="closed" ? f.status==="closed" : f.status!=="closed");
   if(shown.length===0){
-    list.innerHTML = `<div class="empty-state"><div class="ic">🛠️</div><h3>אין תקלות ${faultFilter==='closed'?'סגורות':faultFilter==='open'?'פתוחות':''}</h3><p>${faultFilter!=='closed'?'דווח על תקלה באמצעות כפתור "+ תקלה"':''}</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="ic" style="color:#c2410c"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></div><h3>אין תקלות ${faultFilter==='closed'?'סגורות':faultFilter==='open'?'פתוחות':''}</h3><p>${faultFilter!=='closed'?'דווח על תקלה באמצעות כפתור "+ תקלה"':''}</p></div>`;
     updateBadges(); return;
   }
   list.innerHTML = shown.map(f=>{
@@ -9920,7 +9921,7 @@ async function renderBinuiFaults(){
   const all = await getBinuiFaults();
   const mine = all.filter(f=> origin && f.shedId===origin.shedId && (origin.dept ? f.dept===origin.dept : true));
   if(mine.length===0){
-    list.innerHTML = `<div class="empty-state"><div class="ic">🚧</div><h3>אין עדיין תקלות בינוי</h3><p>דווח באמצעות כפתור "+ תקלה"</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="ic" style="color:#ea580c"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l5 16H7L12 3Z"/><path d="M9 13h6M8 16h8"/></svg></div><h3>אין עדיין תקלות בינוי</h3><p>דווח באמצעות כפתור "+ תקלה"</p></div>`;
     return;
   }
   list.innerHTML = mine.map(f=>{
@@ -10014,7 +10015,7 @@ async function renderBinuiFaultsAdmin(){
   updateBinuiAdminBadge();
   const faults = await getBinuiFaults();
   if(faults.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🚧</div><h3>אין עדיין תקלות בינוי</h3><p>ידווחו ע"י מפקדי הסככות/מחלקות</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#ea580c"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l5 16H7L12 3Z"/><path d="M9 13h6M8 16h8"/></svg></div><h3>אין עדיין תקלות בינוי</h3><p>ידווחו ע"י מפקדי הסככות/מחלקות</p></div>`;
     return;
   }
   /* מ״ע אחזקה רואה לוח קנבן (3 העמודות = 3 הסטטוסים הקיימים בדיוק, בלי
@@ -10696,7 +10697,7 @@ async function renderUsersAdmin(){
     html += `<div class="cmd-section-title">${escapeHTML(g.shed.name)} <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${matches.length}</span></div>`;
     html += `<button class="m-btn ghost" style="width:100%;margin-bottom:8px" onclick="openUserEdit('${g.shed.id}',-1)">➕ הוסף משתמש ל${escapeHTML(g.shed.name)}</button>`;
     if(matches.length===0){
-      html += `<div class="empty-state" style="padding:14px"><div class="ic">👤</div><p>אין עדיין משתמשים במסגרת זו</p></div>`;
+      html += `<div class="empty-state" style="padding:14px"><div class="ic" style="color:#0e7490"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></svg></div><p>אין עדיין משתמשים במסגרת זו</p></div>`;
       continue;
     }
     html += matches.map(x=>{
@@ -10724,7 +10725,7 @@ async function renderUsersAdmin(){
       </div>`;
     }).join("");
   }
-  box.innerHTML = html || `<div class="empty-state"><div class="ic">🔎</div><h3>לא נמצאו משתמשים</h3><p>נסה חיפוש אחר</p></div>`;
+  box.innerHTML = html || `<div class="empty-state"><div class="ic" style="color:#9ca3af"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg></div><h3>לא נמצאו משתמשים</h3><p>נסה חיפוש אחר</p></div>`;
 }
 
 let ueShedId = null, ueIdx = -1;
@@ -11698,7 +11699,7 @@ async function renderAdminEvents(){
   const box = document.getElementById("admin-events-list");
   if(!box) return;
   const list = await getAdminEventsList();
-  if(list.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">📄</div><h3>אין עדיין פריטי קרא וחתום שפורסמו לכל המסגרות</h3><p>פרסם פריט שיופיע לכל המסגרות</p></div>'; return; }
+  if(list.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic" style="color:#475569"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M9 13.5l2 2 4-4.5"/></svg></div><h3>אין עדיין פריטי קרא וחתום שפורסמו לכל המסגרות</h3><p>פרסם פריט שיופיע לכל המסגרות</p></div>'; return; }
   box.innerHTML = list.map(e=>{
     const ft = FTYPE[e.ftype] || FTYPE.image;
     return `<div class="train-card">
@@ -11805,7 +11806,7 @@ async function renderAdminPfStatus(){
       if(st) rows.push({name:p.name, shed:shed.name, ...st});
     }
   }));
-  if(rows.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">✅</div><h3>כולם מוסמכים PF</h3><p>אין חיילים הממתינים להסמכת PF</p></div>'; return; }
+  if(rows.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic" style="color:#16a34a"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg></div><h3>כולם מוסמכים PF</h3><p>אין חיילים הממתינים להסמכת PF</p></div>'; return; }
   rows.sort((a,b)=> (a.cls==="r"?-1:1) - (b.cls==="r"?-1:1));
   box.innerHTML = rows.map(r=>`<div class="exp-row ${r.cls}">
     <div class="ex-body"><b>${escapeHTML(r.name)}</b><span>${r.shed}</span></div>
@@ -11827,7 +11828,7 @@ async function renderAdminCertExpiry(){
     }
   }));
   rows.sort((a,b)=>a.days-b.days);
-  if(rows.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic">✅</div><h3>אין הסמכות שעומדות לפוג</h3><p>כל ההסמכות בתוקף ל-90 הימים הקרובים</p></div>'; return; }
+  if(rows.length===0){ box.innerHTML='<div class="empty-state" style="padding:20px"><div class="ic" style="color:#16a34a"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg></div><h3>אין הסמכות שעומדות לפוג</h3><p>כל ההסמכות בתוקף ל-90 הימים הקרובים</p></div>'; return; }
   box.innerHTML = rows.map(r=>{
     const cls = r.days<0 ? "r" : r.days<=30 ? "r" : "y";
     const tag = r.days<0 ? "פג תוקף" : r.days+" ימים";
@@ -11944,7 +11945,7 @@ async function renderAdminCertMatrix(){
     html += `</div>`;
   }
 
-  box.innerHTML = anyPeople ? html : '<div class="empty-state" style="padding:20px"><div class="ic">🔍</div><h3>אין תוצאות</h3><p>נסה חיפוש/סינון אחר, או שטרם הוזנו צוות והסמכות</p></div>';
+  box.innerHTML = anyPeople ? html : '<div class="empty-state" style="padding:20px"><div class="ic" style="color:#9ca3af"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg></div><h3>אין תוצאות</h3><p>נסה חיפוש/סינון אחר, או שטרם הוזנו צוות והסמכות</p></div>';
 }
 
 /* מחיקת הסמכה מרמת המנהל */
@@ -12309,10 +12310,10 @@ async function renderReserves(){
   const list = await getReserves();
   if(list.length===0){
     if(reservesReadFailed){
-      box.innerHTML = `<div class="empty-state"><div class="ic">⚠️</div><h3>הטעינה נכשלה</h3><p>בעיית תקשורת מנעה טעינת מילואים ממסגרת אחת או יותר — משוך לרענון ונסה שוב</p></div>`;
+      box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#b98900"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21.5 20h-19L12 3.5Z"/><path d="M12 10v4.5M12 17.5h.01"/></svg></div><h3>הטעינה נכשלה</h3><p>בעיית תקשורת מנעה טעינת מילואים ממסגרת אחת או יותר — משוך לרענון ונסה שוב</p></div>`;
       return;
     }
-    box.innerHTML = `<div class="empty-state"><div class="ic">🎖️</div><h3>אין עדיין אנשי מילואים במעקב</h3><p>הוסף איש מילואים באמצעות "הוספת איש מילואים"</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#a16207"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.4 4.8L20 8.6l-4 3.9.9 5.5L12 15.6l-4.9 2.4.9-5.5-4-3.9 5.6-.8Z"/></svg></div><h3>אין עדיין אנשי מילואים במעקב</h3><p>הוסף איש מילואים באמצעות "הוספת איש מילואים"</p></div>`;
     return;
   }
   const shedName = id => id ? ((SHEDS.find(s=>s.id===id)||{}).name || id) : "—";
@@ -12413,7 +12414,7 @@ function renderLogByName({adminItems, perShed}){
       </div>`);
     }
   }
-  return rows.length ? rows.join("") : `<div class="empty-state" style="padding:20px"><div class="ic">👤</div><h3>אין עדיין אנשי צוות</h3></div>`;
+  return rows.length ? rows.join("") : `<div class="empty-state" style="padding:20px"><div class="ic" style="color:#0e7490"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></svg></div><h3>אין עדיין אנשי צוות</h3></div>`;
 }
 
 function renderLogByShed({adminItems, perShed}){
@@ -12440,7 +12441,7 @@ function renderLogByShed({adminItems, perShed}){
 }
 
 function renderLogByItem({adminItems, perShed}){
-  if(!adminItems.length) return `<div class="empty-state" style="padding:20px"><div class="ic">📄</div><h3>אין עדיין פריטי קרא-וחתום שפורסמו</h3></div>`;
+  if(!adminItems.length) return `<div class="empty-state" style="padding:20px"><div class="ic" style="color:#475569"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M9 13.5l2 2 4-4.5"/></svg></div><h3>אין עדיין פריטי קרא-וחתום שפורסמו</h3></div>`;
   return adminItems.slice().reverse().map(item=>{
     const shedStatus = perShed.map(({shed,personnel,eventIds,sigsBy})=>{
       if(!eventIds.has(item.id)) return {shed, present:false, total:personnel.length};
@@ -13256,7 +13257,7 @@ async function renderMedChecks(){
   const filterBox = document.getElementById("medchecks-filter");
   if(people.length===0){
     filterBox.innerHTML = "";
-    box.innerHTML = `<div class="empty-state"><div class="ic">🪖</div><h3>אין חיילים למעקב</h3><p>הוסף אנשי צוות כדי לעקוב אחר ${escapeHTML(t.label)}</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#0d9488"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15a8 8 0 0 1 16 0v2H4v-2Z"/><path d="M2 17h20M9 15v-3M15 15v-3"/></svg></div><h3>אין חיילים למעקב</h3><p>הוסף אנשי צוות כדי לעקוב אחר ${escapeHTML(t.label)}</p></div>`;
     return;
   }
   filterBox.innerHTML = `
@@ -13265,7 +13266,7 @@ async function renderMedChecks(){
   let shown = people;
   if(medFilter==="attention") shown = shown.filter(needsAttn);
   if(shown.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">✅</div><h3>אין למה לשים לב</h3><p>אין חיילים שדורשים חידוש ${escapeHTML(t.label)}</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#16a34a"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg></div><h3>אין למה לשים לב</h3><p>אין חיילים שדורשים חידוש ${escapeHTML(t.label)}</p></div>`;
     return;
   }
   box.innerHTML = shown.map(p=>{
@@ -13439,7 +13440,7 @@ async function renderOnboardingCard(containerId){
     return isOnboarding(p) && (user===p.name || (p.mentor && user===p.mentor));
   });
   if(idxList.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🎓</div><h3>אין כרגע חודש הסתגלות פעיל</h3><p>הכרטיס יופיע כאן כשתהיה בקליטה, או כשתשויך כחונך למישהו שכן</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#7c3aed"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg></div><h3>אין כרגע חודש הסתגלות פעיל</h3><p>הכרטיס יופיע כאן כשתהיה בקליטה, או כשתשויך כחונך למישהו שכן</p></div>`;
     return;
   }
   const tpl = await getOnboardingTemplate();
@@ -13452,7 +13453,7 @@ async function renderOnboardingRoster(){
   if(!box) return;
   const idxList = PERSONNEL.map((p,i)=>i).filter(i=>isOnboarding(PERSONNEL[i]));
   if(idxList.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🎓</div><h3>אין כרגע אף אחד בחודש הסתגלות</h3><p>חייל חדש שהצטרף ב-30 הימים האחרונים יופיע כאן אוטומטית</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#7c3aed"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg></div><h3>אין כרגע אף אחד בחודש הסתגלות</h3><p>חייל חדש שהצטרף ב-30 הימים האחרונים יופיע כאן אוטומטית</p></div>`;
     return;
   }
   const tpl = await getOnboardingTemplate();
@@ -13683,7 +13684,7 @@ function renderCertsPageList(){
 
   if(certs.length===0){
     document.getElementById("certs-filter").innerHTML = "";
-    box.innerHTML = trainingCard + `<div class="empty-state"><div class="ic">🎓</div><h3>אין עדיין הסמכות</h3><p>${isCmdr?'הוסף הסמכה באמצעות "+ הסמכה"':'המפקד טרם הזין הסמכות'}</p></div>`;
+    box.innerHTML = trainingCard + `<div class="empty-state"><div class="ic" style="color:#7c3aed"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg></div><h3>אין עדיין הסמכות</h3><p>${isCmdr?'הוסף הסמכה באמצעות "+ הסמכה"':'המפקד טרם הזין הסמכות'}</p></div>`;
     return;
   }
 
@@ -13737,7 +13738,7 @@ function renderCertsPageList(){
   </div>`;
 
   if(shownNames.length===0){
-    box.innerHTML = trainingCard + legend + `<div class="empty-state"><div class="ic">🔍</div><h3>לא נמצאו תוצאות</h3><p>נסה חיפוש אחר או נקה את הסינון</p></div>`;
+    box.innerHTML = trainingCard + legend + `<div class="empty-state"><div class="ic" style="color:#9ca3af"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg></div><h3>לא נמצאו תוצאות</h3><p>נסה חיפוש אחר או נקה את הסינון</p></div>`;
     return;
   }
 
@@ -13957,7 +13958,7 @@ async function renderToolsPage(){
   const isCmdr = isToolsResp;
   if(tools.length===0){
     document.getElementById("tools-search-box").style.display = "none";
-    box.innerHTML = `<div class="empty-state"><div class="ic">🧰</div><h3>אין עדיין כלים בחדר הכלים</h3><p>${isCmdr?'הוסף כלי באמצעות "+ כלי"':'המפקד או אחראי חדר הכלים טרם הזין כלים'}</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#b45309"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="9" width="19" height="11" rx="2"/><path d="M8 9V6.5A2.5 2.5 0 0 1 10.5 4h3A2.5 2.5 0 0 1 16 6.5V9M2.5 14h19"/></svg></div><h3>אין עדיין כלים בחדר הכלים</h3><p>${isCmdr?'הוסף כלי באמצעות "+ כלי"':'המפקד או אחראי חדר הכלים טרם הזין כלים'}</p></div>`;
     return;
   }
   document.getElementById("tools-search-box").style.display = tools.length>=4 ? "flex" : "none";
@@ -13977,7 +13978,7 @@ async function renderToolsPage(){
   withStatus.sort((a,b)=> expKey(a)-expKey(b) || (a.name||"").localeCompare(b.name||"","he"));
   const filtered = q ? withStatus.filter(t=>(t.name||"").toLowerCase().includes(q) || (t.serial||"").toLowerCase().includes(q)) : withStatus;
   if(filtered.length===0){
-    box.innerHTML = banner + `<div class="empty-state"><div class="ic">🔍</div><h3>לא נמצאו כלים</h3><p>נסה חיפוש אחר לפי שם הכלי או המספר הסידורי.</p></div>`;
+    box.innerHTML = banner + `<div class="empty-state"><div class="ic" style="color:#9ca3af"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg></div><h3>לא נמצאו כלים</h3><p>נסה חיפוש אחר לפי שם הכלי או המספר הסידורי.</p></div>`;
     return;
   }
   const cards = filtered.map(t=>`
@@ -14065,7 +14066,7 @@ async function renderVehiclesPage(){
     currentShed ? getShedLeasingVehicles(currentShed.id) : Promise.resolve([])
   ]);
   if(vehicles.length===0 && leasing.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🚙</div><h3>אין עדיין רכבים במעקב</h3><p>${isCmdr?'הוסף רכב באמצעות "+ רכב"':'המפקד או אחראי הרכבים טרם הזין רכבים'}</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#0e7490"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V12l2-4.5h12L20 12v4"/><path d="M4 16h16M6 16v2M18 16v2"/><circle cx="7.5" cy="16" r="1.6"/><circle cx="16.5" cy="16" r="1.6"/></svg></div><h3>אין עדיין רכבים במעקב</h3><p>${isCmdr?'הוסף רכב באמצעות "+ רכב"':'המפקד או אחראי הרכבים טרם הזין רכבים'}</p></div>`;
     return;
   }
   const ownWithStatus = vehicles.map(v=>({...v, st: vehicleStatusDetailed(v, OWN_CHECKS), _checks: OWN_CHECKS}));
@@ -14106,7 +14107,7 @@ async function renderShedLicensesView(){
   if(!box || !currentShed) return;
   const licenses = (await getVoLicenses()).filter(l=>l.shedId===currentShed.id);
   if(licenses.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🪪</div><h3>אין עדיין רישיונות/הסמכות במעקב</h3><p>מנוהל ע"י מ״ע אחזקה</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#4f46e5"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><circle cx="8" cy="12" r="2.2"/><path d="M5.7 16.5c.5-1.6 1.6-2.3 2.3-2.3s1.8.7 2.3 2.3M14 9.5h5M14 13h5M14 16.5h3"/></svg></div><h3>אין עדיין רישיונות/הסמכות במעקב</h3><p>מנוהל ע"י מ״ע אחזקה</p></div>`;
     return;
   }
   const withStatus = licenses.map(l=>({...l, st: licenseStatus(l)}));
@@ -14376,7 +14377,7 @@ function renderMorningRollcallList(){
       </div>`;
     }).join("");
   }
-  document.getElementById("mc-list").innerHTML = html || `<div class="empty-state"><div class="ic">🔍</div><h3>אין תוצאות</h3></div>`;
+  document.getElementById("mc-list").innerHTML = html || `<div class="empty-state"><div class="ic" style="color:#9ca3af"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg></div><h3>אין תוצאות</h3></div>`;
 }
 /* לחיצה חוזרת על אותו סטטוס מבטלת את הסימון (חזרה ל"טרם סומן") */
 async function setMorningRollcallMark(shedId, name, status){
@@ -14574,7 +14575,7 @@ async function renderVoVehicles(){
           <button class="cert-chip-del" onclick="removeVoVehicle('${shed.id}','${v.id}')">✕</button>`, checks)).join("");
   }
   if(!anyVehicle){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🚙</div><h3>אין עדיין רכבים במעקב</h3><p>הוסף רכב באמצעות "הוספת רכב"</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#0e7490"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V12l2-4.5h12L20 12v4"/><path d="M4 16h16M6 16v2M18 16v2"/><circle cx="7.5" cy="16" r="1.6"/><circle cx="16.5" cy="16" r="1.6"/></svg></div><h3>אין עדיין רכבים במעקב</h3><p>הוסף רכב באמצעות "הוספת רכב"</p></div>`;
     return;
   }
   box.innerHTML = html;
@@ -14835,7 +14836,7 @@ async function renderMaintVehicles(){
   if(!box) return;
   const vehicles = await getMaintVehicles();
   if(vehicles.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🔧</div><h3>אין עדיין רכבי צ' במעקב</h3><p>רכבים שחורים ושכורים — לא משוייכים לסככה ספציפית</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#c2410c"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></div><h3>אין עדיין רכבי צ' במעקב</h3><p>רכבים שחורים ושכורים — לא משוייכים לסככה ספציפית</p></div>`;
     return;
   }
   const checks = ["nextService","monthlyService","annualService","testDate","kmService"];
@@ -15029,7 +15030,7 @@ async function renderLeasingVehicles(){
   box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען…</div>';
   const vehicles = await getLeasingVehicles();
   if(vehicles.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🚗</div><h3>אין עדיין רכבי ליסינג במעקב</h3><p>הוסף רכב לפי שם המחזיק</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#0e7490"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V12l2-4.5h12L20 12v4"/><path d="M4 16h16M6 16v2M18 16v2"/><circle cx="7.5" cy="16" r="1.6"/><circle cx="16.5" cy="16" r="1.6"/></svg></div><h3>אין עדיין רכבי ליסינג במעקב</h3><p>הוסף רכב לפי שם המחזיק</p></div>`;
     return;
   }
   // שיוך כל רכב לסככה (אם המחזיק קיים ברשימת צוות כלשהי), במקביל
@@ -15239,7 +15240,7 @@ async function renderVoLicenses(){
   if(!box) return;
   const licenses = await getVoLicenses();
   if(licenses.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🪪</div><h3>אין עדיין רישיונות במעקב</h3><p>הוסף רישיון באמצעות "הוספת רישיון/הסמכה"</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#4f46e5"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><circle cx="8" cy="12" r="2.2"/><path d="M5.7 16.5c.5-1.6 1.6-2.3 2.3-2.3s1.8.7 2.3 2.3M14 9.5h5M14 13h5M14 16.5h3"/></svg></div><h3>אין עדיין רישיונות במעקב</h3><p>הוסף רישיון באמצעות "הוספת רישיון/הסמכה"</p></div>`;
     return;
   }
   const shedSel = document.getElementById("vo-license-shed-filter");
@@ -15272,7 +15273,7 @@ async function renderVoLicenses(){
   if(typeFilter!=="all") withStatus = withStatus.filter(l=>l.type===typeFilter);
 
   if(withStatus.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🔍</div><h3>אין תוצאות</h3><p>נסה לשנות את החיפוש או הסינון</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#9ca3af"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg></div><h3>אין תוצאות</h3><p>נסה לשנות את החיפוש או הסינון</p></div>`;
     return;
   }
   const groupMode = document.getElementById("vo-license-group")?.value || "shed";
@@ -15356,7 +15357,7 @@ async function renderMaterials(){
   if(!box) return;
   const materials = await getMaterials();
   if(materials.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">📦</div><h3>אין עדיין הזמנות חומרים</h3><p>הוסף הזמנה באמצעות "הוספת הזמנת חומר"</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#6b7280"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M4.5 9v9a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/></svg></div><h3>אין עדיין הזמנות חומרים</h3><p>הוסף הזמנה באמצעות "הוספת הזמנת חומר"</p></div>`;
     return;
   }
   const order = {r:0, y:1, g:2};
@@ -15440,7 +15441,7 @@ async function renderMotorTools(){
   if(!box) return;
   const tools = await getMotorTools();
   if(tools.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🔧</div><h3>אין עדיין כלים מוטוריים במעקב</h3><p>הוסף כלי באמצעות "הוספת כלי מוטורי"</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#c2410c"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></div><h3>אין עדיין כלים מוטוריים במעקב</h3><p>הוסף כלי באמצעות "הוספת כלי מוטורי"</p></div>`;
     return;
   }
   const withStatus = tools.map(t=>({...t, st: motorToolStatus(t)}));
@@ -15536,7 +15537,7 @@ async function renderBoAllocations(){
   if(!box) return;
   const list = await getBoAllocations();
   if(list.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">💵</div><h3>אין עדיין הקצאות</h3><p>הוסף הקצאה באמצעות "הוספת הקצאה"</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#16a34a"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6.5" width="19" height="11" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M5.5 9v.01M18.5 15v.01"/></svg></div><h3>אין עדיין הקצאות</h3><p>הוסף הקצאה באמצעות "הוספת הקצאה"</p></div>`;
     return;
   }
   const sorted = [...list].sort((a,b)=> (b.date||"").localeCompare(a.date||""));
@@ -15647,7 +15648,7 @@ async function renderBoExpenses(){
   if(!box) return;
   const list = await getBoExpenses();
   if(list.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🧾</div><h3>אין עדיין הוצאות</h3><p>הוסף הוצאה באמצעות "הוספת הוצאה"</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic" style="color:#0d9488"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2-1.5L14 21l-2-1.5L10 21l-2-1.5L6 21V3Z"/><path d="M9 8h6M9 12h6"/></svg></div><h3>אין עדיין הוצאות</h3><p>הוסף הוצאה באמצעות "הוספת הוצאה"</p></div>`;
     return;
   }
   const sorted = [...list].sort((a,b)=> (b.date||"").localeCompare(a.date||""));
@@ -15764,8 +15765,8 @@ async function renderBoOverview(){
         </div>
       </div>
       <div class="bo-qa-row" style="margin-top:12px">
-        <div class="bo-qa-btn" onclick="openBoExpenseAdd()"><span class="a-ic">➕</span><span>הוצאה חדשה</span></div>
-        <div class="bo-qa-btn" onclick="openBoAllocationAdd()"><span class="a-ic">💵</span><span>הקצאה חדשה</span></div>
+        <div class="bo-qa-btn" onclick="openBoExpenseAdd()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span><span>הוצאה חדשה</span></div>
+        <div class="bo-qa-btn" onclick="openBoAllocationAdd()"><span class="a-ic" style="color:#16a34a"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6.5" width="19" height="11" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M5.5 9v.01M18.5 15v.01"/></svg></span><span>הקצאה חדשה</span></div>
       </div>
     </div>
 
