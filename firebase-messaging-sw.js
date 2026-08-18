@@ -70,24 +70,31 @@ messaging.onBackgroundMessage(async (payload)=>{
   });
 });
 
-// הקשה על ההתראה — פותח/ממקד את האפליקציה. אם זו "סקירה יומית", שומרים
-// את תוכנה ב-IndexedDB כדי שהאפליקציה תציג חלון פופאפ צף עם התוכן (וסוגרים
-// אותו ב-✕). כשהאפליקציה כבר פתוחה גם שולחים לה הודעת SHOW_DIGEST כדי
-// שתציג מיד; כשהיא סגורה — היא קוראת את pending_digest בעליית העמוד.
+// הקשה על ההתראה — פותח/ממקד את האפליקציה, ומנווט למסך הרלוונטי לפי סוג
+// ההתראה (d.kind). "סקירה יומית" נשארת מקרה מיוחד: שומרים תוכן מלא
+// ב-IndexedDB כדי שהאפליקציה תציג חלון פופאפ צף (וסוגרים אותו ב-✕). שאר
+// הסוגים שומרים רק את ה-kind תחת pending_nav, כדי שהאפליקציה תנווט למסך
+// המתאים דרך handleNotificationNav — גם כשהאפליקציה כבר פתוחה (postMessage)
+// וגם בפתיחה קרה (נקרא בעליית העמוד, בדיוק כמו pending_digest).
 self.addEventListener("notificationclick", (event)=>{
   event.notification.close();
   const d = (event.notification && event.notification.data) || {};
   event.waitUntil((async ()=>{
-    if(d.kind === "daily_digest" && (d.title || d.body)){
-      try{
-        const db = await idbBadge();
+    try{
+      const db = await idbBadge();
+      if(d.kind === "daily_digest" && (d.title || d.body)){
         await idbPut(db, "pending_digest", { title: d.title || "", body: d.body || "", ts: Date.now() });
-      }catch(e){}
-    }
+      } else if(d.kind){
+        await idbPut(db, "pending_nav", { kind: d.kind, ts: Date.now() });
+      }
+    }catch(e){}
     const all = await self.clients.matchAll({ type:"window", includeUncontrolled:true });
     for(const c of all){
       if("focus" in c){
-        try{ if(d.kind === "daily_digest") c.postMessage({ type:"SHOW_DIGEST" }); }catch(e){}
+        try{
+          if(d.kind === "daily_digest") c.postMessage({ type:"SHOW_DIGEST" });
+          else if(d.kind) c.postMessage({ type:"NOTIFICATION_NAV", kind: d.kind });
+        }catch(e){}
         return c.focus();
       }
     }
