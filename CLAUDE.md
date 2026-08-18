@@ -123,7 +123,7 @@ rosterView = "board" | "day" | "mine"
 ## Service Worker
 
 `CACHE_NAME` בקובץ `service-worker.js` חייב להתעדכן בכל batch שנפרס.
-גרסה נוכחית: **v34**.
+גרסה נוכחית: **v40**.
 
 משתמש ב-`SKIP_WAITING` message (לא `skipWaiting()` אוטומטי) — עדכון נשאר "ממתין" עד שהמשתמש לוחץ "גרסה חדשה זמינה".
 
@@ -135,7 +135,7 @@ rosterView = "board" | "day" | "mine"
 node qa/suite/<test>.mjs    # הרץ בדיקה בודדת
 ```
 
-**109 בדיקות, כולן עוברות** נכון ל-2026-08-16.
+**111 בדיקות, כולן עוברות** נכון ל-2026-08-18.
 
 קבצי בדיקות קיימים:
 - `roster_cards_view_test.mjs` — לשוניות + כרטיסי יום
@@ -151,6 +151,7 @@ node qa/suite/<test>.mjs    # הרץ בדיקה בודדת
 - `vo_licenses_by_shed_test.mjs` — רישיונות לפי סככה
 - `build_minify_test.mjs` — מינימיזציה
 - `constraint_edit_resubmit_and_daily_wa_test.mjs` — אילוצים
+- `icons_v2_test.mjs` — מערכת האייקונים (החלפה, משפחות, active)
 
 ---
 
@@ -235,6 +236,47 @@ git push origin main
 
 - `.m-btn` — `.primary` = גרדיאנט אדום + צל; `.ghost` = לבן + `--line`. `.m-input` — פוקוס → גבול `--red`. `.m-file` — dashed.
 - נוספים: `.card`, `.role-chip`, `.nav-btn`, `.today-card`, `.alert-*`, `.roster-*`.
+
+---
+
+## מערכת אייקונים (ICONS v2)
+
+אין יותר אימוג'ים בממשק. סט **Feather** (MIT), קו 1.75px, רשת 24px.
+
+**איך זה עובד:** האימוג'ים **לא נמחקו מה-HTML** — הם נשארו בדיוק במקומם.
+בלוק בסוף ה-`<script>` מחליף אותם ב-SVG בזמן ריצה: בונה sprite אחד
+(`#ic-sprite`, 49 `<symbol>`), עובר על כל `.ic` / `.s-ic`, מתרגם את האימוג'י
+דרך `IC_MAP` ומזריק `<use>`. חלק גדול מהאייקונים נוצר דינמית ב-render,
+ולכן יש `MutationObserver` על `document.body` במקום קריאה מכל render בנפרד.
+
+```js
+var ICONS_V2 = true;   // ← false מחזיר את כל האימוג'ים מיד, בלי revert
+```
+
+**שש משפחות סמנטיות** — הצבע מקודד עולם תוכן, לא מסך:
+
+| משפחה | טוקן | גוון | שייכים |
+|---|---|---|---|
+| פיקוד וזהות | `--f-cmd` | `#a92227` | star, shield, award |
+| משימות ואישורים | `--f-task` | `#007332` | check-square, file-text, clipboard, check |
+| חריגות ותקלות | `--f-alert` | `#914800` | alert-triangle, alert-octagon, tool |
+| לוגיסטיקה וציוד | `--f-logi` | `#075ea9` | truck, package, archive, credit-card |
+| ניהול ומידע | `--f-info` | `#6d41a9` | book-open, bar-chart-2, dollar-sign, briefcase |
+| אנשים וזמן | `--f-people` | `#007071` | users, user, calendar, gift, activity, home, mail |
+| ניטרלי | `--f-none` | `#7b7271` | search, more-horizontal, refresh-cw |
+
+כולם ב-`L .48` — 5.9:1 עד 7.2:1 מול לבן. `--ic-idle` (לא-פעיל בסרגל) = 4.7:1,
+במקום `--ink-3` שעמד על 2.6:1.
+
+**מצב active בסרגל:** הצורה עוברת מקו למילוי (`.ico-o` → `.ico-f`), בלי אריח
+ובלי הפס העליון. סמלים בקו פתוח (activity, check, bar-chart-2, dollar-sign,
+tool, search, refresh-cw) מתעבים ל-2.5px במקום להתמלא.
+
+**להוספת אייקון חדש:** מוסיפים path ל-`IC_OUT`, משפחה ל-`IC_FAM`, ואם הוא
+יכול להופיע בסרגל — גם וריאנט מלא ל-`IC_FILL`. מיפוי אימוג'י ב-`IC_MAP`.
+
+> ⚠️ הרשימה `.sheet-item .s-ic` איבדה את האריח הצבעוני (`--red-soft`) בכוונה —
+> על רקע בהיר הוא הוסיף שכבת צבע רך במקום לחדד. לא להחזיר.
 
 ---
 
