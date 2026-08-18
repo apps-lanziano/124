@@ -4337,7 +4337,7 @@ function setBtnLoading(btn, loading){
   if(loading){
     if(!btn.dataset.label) btn.dataset.label = btn.textContent;
     btn.disabled = true;
-    btn.textContent = "⏳ טוען…";
+    btn.innerHTML = emojiIcon("⏳ טוען…");
   } else {
     btn.disabled = false;
     if(btn.dataset.label) btn.textContent = btn.dataset.label;
@@ -4432,9 +4432,9 @@ function renderQuickUsers(){
     const shed = SHEDS.find(s=>s.id===u.shedId);
     return `<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
       <button onclick="selectQuickUser(${i})" style="flex:1;text-align:right;padding:13px 16px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font-family:'Assistant';font-size:15px;font-weight:700;cursor:pointer;box-shadow:var(--shadow)">
-        👤 ${escapeHTML(u.name)} <span style="opacity:.65;font-size:12px;font-weight:400">· ${escapeHTML(shed?shed.name:"")}</span>
+        ${icon('person')} ${escapeHTML(u.name)} <span style="opacity:.65;font-size:12px;font-weight:400">· ${escapeHTML(shed?shed.name:"")}</span>
       </button>
-      <button onclick="forgetQuickUser(${i})" title="הסר מהמכשיר" style="flex:0 0 auto;padding:13px 12px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--red);font-size:14px;cursor:pointer">✕</button>
+      <button onclick="forgetQuickUser(${i})" title="הסר מהמכשיר" style="flex:0 0 auto;padding:13px 12px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--red);font-size:14px;cursor:pointer">${icon('close')}</button>
     </div>`;
   }).join("");
 }
@@ -4628,8 +4628,8 @@ async function enterFrameworkAfterAuth(shed, role, code){
   document.getElementById("login-step-name").style.display = "block";
   document.getElementById("login-pin-wrap").style.display = "none";
   const banner = document.getElementById("login-role-banner");
-  if(role === "מפקד"){ banner.textContent = "🎖️ " + shed.name + " · כניסת מפקדים"; banner.style.background = "var(--red)"; banner.style.color = "#fff"; }
-  else { banner.textContent = "👤 " + shed.name + " · כניסת חיילים"; banner.style.background = "var(--card)"; banner.style.color = "var(--ink-2)"; banner.style.border = "1px solid var(--line)"; }
+  if(role === "מפקד"){ banner.innerHTML = emojiIcon("🎖️ " + shed.name + " · כניסת מפקדים"); banner.style.background = "var(--red)"; banner.style.color = "#fff"; }
+  else { banner.innerHTML = emojiIcon("👤 " + shed.name + " · כניסת חיילים"); banner.style.background = "var(--card)"; banner.style.color = "var(--ink-2)"; banner.style.border = "1px solid var(--line)"; }
   populateLogin();
 }
 /* ניתוב לפי פרופיל שנקרא מהשרת (מצב server) */
@@ -4755,10 +4755,10 @@ function onLoginNameChange(){
   if(!person){ wrap.style.display = "none"; return; }
   wrap.style.display = "block";
   if(person.pinHash){
-    label.textContent = "🔒 הזן PIN אישי";
+    label.innerHTML = emojiIcon("🔒 הזן PIN אישי");
     pin.placeholder = "4 ספרות";
   } else {
-    label.textContent = "🔒 כניסה ראשונה — הגדר PIN אישי (חובה)";
+    label.innerHTML = emojiIcon("🔒 כניסה ראשונה — הגדר PIN אישי (חובה)");
     pin.placeholder = "בחר 4 ספרות";
   }
 }
@@ -5131,7 +5131,7 @@ function ensureModalCloseButtons(){
     btn.type = "button";
     btn.className = "modal-x";
     btn.setAttribute("aria-label","סגור");
-    btn.textContent = "✕";
+    btn.innerHTML = emojiIcon("✕");
     btn.addEventListener("click", ()=> bg.classList.remove("open"));
     modal.insertBefore(btn, modal.firstChild);
   });
@@ -5209,7 +5209,7 @@ async function renderDocs(){
 
   if(events.length === 0){
     list.innerHTML = `<div class="empty-state">
-      <div class="ic">🗂️</div>
+      <div class="ic">${icon('folder')}</div>
       <h3>אין עדיין פריטים</h3>
       <p>${isCmdr?'העלה פריט חדש באמצעות כפתור "+ פריט"':'טרם פורסמו פריטים'}</p>
     </div>`;
@@ -5218,7 +5218,7 @@ async function renderDocs(){
   }
   const filtered = q ? events.filter(e=>(e.title||"").toLowerCase().includes(q) || (e.date||"").includes(q)) : events;
   if(filtered.length===0){
-    list.innerHTML = `<div class="empty-state"><div class="ic">🔍</div><h3>לא נמצאו פריטים</h3><p>נסה מונח חיפוש אחר</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="ic">${icon('search')}</div><h3>לא נמצאו פריטים</h3><p>נסה מונח חיפוש אחר</p></div>`;
     return;
   }
   filtered.forEach(ev=>{
@@ -5236,10 +5236,10 @@ async function renderDocs(){
       const done = total>0 && signed===total;
       const age = eventAgeDays(ev.id);
       const stale = (!done && age>=3);
-      const ageTag = stale ? `<span style="font-size:10.5px;color:var(--red);font-weight:700">⏳ ${age} ימים ללא חתימה מלאה</span>` : "";
+      const ageTag = stale ? `<span style="font-size:10.5px;color:var(--red);font-weight:700">${icon('hourglass')} ${age} ימים ללא חתימה מלאה</span>` : "";
       cmdSigRow = `<div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
         <span class="pill ${done?'g':signed===0?'r':'y'}" style="font-size:11px">${signed}/${total} חתמו</span>
-        ${!done?`<button class="m-btn ghost" style="padding:4px 10px;font-size:11px;width:auto" onclick="event.stopPropagation();showSigDetail('${ev.id}')">📢 תזכורת</button>`:""}
+        ${!done?`<button class="m-btn ghost" style="padding:4px 10px;font-size:11px;width:auto" onclick="event.stopPropagation();showSigDetail('${ev.id}')">${icon('announce')} תזכורת</button>`:""}
         ${ageTag}
       </div>`;
     }
@@ -5251,7 +5251,7 @@ async function renderDocs(){
         ${cmdSigRow}
       </div>
       <div class="doc-state ${isRead?"read":"unread"}">${isRead?"✓ נקרא":"לא נקרא"}</div>
-      ${isCmdr?`<button class="board-del" style="width:34px;height:34px;margin-right:2px" onclick="event.stopPropagation();deleteEvent('${ev.id}')">🗑️</button>`:""}`;
+      ${isCmdr?`<button class="board-del" style="width:34px;height:34px;margin-right:2px" onclick="event.stopPropagation();deleteEvent('${ev.id}')">${icon('delete')}</button>`:""}`;
     el.querySelector(".doc-body").onclick = ()=>openReader(ev.id);
     el.querySelector(".doc-thumb").onclick = ()=>openReader(ev.id);
     el.querySelector(".doc-state").onclick = ()=>openReader(ev.id);
@@ -5268,12 +5268,12 @@ async function renderVoDocs(){
   const q = (document.getElementById("safety-search")?.value || "").trim().toLowerCase();
   list.innerHTML = "";
   if(events.length===0){
-    list.innerHTML = `<div class="empty-state"><div class="ic">🗂️</div><h3>אין עדיין פריטים</h3><p>אחראי ההדרכה טרם פרסם פריטים לכלל הסככות</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="ic">${icon('folder')}</div><h3>אין עדיין פריטים</h3><p>אחראי ההדרכה טרם פרסם פריטים לכלל הסככות</p></div>`;
     return;
   }
   const filtered = q ? events.filter(e=>(e.title||"").toLowerCase().includes(q) || (e.date||"").includes(q)) : events;
   if(filtered.length===0){
-    list.innerHTML = `<div class="empty-state"><div class="ic">🔍</div><h3>לא נמצאו פריטים</h3><p>נסה מונח חיפוש אחר</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="ic">${icon('search')}</div><h3>לא נמצאו פריטים</h3><p>נסה מונח חיפוש אחר</p></div>`;
     return;
   }
   filtered.forEach(ev=>{
@@ -5327,7 +5327,7 @@ async function openReader(id, adminSourced){
         <div class="img-zoom-wrap doc-img-zoom-wrap" id="doc-zoom-wrap">
           <img id="doc-zoom-img" src="${fileData}" alt="קרא וחתום">
         </div>
-        <div class="img-zoom-hint doc-zoom-hint" id="doc-zoom-hint">🔍 צביטה להגדלה · הקשה כפולה לזום מהיר</div>
+        <div class="img-zoom-hint doc-zoom-hint" id="doc-zoom-hint">${icon('search')} צביטה להגדלה · הקשה כפולה לזום מהיר</div>
         <div class="img-zoom-ctrl doc-zoom-ctrl">
           <button onclick="imgZoomBy('doc-zoom-wrap','doc-zoom-img','doc-zoom-lbl',-0.5)" aria-label="הקטן">−</button>
           <span class="img-zoom-lbl" id="doc-zoom-lbl">100%</span>
@@ -5352,7 +5352,7 @@ async function openReader(id, adminSourced){
     <div class="sub">הועלה ע"י ${escapeHTML(currentDoc.by)} · ${currentDoc.date} · טייסת 124</div>
     ${viewer}
     ${sig ? `<div class="sig-preview">
-        <div class="txt">✓ נקרא ואושר<small>${escapeHTML(user)} · ${sig.date}</small></div>
+        <div class="txt">${icon('check')} נקרא ואושר<small>${escapeHTML(user)} · ${sig.date}</small></div>
       </div>` : ""}`;
   const btn = document.getElementById("reader-confirm");
   if(adminSourced){
@@ -5360,7 +5360,7 @@ async function openReader(id, adminSourced){
   } else {
     btn.style.display = "";
     if(sig){
-      btn.className="confirm-btn done"; btn.textContent="✅ נקרא בתאריך " + sig.date; btn.disabled=true;
+      btn.className="confirm-btn done"; btn.innerHTML=emojiIcon("✅ נקרא בתאריך " + sig.date); btn.disabled=true;
     } else {
       btn.className="confirm-btn"; btn.innerHTML="✓ אישור קריאה"; btn.disabled=false;
     }
@@ -5445,7 +5445,7 @@ function openAddEventRaw(){
   evImgData = null; evFileMeta = null;
   document.getElementById("ev-title").value="";
   const lbl = document.getElementById("ev-file-label");
-  lbl.classList.remove("has"); lbl.textContent="📤 לחץ לבחירת קובץ הפריט";
+  lbl.classList.remove("has"); lbl.innerHTML=emojiIcon("📤 לחץ לבחירת קובץ הפריט");
   const prev = document.getElementById("ev-preview"); if(prev) prev.remove();
   document.getElementById("ev-save").disabled = true;
   document.getElementById("add-modal").classList.add("open");
@@ -5460,12 +5460,12 @@ function onEvFile(e){
   const clearPrev = ()=>{ const p=document.getElementById("ev-preview"); if(p) p.remove(); };
 
   if(ftype === "image"){
-    lbl.classList.remove("has"); lbl.textContent="⏳ טוען ומכווץ תמונה…";
+    lbl.classList.remove("has"); lbl.innerHTML=emojiIcon("⏳ טוען ומכווץ תמונה…");
     const reader = new FileReader();
-    reader.onerror = ()=>{ lbl.textContent="⚠️ שגיאה בקריאת הקובץ — נסה שוב"; };
+    reader.onerror = ()=>{ lbl.innerHTML=emojiIcon("⚠️ שגיאה בקריאת הקובץ — נסה שוב"); };
     reader.onload = ev => {
       const img = new Image();
-      img.onerror = ()=>{ lbl.textContent="⚠️ הקובץ אינו תמונה תקינה"; };
+      img.onerror = ()=>{ lbl.innerHTML=emojiIcon("⚠️ הקובץ אינו תמונה תקינה"); };
       img.onload = () => {
         let quality=.78, data, tries=0;
         const maxW=820, scale=Math.min(1,maxW/img.width);
@@ -5477,7 +5477,7 @@ function onEvFile(e){
         while(data.length>720_000 && tries<7){ quality-=.1; data=c.toDataURL("image/jpeg",Math.max(.28,quality)); tries++; }
         evImgData=data; evFileMeta={type:"image", name:file.name, mime:"image/jpeg"};
         const kb=Math.round(data.length/1024);
-        lbl.classList.add("has"); lbl.textContent="✅ תמונה נטענה ("+kb+"KB)";
+        lbl.classList.add("has"); lbl.innerHTML=emojiIcon("✅ תמונה נטענה ("+kb+"KB)");
         clearPrev();
         const prev=document.createElement("img"); prev.id="ev-preview";
         prev.style.cssText="width:100%;border-radius:12px;margin-top:10px;border:1px solid var(--line);display:block";
@@ -5492,16 +5492,16 @@ function onEvFile(e){
     const maxMB = fbReady ? 0.7 : 3.6;   // Firestore doc limit ~1MB
     if(file.size > maxMB*1024*1024){
       lbl.classList.remove("has");
-      lbl.textContent="⚠️ הקובץ גדול מדי ("+(file.size/1048576).toFixed(1)+"MB). מקסימום "+maxMB+"MB"+(fbReady?" במצב משותף":"");
+      lbl.innerHTML=emojiIcon("⚠️ הקובץ גדול מדי ("+(file.size/1048576).toFixed(1)+"MB). מקסימום "+maxMB+"MB"+(fbReady?" במצב משותף":""));
       evImgData=null; evFileMeta=null; clearPrev(); checkEvReady(); e.target.value=""; return;
     }
-    lbl.classList.remove("has"); lbl.textContent="⏳ טוען "+FTYPE[ftype].label+"…";
+    lbl.classList.remove("has"); lbl.innerHTML=emojiIcon("⏳ טוען "+FTYPE[ftype].label+"…");
     const reader=new FileReader();
-    reader.onerror=()=>{ lbl.textContent="⚠️ שגיאה בקריאת הקובץ"; };
+    reader.onerror=()=>{ lbl.innerHTML=emojiIcon("⚠️ שגיאה בקריאת הקובץ"); };
     reader.onload=ev=>{
       evImgData=ev.target.result; evFileMeta={type:ftype, name:file.name, mime:file.type};
       const kb=Math.round(file.size/1024);
-      lbl.classList.add("has"); lbl.textContent="✅ "+FTYPE[ftype].emoji+" "+file.name+" ("+kb+"KB)";
+      lbl.classList.add("has"); lbl.innerHTML=emojiIcon("✅ "+FTYPE[ftype].emoji+" "+file.name+" ("+kb+"KB)");
       clearPrev();
       const card=document.createElement("div"); card.id="ev-preview";
       card.style.cssText="margin-top:10px;padding:14px;border-radius:12px;border:1px solid var(--line);background:#fdfafa;display:flex;align-items:center;gap:12px";
@@ -5512,7 +5512,7 @@ function onEvFile(e){
     reader.readAsDataURL(file);
   } else {
     lbl.classList.remove("has");
-    lbl.textContent="⚠️ סוג קובץ לא נתמך. העלה תמונה, PDF, Word או PowerPoint";
+    lbl.innerHTML=emojiIcon("⚠️ סוג קובץ לא נתמך. העלה תמונה, PDF, Word או PowerPoint");
     evImgData=null; evFileMeta=null; clearPrev(); checkEvReady();
   }
   e.target.value="";
@@ -5593,12 +5593,12 @@ async function renderTasks(){
     el.className = "card task-row" + (isDone?" done":"");
     el.onclick = ()=>toggleTask(t.id);
     const doneBy = isDone
-      ? `<p class="done-by">✓ בוצע ע"י ${escapeHTML(rec.by)} · ${rec.time}</p>`
+      ? `<p class="done-by">${icon('check')} בוצע ע"י ${escapeHTML(rec.by)} · ${rec.time}</p>`
       : `<p>${escapeHTML(t.desc)}</p>`;
     el.innerHTML = `
       <div class="task-num">${i+1}</div>
       <div class="task-info"><h3>${escapeHTML(t.title)}</h3>${doneBy}</div>
-      <div class="task-check">✓</div>`;
+      <div class="task-check">${icon('check')}</div>`;
     list.appendChild(el);
   });
   const pct = (count/MORNING_TASKS.length)*100;
@@ -5622,9 +5622,9 @@ async function renderTasks(){
   if(MORNING_TASKS.length===0){
     alertBox.innerHTML = "";
   } else if(count===MORNING_TASKS.length){
-    alertBox.innerHTML = `<div class="mstat-banner ok"><span class="big">✅ כל מטלות הבוקר בוצעו</span><small>עבודה מצוינת. יום בטוח ופורה 🛩️</small></div>`;
+    alertBox.innerHTML = `<div class="mstat-banner ok"><span class="big">${icon('checkcircle')} כל מטלות הבוקר בוצעו</span><small>עבודה מצוינת. יום בטוח ופורה 🛩️</small></div>`;
   } else if(count===0){
-    alertBox.innerHTML = `<div class="mstat-banner none"><span class="big">⚠️ מטלות הבוקר טרם בוצעו</span><small>0/${MORNING_TASKS.length} — נדרש ביצוע לפני תחילת פעילות</small>${lateNote}</div>${waBtn}`;
+    alertBox.innerHTML = `<div class="mstat-banner none"><span class="big">${icon('warning')} מטלות הבוקר טרם בוצעו</span><small>0/${MORNING_TASKS.length} — נדרש ביצוע לפני תחילת פעילות</small>${lateNote}</div>${waBtn}`;
   } else {
     alertBox.innerHTML = `<div class="mstat-banner partial"><span class="big">🔶 ביצוע חלקי</span><small>${count}/${MORNING_TASKS.length} בוצעו · ${openCount} מטלות עדיין פתוחות</small>${lateNote}</div>${waBtn}`;
   }
@@ -5765,7 +5765,7 @@ async function renderTrainHub(){
 
   const nowHtml = now.length
     ? `<div class="th-sec">דורש טיפול · ${now.length}</div><div class="th-card">${now.map(rowHtml).join("")}</div>`
-    : `<div class="th-clear">✅ אין פריטים שדורשים טיפול<small>כל ההסמכות בתוקף והקליטות מעודכנות</small></div>`;
+    : `<div class="th-clear">${icon('checkcircle')} אין פריטים שדורשים טיפול<small>כל ההסמכות בתוקף והקליטות מעודכנות</small></div>`;
 
   const soonHtml = soon.length
     ? `<div class="th-sec">בקרוב · 30 יום</div><div class="th-card">${soon.map(rowHtml).join("")}</div>`
@@ -5810,10 +5810,10 @@ async function renderNaatim(){
   // week note
   const now = new Date(); const sun = new Date(); sun.setDate(now.getDate()-now.getDay());
   document.getElementById("naatim-week-note").innerHTML =
-    `<span>🗓️ שבוע נוכחי · מתאפס בכל יום ראשון</span>`;
+    `<span>${icon('calendar')} שבוע נוכחי · מתאפס בכל יום ראשון</span>`;
 
   if(items.length===0){
-    list.innerHTML = `<div class="empty-state"><div class="ic">🗂️</div><h3>אין עדיין נע"תים</h3><p>${isCmdr?'הוסף תחום אחריות באמצעות "+ נע"ת"':'המפקד טרם הגדיר נע"תים'}</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="ic">${icon('folder')}</div><h3>אין עדיין נע"תים</h3><p>${isCmdr?'הוסף תחום אחריות באמצעות "+ נע"ת"':'המפקד טרם הגדיר נע"תים'}</p></div>`;
     return;
   }
 
@@ -5825,13 +5825,13 @@ async function renderNaatim(){
     return `<div class="card naatim-card ${isChecked?'checked':''}">
       <div class="naatim-main">
         <div class="naatim-area">${escapeHTML(n.area)}</div>
-        <div class="naatim-person">👤 ${n.person? escapeHTML(n.person): '<span style="color:var(--ink-3)">לא שובץ</span>'}</div>
-        ${isChecked? `<div class="naatim-done">✓ נבדק ע"י ${escapeHTML(rec.by)} · ${rec.date}</div>`:''}
+        <div class="naatim-person">${icon('person')} ${n.person? escapeHTML(n.person): '<span style="color:var(--ink-3)">לא שובץ</span>'}</div>
+        ${isChecked? `<div class="naatim-done">${icon('check')} נבדק ע"י ${escapeHTML(rec.by)} · ${rec.date}</div>`:''}
       </div>
       <button class="naatim-check ${isChecked?'on':''}" ${canCheck?'':'disabled'} onclick="toggleNaatim('${n.id}')" title="בדיקה שבועית">
         ${isChecked?'✓':''}
       </button>
-      ${isCmdr?`<button class="mr-del" style="align-self:center" onclick="removeNaatim(${i})">🗑️</button>`:''}
+      ${isCmdr?`<button class="mr-del" style="align-self:center" onclick="removeNaatim(${i})">${icon('delete')}</button>`:''}
     </div>`;
   }).join("");
 }
@@ -5869,8 +5869,8 @@ async function renderNaatimMgmt(){
   const box = document.getElementById("naatim-mgmt-list");
   box.innerHTML = items.length ? items.map((n,i)=>`
     <div class="mgmt-row">
-      <div class="mr-body"><b>${escapeHTML(n.area)}</b><span>👤 ${n.person?escapeHTML(n.person):'לא שובץ'}</span></div>
-      <button class="mr-del" onclick="removeNaatim(${i})">🗑️</button>
+      <div class="mr-body"><b>${escapeHTML(n.area)}</b><span>${icon('person')} ${n.person?escapeHTML(n.person):'לא שובץ'}</span></div>
+      <button class="mr-del" onclick="removeNaatim(${i})">${icon('delete')}</button>
     </div>`).join("") : '<div style="text-align:center;color:var(--ink-3);font-size:13px;padding:14px">אין עדיין נע"תים</div>';
 }
 async function addNaatim(){
@@ -6088,8 +6088,8 @@ async function renderCalendarPage(){
   if(acts){
     const btns = [];
     if(userRole==="מפקד" || isAdmin || isSuperAdmin){
-      btns.push(`<button class="m-btn ghost" onclick="openCalEvent()">➕ אירוע ליומן</button>`);
-      btns.push(`<button class="m-btn ghost" onclick="openCalConstraint()">📌 אילוץ / זימון</button>`);
+      btns.push(`<button class="m-btn ghost" onclick="openCalEvent()">${icon('plus')} אירוע ליומן</button>`);
+      btns.push(`<button class="m-btn ghost" onclick="openCalConstraint()">${icon('pin')} אילוץ / זימון</button>`);
     }
     acts.innerHTML = btns.join("");
   }
@@ -6108,7 +6108,7 @@ function renderCalDayDetail(byDate){
   const rows = dayEvents.length
     ? dayEvents.map(e=>`<div class="cal-event-row"><i style="background:${CAL_TYPES[e.type].color}"></i>
         <span>${escapeHTML(e.label)}</span><b>${CAL_TYPES[e.type].label}</b>
-        ${(canDel && e.type==="manual" && e.manualId)?`<button class="cal-ev-del" onclick="deleteCalEvent('${e.manualId}')">🗑</button>`:""}</div>`).join("")
+        ${(canDel && e.type==="manual" && e.manualId)?`<button class="cal-ev-del" onclick="deleteCalEvent('${e.manualId}')">${icon('delete')}</button>`:""}</div>`).join("")
     : `<div style="font-size:12.5px;color:var(--ink-3);padding:8px 0">אין אירועים ביום זה</div>`;
   box.innerHTML = `<div class="cal-day-hdr">${dateLabel}</div>${rows}`;
 }
@@ -6262,12 +6262,12 @@ async function buildSquadronRollcallRowsHtml(){
       rows.push({name: shed.name, active: !!active, done: pers.filter(p=>chk[p.name]).length, total: pers.length});
     }
   }
-  return `<div class="cmd-section-title">📊 סטטוס לפי מסגרת</div>` + rows.map(r=>{
+  return `<div class="cmd-section-title">${icon('chart')} סטטוס לפי מסגרת</div>` + rows.map(r=>{
     const cls = !r.active ? "g" : (r.total>0 && r.done===r.total ? "g" : (r.done>0 ? "y" : "r"));
     const tag = !r.active ? "אין נכס פעיל" : (r.done+"/"+r.total+" סימנו");
     return `<div class="cert-sum-card" style="cursor:default">
       <div class="cert-sum-head">
-        <div class="avatar" style="width:40px;height:40px;font-size:18px">🛡️</div>
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">${icon('shield')}</div>
         <div class="cert-sum-name"><b>${escapeHTML(r.name)}</b></div>
         <span class="pill ${cls}" style="font-size:10px;white-space:nowrap">${tag}</span>
       </div>
@@ -6299,13 +6299,13 @@ async function renderRollcallPageVoTeam(box){
   const team = voTeam || [];
   let html = "";
   if(!voActive){
-    html += `<div class="empty-state"><div class="ic">🛡️</div><h3>אין נכס פעיל למחלקה</h3><p>לחץ על הכפתור כדי להפעיל נכס ולסמן עבור הנהגים</p></div>
-      <button class="m-btn primary" style="width:100%;margin-top:10px" onclick="activateVoRollcall()">🚨 הפעל נכס למחלקה</button>`;
+    html += `<div class="empty-state"><div class="ic">${icon('shield')}</div><h3>אין נכס פעיל למחלקה</h3><p>לחץ על הכפתור כדי להפעיל נכס ולסמן עבור הנהגים</p></div>
+      <button class="m-btn primary" style="width:100%;margin-top:10px" onclick="activateVoRollcall()">${icon('warning')} הפעל נכס למחלקה</button>`;
   } else {
     const done = team.filter(p=>vChk[p.id]).length;
-    html += `<div class="cmd-section-title">📋 מעקב סימונים <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${done}/${team.length}</span></div>`;
+    html += `<div class="cmd-section-title">${icon('people')} מעקב סימונים <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${done}/${team.length}</span></div>`;
     if(team.length===0){
-      html += `<div class="empty-state"><div class="ic">👥</div><h3>אין עדיין אנשי צוות</h3><p>הוסף נהגים דרך "ניהול צוות"</p></div>`;
+      html += `<div class="empty-state"><div class="ic">${icon('people')}</div><h3>אין עדיין אנשי צוות</h3><p>הוסף נהגים דרך "ניהול צוות"</p></div>`;
     } else {
       const sorted = [...team].sort((a,b)=> (vChk[a.id]?1:0) - (vChk[b.id]?1:0));
       html += sorted.map(p=>`
@@ -6317,12 +6317,12 @@ async function renderRollcallPageVoTeam(box){
           </div>
         </div>`).join("");
       if(team.length>0 && done===team.length){
-        html += `<button class="m-btn primary" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#166534,#22c55e)" onclick="openWaPrompt('rollcall-complete')">✅ דווח בוואטסאפ שהנכס הושלם — כולם תקינים</button>`;
+        html += `<button class="m-btn primary" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#166534,#22c55e)" onclick="openWaPrompt('rollcall-complete')">${icon('checkcircle')} דווח בוואטסאפ שהנכס הושלם — כולם תקינים</button>`;
       }
     }
     html += `<div style="display:flex;gap:8px;margin-top:10px">
-      <button class="m-btn ghost" style="flex:1" onclick="endVoRollcall()">🔚 סיים נכס</button>
-      <button class="m-btn primary" style="flex:1" onclick="openWaPrompt('rollcall')">📤 שתף בוואטסאפ</button>
+      <button class="m-btn ghost" style="flex:1" onclick="endVoRollcall()">${icon('close')} סיים נכס</button>
+      <button class="m-btn primary" style="flex:1" onclick="openWaPrompt('rollcall')">${icon('transfer')} שתף בוואטסאפ</button>
     </div>`;
   }
   box.innerHTML = html;
@@ -6336,7 +6336,7 @@ async function renderRollcallPageSquadronOfficer(box){
   let html = `<div class="all-done-banner" style="display:block;background:${myOfficerCheckedIn?'linear-gradient(135deg,#166534,#22c55e)':'linear-gradient(135deg,#7c2d12,#9a3412)'}">
     ${myOfficerCheckedIn ? '✅ סימנת שאתה תקין/ה וזמין/ה' : '🚨 נא לסמן שאתה תקין/ה וזמין/ה'}
   </div>`;
-  if(!myOfficerCheckedIn) html += `<button class="m-btn primary" style="width:100%;margin:10px 0" onclick="checkInOfficerRollcall()">✅ אני תקין/ה וזמין/ה</button>`;
+  if(!myOfficerCheckedIn) html += `<button class="m-btn primary" style="width:100%;margin:10px 0" onclick="checkInOfficerRollcall()">${icon('checkcircle')} אני תקין/ה וזמין/ה</button>`;
 
   html += await buildSquadronRollcallRowsHtml();
   box.innerHTML = html;
@@ -6351,8 +6351,8 @@ async function renderRollcallPageShed(box){
   const myCheckedIn = !!myCheckin;
 
   if(!active){
-    let html = `<div class="empty-state"><div class="ic">🛡️</div><h3>אין נכס פעיל כרגע</h3><p>${isCmdr?'לחץ על הכפתור כדי להפעיל נכס ולבקש מכולם לסמן תקינות':'המפקד טרם הפעיל נכס'}</p></div>`;
-    if(isCmdr) html += `<button class="m-btn primary" style="width:100%;margin-top:10px" onclick="activateRollcall()">🚨 הפעל נכס</button>`;
+    let html = `<div class="empty-state"><div class="ic">${icon('shield')}</div><h3>אין נכס פעיל כרגע</h3><p>${isCmdr?'לחץ על הכפתור כדי להפעיל נכס ולבקש מכולם לסמן תקינות':'המפקד טרם הפעיל נכס'}</p></div>`;
+    if(isCmdr) html += `<button class="m-btn primary" style="width:100%;margin-top:10px" onclick="activateRollcall()">${icon('warning')} הפעל נכס</button>`;
     // גם כשאין נכס פעיל במסגרת שלו — אחראי ההדרכה עדיין רואה את מצב כלל המסגרות
     if(currentShed.isTraining && isCmdr) html += await buildSquadronRollcallRowsHtml();
     box.innerHTML = html;
@@ -6365,13 +6365,13 @@ async function renderRollcallPageShed(box){
   </div>`;
   if(!myCheckedIn){
     html += `<div style="display:flex;gap:8px;margin:10px 0">
-      <button class="m-btn primary" style="flex:1" onclick="checkInRollcall('בית')">🏠 בבית</button>
-      <button class="m-btn primary" style="flex:1" onclick="checkInRollcall('טייסת')">🪖 בטייסת</button>
+      <button class="m-btn primary" style="flex:1" onclick="checkInRollcall('בית')">${icon('home')} בבית</button>
+      <button class="m-btn primary" style="flex:1" onclick="checkInRollcall('טייסת')">${icon('fitness')} בטייסת</button>
     </div>`;
   } else {
     html += `<div style="display:flex;gap:8px;margin:10px 0">
-      <button class="m-btn ghost" style="flex:1" onclick="checkInRollcall('בית')">🏠 בבית</button>
-      <button class="m-btn ghost" style="flex:1" onclick="checkInRollcall('טייסת')">🪖 בטייסת</button>
+      <button class="m-btn ghost" style="flex:1" onclick="checkInRollcall('בית')">${icon('home')} בבית</button>
+      <button class="m-btn ghost" style="flex:1" onclick="checkInRollcall('טייסת')">${icon('fitness')} בטייסת</button>
     </div>`;
   }
 
@@ -6381,7 +6381,7 @@ async function renderRollcallPageShed(box){
     const myDept = isDeptUnit ? personDept(PERSONNEL.find(p=>p.name===user)) : null;
     const pers = myDept ? PERSONNEL.filter(p=>personDept(p)===myDept) : PERSONNEL;
     const done = pers.filter(p=>chk[p.name]).length;
-    html += `<div class="cmd-section-title">📋 מעקב סימונים <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${done}/${pers.length}</span></div>`;
+    html += `<div class="cmd-section-title">${icon('people')} מעקב סימונים <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${done}/${pers.length}</span></div>`;
     const sorted = [...pers].sort((a,b)=> (chk[a.name]?1:0) - (chk[b.name]?1:0));
     html += sorted.map(p=>{
       const info = rollcallCheckinInfo(chk[p.name]);
@@ -6396,11 +6396,11 @@ async function renderRollcallPageShed(box){
       </div>`;
     }).join("");
     if(pers.length>0 && done===pers.length){
-      html += `<button class="m-btn primary" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#166534,#22c55e)" onclick="openWaPrompt('rollcall-complete')">✅ דווח בוואטסאפ שהנכס הושלם — כולם תקינים</button>`;
+      html += `<button class="m-btn primary" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#166534,#22c55e)" onclick="openWaPrompt('rollcall-complete')">${icon('checkcircle')} דווח בוואטסאפ שהנכס הושלם — כולם תקינים</button>`;
     }
     html += `<div style="display:flex;gap:8px;margin-top:10px">
-      <button class="m-btn ghost" style="flex:1" onclick="endRollcall()">🔚 סיים נכס</button>
-      <button class="m-btn primary" style="flex:1" onclick="openWaPrompt('rollcall')">📤 שתף בוואטסאפ</button>
+      <button class="m-btn ghost" style="flex:1" onclick="endRollcall()">${icon('close')} סיים נכס</button>
+      <button class="m-btn primary" style="flex:1" onclick="openWaPrompt('rollcall')">${icon('transfer')} שתף בוואטסאפ</button>
     </div>`;
   }
 
@@ -6423,7 +6423,7 @@ async function renderBdays(){
   list.innerHTML = "";
   const source = isVo ? ((await sGetRaw("vo_personnel")) || []) : PERSONNEL;
   if(isVo && source.length===0){
-    list.innerHTML = `<div class="empty-state"><div class="ic">🎂</div><h3>אין עדיין אנשי צוות</h3><p>הוסף איש צוות באמצעות "+ איש צוות"</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="ic">${icon('cake')}</div><h3>אין עדיין אנשי צוות</h3><p>הוסף איש צוות באמצעות "+ איש צוות"</p></div>`;
     return;
   }
   const withInfo = source.map(p=>({...p, ...bdayInfo(p)})).sort((a,b)=>a.days-b.days);
@@ -6443,7 +6443,7 @@ async function renderBdays(){
         <b>${isToday ? "🎂" : p.days}</b>
         <span>${isToday ? "היום!" : "ימים"}</span>
       </div>
-      ${isVo?`<button class="mr-del" style="margin-right:6px" onclick="event.stopPropagation();removeVoTeamMember('${p.id}')">✕</button>`:""}`;
+      ${isVo?`<button class="mr-del" style="margin-right:6px" onclick="event.stopPropagation();removeVoTeamMember('${p.id}')">${icon('close')}</button>`:""}`;
     list.appendChild(el);
   });
 }
@@ -6467,9 +6467,9 @@ async function renderVoTeamMgmt(){
     return `
     <div class="mgmt-row">
       <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
-      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini">נהג מקצועי</span></b><span>🎂 ${p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—'}${rel?' · 🗓️ שחרור '+rel:''}</span></div>
-      <button class="mr-del" style="background:var(--sky-soft);border-color:#cfe0ff;color:var(--sky)" onclick="startEditVoTeamMember('${p.id}')">✏️</button>
-      <button class="mr-del" onclick="removeVoTeamMember('${p.id}')">🗑️</button>
+      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini">נהג מקצועי</span></b><span>${icon('cake')} ${p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—'}${rel?' · 🗓️ שחרור '+rel:''}</span></div>
+      <button class="mr-del" style="background:var(--sky-soft);border-color:#cfe0ff;color:var(--sky)" onclick="startEditVoTeamMember('${p.id}')">${icon('edit')}</button>
+      <button class="mr-del" onclick="removeVoTeamMember('${p.id}')">${icon('delete')}</button>
     </div>`;}).join("");
 }
 async function startEditVoTeamMember(id){
@@ -6480,8 +6480,8 @@ async function startEditVoTeamMember(id){
   document.getElementById("vo-team-name").value = p.name;
   document.getElementById("vo-team-bday").value = (p.bday && p.bday!=="2000-01-01") ? p.bday : "";
   document.getElementById("vo-team-release").value = p.release || "";
-  document.getElementById("vo-team-form-title").textContent = "✏️ עריכת " + p.name;
-  document.getElementById("vo-team-save-btn").textContent = "💾 שמור שינויים";
+  document.getElementById("vo-team-form-title").innerHTML = emojiIcon("✏️ עריכת " + p.name);
+  document.getElementById("vo-team-save-btn").innerHTML = emojiIcon("💾 שמור שינויים");
   document.getElementById("vo-team-cancel-btn").style.display = "block";
   document.getElementById("vo-team-name").focus();
 }
@@ -6490,8 +6490,8 @@ function cancelEditVoTeamMember(){
   document.getElementById("vo-team-name").value = "";
   document.getElementById("vo-team-bday").value = "";
   document.getElementById("vo-team-release").value = "";
-  document.getElementById("vo-team-form-title").textContent = "➕ הוספת איש צוות";
-  document.getElementById("vo-team-save-btn").textContent = "➕ הוסף איש צוות";
+  document.getElementById("vo-team-form-title").innerHTML = emojiIcon("➕ הוספת איש צוות");
+  document.getElementById("vo-team-save-btn").innerHTML = emojiIcon("➕ הוסף איש צוות");
   document.getElementById("vo-team-cancel-btn").style.display = "none";
 }
 async function saveVoTeamMember(){
@@ -6542,17 +6542,17 @@ async function renderBoardArchive(){
   // מפקד המסגרת, או מי ששובץ נע"ת "לוח צוות שבועי" (isBoardPublisher) —
   // כדי שאחראי תורנויות יוכל לנהל את הלוח בלי להיות מפקד המסגרת
   const canManage = userRole === "מפקד" || isBoardPublisher;
-  let html = `<div class="board-arch-head">📎 צילומי לוח (ארכיון)</div>`;
+  let html = `<div class="board-arch-head">${icon('link')} צילומי לוח (ארכיון)</div>`;
   if(canManage){
     html += `<div class="board-add-btn" onclick="triggerBoardUpload()">
-      <div class="up-ic">📤</div>
+      <div class="up-ic">${icon('transfer')}</div>
       <h3>העלאת לוח צוות חדש</h3>
       <p>לחץ להעלאת צילום מסך של לוח שבועי</p>
     </div>`;
   }
   if(boards.length === 0){
     html += `<div class="empty-state">
-      <div class="ic">📅</div>
+      <div class="ic">${icon('calendar')}</div>
       <h3>אין צילומי לוח עדיין</h3>
       <p>${canManage ? "העלה לוח ראשון באמצעות הכפתור למעלה" : "מ\"ע תורנויות טרם העלה לוח"}</p>
     </div>`;
@@ -6565,7 +6565,7 @@ async function renderBoardArchive(){
           <h3>${escapeHTML(b.label)}</h3>
           <div class="meta">הועלה ע"י ${escapeHTML(b.by)} · ${b.date}</div>
         </div>
-        ${canManage?`<button class="board-del" onclick="event.stopPropagation();deleteBoard('${b.id}')">🗑️</button>`:''}
+        ${canManage?`<button class="board-del" onclick="event.stopPropagation();deleteBoard('${b.id}')">${icon('delete')}</button>`:''}
       </div>`;
     });
   }
@@ -6874,16 +6874,16 @@ async function renderRosterView(){
   // ובניית לוח עתידי (הכנת השבוע הבא מראש, בלי לגעת בפעיל).
   const mgrBanners = isRosterManager ? `<div class="roster-mgr-banners">
       <button class="roster-banner cur" onclick="openRosterEditor(null,'current')">
-        <span class="rb-ic">✏️</span><span class="rb-tx"><b>עריכת לוח נוכחי</b><small>השבוע הפעיל · נשלח בהתראה היומית</small></span></button>
+        <span class="rb-ic">${icon('edit')}</span><span class="rb-tx"><b>עריכת לוח נוכחי</b><small>השבוע הפעיל · נשלח בהתראה היומית</small></span></button>
       <button class="roster-banner fut" onclick="openRosterEditor(null,'next')">
         <span class="rb-ic">🔮</span><span class="rb-tx"><b>בניית לוח עתידי</b><small>הכנת השבוע הבא מראש</small></span></button>
     </div>
     <button class="roster-banner swp" onclick="openNaatSwaps()" style="width:100%;margin-bottom:10px">
-        <span class="rb-ic">🔄</span><span class="rb-tx"><b>אישורי מ״ע<span id="roster-naat-badge" class="rb-badge hidden"></span></b><small>החלפות שהמפקד אישר + אילוצים שהוזנו אחרי ג׳ 10:00 — לאישורך</small></span></button>
+        <span class="rb-ic">${icon('swap')}</span><span class="rb-tx"><b>אישורי מ״ע<span id="roster-naat-badge" class="rb-badge hidden"></span></b><small>החלפות שהמפקד אישר + אילוצים שהוזנו אחרי ג׳ 10:00 — לאישורך</small></span></button>
     <button class="roster-banner cns" onclick="openConstraintsBoard()" style="width:100%;margin-bottom:10px">
-        <span class="rb-ic">📋</span><span class="rb-tx"><b>לוח אילוצים מרוכז<span id="roster-cns-badge" class="rb-badge hidden"></span></b><small>מי זמין ומי לא — כל האילוצים במקום אחד</small></span></button>
+        <span class="rb-ic">${icon('people')}</span><span class="rb-tx"><b>לוח אילוצים מרוכז<span id="roster-cns-badge" class="rb-badge hidden"></span></b><small>מי זמין ומי לא — כל האילוצים במקום אחד</small></span></button>
     <button class="roster-banner arc" onclick="openRosterArchive()" style="width:100%;margin-bottom:10px">
-        <span class="rb-ic">🗄️</span><span class="rb-tx"><b>ארכיון לוחות<span id="roster-arc-badge" class="rb-badge hidden"></span></b><small>היסטוריית הלוחות השבועיים למעקב</small></span></button>` : "";
+        <span class="rb-ic">${icon('folder')}</span><span class="rb-tx"><b>ארכיון לוחות<span id="roster-arc-badge" class="rb-badge hidden"></span></b><small>היסטוריית הלוחות השבועיים למעקב</small></span></button>` : "";
   // "תורן טייסת" מוצג כשורה בתוך הלוח (מתחת ל"תורנות"), לא כבאנר נפרד;
   // בתצוגות "יום"/"רק אני" נשאר באנר קצר כי אין שם טבלה.
   // בורר שבוע — שעבר / נוכחי / הבא (אפשר גם להחליק ימינה/שמאלה על הלוח)
@@ -6903,10 +6903,10 @@ async function renderRosterView(){
       <div class="${rosterView==="day"?"on":""}" onclick="setRosterView('day')">לוח יומי</div>
       <div class="${rosterView==="mine"?"on":""}" onclick="setRosterView('mine')">רק אני</div>
     </div>
-    ${(r.squadronDuty && rosterView!=="board")?`<div class="roster-wkbar">🏠 תורן טייסת השבוע — <b>${escapeHTML(rosterSquadronDutyName(r.squadronDuty))}</b></div>`:""}`;
+    ${(r.squadronDuty && rosterView!=="board")?`<div class="roster-wkbar">${icon('home')} תורן טייסת השבוע — <b>${escapeHTML(rosterSquadronDutyName(r.squadronDuty))}</b></div>`:""}`;
 
   if(!anyData){
-    box.innerHTML = head + `<div class="empty-state"><div class="ic">🗓️</div>
+    box.innerHTML = head + `<div class="empty-state"><div class="ic">${icon('calendar')}</div>
       <h3>${boardWeekSlot==="prev"?"אין לוח לשבוע שעבר":boardWeekSlot==="next"?"לוח השבוע הבא טרם נבנה":"לוח הצוות טרם שובץ"}</h3>
       <p>${isRosterManager ? (boardWeekSlot==="next"?"השתמש בבאנר \"בניית לוח עתידי\"":"השתמש בבאנר \"עריכת לוח נוכחי\" כדי לשבץ את השבוע") : "מ״ע תורנויות טרם פרסם"}</p></div>`;
     initRosterSwipe();
@@ -6921,7 +6921,7 @@ async function renderRosterView(){
   const searchBar = (isRosterManager && rosterView==="board")
     ? `<div class="roster-search">
          <div class="roster-search-in">
-           <input id="roster-search-inp" placeholder="🔎 חיפוש חייל בלוח — הקלד שם או בחר מהבנק" value="${escapeHTML(rosterSearchName)}"
+           <input id="roster-search-inp" placeholder="🔍 חיפוש חייל בלוח — הקלד שם או בחר מהבנק" value="${escapeHTML(rosterSearchName)}"
                   oninput="rosterSearchInput()" onfocus="rosterSearchInput()" onblur="setTimeout(hideRosterSearchRes,180)" autocomplete="off">
            <button class="roster-search-clr" id="roster-search-clr" onclick="clearRosterSearch()" ${rosterSearchName?"":`style="display:none"`}>נקה</button>
          </div>
@@ -6997,7 +6997,7 @@ function applyRosterHighlight(name){
   });
   grid.classList.add("hl-on");
   if(note){
-    note.textContent = hits ? `🔎 ${escapeHTML(name)} — מודגש ב-${hits} מיקומים בלוח` : `🔎 ${escapeHTML(name)} — אינו משובץ בלוח השבוע`;
+    note.textContent = hits ? `${icon('search')} ${escapeHTML(name)} — מודגש ב-${hits} מיקומים בלוח` : `${icon('search')} ${escapeHTML(name)} — אינו משובץ בלוח השבוע`;
     note.style.color = hits ? "#1c5f96" : "var(--ink-3)";
   }
 }
@@ -7146,7 +7146,7 @@ async function renderRosterArchiveList(){
   document.getElementById("roster-archive-sub").textContent =
     _archiveRows.length ? `${_archiveRows.length} לוחות שמורים` : "אין עדיין לוחות בארכיון";
   if(!_archiveRows.length){
-    box.innerHTML = `<div class="empty-state" style="padding:24px"><div class="ic">🗄️</div>
+    box.innerHTML = `<div class="empty-state" style="padding:24px"><div class="ic">${icon('folder')}</div>
       <h3>הארכיון ריק</h3><p>לוח יישמר אוטומטית ביום חמישי</p>
       <button class="m-btn ghost" style="margin-top:10px" onclick="archiveNow()">שמור את הלוח הנוכחי עכשיו</button></div>`;
     return;
@@ -7155,7 +7155,7 @@ async function renderRosterArchiveList(){
       <div onclick="viewArchivedRoster(${i})" style="flex:1;cursor:pointer"><b>שבוע ${escapeHTML(a.label)}</b><small>נשמר ${new Date(a.savedAt).toLocaleDateString("he-IL",{day:"numeric",month:"long"})}</small></div>
       <button class="m-btn ghost" style="flex:0 0 auto;font-size:11px;padding:6px 9px" onclick="restoreArchivedToCurrent(${i})">↩️ שחזר לנוכחי</button>
       <span class="rpick-go" onclick="viewArchivedRoster(${i})" style="cursor:pointer">›</span></div>`).join("") +
-    `<button class="m-btn ghost" style="width:100%;margin-top:10px" onclick="archiveNow()">📌 שמור את הלוח הנוכחי עכשיו</button>`;
+    `<button class="m-btn ghost" style="width:100%;margin-top:10px" onclick="archiveNow()">${icon('pin')} שמור את הלוח הנוכחי עכשיו</button>`;
 }
 /* שחזור לוח מהארכיון אל "הלוח הנוכחי" — לא נוגע בשבוע הבא/שעבר. */
 async function restoreArchivedToCurrent(i){
@@ -7184,7 +7184,7 @@ async function archiveNow(){
 }
 function viewArchivedRoster(i){
   const a = _archiveRows[i]; if(!a) return;
-  document.getElementById("roster-full-title").textContent = `🗄️ שבוע ${a.label}`;
+  document.getElementById("roster-full-title").innerHTML = emojiIcon(`🗄️ שבוע ${a.label}`);
   document.getElementById("roster-full-inner").innerHTML = rosterBoardHtml(migrateRosterToV2(a.roster), "", "wide");
   document.getElementById("roster-full").classList.add("open");
   initRosterFullGestures();
@@ -7226,7 +7226,7 @@ function renderConstraintsBoard(){
   document.getElementById("cns-board-sub").textContent =
     names.length ? `${names.length} אנשים עם אילוצים` : "אין אילוצים פעילים";
   const box = document.getElementById("cns-board-body");
-  if(!names.length){ box.innerHTML = `<div class="empty-state" style="padding:24px"><div class="ic">✓</div><h3>אין אילוצים פעילים</h3><p>כולם זמינים לשיבוץ</p></div>`; return; }
+  if(!names.length){ box.innerHTML = `<div class="empty-state" style="padding:24px"><div class="ic">${icon('check')}</div><h3>אין אילוצים פעילים</h3><p>כולם זמינים לשיבוץ</p></div>`; return; }
   const dt = c => c.date || (c.fromDate ? (!c.toDate||c.toDate===c.fromDate ? fmtHeShort(c.fromDate) : `${fmtHeShort(c.fromDate)}–${fmtHeShort(c.toDate)}`) : "");
   box.innerHTML = names.map(n=>{
     const shed = (SHEDS.find(s=>s.id===byName[n][0]._shed)||{}).name || "";
@@ -7355,7 +7355,7 @@ function hebDayOffset(n){ return WEEK_DAYS_HE[(new Date().getDay()+n+7)%7]; }
 async function renderToday(){
   const box = document.getElementById("today-content");
   if(!box) return;
-  box.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)">⏳ טוען…</div>`;
+  box.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)">${icon('hourglass')} טוען…</div>`;
   try{
     const roster = await getDutyRoster("current");
     const todayName = todayHebrewDay();
@@ -7379,7 +7379,7 @@ async function renderToday(){
     let html = "";
     // 1) דגל ראשי — היום שלי
     if(onDutyToday){
-      html += `<div class="today-flag duty"><div class="tf-ic">🗓️</div>
+      html += `<div class="today-flag duty"><div class="tf-ic">${icon('calendar')}</div>
         <div class="tf-tx"><b>אתה תורן היום</b><span>${myRolesToday.map(escapeHTML).join(" · ")}</span></div></div>`;
     } else if(restToday){
       html += `<div class="today-flag rest"><div class="tf-ic">😌</div>
@@ -7389,7 +7389,7 @@ async function renderToday(){
       html += `<div class="today-flag next"><div class="tf-ic">⏭️</div>
         <div class="tf-tx"><b>התורנות הבאה שלך — ${escapeHTML(dl)}</b><span>${nextDuty.roles.map(escapeHTML).join(" · ")}</span></div></div>`;
     } else {
-      html += `<div class="today-flag off"><div class="tf-ic">✅</div>
+      html += `<div class="today-flag off"><div class="tf-ic">${icon('checkcircle')}</div>
         <div class="tf-tx"><b>אין לך תורנות היום</b><span>${myDutyCount?`${myDutyCount} תורנויות שלך השבוע`:"אין לך תורנויות השבוע"}</span></div></div>`;
     }
 
@@ -7401,9 +7401,9 @@ async function renderToday(){
 
     // 3) פעולות מהירות — תמיד זמינות
     html += `<div class="today-qa">
-      <button onclick="openNewRequest()"><span class="q-ic">📌</span>הזן אילוץ</button>
-      <button onclick="openNewRequest('swap')"><span class="q-ic">🔄</span>בקש החלפה</button>
-      <button onclick="go('scr-board',null)"><span class="q-ic">📅</span>לוח צוות</button>
+      <button onclick="openNewRequest()"><span class="q-ic">${icon('pin')}</span>הזן אילוץ</button>
+      <button onclick="openNewRequest('swap')"><span class="q-ic">${icon('swap')}</span>בקש החלפה</button>
+      <button onclick="go('scr-board',null)"><span class="q-ic">${icon('calendar')}</span>לוח צוות</button>
     </div>`;
 
     // 4) פתוח עבורך — קרא-וחתום שלא נחתמו + הסמכות שלי שפגות
@@ -7422,7 +7422,7 @@ async function renderToday(){
     if(open.length){
       html += open.map(o=>`<div class="tc-row" onclick="${o.go}"><span class="tc-ic">${o.icon}</span><span class="tc-t">${escapeHTML(o.t)}</span><span class="tc-go">›</span></div>`).join("");
     } else {
-      html += `<div class="tc-empty">✓ אין פריטים פתוחים — אתה מעודכן</div>`;
+      html += `<div class="tc-empty">${icon('check')} אין פריטים פתוחים — אתה מעודכן</div>`;
     }
     html += `</div>`;
 
@@ -7442,13 +7442,13 @@ async function renderToday(){
     // 6) העדכון האחרון — תדריך בוקר / הודעה אחרונה
     const brief = await sGet("daily_brief");
     if(brief && brief.text && brief.date===todayKey()){
-      html += `<div class="today-msg" onclick="go('scr-board',null)" style="cursor:pointer"><b>📋 תדריך בוקר · ${escapeHTML(brief.date_display||"")}</b><span>${escapeHTML(brief.text).slice(0,160)}${brief.text.length>160?"…":""}</span></div>`;
+      html += `<div class="today-msg" onclick="go('scr-board',null)" style="cursor:pointer"><b>${icon('people')} תדריך בוקר · ${escapeHTML(brief.date_display||"")}</b><span>${escapeHTML(brief.text).slice(0,160)}${brief.text.length>160?"…":""}</span></div>`;
     } else {
       const msgs = (await sGet("messages_list")) || [];
       if(msgs.length){
         const m = msgs[0];
         html += `<div class="today-card tappable" onclick="go('scr-board',null)"><div class="tc-h">הודעה אחרונה</div>
-          <div class="tc-row" style="border:0"><span class="tc-ic">📢</span><span class="tc-t">${escapeHTML(String(m.text||"").slice(0,120))}</span><span class="tc-go">›</span></div></div>`;
+          <div class="tc-row" style="border:0"><span class="tc-ic">${icon('announce')}</span><span class="tc-t">${escapeHTML(String(m.text||"").slice(0,120))}</span><span class="tc-go">›</span></div></div>`;
       }
     }
 
@@ -7461,10 +7461,10 @@ async function renderToday(){
     });
     if(bdays.length){
       html += `<div class="today-card"><div class="tc-h">היום בטייסת</div>` +
-        bdays.map(p=>`<div class="tc-row" style="border:0"><span class="tc-ic">🎂</span><span class="tc-t">${escapeHTML(p.name)} — יום הולדת! 🎉</span></div>`).join("") + `</div>`;
+        bdays.map(p=>`<div class="tc-row" style="border:0"><span class="tc-ic">${icon('cake')}</span><span class="tc-t">${escapeHTML(p.name)} — יום הולדת! ${icon('checkcircle')}</span></div>`).join("") + `</div>`;
     }
     box.innerHTML = html;
-  }catch(e){ console.error("renderToday", e); box.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)">⚠️ שגיאה בטעינה</div>`; }
+  }catch(e){ console.error("renderToday", e); box.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)">${icon('warning')} שגיאה בטעינה</div>`; }
 }
 
 /* ===== בקשות (החלפת תורנות / יציאה / חופשה / אחר) =====
@@ -7523,7 +7523,7 @@ function reqBodyText(r){
 }
 function reqCardHtml(r, forCommander){
   const reason = r.reason && r.type!=="other" ? `<div class="req-reason">"${escapeHTML(r.reason)}"</div>` : "";
-  const note = r.note ? `<div class="req-note">📝 ${escapeHTML(r.note)}</div>` : "";
+  const note = r.note ? `<div class="req-note">${icon('note')} ${escapeHTML(r.note)}</div>` : "";
   const who = forCommander ? `<div class="req-who">${escapeHTML(r.by)}</div>` : "";
   const btns = [];
   if(forCommander){
@@ -7532,11 +7532,11 @@ function reqCardHtml(r, forCommander){
       btns.push(`<button class="m-btn ok" onclick="approveRequest('${r.id}')">אשר</button>`);
       btns.push(`<button class="m-btn ghost" onclick="openRejectRequest('${r.id}')">דחה</button>`);
     }
-    if(r.type!=="swap") btns.push(`<button class="m-btn ghost" onclick="openEditRequest('${r.id}',true)">✏️ ערוך</button>`);
-    btns.push(`<button class="m-btn ghost" onclick="deleteRequest('${r.id}')">🗑 מחק</button>`);
+    if(r.type!=="swap") btns.push(`<button class="m-btn ghost" onclick="openEditRequest('${r.id}',true)">${icon('edit')} ערוך</button>`);
+    btns.push(`<button class="m-btn ghost" onclick="deleteRequest('${r.id}')">${icon('delete')} מחק</button>`);
   } else if(r.status==="pending"){
     // חייל: עריכה/ביטול כל עוד לא אושר
-    if(r.type!=="swap") btns.push(`<button class="m-btn ghost" onclick="openEditRequest('${r.id}',false)">✏️ ערוך</button>`);
+    if(r.type!=="swap") btns.push(`<button class="m-btn ghost" onclick="openEditRequest('${r.id}',false)">${icon('edit')} ערוך</button>`);
     btns.push(`<button class="m-btn ghost" onclick="deleteRequest('${r.id}')">בטל</button>`);
   }
   const actions = btns.length ? `<div class="req-acts">${btns.join("")}</div>` : "";
@@ -7574,7 +7574,7 @@ function soldierEntryBlocked(fromDate){
 function constraintDeadlineNote(){
   const nw = nextWeekRangeIso();
   const closed = nextWeekEntryLocked();
-  return `<div class="req-deadline ${closed?"closed":""}">⏳ הזנת אילוצים לשבוע הבא (${fmtHeShort(nw.from)}–${fmtHeShort(nw.to)}) ${closed?"נסגרה ביום ג׳ 10:00 — פנה למפקד":"פתוחה עד יום ג׳ 10:00"}</div>`;
+  return `<div class="req-deadline ${closed?"closed":""}">${icon('hourglass')} הזנת אילוצים לשבוע הבא (${fmtHeShort(nw.from)}–${fmtHeShort(nw.to)}) ${closed?"נסגרה ביום ג׳ 10:00 — פנה למפקד":"פתוחה עד יום ג׳ 10:00"}</div>`;
 }
 
 /* פתיחת בקשה חדשה — סוג ברירת מחדל swap אם החייל תורן, אחרת יציאה */
@@ -7685,7 +7685,7 @@ async function renderReqFields(){
         ? `<div class="pick">${replDays.map(d=>`<div class="${d===reqDraftReplDay?"on":""}" onclick="setSwapReplDay('${d}')">${dl(d)}</div>`).join("")}</div>`
         : `<div class="req-warn">ל${escapeHTML(reqDraftRepl)} אין יום תורנות אחר להחלפה מולו.</div>`;
       if(reqDraftReplShed && reqDraftReplShed!==currentShed.id)
-        html += `<div class="req-deadline">↔️ החלפה בין-מסגרתית — תדרוש אישור של שני המפקדים ואז מ״ע תורנויות.</div>`;
+        html += `<div class="req-deadline">${icon('swap')} החלפה בין-מסגרתית — תדרוש אישור של שני המפקדים ואז מ״ע תורנויות.</div>`;
     }
     box.innerHTML = html;
   } else if(reqDraftType==="leave" || reqDraftType==="after"){
@@ -7857,10 +7857,10 @@ async function renderRequestsInbox(){
   document.getElementById("req-inbox-sub").textContent = cnt ? `${cnt} ממתינות להחלטה` : "אין בקשות ממתינות";
   const box = document.getElementById("requests-inbox-list");
   let html = "";
-  if(crossB.length) html += `<div class="req-sec">↔️ החלפות בין-מסגרתיות לאישורך</div>` + crossB.map(swapShedBCardHtml).join("");
+  if(crossB.length) html += `<div class="req-sec">${icon('swap')} החלפות בין-מסגרתיות לאישורך</div>` + crossB.map(swapShedBCardHtml).join("");
   const show = pending.concat(list.filter(r=>r.status!=="pending").slice(0,10));
   if(show.length) html += (crossB.length?`<div class="req-sec">בקשות המסגרת</div>`:"") + show.map(r=>reqCardHtml(r, true)).join("");
-  box.innerHTML = html || `<div class="empty-state" style="padding:24px"><div class="ic">✓</div><h3>אין בקשות</h3></div>`;
+  box.innerHTML = html || `<div class="empty-state" style="padding:24px"><div class="ic">${icon('check')}</div><h3>אין בקשות</h3></div>`;
 }
 async function approveRequest(id){
   const list = await getDutyRequests();
@@ -7993,7 +7993,7 @@ async function renderNaatSwaps(){
   const box = document.getElementById("naat-swaps-list");
   let html = "";
   if(naatSwapRows.length){
-    html += `<div class="req-sec">🔄 החלפות תורנות</div>` + naatSwapRows.map((r,i)=>{
+    html += `<div class="req-sec">${icon('swap')} החלפות תורנות</div>` + naatSwapRows.map((r,i)=>{
       const shed = (SHEDS.find(s=>s.id===r._shed)||{}).name || r._shed;
       return `<div class="req-card">
         <div class="req-top"><span class="req-who">${escapeHTML(r.by)} · ${escapeHTML(shed)}</span>
@@ -8005,7 +8005,7 @@ async function renderNaatSwaps(){
     }).join("");
   }
   if(naatConstraintRows.length){
-    html += `<div class="req-sec">📌 אילוצים שמפקד הזין אחרי ג׳ 10:00</div>` + naatConstraintRows.map((r,i)=>{
+    html += `<div class="req-sec">${icon('pin')} אילוצים שמפקד הזין אחרי ג׳ 10:00</div>` + naatConstraintRows.map((r,i)=>{
       const shed = (SHEDS.find(s=>s.id===r._shed)||{}).name || r._shed;
       return `<div class="req-card">
         <div class="req-top"><span class="req-who">${escapeHTML(r.by)} · ${escapeHTML(shed)}</span>
@@ -8016,7 +8016,7 @@ async function renderNaatSwaps(){
           <button class="m-btn ghost" onclick="naatRejectConstraint(${i})">דחה</button></div></div>`;
     }).join("");
   }
-  box.innerHTML = html || `<div class="empty-state" style="padding:24px"><div class="ic">✓</div><h3>אין פריטים ממתינים</h3></div>`;
+  box.innerHTML = html || `<div class="empty-state" style="padding:24px"><div class="ic">${icon('check')}</div><h3>אין פריטים ממתינים</h3></div>`;
 }
 async function naatApproveConstraint(idx){
   const r = naatConstraintRows[idx]; if(!r) return;
@@ -8095,7 +8095,7 @@ function rosterMineHtml(r, today){
         ${resting?`<div class="rmine-rest">נח · ${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</div>`:""}
       </div></div>`);
   });
-  if(!rows.length) return `<div class="empty-state"><div class="ic">✓</div>
+  if(!rows.length) return `<div class="empty-state"><div class="ic">${icon('check')}</div>
     <h3>אינך משובץ השבוע</h3><p>אין לך תורנות בלוח הנוכחי</p></div>`;
   return `<div class="rmine-wrap">${rows.join("")}</div>`;
 }
@@ -8314,8 +8314,8 @@ function dutyRosterPreviewHtml(ambiguous, unmatched, aiNote){
   const parts = [];
   if(aiNote) parts.push(`<div class="duty-roster-match">🤖 הצעת AI מתוך תמונת הלוח — בדוק ותקן. רק "פרסם שבוע" שומר.</div>`);
   if(ambiguous.length) parts.push(`<div class="duty-roster-unmatch">❓ ${ambiguous.length} שמות דו-משמעיים — בחר את השם המלא הנכון: ${ambiguous.map(a=>`"${escapeHTML(a.name)}" (${a.candidates.map(c=>escapeHTML(c.fullName)).join(" / ")})`).join("; ")}</div>`);
-  if(unmatched.length) parts.push(`<div class="duty-roster-unmatch">⚠️ ${unmatched.length} שמות לא זוהו באף מסגרת — הם לא יקבלו התראה ולא יראו את התורנות: ${unmatched.map(escapeHTML).join(", ")}</div>`);
-  if(!ambiguous.length && !unmatched.length && aiNote) parts.push(`<div class="duty-roster-match">✓ כל השמות זוהו</div>`);
+  if(unmatched.length) parts.push(`<div class="duty-roster-unmatch">${icon('warning')} ${unmatched.length} שמות לא זוהו באף מסגרת — הם לא יקבלו התראה ולא יראו את התורנות: ${unmatched.map(escapeHTML).join(", ")}</div>`);
+  if(!ambiguous.length && !unmatched.length && aiNote) parts.push(`<div class="duty-roster-match">${icon('check')} כל השמות זוהו</div>`);
   return parts.join("");
 }
 /* ===== עורך לוח הצוות (מ"ע תורנויות) =====
@@ -8417,13 +8417,13 @@ function renderRosterEditor(){
     const v = d[field];
     return `<div class="rrow"><div class="rrow-k">${label}${req?' <b style="color:var(--red)">*</b>':""}</div>
       <div class="rrow-v">${ v
-        ? `<span class="rc duty ${lc(v)}" onclick="rosterClearSlot('${field}')">${lk(v)}${escapeHTML(v)} ✕</span>`
+        ? `<span class="rc duty ${lc(v)}" onclick="rosterClearSlot('${field}')">${lk(v)}${escapeHTML(v)} ${icon('close')}</span>`
         : `<span class="rc ${req?"empty":"add"}" onclick="openRosterPick('${field}')">${req?"חסר — בחר":"+ רשות"}</span>`}
       </div></div>`;
   };
   const listRow = (label, field, cls) => `<div class="rrow"><div class="rrow-k">${label}</div>
     <div class="rrow-v">${(d[field]||[]).map((n,i)=>
-      `<span class="rc ${cls||""} ${lc(n)}" onclick="rosterRemoveFromList('${field}',${i})">${lk(n)}${escapeHTML(n)} ✕</span>`).join("")}
+      `<span class="rc ${cls||""} ${lc(n)}" onclick="rosterRemoveFromList('${field}',${i})">${lk(n)}${escapeHTML(n)} ${icon('close')}</span>`).join("")}
       <span class="rc add" onclick="openRosterPick('${field}')">+</span></div></div>`;
 
   let html = "";
@@ -8442,7 +8442,7 @@ function renderRosterEditor(){
   html += `<div class="rblk"><div class="rblk-h"><span>PF</span><span class="rblk-c">${(d.pf||[]).length}</span></div>
     <div class="rpool">${(d.pf||[]).map((p,i)=>
       `<span class="rc ${pfClass(p)} ${lc(p.name)}" onclick="rosterCyclePf(${i})">${lk(p.name)}${escapeHTML(p.name)}${pfTagHtml(p)}</span>
-       <span class="rc-x" onclick="rosterRemovePf(${i})">✕</span>`).join("")}
+       <span class="rc-x" onclick="rosterRemovePf(${i})">${icon('close')}</span>`).join("")}
       <span class="rc add" onclick="openRosterPick('pf')">+ הוסף</span></div>
     <div class="rblk-note">הקש על שם כדי לסמן: רגיל → בקורס (עד 20:00). למילואים — שורת "מילואים" נפרדת.</div></div>`;
 
@@ -8468,14 +8468,14 @@ function renderRosterEditor(){
         <select class="rsel" aria-label="סוג תורנות בסיסית" onchange="rosterDraft.days['${rosterEdDay}'].basic[${i}].type=this.value">
           ${BASIC_DUTY_TYPES.map(t=>`<option ${b.type===t?"selected":""}>${escapeHTML(t)}</option>`).join("")}
         </select>
-        <span class="rc-x" onclick="rosterRemoveBasic(${i})">✕</span>
+        <span class="rc-x" onclick="rosterRemoveBasic(${i})">${icon('close')}</span>
       </div></div>`).join("")}
     <div class="rrow"><div class="rrow-k" style="color:var(--ink-3)">הוסף</div>
       <div class="rrow-v"><span class="rc add" onclick="openRosterPick('basic')">+ שם (יום זה)</span>
       <span class="rc add" onclick="openBasicInterval()">+ טווח ימים</span></div></div></div>`;
 
   html += `<button type="button" class="m-btn ghost" style="width:100%;font-size:12px;padding:9px"
-    onclick="previewDutyRosterNotification('${rosterEdDay}')">🔔 שלח לי תצוגה מקדימה של ההתראה ליום זה</button>`;
+    onclick="previewDutyRosterNotification('${rosterEdDay}')">${icon('bell')} שלח לי תצוגה מקדימה של ההתראה ליום זה</button>`;
   document.getElementById("roster-ed-body").innerHTML = html;
   renderRosterCompliance();
 }
@@ -8497,16 +8497,16 @@ function renderRosterCompliance(){
   if(rosterComplianceOpen){
     html += `<div class="rcmp-body">`;
     if(bad.length){
-      html += `<div class="rcmp-h r">🔴 חורגים מהחוק</div>` + bad.map(r=>
+      html += `<div class="rcmp-h r">${dot('red')} חורגים מהחוק</div>` + bad.map(r=>
         `<div class="rcmp-row"><b>${escapeHTML(r.name)}</b> <span class="rcmp-cat">${escapeHTML(r.cat)}</span>
          <div class="rcmp-why">${r.reasons.map(escapeHTML).join(" · ")}</div></div>`).join("");
     }
     if(c.gray.length){
-      html += `<div class="rcmp-h x">⚪ לא שובצו כלל השבוע (${currentShed?escapeHTML(currentShed.name):""})</div>
+      html += `<div class="rcmp-h x">${dot('white')} לא שובצו כלל השבוע (${currentShed?escapeHTML(currentShed.name):""})</div>
         <div class="rcmp-pool">` + c.gray.map(g=>
         `<span class="rc" style="background:var(--bg);color:var(--ink-3)">${escapeHTML(g.name)} <small>${escapeHTML(g.cat)}</small></span>`).join("") + `</div>`;
     }
-    if(!bad.length && !c.gray.length) html += `<div class="rcmp-ok">🟢 הכל לפי החוקים — לא פוספס אף אחד</div>`;
+    if(!bad.length && !c.gray.length) html += `<div class="rcmp-ok">${dot('green')} הכל לפי החוקים — לא פוספס אף אחד</div>`;
     html += `</div>`;
   }
   box.innerHTML = html;
@@ -8635,7 +8635,7 @@ function renderRosterPickList(){
     `<span><b class="lg part"></b>שובץ חלקית</span>`+
     `<span><b class="lg full"></b>השלים מכסה</span>`+
     (nextSlot?`<span><b class="lg sat"></b>עשה שבת</span>`:``)+
-    `<span>🎓 קורס</span><span>🔒 אילוץ</span>`;
+    `<span>${icon('cert')} קורס</span><span>${icon('lock')} אילוץ</span>`;
 }
 /* מוסיף שם בודד למשבצת (לפי סוג השדה). מחזיר את אזהרת האילוץ אם יש. */
 function rosterAddName(f, name){
@@ -8744,8 +8744,8 @@ async function publishFutureRoster(){
    (אותו rosterBoardHtml, מסך מלא עם זום), לפני שמפרסמים. */
 function previewRosterDraft(){
   if(!rosterDraft) return;
-  document.getElementById("roster-full-title").textContent =
-    "👁️ תצוגה מקדימה — " + (rosterEditSlot==="next" ? "לוח עתידי" : "לוח נוכחי");
+  document.getElementById("roster-full-title").innerHTML =
+    emojiIcon("👁️ תצוגה מקדימה — " + (rosterEditSlot==="next" ? "לוח עתידי" : "לוח נוכחי"));
   document.getElementById("roster-full-inner").innerHTML =
     rosterBoardHtml(rosterDraft, todayHebrewDay(), "wide", rosterEditSlot);
   document.getElementById("roster-full").classList.add("open");
@@ -9128,7 +9128,7 @@ async function renderCommanderConstraints(){
     const pending = list.filter(r=>r.status==="pending").length;
     box.innerHTML = `
       <button class="roster-banner swp" onclick="openRequestsInbox()" style="width:100%;margin-bottom:8px">
-        <span class="rb-ic">📌</span><span class="rb-tx"><b>בקשות לאישור${pending?` <span class="rb-badge">${pending}</span>`:""}</b>
+        <span class="rb-ic">${icon('pin')}</span><span class="rb-tx"><b>בקשות לאישור${pending?` <span class="rb-badge">${pending}</span>`:""}</b>
         <small>${pending?`${pending} בקשות ממתינות מהמסגרת שלך`:"אין בקשות ממתינות"}</small></span></button>
       <button class="m-btn ghost" onclick="openCommanderConstraint()" style="width:100%">+ הזן אילוץ בשם חייל</button>`;
   }catch(e){ box.innerHTML = ""; }
@@ -9150,7 +9150,7 @@ async function renderMorningRollcallReport(wrapId, contentId){
   const counts = report.counts || {absent:report.absentCount||0};
   const absentCount = counts.absent||0;
   const wrapTitle = wrap.querySelector(".cmd-section-title");
-  if(wrapTitle) wrapTitle.textContent = `📋 מסדר בוקר — ${dateStr}`;
+  if(wrapTitle) wrapTitle.innerHTML = emojiIcon(`📋 מסדר בוקר — ${dateStr}`);
   // כלל המסגרות: הכרטיס מציג רק באנר נעדרים עם מספר — לא פירוט לפי כל
   // 5 הסטטוסים (זה נשאר במסך הסימון של מ״ע אחזקה עצמו). לחיצה פותחת
   // את הפירוט המלא (openMorningRollcallDetail).
@@ -9174,9 +9174,9 @@ async function openMorningRollcallDetail(){
   const rows = absentNames.map(name=>`<div class="sig-detail-row">
       <div class="avatar">${initials(name)}</div>
       <div class="nm">${escapeHTML(name)}</div>
-      <span class="no">❌ חסר</span>
+      <span class="no">${icon('close')} חסר</span>
     </div>`).join("");
-  document.getElementById("mc-detail-list").innerHTML = rows || `<div style="text-align:center;padding:14px;color:var(--ink-3)">אין נעדרים — כולם נוכחים 🎉</div>`;
+  document.getElementById("mc-detail-list").innerHTML = rows || `<div style="text-align:center;padding:14px;color:var(--ink-3)">אין נעדרים — כולם נוכחים ${icon('checkcircle')}</div>`;
   document.getElementById("mc-detail-modal").classList.add("open");
 }
 
@@ -9197,7 +9197,7 @@ async function showSigDetail(evId){
     rows.push(`<div class="sig-detail-row">
       <div class="avatar">${initials(p.name)}</div>
       <div class="nm">${escapeHTML(p.name)}${s?`<div class="dt">נקרא · ${s.date}</div>`:""}</div>
-      ${s ? `<span class="ok">✓ אושר</span>` : `<span class="no">לא קרא</span>`}
+      ${s ? `<span class="ok">${icon('check')} אושר</span>` : `<span class="no">לא קרא</span>`}
     </div>`);
   }
   sigDetailCurrent = {title: ev.title, unsigned};
@@ -9240,7 +9240,7 @@ async function shareDailyDutyWA(dayName){
   const d = r.days[day] || r.days[key] || emptyRosterDay(isWeekendDay(key));
   const dateIso = rosterDayLockDates(day, "current")[0];
   const dateStr = new Date((dateIso||todayKey())+"T00:00:00").toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long"});
-  const L = [`🗓️ *לוח צוות תורן — ${dateStr}*`, "━━━━━━━━━━━"];
+  const L = [`${icon('calendar')} *לוח צוות תורן — ${dateStr}*`, "━━━━━━━━━━━"];
   const line = (label, val) => { const v = Array.isArray(val) ? val.filter(Boolean) : (val?[val]:[]); if(v.length) L.push(`${label}: ${v.join(", ")}`); };
   line("מנהל", d.manager);
   line("ר״צ", d.lead);
@@ -9710,11 +9710,11 @@ async function renderMessages(){
   area.innerHTML = msgs.map(m=>{
     const st = MSG_STYLE[m.type] || MSG_STYLE.info;
     const readCount = m.reads ? Object.keys(m.reads).length : 0;
-    const receipt = isCmdr ? `<span class="msg-receipt">👁️ ${readCount}/${receiptDenom}</span>` : "";
+    const receipt = isCmdr ? `<span class="msg-receipt">${icon('eye')} ${readCount}/${receiptDenom}</span>` : "";
     return `<div class="msg-card ${st.cls}">
       <span class="m-emoji">${st.emoji}</span>
       <div class="m-body"><p>${escapeHTML(m.text)}</p><small>${escapeHTML(m.by)} · ${m.date}</small></div>
-      <div class="msg-right">${receipt}${canDelete?`<button class="m-del" onclick="deleteMessage('${m.id}')">✕</button>`:""}</div>
+      <div class="msg-right">${receipt}${canDelete?`<button class="m-del" onclick="deleteMessage('${m.id}')">${icon('close')}</button>`:""}</div>
     </div>`;
   }).join("");
 }
@@ -9831,13 +9831,13 @@ async function renderFaults(){
   const openN = faults.filter(f=>f.status!=="closed").length;
   const closedN = faults.filter(f=>f.status==="closed").length;
   document.getElementById("faults-filter").innerHTML = `
-    <button class="fault-fbtn ${faultFilter==='open'?'active':''}" onclick="setFaultFilter('open')">🔧 פתוחות (${openN})</button>
-    <button class="fault-fbtn ${faultFilter==='closed'?'active':''}" onclick="setFaultFilter('closed')">✅ סגורות (${closedN})</button>
+    <button class="fault-fbtn ${faultFilter==='open'?'active':''}" onclick="setFaultFilter('open')">${icon('maintenance')} פתוחות (${openN})</button>
+    <button class="fault-fbtn ${faultFilter==='closed'?'active':''}" onclick="setFaultFilter('closed')">${icon('checkcircle')} סגורות (${closedN})</button>
     <button class="fault-fbtn ${faultFilter==='all'?'active':''}" onclick="setFaultFilter('all')">הכל (${faults.length})</button>`;
   const list = document.getElementById("faults-list");
   const shown = faults.filter(f=> faultFilter==="all" ? true : faultFilter==="closed" ? f.status==="closed" : f.status!=="closed");
   if(shown.length===0){
-    list.innerHTML = `<div class="empty-state"><div class="ic">🛠️</div><h3>אין תקלות ${faultFilter==='closed'?'סגורות':faultFilter==='open'?'פתוחות':''}</h3><p>${faultFilter!=='closed'?'דווח על תקלה באמצעות כפתור "+ תקלה"':''}</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="ic">${icon('fault')}</div><h3>אין תקלות ${faultFilter==='closed'?'סגורות':faultFilter==='open'?'פתוחות':''}</h3><p>${faultFilter!=='closed'?'דווח על תקלה באמצעות כפתור "+ תקלה"':''}</p></div>`;
     updateBadges(); return;
   }
   list.innerHTML = shown.map(f=>{
@@ -9856,7 +9856,7 @@ function openAddFault(){
   document.getElementById("fault-title").value="";
   document.getElementById("fault-desc").value="";
   const lbl=document.getElementById("fault-file-label");
-  lbl.classList.remove("has"); lbl.textContent="📷 צירוף תמונה (אופציונלי)";
+  lbl.classList.remove("has"); lbl.innerHTML=emojiIcon("📷 צירוף תמונה (אופציונלי)");
   const p=document.getElementById("fault-preview"); if(p) p.remove();
   document.getElementById("fault-save").disabled=true;
   document.getElementById("fault-modal").classList.add("open");
@@ -9866,7 +9866,7 @@ function checkFaultReady(){ document.getElementById("fault-save").disabled = doc
 function onFaultFile(e){
   const file=e.target.files[0]; if(!file) return;
   const lbl=document.getElementById("fault-file-label");
-  lbl.textContent="⏳ טוען…";
+  lbl.innerHTML=emojiIcon("⏳ טוען…");
   const reader=new FileReader();
   reader.onload=ev=>{
     const img=new Image();
@@ -9880,7 +9880,7 @@ function onFaultFile(e){
       data=c.toDataURL("image/jpeg",q);
       while(data.length>600_000&&tries<6){q-=.1;data=c.toDataURL("image/jpeg",Math.max(.3,q));tries++;}
       faultImgData=data;
-      lbl.classList.add("has"); lbl.textContent="✅ תמונה צורפה";
+      lbl.classList.add("has"); lbl.innerHTML=emojiIcon("✅ תמונה צורפה");
       let prev=document.getElementById("fault-preview");
       if(!prev){prev=document.createElement("img");prev.id="fault-preview";prev.style.cssText="width:100%;border-radius:12px;margin-top:8px;border:1px solid var(--line);display:block";lbl.after(prev);}
       prev.src=data;
@@ -9928,10 +9928,10 @@ async function openFaultDetail(id){
       <button class="m-btn ghost" onclick="document.getElementById('faultdetail-modal').classList.remove('open')" style="flex:1">סגור חלון</button>
       ${isCmdr ? (closed
         ? `<button class="m-btn ghost" onclick="reopenFault('${id}')" style="flex:1">↩️ פתח מחדש</button>`
-        : `<button class="m-btn primary" onclick="closeFault('${id}')" style="flex:1.4">✅ סמן כטופל</button>`) : ""}
+        : `<button class="m-btn primary" onclick="closeFault('${id}')" style="flex:1.4">${icon('checkcircle')} סמן כטופל</button>`) : ""}
     </div>
-    ${isCmdr && !closed?`<button class="m-btn ghost" onclick="openFaultReminder('${id}')" style="width:100%;margin-top:8px">🔔 קביעת תזכורת מעקב</button>`:""}
-    ${isCmdr?`<button class="m-btn" onclick="deleteFault('${id}')" style="width:100%;margin-top:8px;background:var(--red-soft);color:var(--red);border:1px solid var(--red-line)">🗑️ מחק תקלה לצמיתות</button>`:""}`;
+    ${isCmdr && !closed?`<button class="m-btn ghost" onclick="openFaultReminder('${id}')" style="width:100%;margin-top:8px">${icon('bell')} קביעת תזכורת מעקב</button>`:""}
+    ${isCmdr?`<button class="m-btn" onclick="deleteFault('${id}')" style="width:100%;margin-top:8px;background:var(--red-soft);color:var(--red);border:1px solid var(--red-line)">${icon('delete')} מחק תקלה לצמיתות</button>`:""}`;
   document.getElementById("faultdetail-modal").classList.add("open");
 }
 async function openFaultReminder(id){
@@ -9992,7 +9992,7 @@ function openAddBinuiFault(){
   document.getElementById("binui-fault-title").value = "";
   document.getElementById("binui-fault-desc").value = "";
   const lbl = document.getElementById("binui-fault-file-label");
-  lbl.classList.remove("has"); lbl.textContent = "📷 צירוף תמונה (אופציונלי)";
+  lbl.classList.remove("has"); lbl.innerHTML = emojiIcon("📷 צירוף תמונה (אופציונלי)");
   const p = document.getElementById("binui-fault-preview"); if(p) p.remove();
   document.getElementById("binui-fault-save").disabled = true;
   document.getElementById("binui-fault-modal").classList.add("open");
@@ -10002,7 +10002,7 @@ function checkBinuiFaultReady(){ document.getElementById("binui-fault-save").dis
 function onBinuiFaultFile(e){
   const file=e.target.files[0]; if(!file) return;
   const lbl=document.getElementById("binui-fault-file-label");
-  lbl.textContent="⏳ טוען…";
+  lbl.innerHTML=emojiIcon("⏳ טוען…");
   const reader=new FileReader();
   reader.onload=ev=>{
     const img=new Image();
@@ -10016,7 +10016,7 @@ function onBinuiFaultFile(e){
       data=c.toDataURL("image/jpeg",q);
       while(data.length>600_000&&tries<6){q-=.1;data=c.toDataURL("image/jpeg",Math.max(.3,q));tries++;}
       binuiFaultImgData=data;
-      lbl.classList.add("has"); lbl.textContent="✅ תמונה צורפה";
+      lbl.classList.add("has"); lbl.innerHTML=emojiIcon("✅ תמונה צורפה");
       let prev=document.getElementById("binui-fault-preview");
       if(!prev){prev=document.createElement("img");prev.id="binui-fault-preview";prev.style.cssText="width:100%;border-radius:12px;margin-top:8px;border:1px solid var(--line);display:block";lbl.after(prev);}
       prev.src=data;
@@ -10058,13 +10058,13 @@ async function renderBinuiFaults(){
   const all = await getBinuiFaults();
   const mine = all.filter(f=> origin && f.shedId===origin.shedId && (origin.dept ? f.dept===origin.dept : true));
   if(mine.length===0){
-    list.innerHTML = `<div class="empty-state"><div class="ic">🚧</div><h3>אין עדיין תקלות בינוי</h3><p>דווח באמצעות כפתור "+ תקלה"</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="ic">${icon('construction')}</div><h3>אין עדיין תקלות בינוי</h3><p>דווח באמצעות כפתור "+ תקלה"</p></div>`;
     return;
   }
   list.innerHTML = mine.map(f=>{
     const cls = binuiStatusCls(f.status);
     return `<div class="card fault-item" onclick="openBinuiFaultDetail('${f.id}')">
-      <div class="f-ic">🚧</div>
+      <div class="f-ic">${icon('construction')}</div>
       <div class="f-body"><h3>${escapeHTML(f.title)}</h3><div class="f-meta">דווח ע"י ${escapeHTML(f.by)} · ${f.date}${f.img?' · 📷':''}</div></div>
       <div class="f-status ${cls==='g'?'closed':'open'}">${escapeHTML(f.status)}</div>
     </div>`;
@@ -10093,8 +10093,8 @@ async function openBinuiFaultDetail(id){
     <div class="modal-actions" style="margin-top:14px">
       <button class="m-btn ghost" onclick="document.getElementById('binuifaultdetail-modal').classList.remove('open')" style="flex:1">סגור חלון</button>
     </div>
-    ${canManage && f.status!=="טופל"?`<button class="m-btn ghost" onclick="openBinuiFaultReminder('${id}')" style="width:100%;margin-top:8px">🔔 קביעת תזכורת מעקב</button>`:""}
-    ${canDelete?`<button class="m-btn" onclick="deleteBinuiFault('${id}')" style="width:100%;margin-top:8px;background:var(--red-soft);color:var(--red);border:1px solid var(--red-line)">🗑️ מחק תקלה לצמיתות</button>`:""}`;
+    ${canManage && f.status!=="טופל"?`<button class="m-btn ghost" onclick="openBinuiFaultReminder('${id}')" style="width:100%;margin-top:8px">${icon('bell')} קביעת תזכורת מעקב</button>`:""}
+    ${canDelete?`<button class="m-btn" onclick="deleteBinuiFault('${id}')" style="width:100%;margin-top:8px;background:var(--red-soft);color:var(--red);border:1px solid var(--red-line)">${icon('delete')} מחק תקלה לצמיתות</button>`:""}`;
   document.getElementById("binuifaultdetail-modal").classList.add("open");
 }
 async function openBinuiFaultReminder(id){
@@ -10152,7 +10152,7 @@ async function renderBinuiFaultsAdmin(){
   updateBinuiAdminBadge();
   const faults = await getBinuiFaults();
   if(faults.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🚧</div><h3>אין עדיין תקלות בינוי</h3><p>ידווחו ע"י מפקדי הסככות/מחלקות</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('construction')}</div><h3>אין עדיין תקלות בינוי</h3><p>ידווחו ע"י מפקדי הסככות/מחלקות</p></div>`;
     return;
   }
   /* מ״ע אחזקה רואה לוח קנבן (3 העמודות = 3 הסטטוסים הקיימים בדיוק, בלי
@@ -10168,7 +10168,7 @@ async function renderBinuiFaultsAdmin(){
     const statusOptions = BINUI_STATUSES.map(s=>`<option value="${s.key}" ${s.key===f.status?'selected':''}>${s.key}</option>`).join("");
     return `<div class="cert-sum-card" style="cursor:pointer" onclick="openBinuiFaultDetail('${f.id}')">
       <div class="cert-sum-head">
-        <div class="avatar" style="width:40px;height:40px;font-size:18px">🚧</div>
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">${icon('construction')}</div>
         <div class="cert-sum-name"><b>${escapeHTML(f.title)}</b><span>${escapeHTML(f.shedName||'—')} · ${escapeHTML(f.by)} · ${f.date}${f.img?' · 📷':''}</span></div>
         <select class="m-input" style="margin-bottom:0;width:auto;font-size:11px;padding:6px 8px" onclick="event.stopPropagation()" onchange="event.stopPropagation();setBinuiFaultStatus('${f.id}', this.value)">${statusOptions}</select>
       </div>
@@ -10228,11 +10228,11 @@ async function renderTeamMgmt(){
     const st7 = (isDeptUnit || p.reserve) ? null : stage7Status(p, certs);
     const st7Tag = st7 ? `<span class="pill ${st7.cls}" style="font-size:9px;margin-right:4px">${st7.tag}</span>` : "";
     const deptTag = personDept(p) ? `<span class="role-mini">${escapeHTML(personDept(p))}</span>` : "";
-    const officerTag = p.officerTag ? `<span class="role-mini">🎖️ ${escapeHTML(p.officerTag)}</span>` : "";
+    const officerTag = p.officerTag ? `<span class="role-mini">${icon('commander')} ${escapeHTML(p.officerTag)}</span>` : "";
     const profTag = p.profession ? `<span class="role-mini">${escapeHTML(p.profession)}</span>` : "";
-    const pinTag = p.pinHash ? `<span class="role-mini" title="PIN מוגדר">🔒</span>` : "";
-    const reserveTag = p.reserve ? `<span class="role-mini" style="background:var(--gold-soft);color:var(--gold);border-color:#f0dfa8">🎖️ מילואים</span>` : "";
-    const onbTag = isOnboarding(p) ? `<span class="pill y" style="font-size:9px;margin-right:4px;cursor:pointer" onclick="event.stopPropagation();openOnboardingDetail(${i})">🎓 קליטה</span>` : "";
+    const pinTag = p.pinHash ? `<span class="role-mini" title="PIN מוגדר">${icon('lock')}</span>` : "";
+    const reserveTag = p.reserve ? `<span class="role-mini" style="background:var(--gold-soft);color:var(--gold);border-color:#f0dfa8">${icon('reserves')} מילואים</span>` : "";
+    const onbTag = isOnboarding(p) ? `<span class="pill y" style="font-size:9px;margin-right:4px;cursor:pointer" onclick="event.stopPropagation();openOnboardingDetail(${i})">${icon('onboarding')} קליטה</span>` : "";
     const cfTags = cfTpl.map(f=>{
       const v = p.customFields && p.customFields[f.id];
       if(!v) return "";
@@ -10246,8 +10246,8 @@ async function renderTeamMgmt(){
       <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini ${p.role==='חייל'?'sol':''}">${p.role}</span> ${reserveTag} ${deptTag} ${officerTag} ${profTag} ${pinTag} ${pfTag} ${st7Tag} ${onbTag}</b>
         <span>${p.reserve ? ('🎖️ מילואים · 🗓️ רענון '+(p.refresh||'—')) : ('🎂 '+(p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—')+(rel?' · 🗓️ שחרור '+rel:''))}</span>
         ${cfTags ? `<div>${cfTags}</div>` : ""}</div>
-      <button class="mr-del" style="background:var(--sky-soft);border-color:#cfe0ff;color:var(--sky)" onclick="startEditMember(${i})">✏️</button>
-      <button class="mr-del" onclick="removeTeamMember(${i})">🗑️</button>
+      <button class="mr-del" style="background:var(--sky-soft);border-color:#cfe0ff;color:var(--sky)" onclick="startEditMember(${i})">${icon('edit')}</button>
+      <button class="mr-del" onclick="removeTeamMember(${i})">${icon('delete')}</button>
     </div>`;}).join("");
 }
 
@@ -10281,8 +10281,8 @@ function startEditMember(i){
   tps.style.color = p.pinHash ? "var(--green,#22c55e)" : "var(--ink-3)";
   document.getElementById("tm-reserve").checked = !!p.reserve;
   onReserveToggle();
-  document.getElementById("tm-form-title").textContent = "✏️ עריכת " + p.name;
-  document.getElementById("tm-save-btn").textContent = "💾 שמור שינויים";
+  document.getElementById("tm-form-title").innerHTML = emojiIcon("✏️ עריכת " + p.name);
+  document.getElementById("tm-save-btn").innerHTML = emojiIcon("💾 שמור שינויים");
   tmShowForm(true);   // פותח את טופס העריכה
   document.getElementById("tm-name").focus();
 }
@@ -10301,8 +10301,8 @@ function cancelEditMember(){
   { const tps=document.getElementById("tm-pin-status"); if(tps){ tps.textContent=""; } }
   { const rc=document.getElementById("tm-reserve"); if(rc) rc.checked=false; }
   { const rs=document.getElementById("tm-role"); if(rs) rs.disabled=false; }
-  document.getElementById("tm-form-title").textContent = "➕ הוספת איש צוות";
-  document.getElementById("tm-save-btn").textContent = "➕ הוסף איש צוות";
+  document.getElementById("tm-form-title").innerHTML = emojiIcon("➕ הוספת איש צוות");
+  document.getElementById("tm-save-btn").innerHTML = emojiIcon("➕ הוסף איש צוות");
 }
 /* טופס ההוספה/עריכה מוצג רק בעת הצורך — רוב הזמן רואים את רשימת הצוות.
    פתיחה בלחיצה על "הוסף איש צוות"; סגירה/מזעור מחזירה לרשימה. */
@@ -10531,7 +10531,7 @@ function renderTaskMgmt(){
     <div class="mgmt-row">
       <div class="task-num" style="width:30px;height:30px;font-size:13px">${i+1}</div>
       <div class="mr-body"><b>${escapeHTML(t.title)}</b><span>${escapeHTML(t.desc||"")}</span></div>
-      <button class="mr-del" onclick="removeTaskItem(${i})">🗑️</button>
+      <button class="mr-del" onclick="removeTaskItem(${i})">${icon('delete')}</button>
     </div>`).join("");
 }
 async function addTaskItem(){
@@ -10582,14 +10582,14 @@ async function openSafetyReport(){
     const cls = (total>0 && c===total) ? "g" : (c===0 ? "r" : "y");
     return `<div class="sr-ev">
       <div class="sr-ev-top"><b>${escapeHTML(e.title)}</b><span class="sr-count ${cls}">${c}/${total}</span></div>
-      ${e.date?`<div class="sr-ev-date">📅 ${escapeHTML(e.date)}</div>`:""}
-      ${confirmed.length?`<div class="sr-line"><span class="sr-tag g">✓ אישרו</span>${confirmed.map(p=>escapeHTML(p.name)).join("، ")}</div>`:""}
-      ${missing.length?`<div class="sr-line"><span class="sr-tag r">✗ טרם</span>${missing.map(p=>escapeHTML(p.name)).join("، ")}</div>`:""}
+      ${e.date?`<div class="sr-ev-date">${icon('calendar')} ${escapeHTML(e.date)}</div>`:""}
+      ${confirmed.length?`<div class="sr-line"><span class="sr-tag g">${icon('check')} אישרו</span>${confirmed.map(p=>escapeHTML(p.name)).join("، ")}</div>`:""}
+      ${missing.length?`<div class="sr-line"><span class="sr-tag r">${icon('close')} טרם</span>${missing.map(p=>escapeHTML(p.name)).join("، ")}</div>`:""}
     </div>`;
   }).join("") : `<div class="sr-empty">אין פריטי קרא-וחתום עדיין</div>`;
 
   box.innerHTML = `<div id="safety-report-box" class="sr-box">
-    <div class="sr-head"><h3>📄 דוח קרא וחתום</h3><p>${escapeHTML(currentShed?currentShed.name:"")} · ${now.toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p></div>
+    <div class="sr-head"><h3>${icon('doc')} דוח קרא וחתום</h3><p>${escapeHTML(currentShed?currentShed.name:"")} · ${now.toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p></div>
     <div class="sr-stats">
       <div class="sr-stat"><b>${events.length}</b><span>פריטים</span></div>
       <div class="sr-stat"><b>${total}</b><span>אנשי צוות</span></div>
@@ -10662,7 +10662,7 @@ async function renderAdminSignatures(){
     <div class="sr-stat"><b class="${pct>=80?'g':''}">${pct}%</b><span>אישור כולל</span></div>
     <div class="sr-stat"><b class="${adminItems.length&&fullyDone===adminItems.length?'g':''}">${fullyDone}/${adminItems.length}</b><span>הושלמו במלואם</span></div>
   </div>
-  ${syncGaps?`<div class="sr-line" style="margin-top:8px"><span class="sr-tag r">⚠️ ${syncGaps} מקרים של פריט שלא נקלט במסגרת מסוימת</span></div>`:""}`;
+  ${syncGaps?`<div class="sr-line" style="margin-top:8px"><span class="sr-tag r">${icon('warning')} ${syncGaps} מקרים של פריט שלא נקלט במסגרת מסוימת</span></div>`:""}`;
 
   adminLogView(adminLogCurrentView);
 }
@@ -10687,7 +10687,7 @@ async function remindNonSigners(eventId, eventTitle){
 
   let allOk = true;
   for(const {shed, missing} of perShed){
-    const text = `⚠️ תזכורת קרא-וחתום: "${eventTitle}" — ${missing.length} טרם חתמו: ${missing.map(p=>p.name).join("، ")}`;
+    const text = `${icon('warning')} תזכורת קרא-וחתום: "${eventTitle}" — ${missing.length} טרם חתמו: ${missing.map(p=>p.name).join("، ")}`;
     const list = (await sGetIn(shed.id, "messages_list")) || [];
     list.unshift({id:"msg_"+Date.now()+Math.random().toString(36).slice(2,6), text, type:"urgent", by:squadronPublisher(), date:new Date().toLocaleDateString("he-IL")});
     if(!(await sSetIn(shed.id, "messages_list", list))) allOk = false;
@@ -10711,7 +10711,7 @@ async function remindNonSigners(eventId, eventTitle){
    חיילי המסגרות האלה מקבלים מסכי חייל רגילים בלבד. */
 async function applyTrainingCommanderPowers(){
   isAdmin = true;
-  document.getElementById("hdr-rank").textContent = "🏛️ אחראי הדרכה";
+  document.getElementById("hdr-rank").innerHTML = emojiIcon("🏛️ אחראי הדרכה");
   document.getElementById("nav-admin").classList.remove("hidden");
   await ensureShed2Seed();
   await ensureAllShedsSeed();   // ללא scope — הוא רואה את כל המסגרות
@@ -10720,7 +10720,7 @@ async function applyTrainingCommanderPowers(){
 
 async function applyMaintCommanderPowers(){
   isVehicleOfficer = true;
-  document.getElementById("hdr-rank").textContent = "🔧 מ״ע אחזקה";
+  document.getElementById("hdr-rank").innerHTML = emojiIcon("🔧 מ״ע אחזקה");
   document.getElementById("nav-vo-overview").classList.remove("hidden");
   document.getElementById("nav-vehicle-officer").classList.remove("hidden");
   document.getElementById("nav-morningcheck").classList.remove("hidden");
@@ -10745,7 +10745,7 @@ async function budgetOfficerLogin(){
   user = "אחראי תקציבים טייסתי"; userRole = "אחראי תקציבים"; isBudgetOfficer = true;
   document.getElementById("login-overlay").style.display = "none";
   document.getElementById("hdr-username").textContent = user;
-  document.getElementById("hdr-rank").textContent = "💰 אחראי תקציבים";
+  document.getElementById("hdr-rank").innerHTML = emojiIcon("💰 אחראי תקציבים");
   document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
   // hide regular nav functions; show only budget-officer screen
   document.querySelectorAll("nav .nav-btn").forEach(b=>{ b.classList.add("hidden"); b.style.order = ""; });
@@ -10832,9 +10832,9 @@ async function renderUsersAdmin(){
     });
     if(q && matches.length===0) continue;
     html += `<div class="cmd-section-title">${escapeHTML(g.shed.name)} <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${matches.length}</span></div>`;
-    html += `<button class="m-btn ghost" style="width:100%;margin-bottom:8px" onclick="openUserEdit('${g.shed.id}',-1)">➕ הוסף משתמש ל${escapeHTML(g.shed.name)}</button>`;
+    html += `<button class="m-btn ghost" style="width:100%;margin-bottom:8px" onclick="openUserEdit('${g.shed.id}',-1)">${icon('plus')} הוסף משתמש ל${escapeHTML(g.shed.name)}</button>`;
     if(matches.length===0){
-      html += `<div class="empty-state" style="padding:14px"><div class="ic">👤</div><p>אין עדיין משתמשים במסגרת זו</p></div>`;
+      html += `<div class="empty-state" style="padding:14px"><div class="ic">${icon('person')}</div><p>אין עדיין משתמשים במסגרת זו</p></div>`;
       continue;
     }
     html += matches.map(x=>{
@@ -10843,10 +10843,10 @@ async function renderUsersAdmin(){
       const tags = [
         `<span class="role-mini ${p.role==='חייל'?'sol':''}">${escapeHTML(p.role)}</span>`,
         dept ? `<span class="role-mini">${escapeHTML(dept)}</span>` : "",
-        p.officerTag ? `<span class="role-mini">🎖️ ${escapeHTML(p.officerTag)}</span>` : "",
+        p.officerTag ? `<span class="role-mini">${icon('commander')} ${escapeHTML(p.officerTag)}</span>` : "",
         p.profession ? `<span class="role-mini">${escapeHTML(p.profession)}</span>` : "",
-        p.release ? `<span class="role-mini">🗓️ ${escapeHTML(p.release)}</span>` : "",
-        p.pinHash ? `<span class="role-mini" style="background:var(--green-soft);color:var(--green)">🔒 PIN${p.pinSetBy?" · "+escapeHTML(p.pinSetBy):""}${p.pinSetAt?" · "+escapeHTML(p.pinSetAt):""}</span>` : `<span class="role-mini">🔓 ללא PIN</span>`
+        p.release ? `<span class="role-mini">${icon('calendar')} ${escapeHTML(p.release)}</span>` : "",
+        p.pinHash ? `<span class="role-mini" style="background:var(--green-soft);color:var(--green)">${icon('lock')} PIN${p.pinSetBy?" · "+escapeHTML(p.pinSetBy):""}${p.pinSetAt?" · "+escapeHTML(p.pinSetAt):""}</span>` : `<span class="role-mini">${icon('lock')} ללא PIN</span>`
       ].filter(Boolean).join(" ");
       return `<div class="cert-sum-card" style="cursor:default">
         <div class="cert-sum-head">
@@ -10854,15 +10854,15 @@ async function renderUsersAdmin(){
           <div class="cert-sum-name" style="flex:1"><b>${escapeHTML(p.name)}</b><span>${tags}</span></div>
         </div>
         <div style="display:flex;gap:6px;margin-top:8px">
-          <button class="m-btn ghost" style="flex:1;font-size:11.5px;padding:7px" onclick="openUserEdit('${g.shed.id}',${x.idx})">✏️ עריכה</button>
-          <button class="m-btn ghost" style="flex:1;font-size:11.5px;padding:7px" onclick="impersonateUser('${g.shed.id}','${jsStr(p.name)}')">👁️ כניסה בתור</button>
-          ${p.pinHash ? `<button class="m-btn ghost" style="flex:0 0 auto;font-size:11.5px;padding:7px" title="איפוס PIN" onclick="resetUserPin('${g.shed.id}',${x.idx})">🔓 איפוס</button>` : ""}
-          <button class="m-btn ghost" style="flex:0 0 auto;font-size:11.5px;padding:7px" onclick="deleteUserAsOwner('${g.shed.id}',${x.idx})">🗑️</button>
+          <button class="m-btn ghost" style="flex:1;font-size:11.5px;padding:7px" onclick="openUserEdit('${g.shed.id}',${x.idx})">${icon('edit')} עריכה</button>
+          <button class="m-btn ghost" style="flex:1;font-size:11.5px;padding:7px" onclick="impersonateUser('${g.shed.id}','${jsStr(p.name)}')">${icon('eye')} כניסה בתור</button>
+          ${p.pinHash ? `<button class="m-btn ghost" style="flex:0 0 auto;font-size:11.5px;padding:7px" title="איפוס PIN" onclick="resetUserPin('${g.shed.id}',${x.idx})">${icon('lock')} איפוס</button>` : ""}
+          <button class="m-btn ghost" style="flex:0 0 auto;font-size:11.5px;padding:7px" onclick="deleteUserAsOwner('${g.shed.id}',${x.idx})">${icon('delete')}</button>
         </div>
       </div>`;
     }).join("");
   }
-  box.innerHTML = html || `<div class="empty-state"><div class="ic">🔎</div><h3>לא נמצאו משתמשים</h3><p>נסה חיפוש אחר</p></div>`;
+  box.innerHTML = html || `<div class="empty-state"><div class="ic">${icon('search')}</div><h3>לא נמצאו משתמשים</h3><p>נסה חיפוש אחר</p></div>`;
 }
 
 let ueShedId = null, ueIdx = -1;
@@ -11044,7 +11044,7 @@ async function impersonateUser(shedId, name){
   suppressDeviceRemember = true;   // אחרת המכשיר הנוכחי "זוכר" את מי שנכנסים בתורו עם קוד הכניסה של מנהל-העל (שגוי) במקום הקוד האמיתי שלו
   await doLogin();
   const bar = document.getElementById("impersonate-bar");
-  document.getElementById("impersonate-txt").textContent = `👑 ${escapeHTML(superAdminSelf.name)} — צופה בתור ${name} · ${shed.name}`;
+  document.getElementById("impersonate-txt").innerHTML = emojiIcon(`👑 ${escapeHTML(superAdminSelf.name)} — צופה בתור ${name} · ${shed.name}`);
   bar.classList.remove("hidden");
   document.body.style.paddingTop = bar.offsetHeight + "px";
 }
@@ -11169,7 +11169,7 @@ async function techOfficerLogin(){
   user = "אור דבח"; userRole = "קצין טכני"; isTechOfficer = true; isAdmin = true;
   document.getElementById("login-overlay").style.display = "none";
   document.getElementById("hdr-username").textContent = user;
-  document.getElementById("hdr-rank").textContent = "🔧 קצין טכני";
+  document.getElementById("hdr-rank").innerHTML = emojiIcon("🔧 קצין טכני");
   document.getElementById("hdr-shed").textContent = "דרג א' · כלל המסגרות";
   document.querySelectorAll("nav .nav-btn").forEach(b=>{ b.classList.add("hidden"); b.style.order = ""; });
   document.getElementById("nav-admin").classList.remove("hidden");
@@ -11842,7 +11842,7 @@ async function renderAdminEvents(){
     return `<div class="train-card">
       <div class="tc-ic">${ft.emoji}</div>
       <div class="tc-body"><b>${escapeHTML(e.title)}</b><span>${ft.label} · ${e.date}</span></div>
-      <button class="mr-del" onclick="deleteAdminEvent('${e.id}')">🗑️</button>
+      <button class="mr-del" onclick="deleteAdminEvent('${e.id}')">${icon('delete')}</button>
     </div>`;
   }).join("");
 }
@@ -12006,13 +12006,13 @@ async function renderAdminCertMatrix(){
   if(stageNames.includes(prevStageVal)) stageSel.value = prevStageVal;
 
   let html = `<div class="cert-legend" style="margin-bottom:12px">
-    <span class="lvl-tag saf">🟢 סף</span>
-    <span class="lvl-tag raf">🔵 רף</span>
-    <span class="lvl-tag himush">🟠 חימוש</span>
-    <span class="lvl-tag elyon">🔴 עליון</span>
-    <span class="lvl-tag stage">🟣 שלבים</span>
-    <span class="lvl-tag pa">🟤 פ"א לאור ספרות</span>
-    <span class="lvl-tag safety">⚫ מערכות בטיחותיות</span>
+    <span class="lvl-tag saf">${dot('green')} סף</span>
+    <span class="lvl-tag raf">${dot('blue')} רף</span>
+    <span class="lvl-tag himush">${dot('orange')} חימוש</span>
+    <span class="lvl-tag elyon">${dot('red')} עליון</span>
+    <span class="lvl-tag stage">${dot('purple')} שלבים</span>
+    <span class="lvl-tag pa">${dot('brown')} פ"א לאור ספרות</span>
+    <span class="lvl-tag safety">${dot('black')} מערכות בטיחותיות</span>
   </div>`;
   let anyPeople = false;
 
@@ -12042,7 +12042,7 @@ async function renderAdminCertMatrix(){
     if(sortMode==="az") personnel = [...personnel].sort((a,b)=>a.name.localeCompare(b.name,"he"));
     if(personnel.length===0) continue;
 
-    html += `<div class="admin-shed-block"><div class="admin-shed-title">🏢 ${shed.name} · ${personnel.length} אנשי צוות</div>`;
+    html += `<div class="admin-shed-block"><div class="admin-shed-title">${icon('institution')} ${shed.name} · ${personnel.length} אנשי צוות</div>`;
 
     for(const p of personnel){
       anyPeople = true;
@@ -12056,7 +12056,7 @@ async function renderAdminCertMatrix(){
         if(items.length===0) return "";
         const rows = items.map(c=>`<div class="cert-chip-row ${specialOtherClass(certCleanName(c.name))}">
           <span class="cert-chip-name">${escapeHTML(certCleanName(c.name))}</span>
-          <button class="cert-chip-del" onclick="event.stopPropagation();removeAdminCert('${shed.id}','${c.id||''}',${c._idx})">✕</button>
+          <button class="cert-chip-del" onclick="event.stopPropagation();removeAdminCert('${shed.id}','${c.id||''}',${c._idx})">${icon('close')}</button>
         </div>`).join("");
         return `<div class="cert-detail-group"><div class="cert-detail-title ${lvl.cls}">${lvl.label} · ${items.length}</div><div class="cert-chip-list">${rows}</div></div>`;
       }).join("");
@@ -12145,7 +12145,7 @@ async function openCertBank(){
 async function renderCertBank(){
   const bank = await getCertBank();
   const box = document.getElementById("certbank-list");
-  box.innerHTML = bank.map((b,i)=>`<div class="mgmt-row"><div class="mr-body"><b>${escapeHTML(b)}</b></div><button class="mr-del" onclick="removeCertBank(${i})">🗑️</button></div>`).join("");
+  box.innerHTML = bank.map((b,i)=>`<div class="mgmt-row"><div class="mr-body"><b>${escapeHTML(b)}</b></div><button class="mr-del" onclick="removeCertBank(${i})">${icon('delete')}</button></div>`).join("");
 }
 async function addCertBank(){
   const v = document.getElementById("certbank-input").value.trim();
@@ -12372,8 +12372,8 @@ function openReserveAdd(){
   populateReserveShed();
   document.getElementById("reserve-person-free").value = "";
   document.getElementById("reserve-last").value = todayISO();   // ברירת מחדל: תאריך ההזנה
-  document.getElementById("reserve-title").textContent = "🎖️ הוספת איש מילואים";
-  document.querySelector("#reserve-modal .m-btn.primary").textContent = "➕ הוסף";
+  document.getElementById("reserve-title").innerHTML = emojiIcon("🎖️ הוספת איש מילואים");
+  document.querySelector("#reserve-modal .m-btn.primary").innerHTML = emojiIcon("➕ הוסף");
   document.getElementById("reserve-modal").classList.add("open");
 }
 async function openReserveEdit(id){
@@ -12385,8 +12385,8 @@ async function openReserveEdit(id){
   populateReserveShed(shedId);
   document.getElementById("reserve-person-free").value = p.name || "";
   document.getElementById("reserve-last").value = p.refresh || todayISO();
-  document.getElementById("reserve-title").textContent = "✏️ עריכת איש מילואים";
-  document.querySelector("#reserve-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.getElementById("reserve-title").innerHTML = emojiIcon("✏️ עריכת איש מילואים");
+  document.querySelector("#reserve-modal .m-btn.primary").innerHTML = emojiIcon("💾 שמור שינויים");
   document.getElementById("reserve-modal").classList.add("open");
 }
 async function saveReserve(){
@@ -12447,10 +12447,10 @@ async function renderReserves(){
   const list = await getReserves();
   if(list.length===0){
     if(reservesReadFailed){
-      box.innerHTML = `<div class="empty-state"><div class="ic">⚠️</div><h3>הטעינה נכשלה</h3><p>בעיית תקשורת מנעה טעינת מילואים ממסגרת אחת או יותר — משוך לרענון ונסה שוב</p></div>`;
+      box.innerHTML = `<div class="empty-state"><div class="ic">${icon('warning')}</div><h3>הטעינה נכשלה</h3><p>בעיית תקשורת מנעה טעינת מילואים ממסגרת אחת או יותר — משוך לרענון ונסה שוב</p></div>`;
       return;
     }
-    box.innerHTML = `<div class="empty-state"><div class="ic">🎖️</div><h3>אין עדיין אנשי מילואים במעקב</h3><p>הוסף איש מילואים באמצעות "הוספת איש מילואים"</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('reserves')}</div><h3>אין עדיין אנשי מילואים במעקב</h3><p>הוסף איש מילואים באמצעות "הוספת איש מילואים"</p></div>`;
     return;
   }
   const shedName = id => id ? ((SHEDS.find(s=>s.id===id)||{}).name || id) : "—";
@@ -12458,11 +12458,11 @@ async function renderReserves(){
   box.innerHTML = sorted.map(r=>`
     <div class="cert-sum-card" style="cursor:default">
       <div class="cert-sum-head">
-        <div class="avatar" style="width:40px;height:40px;font-size:18px">🎖️</div>
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">${icon('commander')}</div>
         <div class="cert-sum-name"><b>${escapeHTML(r.person)}</b><span>${escapeHTML(shedName(r.shedId))}</span></div>
-        <span class="pill g" style="font-size:10px;white-space:nowrap">🗓️ רענון: ${escapeHTML(r.last||"—")}</span>
-        <button class="cert-chip-edit" onclick="openReserveEdit('${jsStr(r.id)}')">✏️</button>
-        <button class="cert-chip-del" onclick="removeReserve('${jsStr(r.id)}')">✕</button>
+        <span class="pill g" style="font-size:10px;white-space:nowrap">${icon('calendar')} רענון: ${escapeHTML(r.last||"—")}</span>
+        <button class="cert-chip-edit" onclick="openReserveEdit('${jsStr(r.id)}')">${icon('edit')}</button>
+        <button class="cert-chip-del" onclick="removeReserve('${jsStr(r.id)}')">${icon('close')}</button>
       </div>
     </div>`).join("");
 }
@@ -12472,7 +12472,7 @@ function trainingCardHtml(t){
   return `<div class="train-card">
     <div class="tc-ic">${ft.emoji}</div>
     <div class="tc-body"><b>${escapeHTML(t.title)}</b><span>${ft.label} · ${t.date}</span></div>
-    <button class="mr-del" onclick="deleteTraining('${t.id}')">🗑️</button>
+    <button class="mr-del" onclick="deleteTraining('${t.id}')">${icon('delete')}</button>
   </div>`;
 }
 async function renderAdminTraining(){
@@ -12551,7 +12551,7 @@ function renderLogByName({adminItems, perShed}){
       </div>`);
     }
   }
-  return rows.length ? rows.join("") : `<div class="empty-state" style="padding:20px"><div class="ic">👤</div><h3>אין עדיין אנשי צוות</h3></div>`;
+  return rows.length ? rows.join("") : `<div class="empty-state" style="padding:20px"><div class="ic">${icon('person')}</div><h3>אין עדיין אנשי צוות</h3></div>`;
 }
 
 function renderLogByShed({adminItems, perShed}){
@@ -12569,7 +12569,7 @@ function renderLogByShed({adminItems, perShed}){
     const sub = total===0 ? `${personnel.length} אנשי צוות`
       : `${personnel.length} אנשי צוות · ${total} פריטים${openItems?" · "+openItems+" עם חתימות חסרות":""}`;
     return `<div class="cmd-row">
-      <div class="avatar" style="border-radius:11px">🏠</div>
+      <div class="avatar" style="border-radius:11px">${icon('home')}</div>
       <div class="cmd-name">${escapeHTML(shed.name)}<br><span style="font-size:11px;color:var(--ink-3);font-weight:300">${sub}</span></div>
       ${pill}
     </div>`;
@@ -12578,7 +12578,7 @@ function renderLogByShed({adminItems, perShed}){
 }
 
 function renderLogByItem({adminItems, perShed}){
-  if(!adminItems.length) return `<div class="empty-state" style="padding:20px"><div class="ic">📄</div><h3>אין עדיין פריטי קרא-וחתום שפורסמו</h3></div>`;
+  if(!adminItems.length) return `<div class="empty-state" style="padding:20px"><div class="ic">${icon('doc')}</div><h3>אין עדיין פריטי קרא-וחתום שפורסמו</h3></div>`;
   return adminItems.slice().reverse().map(item=>{
     const shedStatus = perShed.map(({shed,personnel,eventIds,sigsBy})=>{
       if(!eventIds.has(item.id)) return {shed, present:false, total:personnel.length};
@@ -12589,14 +12589,14 @@ function renderLogByItem({adminItems, perShed}){
     const allDelivered = shedStatus.every(s=>s.present);
     return `<div class="sr-ev">
       <div class="sr-ev-top"><b>${escapeHTML(item.title)}</b>${!allDelivered?'<span class="sr-count r">⚠️ לא בכל המסגרות</span>':""}</div>
-      ${item.date?`<div class="sr-ev-date">📅 ${escapeHTML(item.date)}</div>`:""}
+      ${item.date?`<div class="sr-ev-date">${icon('calendar')} ${escapeHTML(item.date)}</div>`:""}
       ${shedStatus.map(s=>{
-        if(!s.present) return `<div class="sr-line"><span class="sr-tag r">${escapeHTML(s.shed.name)}</span>⚠️ לא נקלט במסגרת זו</div>`;
+        if(!s.present) return `<div class="sr-line"><span class="sr-tag r">${escapeHTML(s.shed.name)}</span>${icon('warning')} לא נקלט במסגרת זו</div>`;
         if(s.total===0) return `<div class="sr-line"><span class="sr-tag" style="background:#eee;color:var(--ink-3)">${escapeHTML(s.shed.name)}</span>אין צוות רשום</div>`;
         const cls = s.c===s.total ? "g" : (s.c===0 ? "r" : "y");
         return `<div class="sr-line"><span class="sr-tag ${cls}">${escapeHTML(s.shed.name)}: ${s.c}/${s.total}</span>${s.missing.length?s.missing.map(p=>escapeHTML(p.name)).join("، "):"כולם חתמו"}</div>`;
       }).join("")}
-      ${needsReminder?`<button class="m-btn ghost" style="width:100%;margin-top:6px;font-size:12px" onclick="remindNonSigners('${item.id}','${jsStr(item.title)}')">📢 שלח תזכורת למפקדים — מי טרם ביצע</button>`:""}
+      ${needsReminder?`<button class="m-btn ghost" style="width:100%;margin-top:6px;font-size:12px" onclick="remindNonSigners('${item.id}','${jsStr(item.title)}')">${icon('announce')} שלח תזכורת למפקדים — מי טרם ביצע</button>`:""}
     </div>`;
   }).join("");
 }
@@ -12948,8 +12948,8 @@ async function renderTrends(boxId){
   const kpis = visibleCatalog.map(c=>({...c, ...kpiLive[c.key]}));
   const kpiHtml = kpis.length
     ? kpis.map(k=>`<button class="cd-kpi" onclick="${k.go}"><span class="cd-led ${k.led}"></span><div class="cd-kic">${k.ic}</div><div class="cd-kn">${k.n}</div><div class="cd-kl">${escapeHTML(k.l)}</div></button>`).join("")
-    : `<div class="cd-kpi-empty">אין באנרים מוצגים — נהל דרך ⚙️ ניהול באנרים</div>`;
-  const bannersBtnHtml = canCustomizeBanners ? `<button class="cd-badge-btn" onclick="openDashBannersModal()">⚙️ באנרים</button>` : `<span class="cd-badge">לחיצה = מסך מלא</span>`;
+    : `<div class="cd-kpi-empty">אין באנרים מוצגים — נהל דרך ${icon('maintenance')} ניהול באנרים</div>`;
+  const bannersBtnHtml = canCustomizeBanners ? `<button class="cd-badge-btn" onclick="openDashBannersModal()">${icon('maintenance')} באנרים</button>` : `<span class="cd-badge">לחיצה = מסך מלא</span>`;
 
   // --- מיקוד יומי — רשימה מאוחדת של כל מה שדורש טיפול היום (המספר = מספר הפריטים) ---
   const focus = [];
@@ -12964,7 +12964,7 @@ async function renderTrends(boxId){
     focus.push({node:(f.cls==="r"?"crit":"warn"), time:"לטיפול", title:f.title, sub:f.sub, pill:f.tag, p:(f.cls==="r"?"r":"y"), go:f.go});
   });
   const focusCount = focus.length;
-  const focusSum = focusCount ? `⚠ ${focusCount} פריטים דורשים טיפול` : "✅ הכל תקין";
+  const focusSum = focusCount ? `${icon('warning')} ${focusCount} פריטים דורשים טיפול` : "✅ הכל תקין";
   const focusHtml = focusCount
     ? `<div class="cd-tl">${focus.map(e=>`
         <div class="cd-ev cd-${e.node}">
@@ -12974,7 +12974,7 @@ async function renderTrends(boxId){
             <span class="cd-ev-pill cd-p-${e.p}">${escapeHTML(e.pill)}</span>
           </div>
         </div>`).join("")}</div>`
-    : `<div class="cd-clear">✅ אין פריטים שדורשים טיפול — הכל בתוקף</div>`;
+    : `<div class="cd-clear">${icon('checkcircle')} אין פריטים שדורשים טיפול — הכל בתוקף</div>`;
 
 
   box.innerHTML = `
@@ -13149,7 +13149,7 @@ async function renderAlertsBody(){
     if(alertsTab==="mine"){
       const list = await getMyReminders();
       if(list.length===0){
-        body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)"><div style="font-size:40px;margin-bottom:8px">🔔</div><b style="font-size:15px">אין תזכורות פתוחות</b><p style="font-size:13px;margin-top:4px">תזכורת שתקבע על כלי, תקלה או הסמכה תופיע כאן</p></div>`;
+        body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)"><div style="font-size:40px;margin-bottom:8px">${icon('bell')}</div><b style="font-size:15px">אין תזכורות פתוחות</b><p style="font-size:13px;margin-top:4px">תזכורת שתקבע על כלי, תקלה או הסמכה תופיע כאן</p></div>`;
       } else {
         const today = todayKey();
         body.innerHTML = list.map(r=>`<div class="alert-row ${r.due<=today?'high':'mid'}" style="cursor:pointer" onclick="deleteReminder('${r.id}')">
@@ -13159,7 +13159,7 @@ async function renderAlertsBody(){
     } else {
       const alerts = await computeAlerts();
       if(alerts.length===0){
-        body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)"><div style="font-size:40px;margin-bottom:8px">✅</div><b style="font-size:15px;color:var(--green)">אין התראות פתוחות</b><p style="font-size:13px;margin-top:4px">הכל תחת שליטה</p></div>`;
+        body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)"><div style="font-size:40px;margin-bottom:8px">${icon('checkcircle')}</div><b style="font-size:15px;color:var(--green)">אין התראות פתוחות</b><p style="font-size:13px;margin-top:4px">הכל תחת שליטה</p></div>`;
       } else {
         body.innerHTML = alerts.map(a=>{
           // כל התראה מובילה למסך שבו מטפלים בה בפועל (nav). בלי זה הבאנר
@@ -13175,7 +13175,7 @@ async function renderAlertsBody(){
     }
   }catch(e){
     console.error("renderAlertsBody failed", e);
-    body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)">⚠️ שגיאה בטעינה — נסה שוב</div>`;
+    body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3)">${icon('warning')} שגיאה בטעינה — נסה שוב</div>`;
   }
 }
 async function updateAlertBell(precomputed){
@@ -13197,7 +13197,7 @@ async function updateAlertBell(precomputed){
     const tabAll = document.getElementById("alerts-tab-all");
     const tabMine = document.getElementById("alerts-tab-mine");
     if(tabAll) tabAll.textContent = `הכול${alerts.length?` (${alerts.length})`:""}`;
-    if(tabMine) tabMine.textContent = `🔔 התזכורות שלי${dueReminders?` (${dueReminders})`:""}`;
+    if(tabMine) tabMine.innerHTML = emojiIcon(`🔔 התזכורות שלי${dueReminders?` (${dueReminders})`:""}`);
   }catch(e){
     console.error("updateAlertBell failed", e);
     badge.classList.add("hidden");
@@ -13254,7 +13254,7 @@ function fmtReminderDate(iso){
   if(iso===today) return "היום";
   const d = new Date(iso+"T00:00:00");
   const label = d.toLocaleDateString("he-IL",{day:"numeric",month:"long"});
-  return iso<today ? `⚠️ עבר המועד — ${label}` : label;
+  return iso<today ? `${icon('warning')} עבר המועד — ${label}` : label;
 }
 
 /* ===== TRAINING MATERIALS (shed users view) ===== */
@@ -13264,12 +13264,12 @@ function trainingViewCardHtml(t, canRemoveOwnLinks){
     ? `<img class="doc-thumb" src="${t.thumb}" alt="">`
     : `<div class="doc-thumb file-badge ${ft.badge}"><span class="doc-fileicon">${ft.emoji}</span></div>`;
   const delBtn = (canRemoveOwnLinks && t.ftype==="link" && t.by!=="אחראי הדרכה")
-    ? `<button class="cert-chip-del" onclick="event.stopPropagation();removeLocalTrainingLink('${jsStr(t.id)}')">✕</button>` : "";
+    ? `<button class="cert-chip-del" onclick="event.stopPropagation();removeLocalTrainingLink('${jsStr(t.id)}')">${icon('close')}</button>` : "";
   return `<div class="card doc-item" onclick="openTrainingItem('${t.id}')">
     ${visual}
     <div class="doc-body"><h3>${escapeHTML(t.title)}</h3><div class="meta">${ft.label} · ${t.date}</div></div>
     ${delBtn}
-    <div class="doc-state read">📚</div>
+    <div class="doc-state read">${icon('library')}</div>
   </div>`;
 }
 async function renderTrainingView(){
@@ -13383,7 +13383,7 @@ async function renderMedChecks(){
   await refreshAreaPermissions();
   const t = MED_TYPES[medTab];
   const subEl = document.getElementById("medchecks-sub");
-  if(subEl) subEl.textContent = `${t.label} · ${t.validTxt}. 🟢 בתוקף · 🔴 נדרש חידוש · ⚪ טרם הוזן.`;
+  if(subEl) subEl.textContent = `${t.label} · ${t.validTxt}. ${dot('green')} בתוקף · ${dot('red')} נדרש חידוש · ${dot('white')} טרם הוזן.`;
   const canEdit = medCanEdit(medTab);
   const data = await getMedChecks();
   const people = medPeople();
@@ -13394,16 +13394,16 @@ async function renderMedChecks(){
   const filterBox = document.getElementById("medchecks-filter");
   if(people.length===0){
     filterBox.innerHTML = "";
-    box.innerHTML = `<div class="empty-state"><div class="ic">🪖</div><h3>אין חיילים למעקב</h3><p>הוסף אנשי צוות כדי לעקוב אחר ${escapeHTML(t.label)}</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('fitness')}</div><h3>אין חיילים למעקב</h3><p>הוסף אנשי צוות כדי לעקוב אחר ${escapeHTML(t.label)}</p></div>`;
     return;
   }
   filterBox.innerHTML = `
     <button class="fault-fbtn ${medFilter==='all'?'active':''}" onclick="setMedFilter('all')">הכל (${people.length})</button>
-    <button class="fault-fbtn ${medFilter==='attention'?'active':''}" onclick="setMedFilter('attention')">⚠️ דורש חידוש (${attnCount})</button>`;
+    <button class="fault-fbtn ${medFilter==='attention'?'active':''}" onclick="setMedFilter('attention')">${icon('warning')} דורש חידוש (${attnCount})</button>`;
   let shown = people;
   if(medFilter==="attention") shown = shown.filter(needsAttn);
   if(shown.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">✅</div><h3>אין למה לשים לב</h3><p>אין חיילים שדורשים חידוש ${escapeHTML(t.label)}</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('checkcircle')}</div><h3>אין למה לשים לב</h3><p>אין חיילים שדורשים חידוש ${escapeHTML(t.label)}</p></div>`;
     return;
   }
   box.innerHTML = shown.map(p=>{
@@ -13524,12 +13524,12 @@ function onboardingCardHtml(pIdx, p, tpl, certs, editable){
   const pct = tpl.items.length ? Math.round(doneCount/tpl.items.length*100) : 0;
   const pf = pfStatus(p, certs);
   const pfHtml = pf
-    ? `<div class="onb-pf ${pf.cls}"><span class="onb-pf-ic">🟡</span><div class="onb-pf-txt"><b>הסמכת PF</b><span>${escapeHTML(pf.tag)}</span></div></div>`
-    : `<div class="onb-pf g"><span class="onb-pf-ic">🟢</span><div class="onb-pf-txt"><b>הסמכת PF</b><span>הושג ✓</span></div></div>`;
-  const mentorRow = p.mentor ? `<div class="onb-row"><span style="font-size:14px">🧑‍🏫</span><span style="flex:1;font-size:12px;color:var(--ink-2)">חונך</span><b style="font-size:12px">${escapeHTML(p.mentor)}</b></div>` : "";
+    ? `<div class="onb-pf ${pf.cls}"><span class="onb-pf-ic">${dot('yellow')}</span><div class="onb-pf-txt"><b>הסמכת PF</b><span>${escapeHTML(pf.tag)}</span></div></div>`
+    : `<div class="onb-pf g"><span class="onb-pf-ic">${dot('green')}</span><div class="onb-pf-txt"><b>הסמכת PF</b><span>הושג ${icon('check')}</span></div></div>`;
+  const mentorRow = p.mentor ? `<div class="onb-row"><span style="font-size:14px">${icon('person')}‍${icon('institution')}</span><span style="flex:1;font-size:12px;color:var(--ink-2)">חונך</span><b style="font-size:12px">${escapeHTML(p.mentor)}</b></div>` : "";
   const itemRows = tpl.items.map((t,ti)=>{
     const isDone = done.includes(t);
-    const editBtns = editable ? `<button class="onb-item-btn" onclick="event.stopPropagation();startEditOnboardingItem(${ti})" title="עריכה">✏️</button><button class="onb-item-btn" onclick="event.stopPropagation();removeOnboardingItemTpl(${ti})" title="הסרה">✕</button>` : "";
+    const editBtns = editable ? `<button class="onb-item-btn" onclick="event.stopPropagation();startEditOnboardingItem(${ti})" title="עריכה">${icon('edit')}</button><button class="onb-item-btn" onclick="event.stopPropagation();removeOnboardingItemTpl(${ti})" title="הסרה">${icon('close')}</button>` : "";
     return `<div class="task-row ${isDone?'done':''}">
       <div class="task-check" onclick="toggleOnboardingTask(${pIdx},${ti})">${isDone?'✓':''}</div>
       <div class="task-info" onclick="toggleOnboardingTask(${pIdx},${ti})"><h3>${escapeHTML(t)}</h3></div>
@@ -13577,7 +13577,7 @@ async function renderOnboardingCard(containerId){
     return isOnboarding(p) && (user===p.name || (p.mentor && user===p.mentor));
   });
   if(idxList.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🎓</div><h3>אין כרגע חודש הסתגלות פעיל</h3><p>הכרטיס יופיע כאן כשתהיה בקליטה, או כשתשויך כחונך למישהו שכן</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('onboarding')}</div><h3>אין כרגע חודש הסתגלות פעיל</h3><p>הכרטיס יופיע כאן כשתהיה בקליטה, או כשתשויך כחונך למישהו שכן</p></div>`;
     return;
   }
   const tpl = await getOnboardingTemplate();
@@ -13590,7 +13590,7 @@ async function renderOnboardingRoster(){
   if(!box) return;
   const idxList = PERSONNEL.map((p,i)=>i).filter(i=>isOnboarding(PERSONNEL[i]));
   if(idxList.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🎓</div><h3>אין כרגע אף אחד בחודש הסתגלות</h3><p>חייל חדש שהצטרף ב-30 הימים האחרונים יופיע כאן אוטומטית</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('onboarding')}</div><h3>אין כרגע אף אחד בחודש הסתגלות</h3><p>חייל חדש שהצטרף ב-30 הימים האחרונים יופיע כאן אוטומטית</p></div>`;
     return;
   }
   const tpl = await getOnboardingTemplate();
@@ -13729,7 +13729,7 @@ async function openCustomFieldsTplModal(){
 async function renderCustomFieldsTplModal(){
   const tpl = await getCustomFieldsTpl();
   document.getElementById("cf-tpl-list").innerHTML = tpl.map((f,i)=>`
-    <div class="mgmt-row"><div class="mr-body"><b>${escapeHTML(f.label)}</b> <span class="role-mini">${f.type==="tag"?"🏷️ תגית":"📝 טקסט"}</span></div><button class="mr-del" onclick="removeCustomFieldTpl(${i})">✕</button></div>`).join("")
+    <div class="mgmt-row"><div class="mr-body"><b>${escapeHTML(f.label)}</b> <span class="role-mini">${f.type==="tag"?"🏷️ תגית":"📝 טקסט"}</span></div><button class="mr-del" onclick="removeCustomFieldTpl(${i})">${icon('close')}</button></div>`).join("")
     || `<div style="font-size:12px;color:var(--ink-3);padding:6px 0">אין שדות מותאמים עדיין</div>`;
 }
 async function addCustomFieldTpl(){
@@ -13808,7 +13808,7 @@ function renderCertsPageList(){
   if(!box) return;
 
   const trainingCard = `<div class="db-board-card" style="display:flex;align-items:center;gap:14px;margin-bottom:16px" onclick="closeMoreAnd('scr-training')">
-    <div class="db-board-ic" style="width:42px;height:42px;font-size:18px">📚</div>
+    <div class="db-board-ic" style="width:42px;height:42px;font-size:18px">${icon('library')}</div>
     <div style="flex:1">
       <b style="font-size:13.5px;display:block">חומרי הדרכה</b>
       <span style="font-size:11.5px;color:var(--ink-3)">חומרים שפורסמו ע"י אחראי ההדרכה הטייסתי — מצגות ומסמכים</span>
@@ -13821,7 +13821,7 @@ function renderCertsPageList(){
 
   if(certs.length===0){
     document.getElementById("certs-filter").innerHTML = "";
-    box.innerHTML = trainingCard + `<div class="empty-state"><div class="ic">🎓</div><h3>אין עדיין הסמכות</h3><p>${isCmdr?'הוסף הסמכה באמצעות "+ הסמכה"':'המפקד טרם הזין הסמכות'}</p></div>`;
+    box.innerHTML = trainingCard + `<div class="empty-state"><div class="ic">${icon('cert')}</div><h3>אין עדיין הסמכות</h3><p>${isCmdr?'הוסף הסמכה באמצעות "+ הסמכה"':'המפקד טרם הזין הסמכות'}</p></div>`;
     return;
   }
 
@@ -13850,7 +13850,7 @@ function renderCertsPageList(){
   const attentionCount = names.filter(needsAttention).length;
   document.getElementById("certs-filter").innerHTML = `
     <button class="fault-fbtn ${certsFilter==='all'?'active':''}" onclick="setCertsFilter('all')">הכל (${names.length})</button>
-    <button class="fault-fbtn ${certsFilter==='attention'?'active':''}" onclick="setCertsFilter('attention')">⚠️ דורש טיפול (${attentionCount})</button>`;
+    <button class="fault-fbtn ${certsFilter==='attention'?'active':''}" onclick="setCertsFilter('attention')">${icon('warning')} דורש טיפול (${attentionCount})</button>`;
 
   const q = (document.getElementById("certs-search")?.value || "").trim().toLowerCase();
   const groupFilter = document.getElementById("certs-group-filter")?.value || "all";
@@ -13865,17 +13865,17 @@ function renderCertsPageList(){
 
   // legend
   const legend = `<div class="cert-legend">
-    <span class="lvl-tag saf">🟢 סף</span>
-    <span class="lvl-tag raf">🔵 רף</span>
-    <span class="lvl-tag himush">🟠 חימוש</span>
-    <span class="lvl-tag elyon">🔴 עליון</span>
-    <span class="lvl-tag stage">🟣 שלבים</span>
-    <span class="lvl-tag pa">🟤 פ"א לאור ספרות</span>
-    <span class="lvl-tag safety">⚫ מערכות בטיחותיות</span>
+    <span class="lvl-tag saf">${dot('green')} סף</span>
+    <span class="lvl-tag raf">${dot('blue')} רף</span>
+    <span class="lvl-tag himush">${dot('orange')} חימוש</span>
+    <span class="lvl-tag elyon">${dot('red')} עליון</span>
+    <span class="lvl-tag stage">${dot('purple')} שלבים</span>
+    <span class="lvl-tag pa">${dot('brown')} פ"א לאור ספרות</span>
+    <span class="lvl-tag safety">${dot('black')} מערכות בטיחותיות</span>
   </div>`;
 
   if(shownNames.length===0){
-    box.innerHTML = trainingCard + legend + `<div class="empty-state"><div class="ic">🔍</div><h3>לא נמצאו תוצאות</h3><p>נסה חיפוש אחר או נקה את הסינון</p></div>`;
+    box.innerHTML = trainingCard + legend + `<div class="empty-state"><div class="ic">${icon('search')}</div><h3>לא נמצאו תוצאות</h3><p>נסה חיפוש אחר או נקה את הסינון</p></div>`;
     return;
   }
 
@@ -13902,7 +13902,7 @@ function certPersonCardHtml(name, byPerson, isCmdr){
       return `<div class="cert-chip-row ${specialOtherClass(certCleanName(c.name))}">
         <span class="cert-chip-name">${escapeHTML(certCleanName(c.name))}</span>
         ${expTag}
-        ${isCmdr?`<button class="cert-chip-del" onclick="event.stopPropagation();removeCertById('${c.id||''}',${c._idx})">✕</button>`:''}
+        ${isCmdr?`<button class="cert-chip-del" onclick="event.stopPropagation();removeCertById('${c.id||''}',${c._idx})">${icon('close')}</button>`:''}
       </div>`;
     }).join("");
     return `<div class="cert-detail-group">
@@ -14016,8 +14016,8 @@ function openToolAdd(){
   document.getElementById("tool-serial").value = "";
   document.getElementById("tool-expiry").value = "";
   document.getElementById("tool-in-repair").checked = false;
-  document.querySelector("#tool-modal h3").textContent = "🧰 הוספת כלי לחדר הכלים";
-  document.querySelector("#tool-modal .m-btn.primary").textContent = "➕ הוסף כלי";
+  document.querySelector("#tool-modal h3").innerHTML = emojiIcon("🧰 הוספת כלי לחדר הכלים");
+  document.querySelector("#tool-modal .m-btn.primary").innerHTML = emojiIcon("➕ הוסף כלי");
   document.getElementById("tool-modal").classList.add("open");
 }
 async function openToolEdit(id){
@@ -14030,8 +14030,8 @@ async function openToolEdit(id){
   document.getElementById("tool-serial").value = t.serial || "";
   document.getElementById("tool-expiry").value = t.expiry || "";
   document.getElementById("tool-in-repair").checked = !!t.inRepair;
-  document.querySelector("#tool-modal h3").textContent = "✏️ עריכת כלי";
-  document.querySelector("#tool-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.querySelector("#tool-modal h3").innerHTML = emojiIcon("✏️ עריכת כלי");
+  document.querySelector("#tool-modal .m-btn.primary").innerHTML = emojiIcon("💾 שמור שינויים");
   document.getElementById("tool-modal").classList.add("open");
 }
 async function addTool(){
@@ -14095,7 +14095,7 @@ async function renderToolsPage(){
   const isCmdr = isToolsResp;
   if(tools.length===0){
     document.getElementById("tools-search-box").style.display = "none";
-    box.innerHTML = `<div class="empty-state"><div class="ic">🧰</div><h3>אין עדיין כלים בחדר הכלים</h3><p>${isCmdr?'הוסף כלי באמצעות "+ כלי"':'המפקד או אחראי חדר הכלים טרם הזין כלים'}</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('toolbox')}</div><h3>אין עדיין כלים בחדר הכלים</h3><p>${isCmdr?'הוסף כלי באמצעות "+ כלי"':'המפקד או אחראי חדר הכלים טרם הזין כלים'}</p></div>`;
     return;
   }
   document.getElementById("tools-search-box").style.display = tools.length>=4 ? "flex" : "none";
@@ -14105,7 +14105,7 @@ async function renderToolsPage(){
   let banner = "";
   if(urgent.length>0){
     banner = `<div class="all-done-banner" style="display:block;background:linear-gradient(135deg,#7c2d12,#9a3412)">
-      ⚠️ ${urgent.length} כלים דורשים כיול תוך שבוע או שכבר פג תוקפם
+      ${icon('warning')} ${urgent.length} כלים דורשים כיול תוך שבוע או שכבר פג תוקפם
       <small>${urgent.map(t=>escapeHTML(t.name)).join(" · ")}</small>
     </div>`;
   }
@@ -14115,17 +14115,17 @@ async function renderToolsPage(){
   withStatus.sort((a,b)=> expKey(a)-expKey(b) || (a.name||"").localeCompare(b.name||"","he"));
   const filtered = q ? withStatus.filter(t=>(t.name||"").toLowerCase().includes(q) || (t.serial||"").toLowerCase().includes(q)) : withStatus;
   if(filtered.length===0){
-    box.innerHTML = banner + `<div class="empty-state"><div class="ic">🔍</div><h3>לא נמצאו כלים</h3><p>נסה חיפוש אחר לפי שם הכלי או המספר הסידורי.</p></div>`;
+    box.innerHTML = banner + `<div class="empty-state"><div class="ic">${icon('search')}</div><h3>לא נמצאו כלים</h3><p>נסה חיפוש אחר לפי שם הכלי או המספר הסידורי.</p></div>`;
     return;
   }
   const cards = filtered.map(t=>`
     <div class="cert-sum-card" style="cursor:default">
       <div class="cert-sum-head">
-        <div class="avatar" style="width:40px;height:40px;font-size:18px">🧰</div>
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">${icon('toolbox')}</div>
         <div class="cert-sum-name"><b>${escapeHTML(t.name)}</b>
-          <span>${t.serial?("מספר סידורי: "+escapeHTML(t.serial)):"ללא מספר סידורי"}${(t.expiry && !t.inRepair)?` · 🗓️ תוקף עד ${new Date(t.expiry+"T00:00:00").toLocaleDateString("he-IL")}`:""}</span></div>
+          <span>${t.serial?("מספר סידורי: "+escapeHTML(t.serial)):"ללא מספר סידורי"}${(t.expiry && !t.inRepair)?` · ${icon('calendar')} תוקף עד ${new Date(t.expiry+"T00:00:00").toLocaleDateString("he-IL")}`:""}</span></div>
         <span class="pill ${t.st.cls}" style="font-size:10px;white-space:nowrap">${t.st.tag}</span>
-        ${isCmdr?`<button class="cert-chip-edit" onclick="toggleToolInRepair('${t.id}')" title="${t.inRepair?'החזר למעקב תוקף':'סמן כבתיקון'}">${t.inRepair?'↩️':'🔧'}</button><button class="cert-chip-edit" onclick="openToolEdit('${t.id}')">✏️</button><button class="cert-chip-del" onclick="removeToolById('${t.id}')">✕</button>`:''}
+        ${isCmdr?`<button class="cert-chip-edit" onclick="toggleToolInRepair('${t.id}')" title="${t.inRepair?'החזר למעקב תוקף':'סמן כבתיקון'}">${t.inRepair?'↩️':'🔧'}</button><button class="cert-chip-edit" onclick="openToolEdit('${t.id}')">${icon('edit')}</button><button class="cert-chip-del" onclick="removeToolById('${t.id}')">${icon('close')}</button>`:''}
       </div>
     </div>`).join("");
   box.innerHTML = banner + cards;
@@ -14203,7 +14203,7 @@ async function renderVehiclesPage(){
     currentShed ? getShedLeasingVehicles(currentShed.id) : Promise.resolve([])
   ]);
   if(vehicles.length===0 && leasing.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🚙</div><h3>אין עדיין רכבים במעקב</h3><p>${isCmdr?'הוסף רכב באמצעות "+ רכב"':'המפקד או אחראי הרכבים טרם הזין רכבים'}</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('vehicle')}</div><h3>אין עדיין רכבים במעקב</h3><p>${isCmdr?'הוסף רכב באמצעות "+ רכב"':'המפקד או אחראי הרכבים טרם הזין רכבים'}</p></div>`;
     return;
   }
   const ownWithStatus = vehicles.map(v=>({...v, st: vehicleStatusDetailed(v, OWN_CHECKS), _checks: OWN_CHECKS}));
@@ -14215,14 +14215,14 @@ async function renderVehiclesPage(){
   let banner = "";
   if(urgent.length>0){
     banner = `<div class="all-done-banner" style="display:block;background:linear-gradient(135deg,#7c2d12,#9a3412)">
-      ⚠️ ${urgent.length} רכבים מתקרבים למועד טיפול/טסט או שכבר עברו אותו
+      ${icon('warning')} ${urgent.length} רכבים מתקרבים למועד טיפול/טסט או שכבר עברו אותו
       <small>${urgent.map(v=>escapeHTML(v.name)).join(" · ")}</small>
     </div>`;
   }
   const cards = all.map(v=>{
     const actions = v._leasing
-      ? `<span class="role-mini">🚗 ליסינג</span>` + (isCmdr ? `<button class="cert-chip-edit" onclick="openLeasingEditFull('${v.id}')">✏️</button>` : '')
-      : (isCmdr ? `<button class="cert-chip-edit" onclick="openShedVehicleFull('${v.id}')">✏️</button><button class="cert-chip-del" onclick="removeVehicleById('${v.id}')">✕</button>` : '');
+      ? `<span class="role-mini">${icon('vehicle')} ליסינג</span>` + (isCmdr ? `<button class="cert-chip-edit" onclick="openLeasingEditFull('${v.id}')">${icon('edit')}</button>` : '')
+      : (isCmdr ? `<button class="cert-chip-edit" onclick="openShedVehicleFull('${v.id}')">${icon('edit')}</button><button class="cert-chip-del" onclick="removeVehicleById('${v.id}')">${icon('close')}</button>` : '');
     return vehicleCardHtml(v, actions, v._checks);
   }).join("");
   box.innerHTML = banner + cards;
@@ -14244,7 +14244,7 @@ async function renderShedLicensesView(){
   if(!box || !currentShed) return;
   const licenses = (await getVoLicenses()).filter(l=>l.shedId===currentShed.id);
   if(licenses.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🪪</div><h3>אין עדיין רישיונות/הסמכות במעקב</h3><p>מנוהל ע"י מ״ע אחזקה</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('tag')}</div><h3>אין עדיין רישיונות/הסמכות במעקב</h3><p>מנוהל ע"י מ״ע אחזקה</p></div>`;
     return;
   }
   const withStatus = licenses.map(l=>({...l, st: licenseStatus(l)}));
@@ -14342,7 +14342,7 @@ async function renderVoOverview(){
 
   const dateStr = new Date().toLocaleDateString("he-IL",{weekday:"long", day:"numeric", month:"long"});
   const feedHtml = groups.length===0
-    ? `<div class="db-all-clear"><b>✅ הכל תקין</b><span>אין רכבים, טסטים, רישיונות, חומרים או כלים שדורשים תשומת לב כרגע</span></div>`
+    ? `<div class="db-all-clear"><b>${icon('checkcircle')} הכל תקין</b><span>אין רכבים, טסטים, רישיונות, חומרים או כלים שדורשים תשומת לב כרגע</span></div>`
     : `<div class="db-feed">${groups.map(f=>`
         <div class="db-feed-item ${f.cls}" onclick="voOverviewGo('${f.go}')">
           <div class="db-feed-ic">${f.ic}</div>
@@ -14368,7 +14368,7 @@ async function renderVoOverview(){
       <div class="db-hero-top">
         <div>
           <div class="db-eyebrow">כלל המסגרות · דרג א׳</div>
-          <div class="db-title">מ״ע אחזקה 🔧</div>
+          <div class="db-title">מ״ע אחזקה ${icon('maintenance')}</div>
           <div class="db-date">${dateStr}</div>
         </div>
         <div class="db-score">
@@ -14377,49 +14377,49 @@ async function renderVoOverview(){
         </div>
       </div>
       <div class="db-strip">
-        <div class="db-chip">🚙 <b>${totalVehicles}</b> רכבים במעקב</div>
-        <div class="db-chip">🪪 <b>${licValid+licSoon}</b> רישיונות בתוקף</div>
+        <div class="db-chip">${icon('vehicle')} <b>${totalVehicles}</b> רכבים במעקב</div>
+        <div class="db-chip">${icon('tag')} <b>${licValid+licSoon}</b> רישיונות בתוקף</div>
       </div>
     </div>
 
     <div class="cmd-section-title">${groups.length? '🔴 דורש טיפול עכשיו' : '✅ סטטוס כללי'}${groups.length?` <span style="background:var(--red-soft);color:var(--red);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${groups.length}</span>`:''}</div>
     ${feedHtml}
 
-    <div class="cmd-section-title">📊 תמונת מצב</div>
+    <div class="cmd-section-title">${icon('chart')} תמונת מצב</div>
     <div class="db-board">
       <div class="db-board-card" onclick="voOverviewGo('vehicles')">
-        <div class="db-board-top"><div class="db-board-ic">🚙</div><div class="db-board-dot ${vehExpired?'r':vehSoon?'y':'g'}"></div></div>
+        <div class="db-board-top"><div class="db-board-ic">${icon('vehicle')}</div><div class="db-board-dot ${vehExpired?'r':vehSoon?'y':'g'}"></div></div>
         <div class="db-board-num">${totalVehicles}</div>
         <div class="db-board-label">רכבים · ${vehExpired+vehSoon? (vehExpired+vehSoon)+' דורשים טיפול' : 'הכל בתוקף'}</div>
       </div>
       <div class="db-board-card" onclick="voOverviewGo('vehicles')">
-        <div class="db-board-top"><div class="db-board-ic">🛂</div><div class="db-board-dot ${testExpired?'r':testSoon?'y':'g'}"></div></div>
+        <div class="db-board-top"><div class="db-board-ic">${icon('vehicle')}</div><div class="db-board-dot ${testExpired?'r':testSoon?'y':'g'}"></div></div>
         <div class="db-board-num">${totalVehicles}</div>
         <div class="db-board-label">טסטים · ${testExpired+testSoon? (testExpired+testSoon)+' דורשים טיפול' : 'הכל בתוקף'}</div>
       </div>
       <div class="db-board-card" onclick="voOverviewGo('licenses')">
-        <div class="db-board-top"><div class="db-board-ic">🪪</div><div class="db-board-dot ${licExpired?'r':licSoon?'y':'g'}"></div></div>
+        <div class="db-board-top"><div class="db-board-ic">${icon('tag')}</div><div class="db-board-dot ${licExpired?'r':licSoon?'y':'g'}"></div></div>
         <div class="db-board-num">${licenses.length}</div>
         <div class="db-board-label">רישיונות · ${licExpired+licSoon? (licExpired+licSoon)+' דורשים טיפול' : 'הכל בתוקף'}</div>
       </div>
       <div class="db-board-card" onclick="voOverviewGo('morningcheck')">
-        <div class="db-board-top"><div class="db-board-ic">📋</div><div class="db-board-dot ${mcMarkedCount===0?'y':'g'}"></div></div>
+        <div class="db-board-top"><div class="db-board-ic">${icon('people')}</div><div class="db-board-dot ${mcMarkedCount===0?'y':'g'}"></div></div>
         <div class="db-board-num">${mcMarkedCount}</div>
         <div class="db-board-label">מסדר בוקר · ${mcMarkedCount===0? 'טרם בוצע היום' : 'סומנו עד כה'}</div>
       </div>
       <div class="db-board-card" onclick="voOverviewGo('materials')">
-        <div class="db-board-top"><div class="db-board-ic">📦</div><div class="db-board-dot ${matWaiting?'r':matOrdered?'y':'g'}"></div></div>
+        <div class="db-board-top"><div class="db-board-ic">${icon('package')}</div><div class="db-board-dot ${matWaiting?'r':matOrdered?'y':'g'}"></div></div>
         <div class="db-board-num">${materials.length}</div>
         <div class="db-board-label">הזמנות חומרים · ${matWaiting+matOrdered? (matWaiting+matOrdered)+' דורשות מעקב' : 'הכל התקבל'}</div>
       </div>
       <div class="db-board-card" onclick="voOverviewGo('tools')">
-        <div class="db-board-top"><div class="db-board-ic">🔧</div><div class="db-board-dot ${toolExpired?'r':toolSoon?'y':'g'}"></div></div>
+        <div class="db-board-top"><div class="db-board-ic">${icon('maintenance')}</div><div class="db-board-dot ${toolExpired?'r':toolSoon?'y':'g'}"></div></div>
         <div class="db-board-num">${motorTools.length}</div>
         <div class="db-board-label">כלים מוטוריים · ${toolExpired+toolSoon? (toolExpired+toolSoon)+' דורשים טיפול' : 'הכל בתוקף'}</div>
       </div>
     </div>
 
-    <div class="cmd-section-title">🏷️ לפי סככה</div>
+    <div class="cmd-section-title">${icon('tag')} לפי סככה</div>
     <div class="cmd-section-sub">לחיצה פותחת את רשימת הרכבים</div>
     ${shedHtml}
   `;
@@ -14491,7 +14491,7 @@ function renderMorningRollcallList(){
   const unmarked = total - MC_STATUSES.reduce((sum,s)=>sum+counts[s.key],0);
 
   const dateStr = new Date().toLocaleDateString("he-IL",{weekday:"long", day:"numeric", month:"long"});
-  document.getElementById("mc-title").textContent = "📋 מסדר בוקר · " + dateStr;
+  document.getElementById("mc-title").innerHTML = emojiIcon("📋 מסדר בוקר · " + dateStr);
   document.getElementById("mc-kpis").innerHTML = MC_STATUSES.map(s=>
     `<div class="kpi ${s.kpiClass}"><b>${counts[s.key]}</b><span>${s.label}</span></div>`
   ).join("") + `<div class="kpi warn"><b>${unmarked}</b><span>טרם סומנו</span></div>`;
@@ -14514,7 +14514,7 @@ function renderMorningRollcallList(){
       </div>`;
     }).join("");
   }
-  document.getElementById("mc-list").innerHTML = html || `<div class="empty-state"><div class="ic">🔍</div><h3>אין תוצאות</h3></div>`;
+  document.getElementById("mc-list").innerHTML = html || `<div class="empty-state"><div class="ic">${icon('search')}</div><h3>אין תוצאות</h3></div>`;
 }
 /* לחיצה חוזרת על אותו סטטוס מבטלת את הסימון (חזרה ל"טרם סומן") */
 async function setMorningRollcallMark(shedId, name, status){
@@ -14678,7 +14678,7 @@ function vehicleCardHtml(v, actionsHtml, checks){
   // הפילה/כפתורים/החץ מול האמצע שלה ויוצר רושם של "תצוגה שבורה"/חתוכה
   return `<div class="cert-sum-card" onclick="this.classList.toggle('open')">
     <div class="cert-sum-head" style="align-items:flex-start">
-      <div class="avatar" style="width:40px;height:40px;font-size:18px">🚙</div>
+      <div class="avatar" style="width:40px;height:40px;font-size:18px">${icon('vehicle')}</div>
       <div class="cert-sum-name"><b>${escapeHTML(v.name)}</b><span>${numberLine}</span>${monthlyCheck ? `<span style="display:block;margin-top:2px">${monthlyCheck.tag}</span>` : ""}</div>
       <span class="pill ${short.cls}" style="flex-shrink:0;max-width:130px;white-space:normal;line-height:1.3;text-align:center;display:inline-block">${escapeHTML(short.txt)}</span>
       <div onclick="event.stopPropagation()" style="display:flex;gap:6px">${actionsHtml}</div>
@@ -14687,7 +14687,7 @@ function vehicleCardHtml(v, actionsHtml, checks){
     <div class="cert-sum-detail"><div class="cert-sum-detail-inner">
       ${checkRows}
       ${metaRows}
-      ${v.notes ? `<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-top:2px">📝 ${escapeHTML(v.notes)}</div>` : ""}
+      ${v.notes ? `<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-top:2px">${icon('note')} ${escapeHTML(v.notes)}</div>` : ""}
       ${!checkRows && !metaRows && !v.notes ? `<div style="font-size:11.5px;color:var(--ink-3)">אין נתוני מעקב נוספים</div>` : ""}
     </div></div>
   </div>`;
@@ -14707,12 +14707,12 @@ async function renderVoVehicles(){
     const order = {r:0, y:1, g:2};
     withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
     html += `<div class="cmd-section-title">${shed.name}</div>` + withStatus.map(v=>vehicleCardHtml(v, `
-          <button class="cert-chip-edit" title="עדכון ק&quot;מ" onclick="openVoKmUpdate('${shed.id}','${v.id}')">📏</button>
-          <button class="cert-chip-edit" onclick="openVoVehicleEdit('${shed.id}','${v.id}')">✏️</button>
-          <button class="cert-chip-del" onclick="removeVoVehicle('${shed.id}','${v.id}')">✕</button>`, checks)).join("");
+          <button class="cert-chip-edit" title="עדכון ק&quot;מ" onclick="openVoKmUpdate('${shed.id}','${v.id}')">${icon('ruler')}</button>
+          <button class="cert-chip-edit" onclick="openVoVehicleEdit('${shed.id}','${v.id}')">${icon('edit')}</button>
+          <button class="cert-chip-del" onclick="removeVoVehicle('${shed.id}','${v.id}')">${icon('close')}</button>`, checks)).join("");
   }
   if(!anyVehicle){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🚙</div><h3>אין עדיין רכבים במעקב</h3><p>הוסף רכב באמצעות "הוספת רכב"</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('vehicle')}</div><h3>אין עדיין רכבים במעקב</h3><p>הוסף רכב באמצעות "הוספת רכב"</p></div>`;
     return;
   }
   box.innerHTML = html;
@@ -14777,8 +14777,8 @@ async function openLeasingEditFull(id){
   document.getElementById("vo-vehicle-shed").innerHTML = leasingShedOptions(v.shedId||"");
   document.getElementById("vo-vehicle-bank-pick").innerHTML = vehicleBankOptions();
   fillVoVehicleForm(v);
-  document.getElementById("vo-vehicle-title").textContent = "✏️ עריכת רכב ליסינג — " + escapeHTML(v.holder||"");
-  document.querySelector("#vo-vehicle-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.getElementById("vo-vehicle-title").innerHTML = emojiIcon("✏️ עריכת רכב ליסינג — " + escapeHTML(v.holder||""));
+  document.querySelector("#vo-vehicle-modal .m-btn.primary").innerHTML = emojiIcon("💾 שמור שינויים");
   document.getElementById("vo-vehicle-modal").classList.add("open");
 }
 async function openShedVehicleFull(id){
@@ -14803,8 +14803,8 @@ function openVoVehicleAdd(){
   document.getElementById("vo-vehicle-shed").innerHTML = voShedOptions();
   document.getElementById("vo-vehicle-bank-pick").innerHTML = vehicleBankOptions();
   fillVoVehicleForm(null);
-  document.getElementById("vo-vehicle-title").textContent = "🚙 הוספת רכב למעקב";
-  document.querySelector("#vo-vehicle-modal .m-btn.primary").textContent = "➕ הוסף רכב";
+  document.getElementById("vo-vehicle-title").innerHTML = emojiIcon("🚙 הוספת רכב למעקב");
+  document.querySelector("#vo-vehicle-modal .m-btn.primary").innerHTML = emojiIcon("➕ הוסף רכב");
   document.getElementById("vo-vehicle-modal").classList.add("open");
 }
 async function openVoVehicleEdit(shedId, id){
@@ -14817,8 +14817,8 @@ async function openVoVehicleEdit(shedId, id){
   document.getElementById("vo-vehicle-shed").innerHTML = voShedOptions(shedId);
   document.getElementById("vo-vehicle-bank-pick").innerHTML = vehicleBankOptions();
   fillVoVehicleForm(v);
-  document.getElementById("vo-vehicle-title").textContent = "✏️ עריכת רכב";
-  document.querySelector("#vo-vehicle-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.getElementById("vo-vehicle-title").innerHTML = emojiIcon("✏️ עריכת רכב");
+  document.querySelector("#vo-vehicle-modal .m-btn.primary").innerHTML = emojiIcon("💾 שמור שינויים");
   document.getElementById("vo-vehicle-modal").classList.add("open");
 }
 async function saveVoVehicle(){
@@ -14925,8 +14925,8 @@ function fillMaintVehicleForm(v){
 function openMaintVehicleAdd(){
   maintVehicleEditId = null;
   fillMaintVehicleForm(null);
-  document.getElementById("maint-vehicle-title").textContent = "🔧 הוספת רכב צ'";
-  document.querySelector("#maint-vehicle-modal .m-btn.primary").textContent = "➕ הוסף רכב";
+  document.getElementById("maint-vehicle-title").innerHTML = emojiIcon("🔧 הוספת רכב צ'");
+  document.querySelector("#maint-vehicle-modal .m-btn.primary").innerHTML = emojiIcon("➕ הוסף רכב");
   document.getElementById("maint-vehicle-modal").classList.add("open");
 }
 async function openMaintVehicleEdit(id){
@@ -14934,8 +14934,8 @@ async function openMaintVehicleEdit(id){
   if(!v) return;
   maintVehicleEditId = id;
   fillMaintVehicleForm(v);
-  document.getElementById("maint-vehicle-title").textContent = "✏️ עריכת רכב צ'";
-  document.querySelector("#maint-vehicle-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.getElementById("maint-vehicle-title").innerHTML = emojiIcon("✏️ עריכת רכב צ'");
+  document.querySelector("#maint-vehicle-modal .m-btn.primary").innerHTML = emojiIcon("💾 שמור שינויים");
   document.getElementById("maint-vehicle-modal").classList.add("open");
 }
 async function saveMaintVehicle(){
@@ -14973,7 +14973,7 @@ async function renderMaintVehicles(){
   if(!box) return;
   const vehicles = await getMaintVehicles();
   if(vehicles.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🔧</div><h3>אין עדיין רכבי צ' במעקב</h3><p>רכבים שחורים ושכורים — לא משוייכים לסככה ספציפית</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('maintenance')}</div><h3>אין עדיין רכבי צ' במעקב</h3><p>רכבים שחורים ושכורים — לא משוייכים לסככה ספציפית</p></div>`;
     return;
   }
   const checks = ["nextService","monthlyService","annualService","testDate","kmService"];
@@ -14981,8 +14981,8 @@ async function renderMaintVehicles(){
   const order = {r:0, y:1, g:2};
   withStatus.sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
   box.innerHTML = withStatus.map(v=>vehicleCardHtml(v, `
-      <button class="cert-chip-edit" onclick="openMaintVehicleEdit('${v.id}')">✏️</button>
-      <button class="cert-chip-del" onclick="removeMaintVehicle('${v.id}')">✕</button>`, checks)).join("");
+      <button class="cert-chip-edit" onclick="openMaintVehicleEdit('${v.id}')">${icon('edit')}</button>
+      <button class="cert-chip-del" onclick="removeMaintVehicle('${v.id}')">${icon('close')}</button>`, checks)).join("");
 }
 
 /* ===== רכבי ליסינג — רשימה גלובלית, משוייכת לפי שם המחזיק לסככה (אם קיים ברשימת הצוות שלה) ===== */
@@ -15019,8 +15019,8 @@ function fillLeasingVehicleForm(v){
 function openLeasingVehicleAdd(){
   leasingVehicleEditId = null;
   fillLeasingVehicleForm(null);
-  document.getElementById("leasing-vehicle-title").textContent = "🚗 הוספת רכב ליסינג";
-  document.querySelector("#leasing-vehicle-modal .m-btn.primary").textContent = "➕ הוסף רכב";
+  document.getElementById("leasing-vehicle-title").innerHTML = emojiIcon("🚗 הוספת רכב ליסינג");
+  document.querySelector("#leasing-vehicle-modal .m-btn.primary").innerHTML = emojiIcon("➕ הוסף רכב");
   document.getElementById("leasing-vehicle-modal").classList.add("open");
 }
 async function openLeasingVehicleEdit(id){
@@ -15028,8 +15028,8 @@ async function openLeasingVehicleEdit(id){
   if(!v) return;
   leasingVehicleEditId = id;
   fillLeasingVehicleForm(v);
-  document.getElementById("leasing-vehicle-title").textContent = "✏️ עריכת רכב ליסינג";
-  document.querySelector("#leasing-vehicle-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.getElementById("leasing-vehicle-title").innerHTML = emojiIcon("✏️ עריכת רכב ליסינג");
+  document.querySelector("#leasing-vehicle-modal .m-btn.primary").innerHTML = emojiIcon("💾 שמור שינויים");
   document.getElementById("leasing-vehicle-modal").classList.add("open");
 }
 async function saveLeasingVehicle(){
@@ -15139,7 +15139,7 @@ function previewLeasingImport(){
   }
   btn.disabled = false;
   box.innerHTML =
-    `<div style="background:var(--green-soft);color:var(--green);border-radius:10px;padding:9px 11px;font-weight:800">✓ זוהו ${rows.length} רכבים</div>` +
+    `<div style="background:var(--green-soft);color:var(--green);border-radius:10px;padding:9px 11px;font-weight:800">${icon('check')} זוהו ${rows.length} רכבים</div>` +
     `<div style="max-height:130px;overflow-y:auto;margin-top:6px;color:var(--ink-3);font-size:11.5px;line-height:1.8">` +
     rows.map(r=>`• ${escapeHTML(r.holder)} — ${escapeHTML(r.name)} (${escapeHTML(r.number)})`).join("<br>") + `</div>`;
 }
@@ -15167,7 +15167,7 @@ async function renderLeasingVehicles(){
   box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3)">⏳ טוען…</div>';
   const vehicles = await getLeasingVehicles();
   if(vehicles.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🚗</div><h3>אין עדיין רכבי ליסינג במעקב</h3><p>הוסף רכב לפי שם המחזיק</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('vehicle')}</div><h3>אין עדיין רכבי ליסינג במעקב</h3><p>הוסף רכב לפי שם המחזיק</p></div>`;
     return;
   }
   // שיוך כל רכב לסככה (אם המחזיק קיים ברשימת צוות כלשהי), במקביל
@@ -15188,8 +15188,8 @@ async function renderLeasingVehicles(){
     const list = groups[shedName].map(v=>({...v, st: vehicleStatusDetailed(v, checks)})).sort((a,b)=> order[a.st.cls]-order[b.st.cls]);
     html += `<div class="cmd-section-title">${escapeHTML(shedName)}</div>` + list.map(v=>vehicleCardHtml(
       {...v, name: v.name + " · " + v.holder},
-      `<button class="cert-chip-edit" onclick="openLeasingVehicleEdit('${v.id}')">✏️</button>
-       <button class="cert-chip-del" onclick="removeLeasingVehicle('${v.id}')">✕</button>`,
+      `<button class="cert-chip-edit" onclick="openLeasingVehicleEdit('${v.id}')">${icon('edit')}</button>
+       <button class="cert-chip-del" onclick="removeLeasingVehicle('${v.id}')">${icon('close')}</button>`,
       checks
     )).join("");
   });
@@ -15240,10 +15240,10 @@ function groupLicensesByTypeHtml(withStatus, showShedAndActions, sortMode){
       list.map(l=>`
       <div class="cert-sum-card" style="cursor:default">
         <div class="cert-sum-head">
-          <div class="avatar" style="width:40px;height:40px;font-size:18px">🪪</div>
+          <div class="avatar" style="width:40px;height:40px;font-size:18px">${icon('tag')}</div>
           <div class="cert-sum-name"><b>${escapeHTML(l.person)}</b>${showShedAndActions?`<span>${escapeHTML(shedName(l.shedId))}</span>`:''}</div>
           <span class="pill ${l.st.cls}" style="font-size:10px;white-space:nowrap">${l.st.tag}</span>
-          ${showShedAndActions?`<button class="cert-chip-edit" onclick="openVoLicenseEdit('${l.id}')">✏️</button><button class="cert-chip-del" onclick="removeVoLicense('${l.id}')">✕</button>`:''}
+          ${showShedAndActions?`<button class="cert-chip-edit" onclick="openVoLicenseEdit('${l.id}')">${icon('edit')}</button><button class="cert-chip-del" onclick="removeVoLicense('${l.id}')">${icon('close')}</button>`:''}
         </div>
       </div>`).join("");
   });
@@ -15277,14 +15277,14 @@ function groupLicensesByShedHtml(withStatus, showActions, sortMode){
   Object.keys(byShed).sort((a,b)=> shedOrder(a)-shedOrder(b)).forEach(sid=>{
     const people = Object.keys(byShed[sid]).map(name=>({name, list:byShed[sid][name]})).sort(sortPeople);
     const totalLic = people.reduce((n,p)=>n+p.list.length,0);
-    html += `<div class="cmd-section-title">🏠 ${escapeHTML(shedName(sid))} <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${people.length} שמות · ${totalLic}</span></div>`;
+    html += `<div class="cmd-section-title">${icon('home')} ${escapeHTML(shedName(sid))} <span style="background:var(--line);color:var(--ink-3);font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px">${people.length} שמות · ${totalLic}</span></div>`;
     html += people.map(p=>{
       const w = worst(p.list);
       const rows = p.list.slice().sort((a,b)=>(a.expiry||"9999-99-99").localeCompare(b.expiry||"9999-99-99")).map(l=>`
         <div class="cert-chip-row">
           <span class="cert-chip-name">${licenseTypeEmoji(l.type)} ${escapeHTML(l.type)}</span>
           <span class="pill ${l.st.cls}" style="font-size:9px">${l.st.tag}</span>
-          ${showActions?`<button class="cert-chip-edit" onclick="event.stopPropagation();openVoLicenseEdit('${l.id}')">✏️</button><button class="cert-chip-del" onclick="event.stopPropagation();removeVoLicense('${l.id}')">✕</button>`:''}
+          ${showActions?`<button class="cert-chip-edit" onclick="event.stopPropagation();openVoLicenseEdit('${l.id}')">${icon('edit')}</button><button class="cert-chip-del" onclick="event.stopPropagation();removeVoLicense('${l.id}')">${icon('close')}</button>`:''}
         </div>`).join("");
       return `<div class="cert-sum-card" onclick="this.classList.toggle('open')">
         <div class="cert-sum-head">
@@ -15325,8 +15325,8 @@ async function openVoLicenseAdd(){
   document.getElementById("vo-license-bank-pick").innerHTML = licenseBankOptions();
   document.getElementById("vo-license-type").value = "";
   document.getElementById("vo-license-expiry").value = "";
-  document.getElementById("vo-license-title").textContent = "🪪 הוספת רישיון/הסמכה";
-  document.querySelector("#vo-license-modal .m-btn.primary").textContent = "➕ הוסף";
+  document.getElementById("vo-license-title").innerHTML = emojiIcon("🪪 הוספת רישיון/הסמכה");
+  document.querySelector("#vo-license-modal .m-btn.primary").innerHTML = emojiIcon("➕ הוסף");
   document.getElementById("vo-license-modal").classList.add("open");
 }
 async function saveVoLicense(){
@@ -15360,8 +15360,8 @@ async function openVoLicenseEdit(id){
   document.getElementById("vo-license-bank-pick").innerHTML = licenseBankOptions();
   document.getElementById("vo-license-type").value = l.type;
   document.getElementById("vo-license-expiry").value = l.expiry || "";
-  document.getElementById("vo-license-title").textContent = "✏️ עריכת רישיון";
-  document.querySelector("#vo-license-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.getElementById("vo-license-title").innerHTML = emojiIcon("✏️ עריכת רישיון");
+  document.querySelector("#vo-license-modal .m-btn.primary").innerHTML = emojiIcon("💾 שמור שינויים");
   document.getElementById("vo-license-modal").classList.add("open");
 }
 async function removeVoLicense(id){
@@ -15377,7 +15377,7 @@ async function renderVoLicenses(){
   if(!box) return;
   const licenses = await getVoLicenses();
   if(licenses.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🪪</div><h3>אין עדיין רישיונות במעקב</h3><p>הוסף רישיון באמצעות "הוספת רישיון/הסמכה"</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('tag')}</div><h3>אין עדיין רישיונות במעקב</h3><p>הוסף רישיון באמצעות "הוספת רישיון/הסמכה"</p></div>`;
     return;
   }
   const shedSel = document.getElementById("vo-license-shed-filter");
@@ -15410,7 +15410,7 @@ async function renderVoLicenses(){
   if(typeFilter!=="all") withStatus = withStatus.filter(l=>l.type===typeFilter);
 
   if(withStatus.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🔍</div><h3>אין תוצאות</h3><p>נסה לשנות את החיפוש או הסינון</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('search')}</div><h3>אין תוצאות</h3><p>נסה לשנות את החיפוש או הסינון</p></div>`;
     return;
   }
   const groupMode = document.getElementById("vo-license-group")?.value || "shed";
@@ -15445,8 +15445,8 @@ function openMaterialAdd(){
   document.getElementById("material-qty").value = "";
   document.getElementById("material-status").value = "ממתין להזמנה";
   document.getElementById("material-notes").value = "";
-  document.getElementById("material-title").textContent = "📦 הוספת הזמנת חומר";
-  document.getElementById("material-save-btn").textContent = "➕ הוסף";
+  document.getElementById("material-title").innerHTML = emojiIcon("📦 הוספת הזמנת חומר");
+  document.getElementById("material-save-btn").innerHTML = emojiIcon("➕ הוסף");
   document.getElementById("material-modal").classList.add("open");
 }
 async function openMaterialEdit(id){
@@ -15457,8 +15457,8 @@ async function openMaterialEdit(id){
   document.getElementById("material-qty").value = m.qty ?? "";
   document.getElementById("material-status").value = m.status || "ממתין להזמנה";
   document.getElementById("material-notes").value = m.notes || "";
-  document.getElementById("material-title").textContent = "✏️ עריכת הזמנת חומר";
-  document.getElementById("material-save-btn").textContent = "💾 שמור שינויים";
+  document.getElementById("material-title").innerHTML = emojiIcon("✏️ עריכת הזמנת חומר");
+  document.getElementById("material-save-btn").innerHTML = emojiIcon("💾 שמור שינויים");
   document.getElementById("material-modal").classList.add("open");
 }
 async function saveMaterial(){
@@ -15494,7 +15494,7 @@ async function renderMaterials(){
   if(!box) return;
   const materials = await getMaterials();
   if(materials.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">📦</div><h3>אין עדיין הזמנות חומרים</h3><p>הוסף הזמנה באמצעות "הוספת הזמנת חומר"</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('package')}</div><h3>אין עדיין הזמנות חומרים</h3><p>הוסף הזמנה באמצעות "הוספת הזמנת חומר"</p></div>`;
     return;
   }
   const order = {r:0, y:1, g:2};
@@ -15502,11 +15502,11 @@ async function renderMaterials(){
   box.innerHTML = sorted.map(m=>`
     <div class="cert-sum-card" style="cursor:default">
       <div class="cert-sum-head">
-        <div class="avatar" style="width:40px;height:40px;font-size:18px">📦</div>
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">${icon('package')}</div>
         <div class="cert-sum-name"><b>${escapeHTML(m.name)}</b><span>${m.qty!=null?("כמות: "+m.qty):"ללא כמות"}${m.notes?(" · "+escapeHTML(m.notes)):""}</span></div>
         <span class="pill ${materialStatusClass(m.status)}" style="font-size:10px;white-space:nowrap">${escapeHTML(m.status)}</span>
-        <button class="cert-chip-edit" onclick="openMaterialEdit('${m.id}')">✏️</button>
-        <button class="cert-chip-del" onclick="removeMaterial('${m.id}')">✕</button>
+        <button class="cert-chip-edit" onclick="openMaterialEdit('${m.id}')">${icon('edit')}</button>
+        <button class="cert-chip-del" onclick="removeMaterial('${m.id}')">${icon('close')}</button>
       </div>
     </div>`).join("");
 }
@@ -15529,8 +15529,8 @@ function openMotorToolAdd(){
   document.getElementById("motor-tool-serial").value = "";
   document.getElementById("motor-tool-next-check").value = "";
   document.getElementById("motor-tool-notes").value = "";
-  document.getElementById("motor-tool-title").textContent = "🔧 הוספת כלי מוטורי";
-  document.getElementById("motor-tool-save-btn").textContent = "➕ הוסף";
+  document.getElementById("motor-tool-title").innerHTML = emojiIcon("🔧 הוספת כלי מוטורי");
+  document.getElementById("motor-tool-save-btn").innerHTML = emojiIcon("➕ הוסף");
   document.getElementById("motor-tool-modal").classList.add("open");
 }
 async function openMotorToolEdit(id){
@@ -15541,8 +15541,8 @@ async function openMotorToolEdit(id){
   document.getElementById("motor-tool-serial").value = t.serial || "";
   document.getElementById("motor-tool-next-check").value = t.nextCheck || "";
   document.getElementById("motor-tool-notes").value = t.notes || "";
-  document.getElementById("motor-tool-title").textContent = "✏️ עריכת כלי מוטורי";
-  document.getElementById("motor-tool-save-btn").textContent = "💾 שמור שינויים";
+  document.getElementById("motor-tool-title").innerHTML = emojiIcon("✏️ עריכת כלי מוטורי");
+  document.getElementById("motor-tool-save-btn").innerHTML = emojiIcon("💾 שמור שינויים");
   document.getElementById("motor-tool-modal").classList.add("open");
 }
 async function saveMotorTool(){
@@ -15578,7 +15578,7 @@ async function renderMotorTools(){
   if(!box) return;
   const tools = await getMotorTools();
   if(tools.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🔧</div><h3>אין עדיין כלים מוטוריים במעקב</h3><p>הוסף כלי באמצעות "הוספת כלי מוטורי"</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('maintenance')}</div><h3>אין עדיין כלים מוטוריים במעקב</h3><p>הוסף כלי באמצעות "הוספת כלי מוטורי"</p></div>`;
     return;
   }
   const withStatus = tools.map(t=>({...t, st: motorToolStatus(t)}));
@@ -15587,11 +15587,11 @@ async function renderMotorTools(){
   box.innerHTML = withStatus.map(t=>`
     <div class="cert-sum-card" style="cursor:default">
       <div class="cert-sum-head">
-        <div class="avatar" style="width:40px;height:40px;font-size:18px">🔧</div>
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">${icon('maintenance')}</div>
         <div class="cert-sum-name"><b>${escapeHTML(t.name)}</b><span>${t.serial?("מספר סידורי "+escapeHTML(t.serial)):"ללא מספר סידורי"}${t.notes?(" · "+escapeHTML(t.notes)):""}</span></div>
         <span class="pill ${t.st.cls}" style="font-size:10px;white-space:nowrap">${t.st.tag}</span>
-        <button class="cert-chip-edit" onclick="openMotorToolEdit('${t.id}')">✏️</button>
-        <button class="cert-chip-del" onclick="removeMotorTool('${t.id}')">✕</button>
+        <button class="cert-chip-edit" onclick="openMotorToolEdit('${t.id}')">${icon('edit')}</button>
+        <button class="cert-chip-del" onclick="removeMotorTool('${t.id}')">${icon('close')}</button>
       </div>
     </div>`).join("");
 }
@@ -15623,8 +15623,8 @@ function openBoAllocationAdd(){
   document.getElementById("bo-alloc-amount").value = "";
   document.getElementById("bo-alloc-date").value = todayKey();
   document.getElementById("bo-alloc-note").value = "";
-  document.getElementById("bo-allocation-title").textContent = "💵 הוספת הקצאה";
-  document.querySelector("#bo-allocation-modal .m-btn.primary").textContent = "➕ הוסף הקצאה";
+  document.getElementById("bo-allocation-title").innerHTML = emojiIcon("💵 הוספת הקצאה");
+  document.querySelector("#bo-allocation-modal .m-btn.primary").innerHTML = emojiIcon("➕ הוסף הקצאה");
   document.getElementById("bo-allocation-modal").classList.add("open");
 }
 async function openBoAllocationEdit(id){
@@ -15636,8 +15636,8 @@ async function openBoAllocationEdit(id){
   document.getElementById("bo-alloc-amount").value = a.amount;
   document.getElementById("bo-alloc-date").value = a.date || "";
   document.getElementById("bo-alloc-note").value = a.note || "";
-  document.getElementById("bo-allocation-title").textContent = "✏️ עריכת הקצאה";
-  document.querySelector("#bo-allocation-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.getElementById("bo-allocation-title").innerHTML = emojiIcon("✏️ עריכת הקצאה");
+  document.querySelector("#bo-allocation-modal .m-btn.primary").innerHTML = emojiIcon("💾 שמור שינויים");
   document.getElementById("bo-allocation-modal").classList.add("open");
 }
 async function saveBoAllocation(){
@@ -15674,17 +15674,17 @@ async function renderBoAllocations(){
   if(!box) return;
   const list = await getBoAllocations();
   if(list.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">💵</div><h3>אין עדיין הקצאות</h3><p>הוסף הקצאה באמצעות "הוספת הקצאה"</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('budget')}</div><h3>אין עדיין הקצאות</h3><p>הוסף הקצאה באמצעות "הוספת הקצאה"</p></div>`;
     return;
   }
   const sorted = [...list].sort((a,b)=> (b.date||"").localeCompare(a.date||""));
   box.innerHTML = sorted.map(a=>`
     <div class="cert-sum-card" style="cursor:default">
       <div class="cert-sum-head">
-        <div class="avatar" style="width:40px;height:40px;font-size:18px">💵</div>
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">${icon('budget')}</div>
         <div class="cert-sum-name"><b>${escapeHTML(a.source)}</b><span>${fmtILS(a.amount)}${a.date?(" · "+a.date):""}${a.note?(" · "+escapeHTML(a.note)):""}</span></div>
-        <button class="cert-chip-edit" onclick="openBoAllocationEdit('${a.id}')">✏️</button>
-        <button class="cert-chip-del" onclick="removeBoAllocation('${a.id}')">✕</button>
+        <button class="cert-chip-edit" onclick="openBoAllocationEdit('${a.id}')">${icon('edit')}</button>
+        <button class="cert-chip-del" onclick="removeBoAllocation('${a.id}')">${icon('close')}</button>
       </div>
     </div>`).join("");
 }
@@ -15714,8 +15714,8 @@ async function openBoExpenseAdd(){
   document.getElementById("bo-exp-amount").value = "";
   document.getElementById("bo-exp-date").value = todayKey();
   document.getElementById("bo-exp-status").value = "pending";
-  document.getElementById("bo-expense-title").textContent = "🧾 הוספת הוצאה";
-  document.querySelector("#bo-expense-modal .m-btn.primary").textContent = "➕ הוסף הוצאה";
+  document.getElementById("bo-expense-title").innerHTML = emojiIcon("🧾 הוספת הוצאה");
+  document.querySelector("#bo-expense-modal .m-btn.primary").innerHTML = emojiIcon("➕ הוסף הוצאה");
   document.getElementById("bo-expense-modal").classList.add("open");
 }
 async function openBoExpenseEdit(id){
@@ -15730,8 +15730,8 @@ async function openBoExpenseEdit(id){
   document.getElementById("bo-exp-amount").value = e.amount;
   document.getElementById("bo-exp-date").value = e.date || "";
   document.getElementById("bo-exp-status").value = e.status || "pending";
-  document.getElementById("bo-expense-title").textContent = "✏️ עריכת הוצאה";
-  document.querySelector("#bo-expense-modal .m-btn.primary").textContent = "💾 שמור שינויים";
+  document.getElementById("bo-expense-title").innerHTML = emojiIcon("✏️ עריכת הוצאה");
+  document.querySelector("#bo-expense-modal .m-btn.primary").innerHTML = emojiIcon("💾 שמור שינויים");
   document.getElementById("bo-expense-modal").classList.add("open");
 }
 async function saveBoExpense(){
@@ -15785,24 +15785,24 @@ async function renderBoExpenses(){
   if(!box) return;
   const list = await getBoExpenses();
   if(list.length===0){
-    box.innerHTML = `<div class="empty-state"><div class="ic">🧾</div><h3>אין עדיין הוצאות</h3><p>הוסף הוצאה באמצעות "הוספת הוצאה"</p></div>`;
+    box.innerHTML = `<div class="empty-state"><div class="ic">${icon('budget')}</div><h3>אין עדיין הוצאות</h3><p>הוסף הוצאה באמצעות "הוספת הוצאה"</p></div>`;
     return;
   }
   const sorted = [...list].sort((a,b)=> (b.date||"").localeCompare(a.date||""));
   box.innerHTML = sorted.map(e=>{
     const st = expenseStatusPill(e.status);
     const approveActions = e.status==="pending"
-      ? `<button class="cert-chip-edit" title="אישור" onclick="setBoExpenseStatus('${e.id}','approved')">✓</button><button class="cert-chip-edit" title="דחייה" onclick="setBoExpenseStatus('${e.id}','rejected')">✕</button>`
+      ? `<button class="cert-chip-edit" title="אישור" onclick="setBoExpenseStatus('${e.id}','approved')">${icon('check')}</button><button class="cert-chip-edit" title="דחייה" onclick="setBoExpenseStatus('${e.id}','rejected')">${icon('close')}</button>`
       : "";
     return `
     <div class="cert-sum-card" style="cursor:default">
       <div class="cert-sum-head">
-        <div class="avatar" style="width:40px;height:40px;font-size:18px">🧾</div>
+        <div class="avatar" style="width:40px;height:40px;font-size:18px">${icon('budget')}</div>
         <div class="cert-sum-name"><b>${escapeHTML(e.description)}</b><span>${fmtILS(e.amount)}${e.category?(" · "+escapeHTML(e.category)):""}${e.source?(" · "+escapeHTML(e.source)):""}${e.date?(" · "+e.date):""}</span></div>
         <span class="pill ${st.cls}" style="font-size:10px;white-space:nowrap">${st.tag}</span>
         ${approveActions}
-        <button class="cert-chip-edit" onclick="openBoExpenseEdit('${e.id}')">✏️</button>
-        <button class="cert-chip-del" onclick="removeBoExpense('${e.id}')">✕</button>
+        <button class="cert-chip-edit" onclick="openBoExpenseEdit('${e.id}')">${icon('edit')}</button>
+        <button class="cert-chip-del" onclick="removeBoExpense('${e.id}')">${icon('close')}</button>
       </div>
     </div>`;
   }).join("");
@@ -15830,13 +15830,13 @@ async function renderBoOverview(){
   // pending approvals feed
   const pendingSorted = [...pending].sort((a,b)=> (b.date||"").localeCompare(a.date||""));
   const feedHtml = pendingSorted.length===0
-    ? `<div class="db-all-clear"><b>✅ אין הוצאות ממתינות</b><span>כל ההוצאות טופלו</span></div>`
+    ? `<div class="db-all-clear"><b>${icon('checkcircle')} אין הוצאות ממתינות</b><span>כל ההוצאות טופלו</span></div>`
     : `<div class="db-feed">${pendingSorted.map(e=>`
         <div class="db-feed-item y">
-          <div class="db-feed-ic">🧾</div>
+          <div class="db-feed-ic">${icon('budget')}</div>
           <div class="db-feed-body"><b>${escapeHTML(e.description)}</b><span>${fmtILS(e.amount)}${e.date?(" · "+e.date):""}</span></div>
-          <button class="cert-chip-edit" title="אישור" onclick="setBoExpenseStatus('${e.id}','approved')">✓</button>
-          <button class="cert-chip-edit" title="דחייה" onclick="setBoExpenseStatus('${e.id}','rejected')">✕</button>
+          <button class="cert-chip-edit" title="אישור" onclick="setBoExpenseStatus('${e.id}','approved')">${icon('check')}</button>
+          <button class="cert-chip-edit" title="דחייה" onclick="setBoExpenseStatus('${e.id}','rejected')">${icon('close')}</button>
         </div>`).join("")}</div>`;
 
   // recent history (all statuses)
@@ -15846,7 +15846,7 @@ async function renderBoOverview(){
       const st = expenseStatusPill(e.status);
       return `<div class="cert-sum-card clickable" style="cursor:pointer" onclick="boTab('expenses')">
         <div class="cert-sum-head">
-          <div class="avatar" style="width:36px;height:36px;font-size:15px">🧾</div>
+          <div class="avatar" style="width:36px;height:36px;font-size:15px">${icon('budget')}</div>
           <div class="cert-sum-name"><b>${escapeHTML(e.description)}</b><span>${e.source?escapeHTML(e.source)+" · ":""}${e.date||""}</span></div>
           <span class="pill ${st.cls}" style="font-size:10px;white-space:nowrap">${fmtILS(e.amount)} · ${st.tag}</span>
         </div>
@@ -15882,7 +15882,7 @@ async function renderBoOverview(){
       <div class="db-hero-top">
         <div>
           <div class="db-eyebrow">תקציב טייסתי כולל · דרג א׳</div>
-          <div class="db-title">אחראי תקציבים 💰</div>
+          <div class="db-title">אחראי תקציבים ${icon('budget')}</div>
           <div class="db-date">${dateStr}</div>
         </div>
         <div class="db-score">
@@ -15902,8 +15902,8 @@ async function renderBoOverview(){
         </div>
       </div>
       <div class="bo-qa-row" style="margin-top:12px">
-        <div class="bo-qa-btn" onclick="openBoExpenseAdd()"><span class="a-ic">➕</span><span>הוצאה חדשה</span></div>
-        <div class="bo-qa-btn" onclick="openBoAllocationAdd()"><span class="a-ic">💵</span><span>הקצאה חדשה</span></div>
+        <div class="bo-qa-btn" onclick="openBoExpenseAdd()"><span class="a-ic">${icon('plus')}</span><span>הוצאה חדשה</span></div>
+        <div class="bo-qa-btn" onclick="openBoAllocationAdd()"><span class="a-ic">${icon('budget')}</span><span>הקצאה חדשה</span></div>
       </div>
     </div>
 
@@ -15913,8 +15913,8 @@ async function renderBoOverview(){
     <div class="cmd-section-title">🕓 היסטוריית הוצאות <span style="font-weight:400;color:var(--red);font-size:10.5px;cursor:pointer" onclick="boTab('expenses')">כל ההוצאות ›</span></div>
     ${histHtml}
 
-    ${bySourceHtml? `<div class="cmd-section-title">💰 לפי מקור תקציב</div>${bySourceHtml}` : ""}
-    ${byCatHtml? `<div class="cmd-section-title">🏷️ לפי קטגוריה</div>${byCatHtml}` : ""}
+    ${bySourceHtml? `<div class="cmd-section-title">${icon('budget')} לפי מקור תקציב</div>${bySourceHtml}` : ""}
+    ${byCatHtml? `<div class="cmd-section-title">${icon('tag')} לפי קטגוריה</div>${byCatHtml}` : ""}
   `;
 }
 
@@ -15931,7 +15931,7 @@ async function renderBrief(){
   const iRead = !!reads[safeName(user||"")];
   const readCount = Object.keys(reads).length;
   area.innerHTML = `<div class="brief-card">
-    <div class="brief-head"><span>📋 תדריך בוקר · ${brief.date_display}</span>${userRole==="מפקד"?`<span style="display:flex;align-items:center;gap:8px"><span class="brief-reads">👁️ ${readCount}/${PERSONNEL.length}</span><button class="brief-del" onclick="deleteBrief()">🗑️</button></span>`:""}</div>
+    <div class="brief-head"><span>${icon('people')} תדריך בוקר · ${brief.date_display}</span>${userRole==="מפקד"?`<span style="display:flex;align-items:center;gap:8px"><span class="brief-reads">${icon('eye')} ${readCount}/${PERSONNEL.length}</span><button class="brief-del" onclick="deleteBrief()">${icon('delete')}</button></span>`:""}</div>
     <div class="brief-text">${escapeHTML(brief.text).replace(/\n/g,"<br>")}</div>
     ${userRole!=="מפקד" ? (iRead?'<div class="brief-ack done">✓ אישרת קריאה</div>':'<button class="brief-ack" onclick="ackBrief()">קראתי — אישור</button>') : ""}
   </div>`;
@@ -15985,7 +15985,7 @@ async function renderProfileBanner(){
     const today = new Date(); today.setHours(0,0,0,0);
     const rel = new Date(me.release+"T00:00:00");
     const days = Math.round((rel-today)/86400000);
-    if(days>=0){ releaseHtml = `<div class="pb-stat"><b>${days}</b><span>ימים לשחרור 🎖️</span></div>`; }
+    if(days>=0){ releaseHtml = `<div class="pb-stat"><b>${days}</b><span>ימים לשחרור ${icon('commander')}</span></div>`; }
   }
   area.innerHTML = `<div class="profile-card">
     <div class="pb-avatar">${initials(me.name)}</div>
@@ -16053,7 +16053,7 @@ function showUpdateHint(waitingWorker){
   if(document.getElementById("update-hint")) return;
   const b = document.createElement("button");
   b.id="update-hint";
-  b.textContent="🔄 גרסה חדשה זמינה — לחץ לרענון";
+  b.innerHTML=emojiIcon("🔄 גרסה חדשה זמינה — לחץ לרענון");
   b.style.cssText="position:absolute;bottom:96px;left:50%;transform:translateX(-50%);z-index:59;background:var(--red);color:#fff;border:none;font-family:'Assistant';font-weight:800;font-size:13px;padding:11px 20px;border-radius:99px;box-shadow:0 10px 26px -6px rgba(179,15,38,.5);cursor:pointer";
   b.onclick = ()=>{ waitingWorker.postMessage("SKIP_WAITING"); b.remove(); };
   document.getElementById("app").appendChild(b);
