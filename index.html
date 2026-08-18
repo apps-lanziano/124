@@ -1622,7 +1622,7 @@ function icon(name, cls){
       <div id="quick-pin-area" style="display:none;margin-top:6px">
         <div id="quick-hello" style="font-size:13.5px;color:var(--ink-2);margin-bottom:8px"></div>
         <div id="quick-faceid-wrap" style="display:none;margin-bottom:10px">
-          <button type="button" class="login-go secondary" id="quick-faceid-btn" onclick="quickLoginBiometric()" style="margin-top:0;margin-bottom:8px">🔓 המשך עם Face ID</button>
+          <button type="button" class="login-go secondary" id="quick-faceid-btn" onclick="quickLoginBiometric()" style="margin-top:0;margin-bottom:8px"><svg><use href="#ic-lock"/></svg> המשך עם Face ID</button>
           <div style="text-align:center;color:var(--ink-3);font-size:12px">— או הקלד PIN —</div>
         </div>
         <input id="quick-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
@@ -1654,7 +1654,7 @@ function icon(name, cls){
 
       <!-- חייל בסככה ריקה -->
       <div id="login-empty-note" style="display:none;font-size:13.5px;line-height:1.7;color:var(--ink-2);background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)">
-        ⏳ המפקד טרם הזין את רשימת הצוות של מסגרת זו.<br>פנה למפקד הסככה.
+        <svg><use href="#ic-hourglass"/></svg> המפקד טרם הזין את רשימת הצוות של מסגרת זו.<br>פנה למפקד הסככה.
       </div>
 
       <div class="login-select-wrap">
@@ -1687,7 +1687,7 @@ function icon(name, cls){
       </div>
 
       <button class="alert-bell" id="alert-bell" onclick="openAlerts()" style="display:none">
-        🔔<span class="alert-bell-count hidden" id="alert-bell-count">0</span>
+        <svg><use href="#ic-bell"/></svg><span class="alert-bell-count hidden" id="alert-bell-count">0</span>
       </button>
 
     </div>
@@ -1720,7 +1720,7 @@ function icon(name, cls){
           <p>חובה לקרוא כל פריט, לחתום ולאשר שהמסר הועבר.</p>
         </div>
         <div style="display:flex;gap:8px;flex-shrink:0">
-          <button class="add-btn hidden" id="safety-report-btn" onclick="openSafetyReport()" style="background:var(--card);color:var(--red);border:1px solid var(--red-line)">📊 דוח</button>
+          <button class="add-btn hidden" id="safety-report-btn" onclick="openSafetyReport()" style="background:var(--card);color:var(--red);border:1px solid var(--red-line)"><svg><use href="#ic-chart"/></svg> דוח</button>
           <button class="add-btn hidden" id="add-event-btn" onclick="openAddEvent()">+ פריט</button>
         </div>
       </div>
@@ -1735,15 +1735,15 @@ function icon(name, cls){
         </div>
       </div>
       <div class="search-box" id="safety-search-box" style="display:none">
-        <span class="search-ic">🔍</span>
+        <span class="search-ic"><svg><use href="#ic-search"/></svg></span>
         <input type="text" id="safety-search" placeholder="חיפוש לפי כותרת או תאריך…" oninput="renderDocs()">
       </div>
       <!-- הרשימה עצמה (פריטים לקריאה וחתימה) עולה מעל טבלת סטטוס-החתימה
            הארוכה, כדי שהתוכן שדורש פעולה בפועל לא יהיה קבור מתחתיה -->
-      <div class="cmd-section-title hidden" id="safety-items-title">📋 פריטים</div>
+      <div class="cmd-section-title hidden" id="safety-items-title"><svg><use href="#ic-people"/></svg> פריטים</div>
       <div id="docs-list"><div class="skel-card"><div class="skel-line w60"></div><div class="skel-line w90"></div></div><div class="skel-card"><div class="skel-line w40"></div><div class="skel-line w90"></div></div></div>
       <div id="safety-signstatus" class="hidden">
-        <div class="cmd-section-title">👥 סטטוס חתימה לפי איש צוות</div>
+        <div class="cmd-section-title"><svg><use href="#ic-people"/></svg> סטטוס חתימה לפי איש צוות</div>
         <div class="cmd-table" id="cmd-reads"></div>
       </div>
     </section>
@@ -1784,7 +1784,7 @@ function icon(name, cls){
     <section class="screen" id="scr-calendar">
       <div class="sec-head">
         <div>
-          <h2>לוח שנה מאוחד 📅</h2>
+          <h2>לוח שנה מאוחד <svg><use href="#ic-calendar"/></svg></h2>
           <p>כל המועדים הקרובים — הסמכות, כיול כלים, טסט רכב ותורנויות — במבט אחד.</p>
         </div>
       </div>
@@ -1803,7 +1803,7 @@ function icon(name, cls){
     <section class="screen" id="scr-onboarding">
       <div class="sec-head">
         <div>
-          <h2>קליטת חייל חדש 🎓</h2>
+          <h2>קליטת חייל חדש <svg><use href="#ic-cert"/></svg></h2>
         </div>
       </div>
       <div id="onboarding-roster"></div>
@@ -1814,7 +1814,7 @@ function icon(name, cls){
     <section class="screen" id="scr-faults">
       <div class="sec-head">
         <div>
-          <h2>דיווח תקלות 🛠️</h2>
+          <h2>דיווח תקלות <svg><use href="#ic-fault"/></svg></h2>
           <p>דיווח על ליקוי או תקלה שהתגלו. המפקד עוקב וסוגר.</p>
         </div>
         <button class="add-btn" id="add-fault-btn" onclick="openAddFault()">+ תקלה</button>
@@ -1827,7 +1827,7 @@ function icon(name, cls){
     <section class="screen" id="scr-binui-faults">
       <div class="sec-head">
         <div>
-          <h2>תקלות בינוי 🚧</h2>
+          <h2>תקלות בינוי <svg><use href="#ic-construction"/></svg></h2>
           <p>דיווח על ליקוי מבנה/בינוי, עם תמונה. מטופל ע"י מ״ע אחזקה.</p>
         </div>
         <button class="add-btn" id="add-binui-fault-btn" onclick="openAddBinuiFault()">+ תקלה</button>
@@ -1839,7 +1839,7 @@ function icon(name, cls){
     <section class="screen" id="scr-board">
       <div class="sec-head">
         <div>
-          <h2>תורנויות 📅</h2>
+          <h2>תורנויות <svg><use href="#ic-calendar"/></svg></h2>
           <p>לוח הצוות השבועי. עדכונים מתבצעים ע"י מ"ע תורנויות.</p>
         </div>
       </div>
@@ -1852,10 +1852,10 @@ function icon(name, cls){
     <section class="screen" id="scr-bdays">
       <div class="sec-head">
         <div>
-          <h2>ימי הולדת 🎂</h2>
+          <h2>ימי הולדת <svg><use href="#ic-cake"/></svg></h2>
           <p id="bdays-desc">צוות המסגרת — ממוינים לפי יום ההולדת הקרוב.</p>
         </div>
-        <button class="add-btn hidden" id="vo-team-add-btn" onclick="openVoTeamMgmt()">👥 ניהול צוות</button>
+        <button class="add-btn hidden" id="vo-team-add-btn" onclick="openVoTeamMgmt()"><svg><use href="#ic-people"/></svg> ניהול צוות</button>
       </div>
       <div id="bdays-list"></div>
     </section>
@@ -1864,7 +1864,7 @@ function icon(name, cls){
     <section class="screen" id="scr-rollcall">
       <div class="sec-head">
         <div>
-          <h2>נכס 🛡️</h2>
+          <h2>נכס <svg><use href="#ic-shield"/></svg></h2>
           <p>סימון תקינות וזמינות של כלל אנשי הצוות.</p>
         </div>
       </div>
@@ -1879,7 +1879,7 @@ function icon(name, cls){
     <section class="screen" id="scr-trainhub">
       <div class="sec-head">
         <div>
-          <h2>הדרכה 🎓</h2>
+          <h2>הדרכה <svg><use href="#ic-cert"/></svg></h2>
           <p>הסמכות, קליטת חיילים חדשים וחומרי הדרכה — במקום אחד.</p>
         </div>
       </div>
@@ -1890,7 +1890,7 @@ function icon(name, cls){
     <section class="screen" id="scr-naatim">
       <div class="sec-head">
         <div>
-          <h2>נע"תים 🗂️</h2>
+          <h2>נע"תים <svg><use href="#ic-folder"/></svg></h2>
           <p>תחומי אחריות, חייל אחראי, ובדיקה שבועית.</p>
         </div>
         <button class="add-btn hidden" id="naatim-mgmt-btn" onclick="openNaatimAdd()">+ נע"ת</button>
@@ -1903,13 +1903,13 @@ function icon(name, cls){
     <section class="screen" id="scr-certs">
       <div class="sec-head">
         <div>
-          <h2>הסמכות וכשירויות 🎓</h2>
+          <h2>הסמכות וכשירויות <svg><use href="#ic-cert"/></svg></h2>
           <p>ריכוז ההסמכות לכל חייל · התראה חודש לפני פקיעה.</p>
         </div>
         <button class="add-btn hidden" id="cert-add-btn" onclick="openCertAdd()">+ הסמכה</button>
       </div>
       <div class="search-box" id="certs-search-box" style="display:none">
-        <span class="search-ic">🔍</span>
+        <span class="search-ic"><svg><use href="#ic-search"/></svg></span>
         <input type="text" id="certs-search" placeholder="חיפוש לפי שם…" oninput="renderCertsPageList()">
       </div>
       <div class="faults-filter" id="certs-filter"></div>
@@ -1920,13 +1920,13 @@ function icon(name, cls){
         </select>
         <select class="m-input" id="certs-group-filter" style="margin-bottom:0;flex:1" onchange="renderCertsPageList()">
           <option value="all">קבוצה: הכל</option>
-          <option value="saf">🟢 סף</option>
-          <option value="raf">🔵 רף</option>
-          <option value="himush">🟠 חימוש</option>
-          <option value="elyon">🔴 עליון</option>
-          <option value="stage">🟣 שלבים</option>
-          <option value="pa">🟤 פ"א לאור ספרות</option>
-          <option value="safety">⚫ מערכות בטיחותיות</option>
+          <option value="saf"><span class="dot green"></span> סף</option>
+          <option value="raf"><span class="dot blue"></span> רף</option>
+          <option value="himush"><span class="dot orange"></span> חימוש</option>
+          <option value="elyon"><span class="dot red"></span> עליון</option>
+          <option value="stage"><span class="dot purple"></span> שלבים</option>
+          <option value="pa"><span class="dot brown"></span> פ"א לאור ספרות</option>
+          <option value="safety"><span class="dot black"></span> מערכות בטיחותיות</option>
           <option value="other">הסמכות נוספות</option>
         </select>
         <select class="m-input" id="certs-stage-filter" style="margin-bottom:0;flex:1" onchange="renderCertsPageList()">
@@ -1941,11 +1941,11 @@ function icon(name, cls){
       <div class="sec-head">
         <div>
           <h2 id="medchecks-h2">כשירות חיילים</h2>
-          <p id="medchecks-sub">🟢 בתוקף · 🔴 נדרש חידוש · ⚪ טרם הוזן.</p>
+          <p id="medchecks-sub"><span class="dot green"></span> בתוקף · <span class="dot red"></span> נדרש חידוש · <span class="dot white"></span> טרם הוזן.</p>
         </div>
       </div>
       <div class="med-tabs">
-        <button class="med-tab active" id="med-tab-hearing" onclick="setMedTab('hearing')">👂 בדיקת שמיעה</button>
+        <button class="med-tab active" id="med-tab-hearing" onclick="setMedTab('hearing')"><svg><use href="#ic-fitness"/></svg> בדיקת שמיעה</button>
         <button class="med-tab" id="med-tab-range" onclick="setMedTab('range')">🎯 מטווח בסיסי</button>
       </div>
       <div class="faults-filter" id="medchecks-filter"></div>
@@ -1956,13 +1956,13 @@ function icon(name, cls){
     <section class="screen" id="scr-tools">
       <div class="sec-head">
         <div>
-          <h2>חדר כלים 🧰</h2>
+          <h2>חדר כלים <svg><use href="#ic-toolbox"/></svg></h2>
           <p>כלים בעלי תוקף כיול · התראה שבוע לפני פקיעה.</p>
         </div>
         <button class="add-btn hidden" id="tools-add-btn" onclick="openToolAdd()">+ כלי</button>
       </div>
       <div class="search-box" id="tools-search-box" style="display:none">
-        <span class="search-ic">🔍</span>
+        <span class="search-ic"><svg><use href="#ic-search"/></svg></span>
         <input type="text" id="tools-search" placeholder="חיפוש לפי שם הכלי או מספר סידורי…" oninput="renderToolsPage()">
       </div>
       <div id="tools-page-list"></div>
@@ -1972,14 +1972,14 @@ function icon(name, cls){
     <section class="screen" id="scr-vehicles">
       <div class="sec-head">
         <div>
-          <h2>מעקב רכבים 🚙</h2>
+          <h2>מעקב רכבים <svg><use href="#ic-vehicle"/></svg></h2>
           <p>רכבי הסככה וטיפול תקופתי · התראה לפני מועד הטיפול.</p>
         </div>
         <button class="add-btn hidden" id="vehicles-add-btn" onclick="openShedVehicleFull(null)">+ רכב</button>
       </div>
       <div class="cmd-tabs" style="margin-bottom:16px">
-        <button class="cmd-tab active" id="vptab-vehicles" onclick="vehiclesPageTab('vehicles')">🚙 רכבים</button>
-        <button class="cmd-tab" id="vptab-licenses" onclick="vehiclesPageTab('licenses')">🪪 רישיונות והסמכות</button>
+        <button class="cmd-tab active" id="vptab-vehicles" onclick="vehiclesPageTab('vehicles')"><svg><use href="#ic-vehicle"/></svg> רכבים</button>
+        <button class="cmd-tab" id="vptab-licenses" onclick="vehiclesPageTab('licenses')"><svg><use href="#ic-tag"/></svg> רישיונות והסמכות</button>
       </div>
       <div class="admin-pane active" id="vppane-vehicles">
         <div id="vehicles-page-list"></div>
@@ -1993,7 +1993,7 @@ function icon(name, cls){
     <section class="screen" id="scr-training">
       <div class="sec-head">
         <div>
-          <h2>חומרי הדרכה 📚</h2>
+          <h2>חומרי הדרכה <svg><use href="#ic-library"/></svg></h2>
           <p>בחר קטגוריה כדי לצפות בחומרים.</p>
         </div>
       </div>
@@ -2027,20 +2027,20 @@ function icon(name, cls){
 
       <!-- דיווח מסדר בוקר יומי — נשלח ע"י מ״ע אחזקה, כל מפקד רואה רק את הסככה שלו -->
       <div id="mc-report-wrap" class="hidden">
-        <div class="cmd-section-title">📋 מסדר בוקר — דיווח אחרון</div>
+        <div class="cmd-section-title"><svg><use href="#ic-people"/></svg> מסדר בוקר — דיווח אחרון</div>
         <div id="mc-report-content"></div>
       </div>
 
       <!-- אילוצים — בקשות החיילים של המסגרת (קורס/חופש/אפטר/החלפה) לאישור המפקד -->
-      <div class="cmd-section-title">📌 אילוצים</div>
+      <div class="cmd-section-title"><svg><use href="#ic-pin"/></svg> אילוצים</div>
       <div id="cmd-constraints-wrap"></div>
 
       <!-- ADMIN quick actions -->
-      <div class="cmd-section-title">⚙️ ניהול</div>
+      <div class="cmd-section-title"><svg><use href="#ic-maintenance"/></svg> ניהול</div>
       <div class="admin-grid">
-        <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic">📋</span><b>תדריך בוקר</b><span>תדריך יומי לצוות</span></button>
-        <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
-        <button class="admin-card" onclick="openTrainingLinkAdd()"><span class="a-ic">🔗</span><b>קישור הדרכה</b><span>הוספת קישור לצוות שלי</span></button>
+        <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic"><svg><use href="#ic-people"/></svg></span><b>תדריך בוקר</b><span>תדריך יומי לצוות</span></button>
+        <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic"><svg><use href="#ic-announce"/></svg></span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
+        <button class="admin-card" onclick="openTrainingLinkAdd()"><span class="a-ic"><svg><use href="#ic-link"/></svg></span><b>קישור הדרכה</b><span>הוספת קישור לצוות שלי</span></button>
       </div>
     </section>
 
@@ -2048,27 +2048,27 @@ function icon(name, cls){
     <section class="screen" id="scr-admin">
       <div class="sec-head">
         <div>
-          <h2>מרכז שליטה — אחראי הדרכה 🏛️</h2>
+          <h2>מרכז שליטה — אחראי הדרכה <svg><use href="#ic-institution"/></svg></h2>
           <p>ניהול טייסתי · 5 מסגרות · דרג א' טייסת 124</p>
         </div>
       </div>
 
       <!-- admin tabs -->
       <div class="cmd-tabs" style="margin-bottom:16px">
-        <button class="cmd-tab active" id="atab-overview" onclick="adminTab('overview')">📊 דשבורד</button>
-        <button class="cmd-tab" id="atab-signatures" onclick="adminTab('signatures')">✍️ חתימות</button>
-        <button class="cmd-tab" id="atab-certs" onclick="adminTab('certs')">🎓 הסמכות</button>
-        <button class="cmd-tab" id="atab-training" onclick="adminTab('training')">📚 הדרכה</button>
-        <button class="cmd-tab" id="atab-reserves" onclick="adminTab('reserves')">🎖️ מילואים</button>
+        <button class="cmd-tab active" id="atab-overview" onclick="adminTab('overview')"><svg><use href="#ic-chart"/></svg> דשבורד</button>
+        <button class="cmd-tab" id="atab-signatures" onclick="adminTab('signatures')"><svg><use href="#ic-edit"/></svg> חתימות</button>
+        <button class="cmd-tab" id="atab-certs" onclick="adminTab('certs')"><svg><use href="#ic-cert"/></svg> הסמכות</button>
+        <button class="cmd-tab" id="atab-training" onclick="adminTab('training')"><svg><use href="#ic-library"/></svg> הדרכה</button>
+        <button class="cmd-tab" id="atab-reserves" onclick="adminTab('reserves')"><svg><use href="#ic-reserves"/></svg> מילואים</button>
       </div>
 
       <!-- PANE: OVERVIEW -->
       <div class="admin-pane active" id="apane-overview">
         <div class="admin-actions-row">
-          <button class="admin-card" onclick="openAdminEvent()"><span class="a-ic">📄</span><b>פרסום קרא וחתום</b><span>לכל המסגרות</span></button>
-          <button class="admin-card" onclick="openAdminBoard()"><span class="a-ic">📅</span><b>העלאת לוח צוות</b><span>לכל המסגרות</span></button>
-          <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>פרסום הודעה</b><span>לכל המסגרות</span></button>
-          <button class="admin-card" onclick="openAdminAlerts()"><span class="a-ic">🔔</span><b>מרכז התראות</b><span>כל המסגרות</span></button>
+          <button class="admin-card" onclick="openAdminEvent()"><span class="a-ic"><svg><use href="#ic-doc"/></svg></span><b>פרסום קרא וחתום</b><span>לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openAdminBoard()"><span class="a-ic"><svg><use href="#ic-calendar"/></svg></span><b>העלאת לוח צוות</b><span>לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic"><svg><use href="#ic-announce"/></svg></span><b>פרסום הודעה</b><span>לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openAdminAlerts()"><span class="a-ic"><svg><use href="#ic-bell"/></svg></span><b>מרכז התראות</b><span>כל המסגרות</span></button>
           <button class="admin-card" onclick="repairDistributionGaps()"><span class="a-ic">🩹</span><b>תיקון פערי הפצה</b><span>סנכרון קרא-וחתום/הדרכה שלא הגיעו לכל המסגרות</span></button>
         </div>
         <div class="cmd-kpis" id="admin-overview-kpis">
@@ -2078,7 +2078,7 @@ function icon(name, cls){
           <div class="kpi bad"><b id="akpi-missing">—</b><span>חתימות ממתינות</span></div>
           <div class="kpi warn"><b id="akpi-reserves">—</b><span>אנשי מילואים</span></div>
         </div>
-        <div class="cmd-section-title">📄 קרא וחתום שפורסמו — כלל הטייסת</div>
+        <div class="cmd-section-title"><svg><use href="#ic-doc"/></svg> קרא וחתום שפורסמו — כלל הטייסת</div>
         <div id="admin-events-list"></div>
       </div>
 
@@ -2086,20 +2086,20 @@ function icon(name, cls){
       <div class="admin-pane" id="apane-signatures">
         <div class="sec-head" style="margin-bottom:10px">
           <div>
-            <h3 style="margin:0;font-size:16px">✍️ חתימות ותיעוד קרא-וחתום</h3>
+            <h3 style="margin:0;font-size:16px"><svg><use href="#ic-edit"/></svg> חתימות ותיעוד קרא-וחתום</h3>
           </div>
-          <button class="add-btn" onclick="openSigHistory()" style="background:var(--card);color:var(--red);border:1px solid var(--red-line);flex-shrink:0">📋 היסטוריה לתיעוד</button>
+          <button class="add-btn" onclick="openSigHistory()" style="background:var(--card);color:var(--red);border:1px solid var(--red-line);flex-shrink:0"><svg><use href="#ic-people"/></svg> היסטוריה לתיעוד</button>
         </div>
         <div class="cmd-tabs" style="margin-bottom:16px">
-          <button class="cmd-tab active" id="logview-byName" onclick="adminLogView('byName')">👤 לפי שם</button>
-          <button class="cmd-tab" id="logview-byShed" onclick="adminLogView('byShed')">🏠 לפי סככה</button>
-          <button class="cmd-tab" id="logview-byItem" onclick="adminLogView('byItem')">📄 לפי קרא-וחתום</button>
+          <button class="cmd-tab active" id="logview-byName" onclick="adminLogView('byName')"><svg><use href="#ic-person"/></svg> לפי שם</button>
+          <button class="cmd-tab" id="logview-byShed" onclick="adminLogView('byShed')"><svg><use href="#ic-home"/></svg> לפי סככה</button>
+          <button class="cmd-tab" id="logview-byItem" onclick="adminLogView('byItem')"><svg><use href="#ic-doc"/></svg> לפי קרא-וחתום</button>
         </div>
         <!-- אזור זה (לא רק admin-log-list) הוא מה שנלכד בייצוא — כדי שהדוח יכלול גם את הסטטוס הכללי -->
         <div id="admin-log-export-box">
-          <div class="cmd-section-title">📊 סטטוס חתימות · כלל הטייסת</div>
+          <div class="cmd-section-title"><svg><use href="#ic-chart"/></svg> סטטוס חתימות · כלל הטייסת</div>
           <div id="admin-sig-stats"></div>
-          <div class="cmd-section-title">📜 יומן תיעוד</div>
+          <div class="cmd-section-title"><svg><use href="#ic-cert"/></svg> יומן תיעוד</div>
           <div id="admin-log-list"></div>
         </div>
       </div>
@@ -2107,20 +2107,20 @@ function icon(name, cls){
       <!-- PANE: CERTS -->
       <div class="admin-pane" id="apane-certs">
         <div class="admin-actions-row">
-          <button class="admin-card" onclick="openAdminCertAdd()"><span class="a-ic">➕</span><b>הזנת הסמכה</b><span>לכל חייל בכל מסגרת</span></button>
-          <button class="admin-card" onclick="openCertBank()"><span class="a-ic">🗃️</span><b>בנק הסמכות</b><span>רשימה סטנדרטית</span></button>
+          <button class="admin-card" onclick="openAdminCertAdd()"><span class="a-ic"><svg><use href="#ic-plus"/></svg></span><b>הזנת הסמכה</b><span>לכל חייל בכל מסגרת</span></button>
+          <button class="admin-card" onclick="openCertBank()"><span class="a-ic"><svg><use href="#ic-folder"/></svg></span><b>בנק הסמכות</b><span>רשימה סטנדרטית</span></button>
         </div>
-        <div class="cmd-section-title">⏳ הסמכות שעומדות לפוג — כלל הטייסת</div>
+        <div class="cmd-section-title"><svg><use href="#ic-hourglass"/></svg> הסמכות שעומדות לפוג — כלל הטייסת</div>
         <div id="admin-cert-expiry"></div>
-        <div class="cmd-section-title">🟡 חיילים שטרם הוסמכו PF — כלל הטייסת</div>
+        <div class="cmd-section-title"><span class="dot yellow"></span> חיילים שטרם הוסמכו PF — כלל הטייסת</div>
         <div id="admin-pf-status"></div>
-        <div class="cmd-section-title">🎓 הסמכות לפי חייל · כל המסגרות</div>
-        <div class="matrix-hint">לחץ על חייל לפירוט · ✕ למחיקת הסמכה</div>
+        <div class="cmd-section-title"><svg><use href="#ic-cert"/></svg> הסמכות לפי חייל · כל המסגרות</div>
+        <div class="matrix-hint">לחץ על חייל לפירוט · <svg><use href="#ic-close"/></svg> למחיקת הסמכה</div>
         <select class="m-input" id="admin-cert-shed-filter" style="margin-bottom:8px" onchange="renderAdminCertMatrix()">
           <option value="all">כל המסגרות</option>
         </select>
         <div class="search-box" id="admin-cert-search-box" style="display:flex;margin-bottom:8px">
-          <span class="search-ic">🔍</span>
+          <span class="search-ic"><svg><use href="#ic-search"/></svg></span>
           <input type="text" id="admin-cert-search" placeholder="חיפוש לפי שם…" oninput="renderAdminCertMatrix()">
         </div>
         <div style="display:flex;gap:8px;margin-bottom:12px">
@@ -2130,13 +2130,13 @@ function icon(name, cls){
           </select>
           <select class="m-input" id="admin-cert-group-filter" style="margin-bottom:0;flex:1" onchange="renderAdminCertMatrix()">
             <option value="all">קבוצה: הכל</option>
-            <option value="saf">🟢 סף</option>
-            <option value="raf">🔵 רף</option>
-            <option value="himush">🟠 חימוש</option>
-            <option value="elyon">🔴 עליון</option>
-            <option value="stage">🟣 שלבים</option>
-            <option value="pa">🟤 פ"א לאור ספרות</option>
-            <option value="safety">⚫ מערכות בטיחותיות</option>
+            <option value="saf"><span class="dot green"></span> סף</option>
+            <option value="raf"><span class="dot blue"></span> רף</option>
+            <option value="himush"><span class="dot orange"></span> חימוש</option>
+            <option value="elyon"><span class="dot red"></span> עליון</option>
+            <option value="stage"><span class="dot purple"></span> שלבים</option>
+            <option value="pa"><span class="dot brown"></span> פ"א לאור ספרות</option>
+            <option value="safety"><span class="dot black"></span> מערכות בטיחותיות</option>
             <option value="other">הסמכות נוספות</option>
           </select>
           <select class="m-input" id="admin-cert-stage-filter" style="margin-bottom:0;flex:1" onchange="renderAdminCertMatrix()">
@@ -2148,16 +2148,16 @@ function icon(name, cls){
 
       <!-- PANE: TRAINING -->
       <div class="admin-pane" id="apane-training">
-        <div class="cmd-section-title">🎞️ מצגות</div>
+        <div class="cmd-section-title"><svg><use href="#ic-training"/></svg> מצגות</div>
         <div class="admin-actions-row">
-          <button class="admin-card" onclick="openTrainingUpload()" style="grid-column:1/-1"><span class="a-ic">📚</span><b>פרסום מצגת/מסמך</b><span>קובץ לכל המסגרות</span></button>
-          <button class="admin-card" onclick="openTrainingLinkAdd('presentations')" style="grid-column:1/-1"><span class="a-ic">🔗</span><b>הוספת קישור למצגת</b><span>קישור חיצוני לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openTrainingUpload()" style="grid-column:1/-1"><span class="a-ic"><svg><use href="#ic-library"/></svg></span><b>פרסום מצגת/מסמך</b><span>קובץ לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openTrainingLinkAdd('presentations')" style="grid-column:1/-1"><span class="a-ic"><svg><use href="#ic-link"/></svg></span><b>הוספת קישור למצגת</b><span>קישור חיצוני לכל המסגרות</span></button>
         </div>
         <div id="admin-training-list-presentations"></div>
 
-        <div class="cmd-section-title" style="margin-top:18px">🎥 הדרכות מצולמות</div>
+        <div class="cmd-section-title" style="margin-top:18px"><svg><use href="#ic-training"/></svg> הדרכות מצולמות</div>
         <div class="admin-actions-row">
-          <button class="admin-card" onclick="openTrainingLinkAdd('recorded')" style="grid-column:1/-1"><span class="a-ic">🔗</span><b>הוספת קישור להדרכה מצולמת</b><span>קישור חיצוני לכל המסגרות</span></button>
+          <button class="admin-card" onclick="openTrainingLinkAdd('recorded')" style="grid-column:1/-1"><span class="a-ic"><svg><use href="#ic-link"/></svg></span><b>הוספת קישור להדרכה מצולמת</b><span>קישור חיצוני לכל המסגרות</span></button>
         </div>
         <div id="admin-training-list-recorded"></div>
       </div>
@@ -2165,7 +2165,7 @@ function icon(name, cls){
       <!-- PANE: RESERVES -->
       <div class="admin-pane" id="apane-reserves">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openReserveAdd()"><span class="a-ic">➕</span><b>הוספת איש מילואים</b><span>לכל חייל בכל מסגרת</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openReserveAdd()"><span class="a-ic"><svg><use href="#ic-plus"/></svg></span><b>הוספת איש מילואים</b><span>לכל חייל בכל מסגרת</span></button>
         </div>
         <div id="admin-reserves-list"></div>
       </div>
@@ -2179,7 +2179,7 @@ function icon(name, cls){
     <section class="screen" id="scr-vo-overview">
       <div class="sec-head">
         <div>
-          <h2>סקירה 📊</h2>
+          <h2>סקירה <svg><use href="#ic-chart"/></svg></h2>
           <p>תמונת מצב מרוכזת · מ״ע אחזקה</p>
         </div>
       </div>
@@ -2190,16 +2190,16 @@ function icon(name, cls){
 
       <!-- דיווח מסדר בוקר יומי — הצוות הפנימי של מ״ע אחזקה עצמו -->
       <div id="vo-mc-report-wrap" class="hidden">
-        <div class="cmd-section-title">📋 מסדר בוקר — דיווח אחרון</div>
+        <div class="cmd-section-title"><svg><use href="#ic-people"/></svg> מסדר בוקר — דיווח אחרון</div>
         <div id="vo-mc-report-content"></div>
       </div>
 
       <!-- ADMIN quick actions -->
-      <div class="cmd-section-title">⚙️ ניהול</div>
+      <div class="cmd-section-title"><svg><use href="#ic-maintenance"/></svg> ניהול</div>
       <div class="admin-grid">
-        <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic">📋</span><b>תדריך בוקר</b><span>תדריך יומי לצוות</span></button>
-        <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic">📢</span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
-        <button class="admin-card" onclick="openTrainingLinkAdd()"><span class="a-ic">🔗</span><b>קישור הדרכה</b><span>הוספת קישור לצוות שלי</span></button>
+        <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic"><svg><use href="#ic-people"/></svg></span><b>תדריך בוקר</b><span>תדריך יומי לצוות</span></button>
+        <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic"><svg><use href="#ic-announce"/></svg></span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
+        <button class="admin-card" onclick="openTrainingLinkAdd()"><span class="a-ic"><svg><use href="#ic-link"/></svg></span><b>קישור הדרכה</b><span>הוספת קישור לצוות שלי</span></button>
       </div>
     </section>
 
@@ -2207,22 +2207,22 @@ function icon(name, cls){
     <section class="screen" id="scr-vehicle-officer">
       <div class="sec-head">
         <div>
-          <h2>רכבים 🚙</h2>
+          <h2>רכבים <svg><use href="#ic-vehicle"/></svg></h2>
           <p>מעקב רכבים ורישיונות · כלל המסגרות</p>
         </div>
       </div>
 
       <div class="cmd-tabs" style="margin-bottom:16px">
-        <button class="cmd-tab active" id="votab-vehicles" onclick="voTab('vehicles')">🚙 תפעוליים</button>
-        <button class="cmd-tab" id="votab-maint" onclick="voTab('maint')">🔧 אחזקה</button>
-        <button class="cmd-tab" id="votab-leasing" onclick="voTab('leasing')">🚗 ליסינג</button>
-        <button class="cmd-tab" id="votab-licenses" onclick="voTab('licenses')">🪪 רישיונות והסמכות</button>
+        <button class="cmd-tab active" id="votab-vehicles" onclick="voTab('vehicles')"><svg><use href="#ic-vehicle"/></svg> תפעוליים</button>
+        <button class="cmd-tab" id="votab-maint" onclick="voTab('maint')"><svg><use href="#ic-maintenance"/></svg> אחזקה</button>
+        <button class="cmd-tab" id="votab-leasing" onclick="voTab('leasing')"><svg><use href="#ic-vehicle"/></svg> ליסינג</button>
+        <button class="cmd-tab" id="votab-licenses" onclick="voTab('licenses')"><svg><use href="#ic-tag"/></svg> רישיונות והסמכות</button>
       </div>
 
       <!-- PANE: VEHICLES (תפעוליים לפי סככה: מ"ע/טרקטור/פיקו/לפיד) -->
       <div class="admin-pane active" id="vopane-vehicles">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openVoVehicleAdd()"><span class="a-ic">➕</span><b>הוספת רכב</b><span>שיוך לסככה + כל פרטי המעקב</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openVoVehicleAdd()"><span class="a-ic"><svg><use href="#ic-plus"/></svg></span><b>הוספת רכב</b><span>שיוך לסככה + כל פרטי המעקב</span></button>
         </div>
         <div id="vo-vehicles-list"></div>
       </div>
@@ -2230,7 +2230,7 @@ function icon(name, cls){
       <!-- PANE: MAINTENANCE DEPT VEHICLES (שחורים+שכורים, ללא שיוך לסככה) -->
       <div class="admin-pane" id="vopane-maint">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openMaintVehicleAdd()"><span class="a-ic">➕</span><b>הוספת רכב צ'</b><span>רכבים שחורים ושכורים</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openMaintVehicleAdd()"><span class="a-ic"><svg><use href="#ic-plus"/></svg></span><b>הוספת רכב צ'</b><span>רכבים שחורים ושכורים</span></button>
         </div>
         <div id="vo-maint-list"></div>
       </div>
@@ -2238,8 +2238,8 @@ function icon(name, cls){
       <!-- PANE: LEASING VEHICLES (משוייכים לפי שם, מקובצים לפי סככה אוטומטית) -->
       <div class="admin-pane" id="vopane-leasing">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openLeasingVehicleAdd()"><span class="a-ic">➕</span><b>הוספת רכב ליסינג</b><span>לפי שם המחזיק</span></button>
-          <button class="admin-card" style="grid-column:1/-1" onclick="openLeasingImport()"><span class="a-ic">📥</span><b>ייבוא מרוכז מגיליון</b><span>הדבקת שורות מהאקסל — עדכון והוספה בבת אחת</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openLeasingVehicleAdd()"><span class="a-ic"><svg><use href="#ic-plus"/></svg></span><b>הוספת רכב ליסינג</b><span>לפי שם המחזיק</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openLeasingImport()"><span class="a-ic"><svg><use href="#ic-transfer"/></svg></span><b>ייבוא מרוכז מגיליון</b><span>הדבקת שורות מהאקסל — עדכון והוספה בבת אחת</span></button>
         </div>
         <div id="vo-leasing-list"></div>
       </div>
@@ -2247,10 +2247,10 @@ function icon(name, cls){
       <!-- PANE: LICENSES -->
       <div class="admin-pane" id="vopane-licenses">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openVoLicenseAdd()"><span class="a-ic">➕</span><b>הוספת רישיון/הסמכה</b><span>לכל חייל בכל מסגרת</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openVoLicenseAdd()"><span class="a-ic"><svg><use href="#ic-plus"/></svg></span><b>הוספת רישיון/הסמכה</b><span>לכל חייל בכל מסגרת</span></button>
         </div>
         <div class="search-box">
-          <span class="search-ic">🔍</span>
+          <span class="search-ic"><svg><use href="#ic-search"/></svg></span>
           <input type="text" id="vo-license-search" placeholder="חיפוש לפי שם…" oninput="renderVoLicenses()">
         </div>
         <div style="display:flex;gap:8px;margin-bottom:10px">
@@ -2261,9 +2261,9 @@ function icon(name, cls){
           </select>
           <select class="m-input" id="vo-license-status-filter" style="margin-bottom:0;flex:1" onchange="renderVoLicenses()">
             <option value="all">סטטוס: הכל</option>
-            <option value="r">🔴 פג תוקף</option>
-            <option value="y">🟡 עומד לפוג</option>
-            <option value="g">🟢 בתוקף</option>
+            <option value="r"><span class="dot red"></span> פג תוקף</option>
+            <option value="y"><span class="dot yellow"></span> עומד לפוג</option>
+            <option value="g"><span class="dot green"></span> בתוקף</option>
           </select>
           <select class="m-input" id="vo-license-shed-filter" style="margin-bottom:0;flex:1" onchange="renderVoLicenses()">
             <option value="all">סככה: הכל</option>
@@ -2286,38 +2286,38 @@ function icon(name, cls){
     <section class="screen" id="scr-morning-rollcall">
       <div class="sec-head">
         <div>
-          <h2>מסדר בוקר 📋</h2>
+          <h2>מסדר בוקר <svg><use href="#ic-people"/></svg></h2>
           <p>נוכחות/חיסור לכלל חיילי הטייסת · דיווח למפקדי הסככות</p>
         </div>
       </div>
-      <div class="cmd-section-title" id="mc-title">📋 מסדר בוקר</div>
+      <div class="cmd-section-title" id="mc-title"><svg><use href="#ic-people"/></svg> מסדר בוקר</div>
       <div class="cmd-kpis" id="mc-kpis"></div>
       <div class="search-box">
-        <span class="search-ic">🔍</span>
+        <span class="search-ic"><svg><use href="#ic-search"/></svg></span>
         <input type="text" id="mc-search" placeholder="חיפוש לפי שם…" oninput="renderMorningRollcallList()">
       </div>
       <div id="mc-list"></div>
-      <button class="m-btn primary" style="width:100%;margin-top:14px" onclick="sendMorningRollcallReport()">📤 שליחת דיווח למפקדי הסככות</button>
+      <button class="m-btn primary" style="width:100%;margin-top:14px" onclick="sendMorningRollcallReport()"><svg><use href="#ic-transfer"/></svg> שליחת דיווח למפקדי הסככות</button>
     </section>
 
     <!-- ===== MAINTENANCE DEPT — MAINT TAB (מ״ע אחזקה: הזמנת חומרים + מעקב כלים מוטוריים) ===== -->
     <section class="screen" id="scr-maint-dept">
       <div class="sec-head">
         <div>
-          <h2>אחזקה 🔧</h2>
+          <h2>אחזקה <svg><use href="#ic-maintenance"/></svg></h2>
           <p>הזמנת חומרים ומעקב כלים מוטוריים · מ״ע אחזקה</p>
         </div>
       </div>
 
       <div class="cmd-tabs" style="margin-bottom:16px">
-        <button class="cmd-tab active" id="mdtab-materials" onclick="mdTab('materials')">📦 הזמנת חומרים</button>
-        <button class="cmd-tab" id="mdtab-tools" onclick="mdTab('tools')">🔧 מעקב כלים מוטוריים</button>
+        <button class="cmd-tab active" id="mdtab-materials" onclick="mdTab('materials')"><svg><use href="#ic-package"/></svg> הזמנת חומרים</button>
+        <button class="cmd-tab" id="mdtab-tools" onclick="mdTab('tools')"><svg><use href="#ic-maintenance"/></svg> מעקב כלים מוטוריים</button>
       </div>
 
       <!-- PANE: MATERIALS ORDERS -->
       <div class="admin-pane active" id="mdpane-materials">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openMaterialAdd()"><span class="a-ic">➕</span><b>הוספת הזמנת חומר</b><span>פריט, כמות וסטטוס</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openMaterialAdd()"><span class="a-ic"><svg><use href="#ic-plus"/></svg></span><b>הוספת הזמנת חומר</b><span>פריט, כמות וסטטוס</span></button>
         </div>
         <div id="md-materials-list"></div>
       </div>
@@ -2325,7 +2325,7 @@ function icon(name, cls){
       <!-- PANE: MOTORIZED TOOLS -->
       <div class="admin-pane" id="mdpane-tools">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openMotorToolAdd()"><span class="a-ic">➕</span><b>הוספת כלי מוטורי</b><span>מספר סידורי + כיול/טיפול הבא</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openMotorToolAdd()"><span class="a-ic"><svg><use href="#ic-plus"/></svg></span><b>הוספת כלי מוטורי</b><span>מספר סידורי + כיול/טיפול הבא</span></button>
         </div>
         <div id="md-tools-list"></div>
       </div>
@@ -2335,7 +2335,7 @@ function icon(name, cls){
     <section class="screen" id="scr-binui-admin">
       <div class="sec-head">
         <div>
-          <h2>תקלות בינוי 🚧</h2>
+          <h2>תקלות בינוי <svg><use href="#ic-construction"/></svg></h2>
           <p>ריכוז דיווחי ליקויי בינוי מכל המסגרות · מ״ע אחזקה</p>
         </div>
         <button class="add-btn" onclick="openAddBinuiFault()">+ תקלה</button>
@@ -2347,15 +2347,15 @@ function icon(name, cls){
     <section class="screen" id="scr-budget-officer">
       <div class="sec-head">
         <div>
-          <h2>אחראי תקציבים טייסתי 💰</h2>
+          <h2>אחראי תקציבים טייסתי <svg><use href="#ic-budget"/></svg></h2>
           <p>הקצאות, הוצאות ואישורים · תקציב טייסתי כולל</p>
         </div>
       </div>
 
       <div class="cmd-tabs" style="margin-bottom:16px">
-        <button class="cmd-tab active" id="botab-overview" onclick="boTab('overview')">📊 סקירה</button>
-        <button class="cmd-tab" id="botab-allocations" onclick="boTab('allocations')">💵 הקצאות</button>
-        <button class="cmd-tab" id="botab-expenses" onclick="boTab('expenses')">🧾 הוצאות ואישורים</button>
+        <button class="cmd-tab active" id="botab-overview" onclick="boTab('overview')"><svg><use href="#ic-chart"/></svg> סקירה</button>
+        <button class="cmd-tab" id="botab-allocations" onclick="boTab('allocations')"><svg><use href="#ic-budget"/></svg> הקצאות</button>
+        <button class="cmd-tab" id="botab-expenses" onclick="boTab('expenses')"><svg><use href="#ic-budget"/></svg> הוצאות ואישורים</button>
       </div>
 
       <!-- PANE: OVERVIEW -->
@@ -2366,7 +2366,7 @@ function icon(name, cls){
       <!-- PANE: ALLOCATIONS -->
       <div class="admin-pane" id="bopane-allocations">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openBoAllocationAdd()"><span class="a-ic">➕</span><b>הוספת הקצאה</b><span>מקור תקציב + סכום</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openBoAllocationAdd()"><span class="a-ic"><svg><use href="#ic-plus"/></svg></span><b>הוספת הקצאה</b><span>מקור תקציב + סכום</span></button>
         </div>
         <div id="bo-allocations-list"></div>
       </div>
@@ -2374,7 +2374,7 @@ function icon(name, cls){
       <!-- PANE: EXPENSES -->
       <div class="admin-pane" id="bopane-expenses">
         <div class="admin-actions-row">
-          <button class="admin-card" style="grid-column:1/-1" onclick="openBoExpenseAdd()"><span class="a-ic">➕</span><b>הוספת הוצאה</b><span>סכום, קטגוריה ומקור</span></button>
+          <button class="admin-card" style="grid-column:1/-1" onclick="openBoExpenseAdd()"><span class="a-ic"><svg><use href="#ic-plus"/></svg></span><b>הוספת הוצאה</b><span>סכום, קטגוריה ומקור</span></button>
         </div>
         <div id="bo-expenses-list"></div>
       </div>
@@ -2384,21 +2384,21 @@ function icon(name, cls){
     <section class="screen" id="scr-users">
       <div class="sec-head">
         <div>
-          <h2>ניהול משתמשים 👑</h2>
+          <h2>ניהול משתמשים <svg><use href="#ic-people"/></svg></h2>
           <p>כל המשתמשים בכל המסגרות · צפייה, עריכה וכניסה בתור</p>
         </div>
       </div>
       <div id="users-stats" style="margin-bottom:12px"></div>
-      <button class="m-btn ghost" style="width:100%;margin-bottom:12px" onclick="openMasterPinModal()">🔑 סיסמת-על (כניסה לכל משתמש)</button>
+      <button class="m-btn ghost" style="width:100%;margin-bottom:12px" onclick="openMasterPinModal()"><svg><use href="#ic-lock"/></svg> סיסמת-על (כניסה לכל משתמש)</button>
       <details style="margin-bottom:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px">
-        <summary style="cursor:pointer;font-weight:800;font-size:13px">🔐 אבטחה — הקמת חשבון אימות (ידני)</summary>
+        <summary style="cursor:pointer;font-weight:800;font-size:13px"><svg><use href="#ic-lock"/></svg> אבטחה — הקמת חשבון אימות (ידני)</summary>
         <p style="font-size:12px;color:var(--ink-3);line-height:1.6;margin:8px 0">
           החשבונות של כל המסגרות ובעלי-התפקיד כבר הוקמו. הקודים הוסרו מקוד המקור,
           ולכן הכניסה נעשית מול השרת ואין קודים לקרוא ב-F12. כפתור זה נשאר למקרים
           נדירים בלבד: הוספת מסגרת חדשה או תיקון חשבון בודד — תזין את הקוד (רק אתה
           יודע אותו) ותבחר למי הוא שייך. בטוח להרצה חוזרת.
         </p>
-        <button class="m-btn ghost" style="width:100%;margin-bottom:8px" onclick="provisionAuthAccounts()">🔐 הקם חשבון אימות (ידני)</button>
+        <button class="m-btn ghost" style="width:100%;margin-bottom:8px" onclick="provisionAuthAccounts()"><svg><use href="#ic-lock"/></svg> הקם חשבון אימות (ידני)</button>
         <p style="font-size:12px;color:var(--ink-3);line-height:1.6;margin:8px 0">
           סגירת קוד כניסה — מבטלת לצמיתות את הכניסה עם קוד מסוים (מוחקת את פרופיל
           הניתוב ואת חשבון האימות שלו). למשל לסגירת קודים ישנים שכבר לא בשימוש —
@@ -2406,7 +2406,7 @@ function icon(name, cls){
         </p>
         <button class="m-btn ghost" style="width:100%" onclick="closeAuthCode()">🚫 סגור קוד כניסה</button>
       </details>
-      <input class="m-input" id="users-search" type="text" placeholder="🔎 חיפוש משתמש לפי שם, מסגרת או תפקיד…" style="margin-bottom:12px" oninput="renderUsersAdmin()">
+      <input class="m-input" id="users-search" type="text" placeholder="🔍 חיפוש משתמש לפי שם, מסגרת או תפקיד…" style="margin-bottom:12px" oninput="renderUsersAdmin()">
       <div id="users-list"></div>
     </section>
 
@@ -2454,7 +2454,7 @@ function icon(name, cls){
     </div>
     <div class="reader-body" id="reader-body"></div>
     <div class="reader-foot">
-      <button class="confirm-btn" id="reader-confirm" onclick="confirmRead()">✓ אישור קריאה</button>
+      <button class="confirm-btn" id="reader-confirm" onclick="confirmRead()"><svg><use href="#ic-check"/></svg> אישור קריאה</button>
     </div>
   </div>
 
@@ -2487,7 +2487,7 @@ function icon(name, cls){
       <div id="board-zoom-wrap" class="img-zoom-wrap">
         <img id="board-viewer-img" src="" alt="לוח צוות שבועי">
       </div>
-      <div id="board-zoom-hint" class="img-zoom-hint">🔍 צביטה להגדלה · הקשה כפולה לזום מהיר</div>
+      <div id="board-zoom-hint" class="img-zoom-hint"><svg><use href="#ic-search"/></svg> צביטה להגדלה · הקשה כפולה לזום מהיר</div>
       <div id="board-zoom-ctrl" class="img-zoom-ctrl">
         <button onclick="imgZoomBy('board-zoom-wrap','board-viewer-img','board-zoom-lbl',-0.5)" aria-label="הקטן">−</button>
         <span id="board-zoom-lbl" class="img-zoom-lbl">100%</span>
@@ -2500,7 +2500,7 @@ function icon(name, cls){
   <!-- SIGNATURE MODAL -->
   <div class="modal-bg" id="user-edit-modal">
     <div class="modal">
-      <h3 id="ue-title">✏️ עריכת משתמש</h3>
+      <h3 id="ue-title"><svg><use href="#ic-edit"/></svg> עריכת משתמש</h3>
       <div class="m-sub" id="ue-sub">שינוי פרטי המשתמש. השם מתעדכן בכל מקום באפליקציה.</div>
       <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">מסגרת</label>
       <select class="m-input" id="ue-shed" style="margin-bottom:8px"></select>
@@ -2511,14 +2511,14 @@ function icon(name, cls){
       </div>
       <div id="ue-dept-wrap">
         <input class="m-input" id="ue-dept" list="tm-dept-list" placeholder="מחלקה (טקסט חופשי)" style="margin-bottom:8px">
-        <select class="m-input" id="ue-officer" style="margin-bottom:8px"><option value="">— רגיל (משויך למחלקה) —</option><option value="קצין">🎖️ קצין — משויך לצוות "קצינים"</option></select>
+        <select class="m-input" id="ue-officer" style="margin-bottom:8px"><option value="">— רגיל (משויך למחלקה) —</option><option value="קצין"><svg><use href="#ic-commander"/></svg> קצין — משויך לצוות "קצינים"</option></select>
       </div>
       <select class="m-input" id="ue-profession" style="margin-bottom:8px"><option value="">— ללא מקצוע —</option></select>
-      <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך שחרור (אופציונלי)</label>
+      <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> תאריך שחרור (אופציונלי)</label>
       <input class="m-input" id="ue-release" type="date" style="margin-bottom:10px">
       <div style="border-top:1px solid var(--line);padding-top:10px;margin-bottom:10px">
         <label style="font-size:11.5px;color:var(--ink-3);display:flex;justify-content:space-between;margin-bottom:3px">
-          <span>🔒 PIN אישי (4 ספרות)</span><span id="ue-pin-status" style="font-weight:800"></span>
+          <span><svg><use href="#ic-lock"/></svg> PIN אישי (4 ספרות)</span><span id="ue-pin-status" style="font-weight:800"></span>
         </label>
         <input class="m-input" id="ue-pin" type="text" inputmode="numeric" maxlength="4" autocomplete="off"
           placeholder="השאר ריק — ללא שינוי" style="margin-bottom:6px">
@@ -2527,7 +2527,7 @@ function icon(name, cls){
         </label>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="m-btn primary" style="flex:1" onclick="saveUserEdit()">💾 שמירה</button>
+        <button class="m-btn primary" style="flex:1" onclick="saveUserEdit()"><svg><use href="#ic-save"/></svg> שמירה</button>
         <button class="m-btn ghost" style="flex:0 0 auto" onclick="document.getElementById('user-edit-modal').classList.remove('open')">ביטול</button>
       </div>
     </div>
@@ -2536,12 +2536,12 @@ function icon(name, cls){
   <!-- ADD EVENT MODAL (commander) -->
   <div class="modal-bg" id="add-modal">
     <div class="modal">
-      <h3>➕ העלאת פריט</h3>
+      <h3><svg><use href="#ic-plus"/></svg> העלאת פריט</h3>
       <div class="m-sub">הפריט יופץ לכל אנשי הצוות ויידרש אישור חתימה מכל אחד.</div>
       <input class="m-input" id="ev-title" type="text" placeholder="כותרת הפריט (לדוגמה: אירוע FOD ברחבה)">
-      <div class="m-file" id="ev-file-label" onclick="document.getElementById('ev-file').click()">📤 לחץ לבחירת קובץ הפריט</div>
+      <div class="m-file" id="ev-file-label" onclick="document.getElementById('ev-file').click()"><svg><use href="#ic-transfer"/></svg> לחץ לבחירת קובץ הפריט</div>
       <input type="file" id="ev-file" accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" class="hidden" onchange="onEvFile(event)">
-      <div class="ftype-pills"><span class="ftype-pill">🖼️ תמונה</span><span class="ftype-pill">📕 PDF</span><span class="ftype-pill">📘 Word</span><span class="ftype-pill">📙 PowerPoint</span></div>
+      <div class="ftype-pills"><span class="ftype-pill"><svg><use href="#ic-camera"/></svg> תמונה</span><span class="ftype-pill">📕 PDF</span><span class="ftype-pill">📘 Word</span><span class="ftype-pill">📙 PowerPoint</span></div>
       <div class="modal-actions">
         <button class="m-btn ghost" onclick="closeAddEvent()">ביטול</button>
         <button class="m-btn primary" id="ev-save" onclick="saveEvent()" disabled>פרסום הפריט</button>
@@ -2565,7 +2565,7 @@ function icon(name, cls){
   <!-- פירוט מסדר בוקר — נפתח בלחיצה על באנר הנוכחים/נעדרים בדשבורד המפקד -->
   <div class="modal-bg" id="mc-detail-modal">
     <div class="modal">
-      <h3>📋 נעדרים ממסדר בוקר</h3>
+      <h3><svg><use href="#ic-people"/></svg> נעדרים ממסדר בוקר</h3>
       <div class="m-sub" id="mc-detail-sub"></div>
       <div class="sig-detail-list" id="mc-detail-list"></div>
       <div class="modal-actions">
@@ -2578,7 +2578,7 @@ function icon(name, cls){
   <div class="sheet-bg" id="more-sheet" onclick="if(event.target===this)this.classList.remove('open')">
     <div class="sheet">
       <div class="sheet-handle"></div>
-      <div class="sheet-top"><b>עוד</b><button class="sheet-x" onclick="document.getElementById('more-sheet').classList.remove('open')" aria-label="סגור">✕</button></div>
+      <div class="sheet-top"><b>עוד</b><button class="sheet-x" onclick="document.getElementById('more-sheet').classList.remove('open')" aria-label="סגור"><svg><use href="#ic-close"/></svg></button></div>
       <div class="sheet-item" id="sheet-naatim" onclick="closeMoreAnd('scr-naatim')"><div class="s-ic"><svg><use href="#ic-folder"/></svg></div><div class="s-tx"><b>נע"תים</b><span>תחומי אחריות ובדיקה שבועית</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-duties" onclick="closeMoreAnd('scr-duties')"><div class="s-ic"><svg><use href="#ic-calendar"/></svg></div><div class="s-tx"><b>תורנויות</b><span>שיבוץ שמי שבועי</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="sheet-certs" onclick="closeMoreAnd('scr-certs')"><div class="s-ic"><svg><use href="#ic-cert"/></svg></div><div class="s-tx"><b>הסמכות</b><span>תוקף וחידוש הסמכות</span></div><span class="s-chev">‹</span></div>
@@ -2601,11 +2601,11 @@ function icon(name, cls){
   <!-- ADD FAULT MODAL (feature 10) -->
   <div class="modal-bg" id="fault-modal">
     <div class="modal">
-      <h3>🛠️ דיווח תקלה חדשה</h3>
+      <h3><svg><use href="#ic-fault"/></svg> דיווח תקלה חדשה</h3>
       <div class="m-sub">תאר את התקלה שהתגלתה. המפקד יראה ויטפל.</div>
       <input class="m-input" id="fault-title" type="text" placeholder="כותרת התקלה (לדוגמה: עגלת לחץ 3 דולפת)" oninput="checkFaultReady()">
       <textarea class="m-input" id="fault-desc" rows="3" placeholder="פירוט (אופציונלי): מיקום, חומרה, מה נדרש…" style="resize:none"></textarea>
-      <div class="m-file" id="fault-file-label" onclick="document.getElementById('fault-file').click()">📷 צירוף תמונה (אופציונלי)</div>
+      <div class="m-file" id="fault-file-label" onclick="document.getElementById('fault-file').click()"><svg><use href="#ic-camera"/></svg> צירוף תמונה (אופציונלי)</div>
       <input type="file" id="fault-file" accept="image/*" class="hidden" onchange="onFaultFile(event)">
       <div class="modal-actions">
         <button class="m-btn ghost" onclick="closeAddFault()">ביטול</button>
@@ -2622,11 +2622,11 @@ function icon(name, cls){
   <!-- ADD BINUI FAULT MODAL (תקלות בינוי) -->
   <div class="modal-bg" id="binui-fault-modal">
     <div class="modal">
-      <h3>🚧 דיווח תקלת בינוי</h3>
+      <h3><svg><use href="#ic-construction"/></svg> דיווח תקלת בינוי</h3>
       <div class="m-sub">תאר את הליקוי שהתגלה. מ״ע אחזקה תטפל ותעדכן סטטוס.</div>
       <input class="m-input" id="binui-fault-title" type="text" placeholder="כותרת התקלה (לדוגמה: דלת חדר כלים לא נסגרת)" oninput="checkBinuiFaultReady()">
       <textarea class="m-input" id="binui-fault-desc" rows="3" placeholder="פירוט (אופציונלי): מיקום, חומרה, מה נדרש…" style="resize:none"></textarea>
-      <div class="m-file" id="binui-fault-file-label" onclick="document.getElementById('binui-fault-file').click()">📷 צירוף תמונה (אופציונלי)</div>
+      <div class="m-file" id="binui-fault-file-label" onclick="document.getElementById('binui-fault-file').click()"><svg><use href="#ic-camera"/></svg> צירוף תמונה (אופציונלי)</div>
       <input type="file" id="binui-fault-file" accept="image/*" class="hidden" onchange="onBinuiFaultFile(event)">
       <div class="modal-actions">
         <button class="m-btn ghost" onclick="closeAddBinuiFault()">ביטול</button>
@@ -2643,13 +2643,13 @@ function icon(name, cls){
   <!-- MESSAGE MGMT MODAL (feature 11) -->
   <div class="modal-bg" id="msg-modal">
     <div class="modal">
-      <h3>📢 לוח הודעות</h3>
+      <h3><svg><use href="#ic-announce"/></svg> לוח הודעות</h3>
       <div class="m-sub">הודעה תופיע לכל הצוות בראש מסך קרא וחתום.</div>
       <input class="m-input" id="msg-text" type="text" placeholder="תוכן ההודעה…" oninput="checkMsgReady()">
       <div style="display:flex;gap:8px;margin-bottom:12px">
-        <button class="msg-type-btn active" data-type="info" onclick="selMsgType('info',this)">🔵 מידע</button>
-        <button class="msg-type-btn" data-type="warn" onclick="selMsgType('warn',this)">🟡 חשוב</button>
-        <button class="msg-type-btn" data-type="urgent" onclick="selMsgType('urgent',this)">🔴 דחוף</button>
+        <button class="msg-type-btn active" data-type="info" onclick="selMsgType('info',this)"><span class="dot blue"></span> מידע</button>
+        <button class="msg-type-btn" data-type="warn" onclick="selMsgType('warn',this)"><span class="dot yellow"></span> חשוב</button>
+        <button class="msg-type-btn" data-type="urgent" onclick="selMsgType('urgent',this)"><span class="dot red"></span> דחוף</button>
       </div>
       <div class="modal-actions">
         <button class="m-btn ghost" onclick="document.getElementById('msg-modal').classList.remove('open')">ביטול</button>
@@ -2662,16 +2662,16 @@ function icon(name, cls){
   <!-- TEAM MGMT MODAL (feature 8) -->
   <div class="modal-bg" id="team-modal">
     <div class="modal">
-      <h3>👥 ניהול צוות</h3>
+      <h3><svg><use href="#ic-people"/></svg> ניהול צוות</h3>
       <div class="m-sub">הוספה, עריכה והסרה של אנשי צוות. ניתן להגדיר תאריך שחרור.</div>
-      <input class="m-input hidden" id="tm-search" type="text" placeholder="🔎 חיפוש לפי שם…" style="margin-bottom:8px" oninput="renderTeamMgmt()">
+      <input class="m-input hidden" id="tm-search" type="text" placeholder="🔍 חיפוש לפי שם…" style="margin-bottom:8px" oninput="renderTeamMgmt()">
       <div id="team-mgmt-list" style="max-height:52vh;overflow-y:auto;margin-bottom:12px"></div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button class="m-btn primary" id="tm-add-toggle" style="flex:1" onclick="tmOpenAddForm()">➕ הוסף איש צוות</button>
-        <button class="m-btn ghost" style="flex:0 0 auto" onclick="openCustomFieldsTplModal()">🏷️ שדות מותאמים</button>
+        <button class="m-btn primary" id="tm-add-toggle" style="flex:1" onclick="tmOpenAddForm()"><svg><use href="#ic-plus"/></svg> הוסף איש צוות</button>
+        <button class="m-btn ghost" style="flex:0 0 auto" onclick="openCustomFieldsTplModal()"><svg><use href="#ic-tag"/></svg> שדות מותאמים</button>
       </div>
       <div class="team-add-form" id="tm-add-form" style="display:none">
-        <div id="tm-form-title" style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:8px">➕ הוספת איש צוות</div>
+        <div id="tm-form-title" style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:8px"><svg><use href="#ic-plus"/></svg> הוספת איש צוות</div>
         <input class="m-input" id="tm-name" type="text" placeholder="שם מלא" style="margin-bottom:8px">
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <div style="flex:1">
@@ -2679,26 +2679,26 @@ function icon(name, cls){
             <select class="m-input" id="tm-role" style="margin-bottom:0;width:100%"><option value="חייל">חייל</option><option value="מפקד">מפקד</option></select>
           </div>
           <div style="flex:1">
-            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🎂 תאריך לידה</label>
+            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-cake"/></svg> תאריך לידה</label>
             <input class="m-input" id="tm-bday" type="date" style="margin-bottom:0;width:100%" title="תאריך לידה">
           </div>
         </div>
         <label style="font-size:12px;color:var(--ink-2);display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;background:var(--gold-soft);border:1px solid #f0dfa8;border-radius:10px;padding:9px 11px">
           <input type="checkbox" id="tm-reserve" style="width:auto;margin:0" onchange="onReserveToggle()">
-          <span>🎖️ איש מילואים <span style="color:var(--ink-3);font-weight:400">— חייל, ללא מעקב הסמכות</span></span>
+          <span><svg><use href="#ic-reserves"/></svg> איש מילואים <span style="color:var(--ink-3);font-weight:400">— חייל, ללא מעקב הסמכות</span></span>
         </label>
         <input class="m-input" id="tm-dept" list="tm-dept-list" placeholder="מחלקה (טקסט חופשי)" style="margin-bottom:8px;display:none">
         <datalist id="tm-dept-list"></datalist>
-        <select class="m-input" id="tm-officer" style="margin-bottom:8px;display:none"><option value="">— רגיל (משויך למחלקה) —</option><option value="קצין">🎖️ קצין — משויך לצוות "קצינים"</option></select>
+        <select class="m-input" id="tm-officer" style="margin-bottom:8px;display:none"><option value="">— רגיל (משויך למחלקה) —</option><option value="קצין"><svg><use href="#ic-commander"/></svg> קצין — משויך לצוות "קצינים"</option></select>
         <select class="m-input" id="tm-profession" style="margin-bottom:8px"><option value="">— ללא מקצוע —</option></select>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🧑‍🏫 חונך בחודש ההסתגלות (אופציונלי)</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-person"/></svg>‍<svg><use href="#ic-institution"/></svg> חונך בחודש ההסתגלות (אופציונלי)</label>
         <select class="m-input" id="tm-mentor" style="margin-bottom:8px"><option value="">— ללא חונך —</option></select>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך שחרור (אופציונלי — החייל יוסר אוטומטית ביום זה)</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> תאריך שחרור (אופציונלי — החייל יוסר אוטומטית ביום זה)</label>
         <input class="m-input" id="tm-release" type="date" style="margin-bottom:10px" title="תאריך שחרור">
         <div id="tm-custom-fields"></div>
         <div style="border-top:1px solid var(--line);padding-top:10px;margin-bottom:10px">
           <label style="font-size:11.5px;color:var(--ink-3);display:flex;justify-content:space-between;margin-bottom:3px">
-            <span>🔒 PIN אישי (4 ספרות)</span><span id="tm-pin-status" style="font-weight:800"></span>
+            <span><svg><use href="#ic-lock"/></svg> PIN אישי (4 ספרות)</span><span id="tm-pin-status" style="font-weight:800"></span>
           </label>
           <input class="m-input" id="tm-pin" type="text" inputmode="numeric" maxlength="4" autocomplete="off"
             placeholder="השאר ריק — ללא שינוי" style="margin-bottom:6px">
@@ -2707,7 +2707,7 @@ function icon(name, cls){
           </label>
         </div>
         <div style="display:flex;gap:8px">
-          <button class="m-btn primary" id="tm-save-btn" onclick="saveTeamMember()" style="flex:1">➕ הוסף איש צוות</button>
+          <button class="m-btn primary" id="tm-save-btn" onclick="saveTeamMember()" style="flex:1"><svg><use href="#ic-plus"/></svg> הוסף איש צוות</button>
           <button class="m-btn ghost" id="tm-cancel-btn" onclick="tmCancelForm()" style="flex:0 0 auto">ביטול</button>
         </div>
       </div>
@@ -2723,7 +2723,7 @@ function icon(name, cls){
       <div class="sheet-handle"></div>
       <div class="sheet-top">
         <b>חודש הסתגלות</b>
-        <button class="sheet-x" onclick="closeOnboardingDetail()">✕</button>
+        <button class="sheet-x" onclick="closeOnboardingDetail()"><svg><use href="#ic-close"/></svg></button>
       </div>
       <div id="onboarding-detail-body"></div>
     </div>
@@ -2732,10 +2732,10 @@ function icon(name, cls){
   <!-- ONBOARDING ITEM EDIT MODAL — שינוי שם מטלה/הסמכה קיימת בתבנית -->
   <div class="modal-bg" id="onboarding-item-edit-modal">
     <div class="modal">
-      <h3>✏️ עריכת פריט</h3>
+      <h3><svg><use href="#ic-edit"/></svg> עריכת פריט</h3>
       <input class="m-input" id="onb-item-edit-input" type="text" placeholder="שם המטלה/הסמכה" style="margin-bottom:10px">
       <div class="modal-actions">
-        <button class="m-btn primary" onclick="saveOnboardingItemEdit()" style="flex:1">💾 שמור</button>
+        <button class="m-btn primary" onclick="saveOnboardingItemEdit()" style="flex:1"><svg><use href="#ic-save"/></svg> שמור</button>
         <button class="m-btn ghost" onclick="document.getElementById('onboarding-item-edit-modal').classList.remove('open')" style="flex:0 0 auto">ביטול</button>
       </div>
     </div>
@@ -2745,14 +2745,14 @@ function icon(name, cls){
   <!-- CUSTOM FIELDS TEMPLATE MODAL — שדות/תגיות מותאמים אישית לכרטיס חייל, בנפרד לכל מסגרת -->
   <div class="modal-bg" id="custom-fields-tpl-modal">
     <div class="modal">
-      <h3>🏷️ שדות מותאמים אישית</h3>
+      <h3><svg><use href="#ic-tag"/></svg> שדות מותאמים אישית</h3>
       <div class="m-sub">שדה טקסט חופשי או תגית, לכל מה שאין לו מקום קבוע בכרטיס איש הצוות (למשל קבוצת דם, התמחות משנית).</div>
       <div id="cf-tpl-list"></div>
       <div style="display:flex;gap:8px;margin-top:6px">
         <input class="m-input" id="cf-new-label" type="text" placeholder="שם השדה…" style="margin-bottom:0;flex:1">
         <select class="m-input" id="cf-new-type" style="margin-bottom:0;flex:0 0 auto;width:auto">
-          <option value="text">📝 טקסט</option>
-          <option value="tag">🏷️ תגית</option>
+          <option value="text"><svg><use href="#ic-note"/></svg> טקסט</option>
+          <option value="tag"><svg><use href="#ic-tag"/></svg> תגית</option>
         </select>
         <button class="m-btn primary" style="flex:0 0 auto" onclick="addCustomFieldTpl()">+ הוסף</button>
       </div>
@@ -2765,7 +2765,7 @@ function icon(name, cls){
   <!-- DASHBOARD BANNERS MODAL — בחירת המפקד אילו באנרים יופיעו ב"מדדים במבט אחד" -->
   <div class="modal-bg" id="dash-banners-modal">
     <div class="modal">
-      <h3>⚙️ ניהול באנרים</h3>
+      <h3><svg><use href="#ic-maintenance"/></svg> ניהול באנרים</h3>
       <div class="m-sub">בחר אילו באנרים יופיעו בדשבורד שלך תחת "מדדים במבט אחד".</div>
       <div id="dash-banners-list"></div>
       <div class="modal-actions" style="margin-top:14px">
@@ -2777,14 +2777,14 @@ function icon(name, cls){
   <!-- MASTER PIN MODAL — סיסמת-על לכניסה לכל משתמש, ללא צורך ב-PIN האמיתי שלו -->
   <div class="modal-bg" id="master-pin-modal">
     <div class="modal">
-      <h3>🔑 סיסמת-על</h3>
+      <h3><svg><use href="#ic-lock"/></svg> סיסמת-על</h3>
       <div class="m-sub">קוד גלובלי בן 4 ספרות — מי שמכיר אותו יכול להיכנס לכל משתמש בכל מסגרת, בלי לדעת את ה-PIN האישי שלו. שמור אותו בסוד.</div>
       <div style="font-size:11.5px;color:var(--ink-3);display:flex;justify-content:space-between;margin-bottom:6px">
         <span>סטטוס נוכחי</span><span id="master-pin-status" style="font-weight:800"></span>
       </div>
       <input class="m-input" id="master-pin-input" type="text" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4 ספרות" style="margin-bottom:10px">
       <div class="modal-actions">
-        <button class="m-btn primary" onclick="saveMasterPin()" style="flex:1">💾 שמור</button>
+        <button class="m-btn primary" onclick="saveMasterPin()" style="flex:1"><svg><use href="#ic-save"/></svg> שמור</button>
         <button class="m-btn ghost" onclick="clearMasterPin()" style="flex:0 0 auto">בטל</button>
       </div>
       <div class="modal-actions" style="margin-top:8px">
@@ -2796,13 +2796,13 @@ function icon(name, cls){
   <!-- TASK MGMT MODAL (feature 9) -->
   <div class="modal-bg" id="task-modal">
     <div class="modal">
-      <h3>🧰 עריכת מטלות בוקר</h3>
+      <h3><svg><use href="#ic-tasks"/></svg> עריכת מטלות בוקר</h3>
       <div class="m-sub">הוספה, שינוי והסרה של מטלות. משפיע על כל הצוות.</div>
       <div id="task-mgmt-list" style="max-height:44vh;overflow-y:auto;margin-bottom:12px"></div>
       <div class="team-add-form">
         <input class="m-input" id="tk-title" type="text" placeholder="שם המטלה" style="margin-bottom:8px">
         <input class="m-input" id="tk-desc" type="text" placeholder="תיאור המטלה" style="margin-bottom:8px">
-        <button class="m-btn primary" onclick="addTaskItem()" style="width:100%">➕ הוסף מטלה</button>
+        <button class="m-btn primary" onclick="addTaskItem()" style="width:100%"><svg><use href="#ic-plus"/></svg> הוסף מטלה</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('task-modal').classList.remove('open')" style="flex:1">סגור</button>
@@ -2819,10 +2819,10 @@ function icon(name, cls){
       <input class="m-input" id="med-done" type="date" style="margin-bottom:10px" onchange="medAutoExpiry()">
       <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">בתוקף עד (פ.ת)</label>
       <input class="m-input" id="med-exp" type="date" style="margin-bottom:6px">
-      <button class="m-btn ghost" onclick="medClearDates()" style="width:100%;margin-bottom:4px;font-size:12px">🗑️ נקה תאריכים</button>
+      <button class="m-btn ghost" onclick="medClearDates()" style="width:100%;margin-bottom:4px;font-size:12px"><svg><use href="#ic-delete"/></svg> נקה תאריכים</button>
       <div class="modal-actions" style="margin-top:8px">
         <button class="m-btn ghost" onclick="document.getElementById('med-modal').classList.remove('open')" style="flex:1">ביטול</button>
-        <button class="m-btn primary" onclick="saveMedCheck()" style="flex:1.4">💾 שמירה</button>
+        <button class="m-btn primary" onclick="saveMedCheck()" style="flex:1.4"><svg><use href="#ic-save"/></svg> שמירה</button>
       </div>
     </div>
   </div>
@@ -2830,11 +2830,11 @@ function icon(name, cls){
   <!-- SAFETY (קרא וחתום) REPORT -->
   <div class="modal-bg" id="safety-report-modal">
     <div class="modal">
-      <h3>📄 דוח קרא וחתום</h3>
+      <h3><svg><use href="#ic-doc"/></svg> דוח קרא וחתום</h3>
       <div class="m-sub">ריכוז כל פריטי קרא-וחתום ומי אישר כל אחד.</div>
       <div id="safety-report-content" style="max-height:60vh;overflow-y:auto;margin:10px 0"></div>
       <div class="modal-actions" style="margin-top:12px;display:flex;gap:8px">
-        <button class="m-btn primary" onclick="exportSafetyReport()" style="flex:1">📸 ייצוא כתמונה</button>
+        <button class="m-btn primary" onclick="exportSafetyReport()" style="flex:1"><svg><use href="#ic-camera"/></svg> ייצוא כתמונה</button>
         <button class="m-btn ghost" onclick="document.getElementById('safety-report-modal').classList.remove('open')" style="flex:1">סגור</button>
       </div>
     </div>
@@ -2843,11 +2843,11 @@ function icon(name, cls){
   <!-- היסטוריית קרא-וחתום לתיעוד (אחראי הדרכה) — טקסט פשוט, בלי תלות ברשת/CDN -->
   <div class="modal-bg" id="sig-history-modal">
     <div class="modal">
-      <h3>📋 היסטוריית קרא-וחתום — לתיעוד</h3>
+      <h3><svg><use href="#ic-people"/></svg> היסטוריית קרא-וחתום — לתיעוד</h3>
       <div class="m-sub">לכל נושא: מי ביצע (שמות ותאריך), לפי מסגרת. להעתקה או שמירה כטקסט לצורך סיקור.</div>
       <textarea id="sig-history-text" readonly style="width:100%;height:46vh;font-family:inherit;font-size:12.5px;line-height:1.6;border:1px solid var(--line);border-radius:12px;padding:10px;margin:10px 0;resize:vertical;direction:rtl;text-align:right;white-space:pre-wrap;background:var(--card);color:var(--ink)"></textarea>
       <div class="modal-actions" style="display:flex;gap:8px">
-        <button class="m-btn primary" onclick="copySigHistory()" style="flex:1">📋 העתק</button>
+        <button class="m-btn primary" onclick="copySigHistory()" style="flex:1"><svg><use href="#ic-people"/></svg> העתק</button>
         <button class="m-btn ghost" onclick="saveSigHistoryFile()" style="flex:1">⬇️ שמור קובץ</button>
         <button class="m-btn ghost" onclick="document.getElementById('sig-history-modal').classList.remove('open')" style="flex:0 0 auto">סגור</button>
       </div>
@@ -2858,8 +2858,8 @@ function icon(name, cls){
   <div class="digest-pop-bg" id="digest-popup">
     <div class="digest-card">
       <div class="digest-card-hd">
-        <button class="digest-card-x" onclick="closeDigestPopup()" aria-label="סגור">✕</button>
-        <h3 id="digest-popup-title">📋 סקירה יומית</h3>
+        <button class="digest-card-x" onclick="closeDigestPopup()" aria-label="סגור"><svg><use href="#ic-close"/></svg></button>
+        <h3 id="digest-popup-title"><svg><use href="#ic-people"/></svg> סקירה יומית</h3>
       </div>
       <div class="digest-card-body" id="digest-popup-body"></div>
     </div>
@@ -2868,14 +2868,14 @@ function icon(name, cls){
   <!-- BOARD UPLOAD SCOPE CHOICE — כל מפקד בוחר לאן להעלות -->
   <div class="modal-bg" id="board-scope-modal">
     <div class="modal">
-      <h3>📅 העלאת לוח צוות</h3>
+      <h3><svg><use href="#ic-calendar"/></svg> העלאת לוח צוות</h3>
       <div class="m-sub">לאן להעלות את הלוח?</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
         <button class="admin-card" onclick="closeBoardScopeChoice();document.getElementById('board-input').click()">
-          <span class="a-ic">📍</span><b>למסגרת שלי בלבד</b><span>יופיע רק אצל הצוות שלי</span>
+          <span class="a-ic"><svg><use href="#ic-pin"/></svg></span><b>למסגרת שלי בלבד</b><span>יופיע רק אצל הצוות שלי</span>
         </button>
         <button class="admin-card" onclick="closeBoardScopeChoice();openAdminBoard()">
-          <span class="a-ic">🌐</span><b>לכלל המסגרות</b><span>יופיע אצל כל הטייסת + פוש והתראה</span>
+          <span class="a-ic"><svg><use href="#ic-pin"/></svg></span><b>לכלל המסגרות</b><span>יופיע אצל כל הטייסת + פוש והתראה</span>
         </button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
@@ -2888,18 +2888,18 @@ function icon(name, cls){
   <!-- עורך לוח הצוות — מ"ע תורנויות בלבד -->
   <div class="modal-bg" id="duty-roster-modal">
     <div class="modal">
-      <h3 id="roster-ed-title">✏️ עריכת לוח נוכחי</h3>
+      <h3 id="roster-ed-title"><svg><use href="#ic-edit"/></svg> עריכת לוח נוכחי</h3>
       <div class="m-sub">שיבוץ שבועי לפי תפקידים. משבצות חובה (ר״צ, פקיד כלים) חייבות להתמלא לפני פרסום.</div>
       <div id="roster-ed-week"></div>
       <div id="roster-ed-compliance"></div>
       <div id="roster-ed-daystrip"></div>
       <div id="roster-ed-body"></div>
       <div id="roster-ed-preview"></div>
-      <button type="button" class="m-btn ghost" style="width:100%;margin-top:10px" onclick="previewRosterDraft()">👁️ תצוגה מקדימה של הלוח</button>
+      <button type="button" class="m-btn ghost" style="width:100%;margin-top:10px" onclick="previewRosterDraft()"><svg><use href="#ic-eye"/></svg> תצוגה מקדימה של הלוח</button>
       <div class="modal-actions" style="margin-top:10px">
-        <button class="m-btn ghost hidden" id="roster-ed-savedraft" onclick="saveRosterDraftNext()" style="flex:1">💾 שמור טיוטה</button>
-        <button class="m-btn primary" id="roster-ed-publish" onclick="rosterPrimaryAction()" style="flex:1">📢 פרסם שבוע</button>
-        <button class="m-btn ghost" onclick="copyRosterFromLastWeek()" style="flex:0 0 auto">📋 העתק</button>
+        <button class="m-btn ghost hidden" id="roster-ed-savedraft" onclick="saveRosterDraftNext()" style="flex:1"><svg><use href="#ic-save"/></svg> שמור טיוטה</button>
+        <button class="m-btn primary" id="roster-ed-publish" onclick="rosterPrimaryAction()" style="flex:1"><svg><use href="#ic-announce"/></svg> פרסם שבוע</button>
+        <button class="m-btn ghost" onclick="copyRosterFromLastWeek()" style="flex:0 0 auto"><svg><use href="#ic-people"/></svg> העתק</button>
         <button class="m-btn ghost" onclick="document.getElementById('duty-roster-modal').classList.remove('open')" style="flex:0 0 auto">סגור</button>
       </div>
     </div>
@@ -2923,7 +2923,7 @@ function icon(name, cls){
   <!-- אירוע יומן ידני (מפקד) -->
   <div class="modal-bg" id="cal-event-modal">
     <div class="modal">
-      <h3 id="cal-ev-title">➕ אירוע ליומן</h3>
+      <h3 id="cal-ev-title"><svg><use href="#ic-plus"/></svg> אירוע ליומן</h3>
       <div class="m-sub">אירוע חופשי שיופיע ליומן המסגרת (כמו יומן גוגל).</div>
       <label class="req-lbl">כותרת</label>
       <input class="m-input" id="cal-ev-name" placeholder="למשל: ביקורת מפקד גדוד">
@@ -2943,7 +2943,7 @@ function icon(name, cls){
   <!-- לוח אילוצים (חייל) -->
   <div class="modal-bg" id="my-requests-modal">
     <div class="modal">
-      <h3>📌 לוח אילוצים</h3>
+      <h3><svg><use href="#ic-pin"/></svg> לוח אילוצים</h3>
       <div class="m-sub">קורס · חופש · אפטר · יציאה מוקדמת · החלפת תורנות. כל אילוץ עובר לאישור מפקד.</div>
       <button class="m-btn primary" style="width:100%;margin:8px 0 12px" onclick="openNewRequest()">+ אילוץ חדש</button>
       <div id="my-requests-list" style="max-height:52vh;overflow-y:auto"></div>
@@ -2968,7 +2968,7 @@ function icon(name, cls){
   <!-- החלפות לאישור מ"ע תורנויות -->
   <div class="modal-bg" id="naat-swaps-modal">
     <div class="modal">
-      <h3>🔄 אישורי מ״ע — החלפות ואילוצים</h3>
+      <h3><svg><use href="#ic-swap"/></svg> אישורי מ״ע — החלפות ואילוצים</h3>
       <div class="m-sub" id="naat-swaps-sub"></div>
       <div id="naat-swaps-list" style="max-height:56vh;overflow-y:auto"></div>
       <div class="modal-actions" style="margin-top:10px">
@@ -2980,7 +2980,7 @@ function icon(name, cls){
   <!-- לוח אילוצים מרוכז (מ״ע תורנויות) -->
   <div class="modal-bg" id="constraints-board-modal">
     <div class="modal">
-      <h3>📋 לוח אילוצים מרוכז</h3>
+      <h3><svg><use href="#ic-people"/></svg> לוח אילוצים מרוכז</h3>
       <div class="m-sub" id="cns-board-sub"></div>
       <input class="m-input" id="cns-board-search" placeholder="סנן לפי שם…" oninput="renderConstraintsBoard()">
       <div id="cns-board-body" style="max-height:60vh;overflow-y:auto"></div>
@@ -2993,7 +2993,7 @@ function icon(name, cls){
   <!-- ארכיון לוחות שבועיים (מ״ע תורנויות) -->
   <div class="modal-bg" id="roster-archive-modal">
     <div class="modal">
-      <h3>🗄️ ארכיון לוחות</h3>
+      <h3><svg><use href="#ic-folder"/></svg> ארכיון לוחות</h3>
       <div class="m-sub" id="roster-archive-sub"></div>
       <div id="roster-archive-body" style="max-height:56vh;overflow-y:auto"></div>
       <div class="modal-actions" style="margin-top:10px">
@@ -3053,7 +3053,7 @@ function icon(name, cls){
   <!-- WHATSAPP SHARE PROMPT -->
   <div class="modal-bg" id="wa-modal">
     <div class="modal" style="text-align:center">
-      <div style="font-size:44px;margin-bottom:6px">✅</div>
+      <div style="font-size:44px;margin-bottom:6px"><svg><use href="#ic-checkcircle"/></svg></div>
       <h3 id="wa-title">פורסם בהצלחה</h3>
       <div class="m-sub" id="wa-sub" style="text-align:center">רוצה לשלוח התראה לקבוצת הצוות בוואטסאפ?</div>
       <button class="wa-btn" id="wa-go">
@@ -3067,11 +3067,11 @@ function icon(name, cls){
   <!-- ALERTS MODAL (feature 3) -->
   <div class="modal-bg" id="alerts-modal">
     <div class="modal">
-      <h3>🔔 מרכז התראות</h3>
+      <h3><svg><use href="#ic-bell"/></svg> מרכז התראות</h3>
       <div class="m-sub">כל מה שדורש תשומת לב במסגרת שלך</div>
       <div class="cmd-tabs" id="alerts-tabs" style="margin-bottom:10px">
         <button class="cmd-tab active" onclick="switchAlertsTab('all',this)" id="alerts-tab-all">הכול</button>
-        <button class="cmd-tab" onclick="switchAlertsTab('mine',this)" id="alerts-tab-mine">🔔 התזכורות שלי</button>
+        <button class="cmd-tab" onclick="switchAlertsTab('mine',this)" id="alerts-tab-mine"><svg><use href="#ic-bell"/></svg> התזכורות שלי</button>
       </div>
       <div id="alerts-body" style="max-height:56vh;overflow-y:auto;margin-bottom:12px"></div>
       <button class="m-btn ghost" onclick="document.getElementById('alerts-modal').classList.remove('open')" style="width:100%">סגור</button>
@@ -3081,7 +3081,7 @@ function icon(name, cls){
   <!-- REMINDER MODAL — "תזכיר לי" גנרי, נפתח מכלים/תקלות/הסמכות -->
   <div class="modal-bg" id="reminder-modal">
     <div class="modal">
-      <h3>🔔 קביעת תזכורת</h3>
+      <h3><svg><use href="#ic-bell"/></svg> קביעת תזכורת</h3>
       <div class="m-sub" id="reminder-item-label"></div>
       <div class="reminder-chip-row">
         <button class="reminder-chip" onclick="pickReminderDate(1)">מחר</button>
@@ -3101,17 +3101,17 @@ function icon(name, cls){
   <!-- CERT ADD MODAL (feature 15) -->
   <div class="modal-bg" id="cert-modal">
     <div class="modal">
-      <h3>🎓 הוספת הסמכה</h3>
+      <h3><svg><use href="#ic-cert"/></svg> הוספת הסמכה</h3>
       <div class="m-sub">בחר חייל והזן הסמכה. ניתן להוסיף כמה שרוצים לכל חייל.</div>
       <div class="team-add-form">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">👤 חייל</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-person"/></svg> חייל</label>
         <select class="m-input" id="cert-person" style="margin-bottom:8px"></select>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗃️ בחר מהמאגר (לפי רמה) — או הקלד ידני למטה</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-folder"/></svg> בחר מהמאגר (לפי רמה) — או הקלד ידני למטה</label>
         <select class="m-input" id="cert-bank-pick" style="margin-bottom:8px" onchange="pickCmdCertFromBank()"></select>
         <input class="m-input" id="cert-name" type="text" placeholder="שם ההסמכה" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך תפוגה (אופציונלי)</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> תאריך תפוגה (אופציונלי)</label>
         <input class="m-input" id="cert-expiry" type="date" style="margin-bottom:10px">
-        <button class="m-btn primary" onclick="addCert()" style="width:100%">➕ הוסף הסמכה</button>
+        <button class="m-btn primary" onclick="addCert()" style="width:100%"><svg><use href="#ic-plus"/></svg> הוסף הסמכה</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('cert-modal').classList.remove('open')" style="flex:1">סגור</button>
@@ -3122,20 +3122,20 @@ function icon(name, cls){
   <!-- TOOL ROOM MODAL (חדר כלים) -->
   <div class="modal-bg" id="tool-modal">
     <div class="modal">
-      <h3>🧰 הוספת כלי לחדר הכלים</h3>
+      <h3><svg><use href="#ic-toolbox"/></svg> הוספת כלי לחדר הכלים</h3>
       <div class="m-sub">בחר כלי מהמאגר או הקלד ידנית, הזן מספר סידורי ותוקף כיול.</div>
       <div class="team-add-form">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗃️ בחר מהמאגר — או הקלד ידני למטה</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-folder"/></svg> בחר מהמאגר — או הקלד ידני למטה</label>
         <select class="m-input" id="tool-bank-pick" style="margin-bottom:8px" onchange="pickToolFromBank()"></select>
         <input class="m-input" id="tool-name" type="text" placeholder="שם הכלי" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מספר סידורי בחדר כלים</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-note"/></svg> מספר סידורי בחדר כלים</label>
         <input class="m-input" id="tool-serial" type="text" placeholder="מס' סידורי" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תוקף כיול (פ.ת)</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> תוקף כיול (פ.ת)</label>
         <input class="m-input" id="tool-expiry" type="date" style="margin-bottom:10px">
         <label style="font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:10px">
-          <input type="checkbox" id="tool-in-repair" style="width:auto;margin:0"> 🔧 הכלי בתיקון/כיול — לא להתריע עד שיחזור
+          <input type="checkbox" id="tool-in-repair" style="width:auto;margin:0"> <svg><use href="#ic-maintenance"/></svg> הכלי בתיקון/כיול — לא להתריע עד שיחזור
         </label>
-        <button class="m-btn primary" onclick="addTool()" style="width:100%">➕ הוסף כלי</button>
+        <button class="m-btn primary" onclick="addTool()" style="width:100%"><svg><use href="#ic-plus"/></svg> הוסף כלי</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('tool-modal').classList.remove('open')" style="flex:1">סגור</button>
@@ -3146,56 +3146,56 @@ function icon(name, cls){
   <!-- VEHICLE OFFICER — VEHICLE MODAL (כלל הסככות) -->
   <div class="modal-bg" id="vo-vehicle-modal">
     <div class="modal">
-      <h3 id="vo-vehicle-title">🚙 הוספת רכב למעקב</h3>
+      <h3 id="vo-vehicle-title"><svg><use href="#ic-vehicle"/></svg> הוספת רכב למעקב</h3>
       <div class="m-sub">שיוך לסככה + כל פרטי המעקב.</div>
       <div class="team-add-form">
         <div id="vo-vehicle-shed-wrap">
-          <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏷️ סככה משוייכת</label>
+          <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-tag"/></svg> סככה משוייכת</label>
           <select class="m-input" id="vo-vehicle-shed" style="margin-bottom:8px"></select>
         </div>
         <select class="m-input" id="vo-vehicle-bank-pick" style="margin-bottom:8px" onchange="pickVoVehicleFromBank()"></select>
         <input class="m-input" id="vo-vehicle-name" type="text" placeholder="שם/סוג הרכב" style="margin-bottom:8px">
         <label style="font-size:12px;color:var(--ink-2);display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;background:var(--gold-soft);border:1px solid #f0dfa8;border-radius:10px;padding:9px 11px">
           <input type="checkbox" id="vo-vehicle-in-service" style="width:auto;margin:0">
-          <span>🔧 הרכב כרגע בטיפול <span style="color:var(--ink-3);font-weight:400">— משתיק התראות פג-תוקף עד שיוסר הסימון</span></span>
+          <span><svg><use href="#ic-maintenance"/></svg> הרכב כרגע בטיפול <span style="color:var(--ink-3);font-weight:400">— משתיק התראות פג-תוקף עד שיוסר הסימון</span></span>
         </label>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מס' רכב אזרחי</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-note"/></svg> מס' רכב אזרחי</label>
         <input class="m-input" id="vo-vehicle-number" type="text" placeholder="מס' רכב אזרחי" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🪖 מס' רכב צבאי</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-fitness"/></svg> מס' רכב צבאי</label>
         <input class="m-input" id="vo-vehicle-military-number" type="text" placeholder="מס' רכב צבאי" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏢 חברה</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-institution"/></svg> חברה</label>
         <input class="m-input" id="vo-vehicle-company" type="text" placeholder="צבאי / שלמה / אלדן / פרי..." style="margin-bottom:8px">
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <input class="m-input" id="vo-vehicle-code" type="text" placeholder="קוד רכב" style="margin-bottom:0;flex:1">
           <input class="m-input" id="vo-vehicle-fuel-code" type="text" placeholder="קוד דלק" style="margin-bottom:0;flex:1">
         </div>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך טיפול הבא</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> תאריך טיפול הבא</label>
         <input class="m-input" id="vo-vehicle-next-service" type="date" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🛂 תאריך טסט</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-vehicle"/></svg> תאריך טסט</label>
         <input class="m-input" id="vo-vehicle-test" type="date" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📏 ק"מ נוכחי</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-ruler"/></svg> ק"מ נוכחי</label>
         <input class="m-input" id="vo-vehicle-km" type="number" min="0" placeholder="ק&quot;מ נוכחי" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📏 ק"מ לטיפול הבא</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-ruler"/></svg> ק"מ לטיפול הבא</label>
         <input class="m-input" id="vo-vehicle-km-service" type="number" min="0" placeholder="לדוגמה: 120000" style="margin-bottom:8px">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">⏱️ שעות מנוע נוכחיות</label>
         <input class="m-input" id="vo-vehicle-hours" type="number" min="0" placeholder="שעו&quot;מ נוכחי (לפיקו וכו')" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔧 טיפול הבא בשעו"מ (רכב מבוסס שעות — פיקו)</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-maintenance"/></svg> טיפול הבא בשעו"מ (רכב מבוסס שעות — פיקו)</label>
         <input class="m-input" id="vo-vehicle-hours-next" type="number" min="0" placeholder="לדוגמה: 50 · הסטטוס יחושב לפי שעות" style="margin-bottom:8px">
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <div style="flex:1">
-            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ טיפול חודשי/תלת-חודשי</label>
+            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> טיפול חודשי/תלת-חודשי</label>
             <input class="m-input" id="vo-vehicle-monthly-service" type="date" style="margin-bottom:0">
           </div>
           <div style="flex:1">
-            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ טיפול שנתי</label>
+            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> טיפול שנתי</label>
             <input class="m-input" id="vo-vehicle-annual-service" type="date" style="margin-bottom:0">
           </div>
         </div>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">❄️ ביקורת חורף</label>
         <input class="m-input" id="vo-vehicle-winter" type="date" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📝 הערות</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-note"/></svg> הערות</label>
         <input class="m-input" id="vo-vehicle-notes" type="text" placeholder="הערות" style="margin-bottom:10px">
-        <button class="m-btn primary" onclick="saveVoVehicle()" style="width:100%">➕ הוסף רכב</button>
+        <button class="m-btn primary" onclick="saveVoVehicle()" style="width:100%"><svg><use href="#ic-plus"/></svg> הוסף רכב</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('vo-vehicle-modal').classList.remove('open')" style="flex:1">סגור</button>
@@ -3206,11 +3206,11 @@ function icon(name, cls){
   <!-- VEHICLE OFFICER — UPDATE KM MODAL -->
   <div class="modal-bg" id="vo-km-modal">
     <div class="modal">
-      <h3>📏 עדכון ק"מ</h3>
+      <h3><svg><use href="#ic-ruler"/></svg> עדכון ק"מ</h3>
       <div class="m-sub" id="vo-km-sub"></div>
       <div class="team-add-form">
         <input class="m-input" id="vo-km-value" type="number" min="0" placeholder="ק&quot;מ נוכחי" style="margin-bottom:10px">
-        <button class="m-btn primary" onclick="saveVoKmUpdate()" style="width:100%">💾 עדכן ק"מ</button>
+        <button class="m-btn primary" onclick="saveVoKmUpdate()" style="width:100%"><svg><use href="#ic-save"/></svg> עדכן ק"מ</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('vo-km-modal').classList.remove('open')" style="flex:1">סגור</button>
@@ -3221,47 +3221,47 @@ function icon(name, cls){
   <!-- MAINTENANCE DEPT VEHICLE MODAL (שחורים+שכורים, ללא שיוך לסככה) -->
   <div class="modal-bg" id="maint-vehicle-modal">
     <div class="modal">
-      <h3 id="maint-vehicle-title">🔧 הוספת רכב צ'</h3>
+      <h3 id="maint-vehicle-title"><svg><use href="#ic-maintenance"/></svg> הוספת רכב צ'</h3>
       <div class="m-sub">רכבי צ' — שחורים ושכורים. גלוי למ״ע אחזקה בלבד.</div>
       <div class="team-add-form">
         <input class="m-input" id="maint-vehicle-name" type="text" placeholder="שם/סוג הרכב" style="margin-bottom:8px">
         <label style="font-size:12px;color:var(--ink-2);display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;background:var(--gold-soft);border:1px solid #f0dfa8;border-radius:10px;padding:9px 11px">
           <input type="checkbox" id="maint-vehicle-in-service" style="width:auto;margin:0">
-          <span>🔧 הרכב כרגע בטיפול <span style="color:var(--ink-3);font-weight:400">— משתיק התראות פג-תוקף עד שיוסר הסימון</span></span>
+          <span><svg><use href="#ic-maintenance"/></svg> הרכב כרגע בטיפול <span style="color:var(--ink-3);font-weight:400">— משתיק התראות פג-תוקף עד שיוסר הסימון</span></span>
         </label>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מס' רכב אזרחי</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-note"/></svg> מס' רכב אזרחי</label>
         <input class="m-input" id="maint-vehicle-number" type="text" placeholder="מס' רכב אזרחי" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🪖 מס' רכב צבאי</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-fitness"/></svg> מס' רכב צבאי</label>
         <input class="m-input" id="maint-vehicle-military-number" type="text" placeholder="מס' רכב צבאי" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏢 חברה</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-institution"/></svg> חברה</label>
         <input class="m-input" id="maint-vehicle-company" type="text" placeholder="צבאי / שלמה / אלדן..." style="margin-bottom:8px">
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <input class="m-input" id="maint-vehicle-code" type="text" placeholder="קוד רכב" style="margin-bottom:0;flex:1">
           <input class="m-input" id="maint-vehicle-fuel-code" type="text" placeholder="קוד דלק" style="margin-bottom:0;flex:1">
         </div>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך טיפול הבא</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> תאריך טיפול הבא</label>
         <input class="m-input" id="maint-vehicle-next-service" type="date" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🛂 תאריך טסט</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-vehicle"/></svg> תאריך טסט</label>
         <input class="m-input" id="maint-vehicle-test" type="date" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📏 ק"מ נוכחי</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-ruler"/></svg> ק"מ נוכחי</label>
         <input class="m-input" id="maint-vehicle-km" type="number" min="0" placeholder="ק&quot;מ נוכחי" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📏 ק"מ לטיפול הבא</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-ruler"/></svg> ק"מ לטיפול הבא</label>
         <input class="m-input" id="maint-vehicle-km-service" type="number" min="0" placeholder="לדוגמה: 120000" style="margin-bottom:8px">
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <div style="flex:1">
-            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ טיפול חודשי/תלת-חודשי</label>
+            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> טיפול חודשי/תלת-חודשי</label>
             <input class="m-input" id="maint-vehicle-monthly-service" type="date" style="margin-bottom:0">
           </div>
           <div style="flex:1">
-            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ טיפול שנתי</label>
+            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> טיפול שנתי</label>
             <input class="m-input" id="maint-vehicle-annual-service" type="date" style="margin-bottom:0">
           </div>
         </div>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">❄️ ביקורת חורף</label>
         <input class="m-input" id="maint-vehicle-winter" type="date" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📝 הערות</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-note"/></svg> הערות</label>
         <input class="m-input" id="maint-vehicle-notes" type="text" placeholder="הערות" style="margin-bottom:10px">
-        <button class="m-btn primary" onclick="saveMaintVehicle()" style="width:100%">➕ הוסף רכב</button>
+        <button class="m-btn primary" onclick="saveMaintVehicle()" style="width:100%"><svg><use href="#ic-plus"/></svg> הוסף רכב</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('maint-vehicle-modal').classList.remove('open')" style="flex:1">סגור</button>
@@ -3272,57 +3272,57 @@ function icon(name, cls){
   <!-- LEASING VEHICLE MODAL (משוייך לפי שם מחזיק, מקובץ אוטומטית לסככה) -->
   <div class="modal-bg" id="leasing-vehicle-modal">
     <div class="modal">
-      <h3 id="leasing-vehicle-title">🚗 הוספת רכב ליסינג</h3>
+      <h3 id="leasing-vehicle-title"><svg><use href="#ic-vehicle"/></svg> הוספת רכב ליסינג</h3>
       <div class="m-sub">רכב ליסינג משוייך לפי שם המחזיק. אם השם קיים באחת הסככות, הרכב יופיע גם שם.</div>
       <div class="team-add-form">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">👤 שם המחזיק ברכב</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-person"/></svg> שם המחזיק ברכב</label>
         <input class="m-input" id="leasing-vehicle-holder" type="text" placeholder="שם מלא" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏷️ גף</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-tag"/></svg> גף</label>
         <select class="m-input" id="leasing-vehicle-group" style="margin-bottom:8px">
           <option value="גף טכני">גף טכני</option>
           <option value="גף טיסה">גף טיסה</option>
           <option value="אחר">אחר</option>
         </select>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏢 סככה משויכת</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-institution"/></svg> סככה משויכת</label>
         <select class="m-input" id="leasing-vehicle-shed" style="margin-bottom:8px"></select>
         <input class="m-input" id="leasing-vehicle-name" type="text" placeholder="שם/סוג הרכב" style="margin-bottom:8px">
         <label style="font-size:12px;color:var(--ink-2);display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;background:var(--gold-soft);border:1px solid #f0dfa8;border-radius:10px;padding:9px 11px">
           <input type="checkbox" id="leasing-vehicle-in-service" style="width:auto;margin:0">
-          <span>🔧 הרכב כרגע בטיפול <span style="color:var(--ink-3);font-weight:400">— משתיק התראות פג-תוקף עד שיוסר הסימון</span></span>
+          <span><svg><use href="#ic-maintenance"/></svg> הרכב כרגע בטיפול <span style="color:var(--ink-3);font-weight:400">— משתיק התראות פג-תוקף עד שיוסר הסימון</span></span>
         </label>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מס' רכב אזרחי</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-note"/></svg> מס' רכב אזרחי</label>
         <input class="m-input" id="leasing-vehicle-number" type="text" placeholder="מס' רכב אזרחי" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🪖 מס' רכב צבאי</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-fitness"/></svg> מס' רכב צבאי</label>
         <input class="m-input" id="leasing-vehicle-military-number" type="text" placeholder="מס' רכב צבאי (אם יש)" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏢 חברת ליסינג</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-institution"/></svg> חברת ליסינג</label>
         <input class="m-input" id="leasing-vehicle-company" type="text" placeholder="שלמה / אלדן / פרי..." style="margin-bottom:8px">
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <input class="m-input" id="leasing-vehicle-code" type="text" placeholder="קוד רכב" style="margin-bottom:0;flex:1">
           <input class="m-input" id="leasing-vehicle-fuel-code" type="text" placeholder="קוד דלק" style="margin-bottom:0;flex:1">
         </div>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך טיפול הבא</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> תאריך טיפול הבא</label>
         <input class="m-input" id="leasing-vehicle-next-service" type="date" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🛂 תאריך טסט</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-vehicle"/></svg> תאריך טסט</label>
         <input class="m-input" id="leasing-vehicle-test" type="date" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📏 ק"מ נוכחי</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-ruler"/></svg> ק"מ נוכחי</label>
         <input class="m-input" id="leasing-vehicle-km" type="number" min="0" placeholder="ק&quot;מ נוכחי" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📏 ק"מ לטיפול הבא</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-ruler"/></svg> ק"מ לטיפול הבא</label>
         <input class="m-input" id="leasing-vehicle-km-service" type="number" min="0" placeholder="לדוגמה: 120000" style="margin-bottom:8px">
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <div style="flex:1">
-            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ טיפול חודשי/תלת-חודשי</label>
+            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> טיפול חודשי/תלת-חודשי</label>
             <input class="m-input" id="leasing-vehicle-monthly-service" type="date" style="margin-bottom:0">
           </div>
           <div style="flex:1">
-            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ טיפול שנתי</label>
+            <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> טיפול שנתי</label>
             <input class="m-input" id="leasing-vehicle-annual-service" type="date" style="margin-bottom:0">
           </div>
         </div>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">❄️ ביקורת חורף</label>
         <input class="m-input" id="leasing-vehicle-winter" type="date" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📝 הערות</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-note"/></svg> הערות</label>
         <input class="m-input" id="leasing-vehicle-notes" type="text" placeholder="הערות" style="margin-bottom:10px">
-        <button class="m-btn primary" onclick="saveLeasingVehicle()" style="width:100%">➕ הוסף רכב</button>
+        <button class="m-btn primary" onclick="saveLeasingVehicle()" style="width:100%"><svg><use href="#ic-plus"/></svg> הוסף רכב</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('leasing-vehicle-modal').classList.remove('open')" style="flex:1">סגור</button>
@@ -3333,9 +3333,9 @@ function icon(name, cls){
   <!-- LEASING BULK IMPORT MODAL — הדבקת שורות מגיליון המעקב -->
   <div class="modal-bg" id="leasing-import-modal">
     <div class="modal">
-      <h3>📥 ייבוא מרוכז — רכבי ליסינג</h3>
+      <h3><svg><use href="#ic-transfer"/></svg> ייבוא מרוכז — רכבי ליסינג</h3>
       <div class="m-sub">סמן את השורות באקסל, העתק (Ctrl+C) והדבק כאן. רכב שכבר קיים (לפי מס' רכב) יתעדכן — רכב חדש יתווסף. שום רכב לא נמחק.</div>
-      <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏷️ הגף שאליו שייכות השורות שהודבקו</label>
+      <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-tag"/></svg> הגף שאליו שייכות השורות שהודבקו</label>
       <select class="m-input" id="leasing-import-group" style="margin-bottom:8px">
         <option value="גף טכני">גף טכני</option>
         <option value="גף טיסה">גף טיסה</option>
@@ -3349,7 +3349,7 @@ function icon(name, cls){
       <div id="leasing-import-preview" style="font-size:12px;margin-bottom:10px"></div>
       <div class="modal-actions">
         <button class="m-btn ghost" onclick="document.getElementById('leasing-import-modal').classList.remove('open')" style="flex:1">ביטול</button>
-        <button class="m-btn primary" id="leasing-import-go" onclick="runLeasingImport()" style="flex:1.4" disabled>📥 ייבא</button>
+        <button class="m-btn primary" id="leasing-import-go" onclick="runLeasingImport()" style="flex:1.4" disabled><svg><use href="#ic-transfer"/></svg> ייבא</button>
       </div>
     </div>
   </div>
@@ -3357,7 +3357,7 @@ function icon(name, cls){
   <!-- MAINT DEPT — MATERIAL ORDER MODAL -->
   <div class="modal-bg" id="material-modal">
     <div class="modal">
-      <h3 id="material-title">📦 הוספת הזמנת חומר</h3>
+      <h3 id="material-title"><svg><use href="#ic-package"/></svg> הוספת הזמנת חומר</h3>
       <div class="m-sub">מעקב הזמנות חומרים למ״ע אחזקה.</div>
       <div class="team-add-form">
         <input class="m-input" id="material-name" type="text" placeholder="שם הפריט" style="margin-bottom:8px">
@@ -3369,9 +3369,9 @@ function icon(name, cls){
             <option value="התקבל">התקבל</option>
           </select>
         </div>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📝 הערות</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-note"/></svg> הערות</label>
         <input class="m-input" id="material-notes" type="text" placeholder="הערות" style="margin-bottom:10px">
-        <button class="m-btn primary" id="material-save-btn" onclick="saveMaterial()" style="width:100%">➕ הוסף</button>
+        <button class="m-btn primary" id="material-save-btn" onclick="saveMaterial()" style="width:100%"><svg><use href="#ic-plus"/></svg> הוסף</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('material-modal').classList.remove('open')" style="flex:1">סגור</button>
@@ -3382,17 +3382,17 @@ function icon(name, cls){
   <!-- MAINT DEPT — MOTORIZED TOOL MODAL -->
   <div class="modal-bg" id="motor-tool-modal">
     <div class="modal">
-      <h3 id="motor-tool-title">🔧 הוספת כלי מוטורי</h3>
+      <h3 id="motor-tool-title"><svg><use href="#ic-maintenance"/></svg> הוספת כלי מוטורי</h3>
       <div class="m-sub">מעקב כלים מוטוריים של מ״ע אחזקה.</div>
       <div class="team-add-form">
         <input class="m-input" id="motor-tool-name" type="text" placeholder="שם הכלי" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🔢 מספר סידורי</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-note"/></svg> מספר סידורי</label>
         <input class="m-input" id="motor-tool-serial" type="text" placeholder="מספר סידורי" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך כיול/טיפול הבא</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> תאריך כיול/טיפול הבא</label>
         <input class="m-input" id="motor-tool-next-check" type="date" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📝 הערות</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-note"/></svg> הערות</label>
         <input class="m-input" id="motor-tool-notes" type="text" placeholder="הערות" style="margin-bottom:10px">
-        <button class="m-btn primary" id="motor-tool-save-btn" onclick="saveMotorTool()" style="width:100%">➕ הוסף</button>
+        <button class="m-btn primary" id="motor-tool-save-btn" onclick="saveMotorTool()" style="width:100%"><svg><use href="#ic-plus"/></svg> הוסף</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('motor-tool-modal').classList.remove('open')" style="flex:1">סגור</button>
@@ -3403,18 +3403,18 @@ function icon(name, cls){
   <!-- VEHICLE OFFICER — TEAM MODAL (הצוות הפרטי שלו, לצורך ימי הולדת) -->
   <div class="modal-bg" id="vo-team-modal">
     <div class="modal">
-      <h3>👥 הצוות שלי</h3>
+      <h3><svg><use href="#ic-people"/></svg> הצוות שלי</h3>
       <div class="m-sub">הוספה ועריכה של אנשי הצוות שלך — לצורך מעקב ימי הולדת.</div>
       <div id="vo-team-list" style="max-height:35vh;overflow-y:auto;margin-bottom:12px"></div>
       <div class="team-add-form">
-        <div id="vo-team-form-title" style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:8px">➕ הוספת איש צוות</div>
+        <div id="vo-team-form-title" style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:8px"><svg><use href="#ic-plus"/></svg> הוספת איש צוות</div>
         <input class="m-input" id="vo-team-name" type="text" placeholder="שם מלא" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🎂 תאריך לידה</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-cake"/></svg> תאריך לידה</label>
         <input class="m-input" id="vo-team-bday" type="date" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך שחרור (אופציונלי — יוסר אוטומטית ביום זה)</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> תאריך שחרור (אופציונלי — יוסר אוטומטית ביום זה)</label>
         <input class="m-input" id="vo-team-release" type="date" style="margin-bottom:10px" title="תאריך שחרור">
         <div style="display:flex;gap:8px">
-          <button class="m-btn primary" id="vo-team-save-btn" onclick="saveVoTeamMember()" style="flex:1">➕ הוסף איש צוות</button>
+          <button class="m-btn primary" id="vo-team-save-btn" onclick="saveVoTeamMember()" style="flex:1"><svg><use href="#ic-plus"/></svg> הוסף איש צוות</button>
           <button class="m-btn ghost" id="vo-team-cancel-btn" onclick="cancelEditVoTeamMember()" style="flex:0 0 auto;display:none">ביטול עריכה</button>
         </div>
       </div>
@@ -3427,17 +3427,17 @@ function icon(name, cls){
   <!-- VEHICLE OFFICER — LICENSE MODAL (כלל הסככות) -->
   <div class="modal-bg" id="vo-license-modal">
     <div class="modal">
-      <h3 id="vo-license-title">🪪 הוספת רישיון/הסמכה</h3>
+      <h3 id="vo-license-title"><svg><use href="#ic-tag"/></svg> הוספת רישיון/הסמכה</h3>
       <div class="m-sub">רישיונות נהיגה והסמכות רכב, לכל חייל בכל מסגרת.</div>
       <div class="team-add-form">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">👤 חייל</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-person"/></svg> חייל</label>
         <select class="m-input" id="vo-license-person" style="margin-bottom:8px"></select>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗃️ בחר מהמאגר — או הקלד ידני למטה</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-folder"/></svg> בחר מהמאגר — או הקלד ידני למטה</label>
         <select class="m-input" id="vo-license-bank-pick" style="margin-bottom:8px" onchange="pickVoLicenseFromBank()"></select>
         <input class="m-input" id="vo-license-type" type="text" placeholder="סוג רישיון/הסמכה" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תוקף עד</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> תוקף עד</label>
         <input class="m-input" id="vo-license-expiry" type="date" style="margin-bottom:10px">
-        <button class="m-btn primary" onclick="saveVoLicense()" style="width:100%">➕ הוסף</button>
+        <button class="m-btn primary" onclick="saveVoLicense()" style="width:100%"><svg><use href="#ic-plus"/></svg> הוסף</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('vo-license-modal').classList.remove('open')" style="flex:1">סגור</button>
@@ -3448,17 +3448,17 @@ function icon(name, cls){
   <!-- BUDGET OFFICER — ALLOCATION MODAL -->
   <div class="modal-bg" id="bo-allocation-modal">
     <div class="modal">
-      <h3 id="bo-allocation-title">💵 הוספת הקצאה</h3>
+      <h3 id="bo-allocation-title"><svg><use href="#ic-budget"/></svg> הוספת הקצאה</h3>
       <div class="m-sub">מקור תקציב + סכום. שם המקור חופשי — הקלד לפי מה שמתאים.</div>
       <div class="team-add-form">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏦 מקור תקציב</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-budget"/></svg> מקור תקציב</label>
         <input class="m-input" id="bo-alloc-source" type="text" placeholder="לדוגמה: בסיס, אג&quot;ם, תרומה" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">💰 סכום (₪)</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-budget"/></svg> סכום (₪)</label>
         <input class="m-input" id="bo-alloc-amount" type="number" min="0" placeholder="סכום ההקצאה" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> תאריך</label>
         <input class="m-input" id="bo-alloc-date" type="date" style="margin-bottom:8px">
         <input class="m-input" id="bo-alloc-note" type="text" placeholder="הערה (לא חובה)" style="margin-bottom:10px">
-        <button class="m-btn primary" onclick="saveBoAllocation()" style="width:100%">➕ הוסף הקצאה</button>
+        <button class="m-btn primary" onclick="saveBoAllocation()" style="width:100%"><svg><use href="#ic-plus"/></svg> הוסף הקצאה</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('bo-allocation-modal').classList.remove('open')" style="flex:1">סגור</button>
@@ -3469,26 +3469,26 @@ function icon(name, cls){
   <!-- BUDGET OFFICER — EXPENSE MODAL -->
   <div class="modal-bg" id="bo-expense-modal">
     <div class="modal">
-      <h3 id="bo-expense-title">🧾 הוספת הוצאה</h3>
+      <h3 id="bo-expense-title"><svg><use href="#ic-budget"/></svg> הוספת הוצאה</h3>
       <div class="m-sub">סכום, קטגוריה ומקור תקציב.</div>
       <div class="team-add-form">
         <input class="m-input" id="bo-exp-desc" type="text" placeholder="תיאור ההוצאה" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗃️ קטגוריה — בחר מהמאגר או הקלד ידני למטה</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-folder"/></svg> קטגוריה — בחר מהמאגר או הקלד ידני למטה</label>
         <select class="m-input" id="bo-exp-cat-pick" style="margin-bottom:8px" onchange="pickBoExpenseCatFromBank()"></select>
         <input class="m-input" id="bo-exp-category" type="text" placeholder="קטגוריה" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏦 מקור תקציב</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-budget"/></svg> מקור תקציב</label>
         <select class="m-input" id="bo-exp-source" style="margin-bottom:8px"></select>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">💰 סכום (₪)</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-budget"/></svg> סכום (₪)</label>
         <input class="m-input" id="bo-exp-amount" type="number" min="0" placeholder="סכום ההוצאה" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> תאריך</label>
         <input class="m-input" id="bo-exp-date" type="date" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">📌 סטטוס</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-pin"/></svg> סטטוס</label>
         <select class="m-input" id="bo-exp-status" style="margin-bottom:10px">
           <option value="pending">ממתין לאישור</option>
           <option value="approved">אושר</option>
           <option value="rejected">נדחה</option>
         </select>
-        <button class="m-btn primary" onclick="saveBoExpense()" style="width:100%">➕ הוסף הוצאה</button>
+        <button class="m-btn primary" onclick="saveBoExpense()" style="width:100%"><svg><use href="#ic-plus"/></svg> הוסף הוצאה</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('bo-expense-modal').classList.remove('open')" style="flex:1">סגור</button>
@@ -3499,16 +3499,16 @@ function icon(name, cls){
   <!-- ADMIN — RESERVIST MODAL (כלל הסככות) -->
   <div class="modal-bg" id="reserve-modal">
     <div class="modal">
-      <h3 id="reserve-title">🎖️ הוספת איש מילואים</h3>
+      <h3 id="reserve-title"><svg><use href="#ic-reserves"/></svg> הוספת איש מילואים</h3>
       <div class="m-sub">איש מילואים בצוות — ללא מעקב הסמכות. נשמר רק תאריך הרענון האחרון.</div>
       <div class="team-add-form">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏠 מסגרת</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-home"/></svg> מסגרת</label>
         <select class="m-input" id="reserve-shed" style="margin-bottom:8px"></select>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">👤 שם החייל</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-person"/></svg> שם החייל</label>
         <input class="m-input" id="reserve-person-free" type="text" placeholder="שם מלא" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ רענון אחרון <span style="font-weight:400">(ברירת מחדל: תאריך ההזנה)</span></label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> רענון אחרון <span style="font-weight:400">(ברירת מחדל: תאריך ההזנה)</span></label>
         <input class="m-input" id="reserve-last" type="date" style="margin-bottom:10px">
-        <button class="m-btn primary" onclick="saveReserve()" style="width:100%">➕ הוסף</button>
+        <button class="m-btn primary" onclick="saveReserve()" style="width:100%"><svg><use href="#ic-plus"/></svg> הוסף</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('reserve-modal').classList.remove('open')" style="flex:1">סגור</button>
@@ -3519,12 +3519,12 @@ function icon(name, cls){
   <!-- TRAINING LINK MODAL — קישור (לא קובץ) לחומר הדרכה, למפקד מסגרת (מקומי) או אחראי הדרכה (כלל-טייסתי) -->
   <div class="modal-bg" id="training-link-modal">
     <div class="modal">
-      <h3>🔗 הוספת קישור לחומר הדרכה</h3>
+      <h3><svg><use href="#ic-link"/></svg> הוספת קישור לחומר הדרכה</h3>
       <div class="m-sub">קישור חיצוני (מצגת, סרטון, מסמך) — לא קובץ שמועלה לאפליקציה.</div>
       <div id="tl-category-label" class="pill g hidden" style="margin-bottom:10px"></div>
       <input class="m-input" id="tl-title" type="text" placeholder="כותרת" style="margin-bottom:8px">
       <input class="m-input" id="tl-url" type="text" placeholder="https://…" style="margin-bottom:10px">
-      <button class="m-btn primary" onclick="saveTrainingLink()" style="width:100%">➕ הוסף קישור</button>
+      <button class="m-btn primary" onclick="saveTrainingLink()" style="width:100%"><svg><use href="#ic-plus"/></svg> הוסף קישור</button>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('training-link-modal').classList.remove('open')" style="flex:1">סגור</button>
       </div>
@@ -3534,12 +3534,12 @@ function icon(name, cls){
   <!-- BRIEF MODAL (feature 24) -->
   <div class="modal-bg" id="brief-modal">
     <div class="modal">
-      <h3>📋 תדריך בוקר</h3>
+      <h3><svg><use href="#ic-people"/></svg> תדריך בוקר</h3>
       <div class="m-sub">התדריך יופיע לצוות בראש כל מסך. החיילים יאשרו קריאה.</div>
       <textarea class="m-input" id="brief-input" rows="5" placeholder="לדוגמה:&#10;• מז״א: רוח מזרחית 15 קשר&#10;• 2 גיחות בוקר צפויות&#10;• דגש בטיחות: ספירת כלים בסיום עבודה" style="resize:none;line-height:1.7"></textarea>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('brief-modal').classList.remove('open')" style="flex:1">ביטול</button>
-        <button class="m-btn primary" onclick="saveBrief()" style="flex:1.4">📋 פרסום תדריך</button>
+        <button class="m-btn primary" onclick="saveBrief()" style="flex:1.4"><svg><use href="#ic-people"/></svg> פרסום תדריך</button>
       </div>
     </div>
   </div>
@@ -3547,7 +3547,7 @@ function icon(name, cls){
   <!-- AUDIT LOG MODAL (feature 2) -->
   <div class="modal-bg" id="audit-modal">
     <div class="modal">
-      <h3>📜 יומן תיעוד</h3>
+      <h3><svg><use href="#ic-cert"/></svg> יומן תיעוד</h3>
       <div class="m-sub">כל הפעולות שבוצעו במסגרת (200 אחרונות)</div>
       <div id="audit-body" style="max-height:60vh;overflow-y:auto;margin-bottom:12px"></div>
       <button class="m-btn ghost" onclick="document.getElementById('audit-modal').classList.remove('open')" style="width:100%">סגור</button>
@@ -3558,7 +3558,7 @@ function icon(name, cls){
   <!-- NAATIM ADD MODAL -->
   <div class="modal-bg" id="naatim-modal">
     <div class="modal">
-      <h3>🗂️ ניהול נע"תים</h3>
+      <h3><svg><use href="#ic-folder"/></svg> ניהול נע"תים</h3>
       <div class="m-sub">תחום אחריות + חייל אחראי. הבדיקה מתאפסת כל שבוע.</div>
       <div id="naatim-mgmt-list" style="max-height:36vh;overflow-y:auto;margin-bottom:12px"></div>
       <div class="team-add-form">
@@ -3572,12 +3572,12 @@ function icon(name, cls){
           <option value="לוח צוות שבועי">מעניק הרשאה: פרסום לוח צוות לכל המסגרות</option>
         </datalist>
         <div style="background:var(--gold-soft);border:1px solid #f0dfa8;border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:var(--ink-2);line-height:1.6">
-          🔑 <b>תחומים שמעניקים הרשאת עריכה:</b> "כשירות חיילים" (שמיעה + מטווח), "בדיקות שמיעה", "מטווחים", "חדר כלים", "רכבים", "לוח צוות שבועי" (פרסום לכל המסגרות).
+          <svg><use href="#ic-lock"/></svg> <b>תחומים שמעניקים הרשאת עריכה:</b> "כשירות חיילים" (שמיעה + מטווח), "בדיקות שמיעה", "מטווחים", "חדר כלים", "רכבים", "לוח צוות שבועי" (פרסום לכל המסגרות).
           יש לבחור מהרשימה — שם שונה במקצת לא ייתן הרשאה.
         </div>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">👤 חייל אחראי</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-person"/></svg> חייל אחראי</label>
         <select class="m-input" id="naatim-person" style="margin-bottom:10px"></select>
-        <button class="m-btn primary" onclick="addNaatim()" style="width:100%">➕ הוסף נע"ת</button>
+        <button class="m-btn primary" onclick="addNaatim()" style="width:100%"><svg><use href="#ic-plus"/></svg> הוסף נע"ת</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('naatim-modal').classList.remove('open')" style="flex:1">סגור</button>
@@ -3588,19 +3588,19 @@ function icon(name, cls){
   <!-- ADMIN CERT ADD MODAL -->
   <div class="modal-bg" id="acert-modal">
     <div class="modal">
-      <h3>➕ הזנת הסמכה</h3>
+      <h3><svg><use href="#ic-plus"/></svg> הזנת הסמכה</h3>
       <div class="m-sub">בחר סככה, חייל והסמכה. אפשר להוסיף כמה שרוצים.</div>
       <div class="team-add-form">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🏢 סככה</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-institution"/></svg> סככה</label>
         <select class="m-input" id="acert-shed" style="margin-bottom:8px" onchange="onAdminCertShedChange()"></select>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">👤 חייל</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-person"/></svg> חייל</label>
         <select class="m-input" id="acert-person" style="margin-bottom:8px"></select>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗃️ בחר מבנק ההסמכות (או הקלד ידני למטה)</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-folder"/></svg> בחר מבנק ההסמכות (או הקלד ידני למטה)</label>
         <select class="m-input" id="acert-bank" style="margin-bottom:8px" onchange="pickCertFromBank()"></select>
         <input class="m-input" id="acert-name" type="text" placeholder="שם ההסמכה" style="margin-bottom:8px">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">🗓️ תאריך תפוגה (אופציונלי)</label>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg><use href="#ic-calendar"/></svg> תאריך תפוגה (אופציונלי)</label>
         <input class="m-input" id="acert-expiry" type="date" style="margin-bottom:10px">
-        <button class="m-btn primary" onclick="saveAdminCert()" style="width:100%">➕ הוסף הסמכה</button>
+        <button class="m-btn primary" onclick="saveAdminCert()" style="width:100%"><svg><use href="#ic-plus"/></svg> הוסף הסמכה</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('acert-modal').classList.remove('open')" style="flex:1">סגור</button>
@@ -3611,12 +3611,12 @@ function icon(name, cls){
   <!-- CERT BANK MODAL -->
   <div class="modal-bg" id="certbank-modal">
     <div class="modal">
-      <h3>🗃️ בנק הסמכות</h3>
+      <h3><svg><use href="#ic-folder"/></svg> בנק הסמכות</h3>
       <div class="m-sub">רשימת ההסמכות הסטנדרטית לטייסת. משמשת למטריצה ולהזנה.</div>
       <div id="certbank-list" style="max-height:40vh;overflow-y:auto;margin-bottom:12px"></div>
       <div class="team-add-form">
         <input class="m-input" id="certbank-input" type="text" placeholder="שם הסמכה חדשה" style="margin-bottom:10px">
-        <button class="m-btn primary" onclick="addCertBank()" style="width:100%">➕ הוסף לבנק</button>
+        <button class="m-btn primary" onclick="addCertBank()" style="width:100%"><svg><use href="#ic-plus"/></svg> הוסף לבנק</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn ghost" onclick="document.getElementById('certbank-modal').classList.remove('open')" style="flex:1">סגור</button>
