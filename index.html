@@ -8927,10 +8927,43 @@ function rosterPrimaryAction(){ return rosterEditSlot==="next" ? publishFutureRo
    נשמר ל-board_roster_next בלבד, לא נוגע בלוח הפעיל שההתראה קוראת.
    העורך נשאר פתוח כדי להמשיך לערוך. */
 async function saveRosterDraftNext(){
+  if(rosterDraft.published && !(await confirmRosterCompletenessBeforeVisible(rosterDraft))) return;
   rosterDraft.weekKey = todayKey();
   const ok = await saveDutyRosterV2(rosterDraft, "next");
   if(ok === false){ toast("⚠️ שמירת הטיוטה נכשלה — נסה שוב"); return; }
   toast("הטיוטה נשמרה — אפשר להמשיך לערוך ✓");
+}
+/* שדות "שורה קבוצתית" (אותן שורות שמוסתרות ב-rosterBoardHtml כשאין בהן
+   שיבוץ, ר' hasAny שם) המאוישים בלוח r — עוזר לזהות טיוטה "חצי מלאה"
+   לפני שהיא נחשפת לכולם. עצמאי מהרינדור עצמו, לא משתף איתו קוד. */
+function rosterStaffedGroupFields(r, customRows){
+  const cols = [...ROSTER_ROTATING_DAYS, "חמישי"];
+  const hasAny = field => cols.some(dk=>{
+    const day = r.days[dk]; if(!day) return false;
+    const v = day[field]; return Array.isArray(v) && v.length>0;
+  });
+  const friDay = r.days["שישי"] || {};
+  const staffed = new Set();
+  if(hasAny("fixedAug") || (Array.isArray(friDay.fixedAug) && friDay.fixedAug.length>0)) staffed.add("fixedAug");
+  ["pf","pfRest","pms","pmsRest","reserve","basic"].forEach(f=>{ if(hasAny(f)) staffed.add(f); });
+  (customRows||[]).forEach(cr=>{ if(hasAny("custom_"+cr.id)) staffed.add(cr.id); });
+  return staffed;
+}
+/* לפני שחושפים טיוטה עתידית לכולם (פרסום ראשוני, או המשך שמירה אחרי
+   שכבר פורסמה) — מזהירים אם שורה קבוצתית שמאוישת בלוח הנוכחי (כלומר
+   המסגרת בפועל משתמשת בתפקיד הזה) עדיין ריקה בטיוטה. זה בדיוק המצב
+   שגורם למשתמשים לראות "חצי לוח": hasAny מסתיר שורות ריקות, ומ"ע
+   תורנויות עלול לפרסם בטעות לפני שסיים למלא PF/PMS/מילואים/תורנות
+   וכו'. לא חוסם — רק מוודא אישור מודע לפני חשיפה. */
+async function confirmRosterCompletenessBeforeVisible(draft){
+  let cur;
+  try{ cur = await getDutyRoster("current"); }catch(e){ return true; }
+  const curStaffed = rosterStaffedGroupFields(cur, rosterCustomRows);
+  const draftStaffed = rosterStaffedGroupFields(draft, rosterCustomRows);
+  const missing = [...curStaffed].filter(k=>!draftStaffed.has(k));
+  if(!missing.length) return true;
+  const labels = missing.map(k=>rosterCustomRowLabel(k)).join(", ");
+  return confirm(`השורות הבאות מאוישות בלוח הנוכחי אך עדיין ריקות בטיוטה: ${labels}.\n\nהלוח ייראה "חצי מלא" לכל מי שיצפה בו. להמשיך בכל זאת?`);
 }
 /* פרסום הלוח העתידי: הופך אותו לגלוי לכולם כ"שבוע הבא" (roster.published)
    — נשאר בסלוט "הבא" ולא נוגע בלוח הפעיל (current) שההתראה היומית קוראת
@@ -8938,6 +8971,7 @@ async function saveRosterDraftNext(){
    ביודעין מתי שהוא בוחר — הבאנר "↩️ קבע את הלוח הזה כ'לוח נוכחי'"
    בתצוגת "שבוע הבא" (ר' restoreWeekToCurrent), לא אוטומטית בפרסום. */
 async function publishFutureRoster(){
+  if(!(await confirmRosterCompletenessBeforeVisible(rosterDraft))) return;
   rosterDraft.weekKey = todayKey();
   rosterDraft.published = true;
   const ok = await saveDutyRosterV2(rosterDraft, "next");
