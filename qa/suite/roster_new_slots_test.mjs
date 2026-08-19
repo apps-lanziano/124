@@ -14,6 +14,7 @@ const out = await page.evaluate(async ()=>{
   base.days["ראשון"].manager = "מנהל א";
   base.days["ראשון"].pilot   = "מטיס א";
   base.days["ראשון"].lead    = "ראש א";
+  base.days["ראשון"].fixedAug = ["מתגבר א"];   // כדי שהשורה תוצג ובדיקת הסדר תהיה משמעותית
 
   // ללא PMS נחים — השורה לא אמורה להופיע
   const html1 = rosterBoardHtml(base, "", "wide");
