@@ -8617,7 +8617,13 @@ function renderRosterEditor(){
     ${listRow("מילואים","reserve","res")}</div>`;
 
   html += `<div class="rblk"><div class="rblk-h pmsz"><span>${rosterRowToggleHtml("pms","PMS")}</span><span class="rblk-c">${(d.pms||[]).length}</span></div>
-    ${listRow("PMS","pms","pms")}${!wknd?listRow(rosterRowToggleHtml("pmsRest","PMS נחים"),"pmsRest","rest"):""}</div>`;
+    ${listRow("PMS","pms","pms")}</div>`;
+
+  if(!wknd){
+    html += `<div class="rblk"><div class="rblk-h restz"><span>${rosterRowToggleHtml("pmsRest","PMS נחים")}</span>
+      <span class="rblk-c">${(d.pmsRest||[]).length}</span></div>
+      ${listRow("PMS נחים","pmsRest","rest")}</div>`;
+  }
 
   html += `<div class="rblk"><div class="rblk-h"><span>${rosterRowToggleHtml("basic","תורנות בסיסית")}</span><span class="rblk-c">${(d.basic||[]).length}</span></div>
     ${(d.basic||[]).map((b,i)=>`<div class="rrow">
