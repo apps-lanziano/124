@@ -26,6 +26,9 @@ jobs:
         with:
           node-version: '22'
 
+      - name: בדיקת סנכרון גרסת Service Worker
+        run: node scripts/sw-cache-name.mjs --check
+
       - name: התקנת Playwright ודפדפן
         run: |
           npm install --no-audit --no-fund
