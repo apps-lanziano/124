@@ -887,8 +887,6 @@ nav{
 .roster-banner.arc .rb-tx b{color:#5b3fa0}
 .roster-banner.cns{background:#e9f7f4;border-color:#c3e8e0}
 .roster-banner.cns .rb-tx b{color:#0d7a68}
-.roster-banner.cst{background:#f0f5ea;border-color:#d3e3c0}
-.roster-banner.cst .rb-tx b{color:#4c6b2b}
 .cns-person{padding:11px 4px;border-bottom:1px solid var(--line)}
 .cns-person:last-child{border-bottom:0}
 .cns-person-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
@@ -1019,8 +1017,14 @@ nav{
 .rblk-h.restz{background:#eef4ea;color:#3f6b32}
 .rblk-h.pmsz{background:#faeeee;color:#8a4444}
 .rblk-c{font-size:10.5px;color:var(--ink-3);font-weight:700}
-.rblk-toggle{cursor:pointer}
-.rblk-toggle.off{opacity:.55;text-decoration:line-through}
+.rblk-toggle-lbl{display:inline-flex;align-items:center;gap:5px}
+.rblk-toggle-lbl.off{opacity:.55;text-decoration:line-through}
+.rblk-toggle-btn{display:inline-flex;align-items:center;justify-content:center;margin-inline-start:6px;
+  border:1.5px solid var(--line);background:#fff;border-radius:20px;font-size:12px;line-height:1;
+  padding:3px 7px;cursor:pointer;flex:0 0 auto;font-family:inherit}
+.rblk-toggle-btn:active{transform:scale(.9)}
+.rblk-toggle-btn.off{background:var(--red-soft);border-color:var(--red-line)}
+.rrow .rblk-toggle-btn{padding:2px 6px}
 .rrow{display:grid;grid-template-columns:80px 1fr;border-bottom:1px solid var(--bg);align-items:center}
 .rrow:last-child{border-bottom:0}
 .rrow-k{padding:8px 9px;font-size:11px;font-weight:700;color:var(--ink-3);border-inline-end:1px solid var(--bg);
@@ -6645,11 +6649,15 @@ async function toggleRosterRowDisabled(key){
   rosterCache = null;
   toast(isRosterRowDisabled(key) ? "השורה מוסתרת בלוח הצוות" : "השורה תוצג שוב בלוח הצוות");
 }
-/* כותרת שורה בעורך שאפשר להקיש עליה כדי להשבית/להפעיל את הצגתה בלוח. */
+/* כותרת שורה בעורך + כפתור נראה-לעין (לא רק טקסט לחיץ) שמשבית/מפעיל
+   את הצגתה בלוח הצוות. הלחצן קיים גם במצב "מוצג" (לא רק כשמושבת),
+   כדי שיהיה ברור מיד שיש כאן פעולה זמינה. אייקון בלבד (בלי טקסט בתוך
+   הכפתור) כדי שיישאר קומפקטי גם בתוך עמודת rrow-k הצרה (80px). */
 function rosterRowToggleHtml(key, label){
   const off = isRosterRowDisabled(key);
-  return `<span class="rblk-toggle ${off?"off":""}" onclick="toggleRosterRowDisabled('${key}')"
-    title="הקש כדי ${off?"להציג":"להסתיר"} בלוח הצוות">${off?"🚫 ":""}${label}${off?" — מוסתר בלוח":""}</span>`;
+  return `<span class="rblk-toggle-lbl ${off?"off":""}">${label}${off?" — מוסתר בלוח":""}</span>` +
+    `<button type="button" class="rblk-toggle-btn ${off?"off":""}" onclick="event.stopPropagation();toggleRosterRowDisabled('${key}')"
+      title="הקש כדי ${off?"להציג":"להסתיר"} בלוח הצוות" aria-label="${off?"הצג בלוח הצוות":"הסתר מלוח הצוות"}">${off?"🚫":"👁️"}</button>`;
 }
 
 /* ===== ניהול שורות מותאמות-אישית (מ״ע תורנויות) ===== */
@@ -7000,9 +7008,7 @@ async function renderRosterView(){
     <button class="roster-banner cns" onclick="openConstraintsBoard()" style="width:100%;margin-bottom:10px">
         <span class="rb-ic">📋</span><span class="rb-tx"><b>לוח אילוצים מרוכז<span id="roster-cns-badge" class="rb-badge hidden"></span></b><small>מי זמין ומי לא — כל האילוצים במקום אחד</small></span></button>
     <button class="roster-banner arc" onclick="openRosterArchive()" style="width:100%;margin-bottom:10px">
-        <span class="rb-ic">🗄️</span><span class="rb-tx"><b>ארכיון לוחות<span id="roster-arc-badge" class="rb-badge hidden"></span></b><small>היסטוריית הלוחות השבועיים למעקב</small></span></button>
-    <button class="roster-banner cst" onclick="openRosterCustomRowsMgr()" style="width:100%;margin-bottom:10px">
-        <span class="rb-ic">➕</span><span class="rb-tx"><b>שורות מותאמות אישית</b><small>הוספת שורה חדשה ללוח, כולל מיקום</small></span></button>` : "";
+        <span class="rb-ic">🗄️</span><span class="rb-tx"><b>ארכיון לוחות<span id="roster-arc-badge" class="rb-badge hidden"></span></b><small>היסטוריית הלוחות השבועיים למעקב</small></span></button>` : "";
   // "תורן טייסת" מוצג כשורה בתוך הלוח (מתחת ל"תורנות"), לא כבאנר נפרד;
   // בתצוגות "יום"/"רק אני" נשאר באנר קצר כי אין שם טבלה.
   // בורר שבוע — שעבר / נוכחי / הבא (אפשר גם להחליק ימינה/שמאלה על הלוח)

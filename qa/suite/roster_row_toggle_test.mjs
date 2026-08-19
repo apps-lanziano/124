@@ -40,26 +40,37 @@ const out = await page.evaluate(async ()=>{
   const htmlReenabled = rosterBoardHtml(draft, "", "wide");
   r.pfShownAfterReenable = htmlReenabled.includes(">PF<") && htmlReenabled.includes("חייל פ א");
 
-  // עורך הלוח — כותרת השורה ניתנת להקשה, ומשקפת מצב הפעלה/השבתה
+  // עורך הלוח — כותרת השורה כוללת כפתור נראה-לעין (לא רק טקסט לחיץ),
+  // שמשקף מצב הפעלה/השבתה. מאתרים את הבלוק לפי הכותרת "PF" (לא PMS),
+  // ואת הכפתור בתוכו.
   rosterDraft = draft;
   rosterEditSlot = "current";
   rosterEdDay = "ראשון";
   await loadRosterCustomRows(); await loadRosterDisabledRows();
   renderRosterEditor();
-  const toggle = [...document.querySelectorAll(".rblk-toggle")].find(el=>el.textContent.includes("PF") && !el.textContent.includes("PMS"));
-  r.editorHasToggle = !!toggle;
-  r.editorToggleOnByDefault = toggle && !toggle.classList.contains("off");
+  const findPfBlock = () => [...document.querySelectorAll(".rblk-h")].find(el=>
+    el.querySelector(".rblk-toggle-lbl") && el.textContent.includes("PF") && !el.textContent.includes("PMS"));
+  const block1 = findPfBlock();
+  const btn1 = block1 && block1.querySelector(".rblk-toggle-btn");
+  r.editorHasToggle = !!btn1;
+  r.editorToggleOnByDefault = btn1 && !btn1.classList.contains("off");
+  // הכפתור הוא אלמנט <button> אמיתי עם גבול נראה — לא רק טקסט לחיץ בלתי מובחן
+  r.editorToggleIsRealButtonTag = btn1 && btn1.tagName === "BUTTON";
+  const cs1 = btn1 && getComputedStyle(btn1);
+  r.editorToggleLooksLikeButton = !!(cs1 && parseFloat(cs1.borderWidth) > 0);
 
-  // הקשה על הכותרת משביתה, ומעדכנת את התצוגה מיד (קוראים לפונקציה
-  // ישירות עם await — אותה פונקציה שה-onclick מפעיל — כדי לוודא שהבדיקה
-  // ממתינה לשרשרת האסינכרונית המלאה, לא רק לזמן קבוע).
-  await toggleRosterRowDisabled("pf");
-  const toggleAfter = [...document.querySelectorAll(".rblk-toggle")].find(el=>el.textContent.includes("PF") && !el.textContent.includes("PMS"));
-  r.editorToggleOffAfterClick = toggleAfter && toggleAfter.classList.contains("off");
+  // הקשה בפועל על הכפתור (לא רק קריאה לפונקציה) — מדמה בדיוק את מה
+  // שהמשתמש עושה: מוצא את הלחצן וממש לוחץ עליו.
+  btn1.click();
+  await new Promise(res=>setTimeout(res, 60));
+  const block2 = findPfBlock();
+  const btn2 = block2 && block2.querySelector(".rblk-toggle-btn");
+  r.editorToggleOffAfterClick = btn2 && btn2.classList.contains("off");
   r.disabledListUpdated = rosterDisabledRows.includes("pf");
 
   // הקשה נוספת מפעילה מחדש
-  await toggleRosterRowDisabled("pf");
+  btn2.click();
+  await new Promise(res=>setTimeout(res, 60));
   r.disabledListClearedAfterSecondClick = !rosterDisabledRows.includes("pf");
 
   // כפתור להוספת שורה מותאמת-אישית מופיע בתוך עורך הלוח עצמו
@@ -74,9 +85,11 @@ record("PF מוצג לפני השבתה", out.pfShownBeforeToggle, String(out.pf
 record("PF מוסתר אחרי השבתה ידנית — גם עם שיבוץ בפועל", out.pfHiddenAfterDisable, String(out.pfHiddenAfterDisable));
 record("ההשבתה גלובלית — משפיעה גם על לוח עתידי", out.pfHiddenInFutureToo, String(out.pfHiddenInFutureToo));
 record("PF חוזר להופיע אחרי הפעלה מחדש", out.pfShownAfterReenable, String(out.pfShownAfterReenable));
-record("בעורך: כותרת PF ניתנת להקשה", out.editorHasToggle, String(out.editorHasToggle));
+record("בעורך: כפתור השבתה קיים ליד כותרת PF", out.editorHasToggle, String(out.editorHasToggle));
+record("הכפתור הוא אלמנט <button> אמיתי", out.editorToggleIsRealButtonTag, String(out.editorToggleIsRealButtonTag));
+record("הכפתור נראה כמו כפתור (עם גבול) — לא רק טקסט", out.editorToggleLooksLikeButton, String(out.editorToggleLooksLikeButton));
 record("בעורך: ברירת המחדל — פעיל (לא מסומן 'off')", out.editorToggleOnByDefault, String(out.editorToggleOnByDefault));
-record("הקשה על הכותרת מסמנת 'off' מיד", out.editorToggleOffAfterClick, String(out.editorToggleOffAfterClick));
+record("לחיצה בפועל על הכפתור מסמנת 'off' מיד", out.editorToggleOffAfterClick, String(out.editorToggleOffAfterClick));
 record("הקשה מעדכנת את rosterDisabledRows", out.disabledListUpdated, String(out.disabledListUpdated));
 record("הקשה שנייה מפעילה מחדש", out.disabledListClearedAfterSecondClick, String(out.disabledListClearedAfterSecondClick));
 record("כפתור 'הוסף שורה מותאמת אישית' קיים בתוך עורך הלוח", out.addCustomRowButtonInEditor, String(out.addCustomRowButtonInEditor));
