@@ -6835,7 +6835,8 @@ function rosterEditKey(day){ return isWeekendDay(day) ? "חמישי" : day; }
 function migrateRosterToV2(raw){
   const out = {v:2, weekNumber: raw && raw.weekNumber || null, weekKey: (raw && raw.weekKey) || "",
     squadronDuty: (raw && raw.squadronDuty) || "", restWindow: (raw && raw.restWindow) || ROSTER_DEFAULT_REST_WINDOW,
-    disabledRows: Array.isArray(raw && raw.disabledRows) ? raw.disabledRows.slice() : [], days:{}};
+    disabledRows: Array.isArray(raw && raw.disabledRows) ? raw.disabledRows.slice() : [],
+    published: !!(raw && raw.published), days:{}};
   const src = (raw && raw.days) || {};
   WEEK_DAYS_HE.forEach(day=>{
     const d = src[day];
@@ -6923,7 +6924,8 @@ async function getDutyRoster(slot){
 async function saveDutyRosterV2(roster, slot){
   const out = {v:2, weekNumber: roster.weekNumber||null, weekKey: roster.weekKey || todayKey(),
     squadronDuty: roster.squadronDuty||"", restWindow: roster.restWindow || ROSTER_DEFAULT_REST_WINDOW,
-    disabledRows: Array.isArray(roster.disabledRows) ? roster.disabledRows.slice() : [], days:{}};
+    disabledRows: Array.isArray(roster.disabledRows) ? roster.disabledRows.slice() : [],
+    published: !!roster.published, days:{}};
   WEEK_DAYS_HE.forEach(day=>{
     const src = roster.days[rosterEditKey(day)] || emptyRosterDay(isWeekendDay(day));
     const d = JSON.parse(JSON.stringify(src));
@@ -6985,14 +6987,20 @@ async function renderRosterView(){
   // ברירת מחדל לפי תפקיד: חיילים מתחילים ב"לוח יומי" (כרטיסי יום — קריא בנייד),
   // מ״ע/מפקד ב"לוח שבועי" (טבלה מלאה). המשתמש יכול להחליף בכל רגע.
   if(!_rosterViewInit){ _rosterViewInit = true; if(!isRosterManager && userRole!=="מפקד") rosterView = "day"; }
-  // "שבוע הבא" הוא תכנון פרטי של מ״ע תורנויות עד לפרסום — שאר היוזרים
-  // רואים רק שבוע שעבר + נוכחי. אם מישהו שאינו מ״ע נמצא על "הבא" — מחזירים לנוכחי.
-  if(boardWeekSlot==="next" && !isRosterManager) boardWeekSlot = "current";
-  // הלוח מציג שבוע לפי boardWeekSlot (שעבר/נוכחי/הבא). רק "נוכחי" נשמר
-  // במטמון (הוא מה שנקרא הכי הרבה); שעבר/הבא נטענים לפי דרישה.
+  // "שבוע הבא" הוא תכנון פרטי של מ״ע תורנויות עד ללחיצה על "פרסם לוח
+  // צוות" (roster.published) — מרגע הפרסום הוא גלוי לכולם כ"שבוע הבא",
+  // בלי לקדם אותו אוטומטית ללוח הנוכחי (זו פעולה נפרדת ומפורשת: הבאנר
+  // "↩️ קבע את הלוח הזה כ'לוח נוכחי'", ר' restoreWeekToCurrent). לפני
+  // הפרסום — רק מ״ע תורנויות רואה. אם מישהו שאינו מ״ע נמצא על "הבא"
+  // והוא עדיין לא פורסם — מחזירים לנוכחי.
   const r = boardWeekSlot==="current"
     ? (rosterCache || (rosterCache = await getDutyRoster()))
     : await getDutyRoster(boardWeekSlot);
+  let nextVisible = isRosterManager;
+  if(!nextVisible){
+    nextVisible = boardWeekSlot==="next" ? !!r.published : !!(await getDutyRoster("next")).published;
+  }
+  if(boardWeekSlot==="next" && !nextVisible){ boardWeekSlot = "current"; return renderRosterView(); }
   const today = todayHebrewDay();
   const todayForBoard = boardWeekSlot==="current" ? today : "";  // "היום" רק בשבוע הנוכחי
   if(!rosterDaySel) rosterDaySel = rosterEditKey(today);
@@ -7015,11 +7023,11 @@ async function renderRosterView(){
   // "תורן טייסת" מוצג כשורה בתוך הלוח (מתחת ל"תורנות"), לא כבאנר נפרד;
   // בתצוגות "יום"/"רק אני" נשאר באנר קצר כי אין שם טבלה.
   // בורר שבוע — שעבר / נוכחי / הבא (אפשר גם להחליק ימינה/שמאלה על הלוח)
-  // "שבוע הבא" מוצג רק למ״ע תורנויות (תכנון פרטי עד לפרסום)
+  // "שבוע הבא" מוצג לכולם רק אחרי פרסום; לפני כן רק למ״ע תורנויות (nextVisible)
   const weekSel = `<div class="roster-weeksel">
       <div class="${boardWeekSlot==="prev"?"on":""}" onclick="setBoardWeek('prev')">שבוע שעבר</div>
       <div class="${boardWeekSlot==="current"?"on":""}" onclick="setBoardWeek('current')">נוכחי</div>
-      ${isRosterManager ? `<div class="${boardWeekSlot==="next"?"on":""}" onclick="setBoardWeek('next')">שבוע הבא</div>` : ""}
+      ${nextVisible ? `<div class="${boardWeekSlot==="next"?"on":""}" onclick="setBoardWeek('next')">שבוע הבא</div>` : ""}
     </div>`;
   // כשמ"ע צופה ב"שבוע שעבר"/"שבוע הבא" — כפתור לקבוע אותו כ"לוח נוכחי"
   // (שחזור בטוח: מעתיק את השבוע המוצג ל-current, בלי לגעת בשאר).
@@ -7142,17 +7150,17 @@ async function restoreWeekToCurrent(slot){
   await renderRosterView();
   toast("הלוח הנוכחי עודכן ✓");
 }
-/* בחירת השבוע המוצג + החלקה ימינה/שמאלה על הלוח. */
+/* בחירת השבוע המוצג + החלקה ימינה/שמאלה על הלוח. את ההרשאה בפועל
+   ל"הבא" (מ״ע תורנויות, או כולם אחרי פרסום) בודקת renderRosterView
+   באופן אסינכרוני ומתקנת בחזרה ל"נוכחי" אם צריך — כאן רק קובעים כוונה. */
 function setBoardWeek(slot){
-  if(slot==="next" && !isRosterManager) slot = "current";   // "הבא" רק למ״ע תורנויות
-  boardWeekSlot = slot; renderRosterView();
+  boardWeekSlot = slot; return renderRosterView();
 }
 function rosterWeekShift(delta){
-  // שאר היוזרים מנווטים רק בין "שעבר" ל"נוכחי"; "הבא" זמין רק למ״ע תורנויות
-  const order = isRosterManager ? ["prev","current","next"] : ["prev","current"];
+  const order = ["prev","current","next"];
   const cur = Math.max(0, order.indexOf(boardWeekSlot));
   const i = Math.min(order.length-1, Math.max(0, cur + delta));
-  if(order[i] !== boardWeekSlot){ boardWeekSlot = order[i]; renderRosterView(); }
+  if(order[i] !== boardWeekSlot){ boardWeekSlot = order[i]; return renderRosterView(); }
 }
 let _rosterSwipeBound = false;
 function initRosterSwipe(){
@@ -8512,8 +8520,9 @@ async function openRosterEditor(aiDays, slot){
   rosterEdDay = rosterEditSlot==="next" ? "ראשון" : rosterEditKey(todayHebrewDay());
   document.getElementById("roster-ed-title").textContent =
     rosterEditSlot==="next" ? "🔮 בניית לוח עתידי" : "✏️ עריכת לוח נוכחי";
-  // לוח עתידי: "שמור טיוטה" (שומר וממשיך לערוך, לא מפרסם) + "פרסם לוח צוות"
-  // (רק כשמסיימים — מקדם את הטיוטה ללוח הפעיל). לוח נוכחי: שמור ופרסם.
+  // לוח עתידי: "שמור טיוטה" (שומר וממשיך לערוך, פרטי) + "פרסם לוח צוות"
+  // (הופך גלוי לכולם כ"שבוע הבא" — לא מקדם ללוח הפעיל, ר' publishFutureRoster).
+  // לוח נוכחי: שמור ופרסם (מיד ללוח הפעיל).
   document.getElementById("roster-ed-savedraft").classList.toggle("hidden", rosterEditSlot!=="next");
   document.getElementById("roster-ed-publish").textContent =
     rosterEditSlot==="next" ? "📢 פרסם לוח צוות" : "💾 שמור ופרסם";
@@ -8909,35 +8918,34 @@ async function publishRoster(){
     toast("הלוח פורסם ✓");
   }
 }
-/* הכפתור הראשי בעורך: בלוח נוכחי מפרסם מיד; בלוח עתידי מפרסם (מקדם ל-
-   לוח הפעיל) רק כשמסיימים. */
+/* הכפתור הראשי בעורך: בלוח נוכחי מפרסם מיד ללוח הפעיל; בלוח עתידי
+   מפרסם כ"שבוע הבא" הגלוי לכולם, בלי לגעת בלוח הפעיל (ר' publishFutureRoster). */
 function rosterPrimaryAction(){ return rosterEditSlot==="next" ? publishFutureRoster() : publishRoster(); }
-/* לוח עתידי — שמירת טיוטה בלי לפרסם. נשמר ל-board_roster_next בלבד, לא
-   נוגע בלוח הפעיל שההתראה קוראת. העורך נשאר פתוח כדי להמשיך לערוך. */
+/* לוח עתידי — שמירת טיוטה בלי לפרסם, ובלי לגעת ב-published: אם הלוח
+   טרם פורסם הוא נשאר פרטי; אם כבר פורסם קודם, עדכונים נוספים ממשיכים
+   להופיע מיד לכולם (זו המשך עריכה של לוח שכבר גלוי, לא פרסום חדש).
+   נשמר ל-board_roster_next בלבד, לא נוגע בלוח הפעיל שההתראה קוראת.
+   העורך נשאר פתוח כדי להמשיך לערוך. */
 async function saveRosterDraftNext(){
   rosterDraft.weekKey = todayKey();
   const ok = await saveDutyRosterV2(rosterDraft, "next");
   if(ok === false){ toast("⚠️ שמירת הטיוטה נכשלה — נסה שוב"); return; }
   toast("הטיוטה נשמרה — אפשר להמשיך לערוך ✓");
 }
-/* פרסום הלוח העתידי: מקדם את הטיוטה ללוח הפעיל (current) כך שכולם רואים
-   אותו וההתראה היומית קוראת ממנו, ומרוקן את "שבוע הבא" עד לתכנון הבא —
-   כך שאף אחד (פרט למ״ע תורנויות בזמן תכנון) לא רואה לוח עתידי לא-מפורסם. */
+/* פרסום הלוח העתידי: הופך אותו לגלוי לכולם כ"שבוע הבא" (roster.published)
+   — נשאר בסלוט "הבא" ולא נוגע בלוח הפעיל (current) שההתראה היומית קוראת
+   ממנו. הקידום ללוח נוכחי הוא פעולה נפרדת ומפורשת שמ״ע תורנויות מבצע
+   ביודעין מתי שהוא בוחר — הבאנר "↩️ קבע את הלוח הזה כ'לוח נוכחי'"
+   בתצוגת "שבוע הבא" (ר' restoreWeekToCurrent), לא אוטומטית בפרסום. */
 async function publishFutureRoster(){
-  if(!confirm("להפוך את הטיוטה ללוח הנוכחי הפעיל?\n\n• השבוע הנוכחי הקודם עובר ל\"שבוע שעבר\".\n• \"שבוע הבא\" יתרוקן עד לתכנון הבא.\n• מכאן ההתראה היומית תקרא מהלוח הזה.")) return;
   rosterDraft.weekKey = todayKey();
-  // הנוכחי הקודם → "שבוע שעבר", הטיוטה → "נוכחי", ו"שבוע הבא" מתרוקן.
-  const oldCurrent = await getDutyRoster("current");
-  const hadCurrent = WEEK_DAYS_HE.some(d=>rosterDayCount(oldCurrent.days[d])>0);
-  if(hadCurrent) await saveDutyRosterV2(oldCurrent, "prev");
-  const ok = await saveDutyRosterV2(rosterDraft, "current"); // הופך ללוח הפעיל
+  rosterDraft.published = true;
+  const ok = await saveDutyRosterV2(rosterDraft, "next");
   if(ok === false){ toast("⚠️ הפרסום נכשל — בדוק חיבור ונסה שוב"); return; }
-  await saveDutyRosterV2(migrateRosterToV2(null), "next");   // מרוקן את "שבוע הבא"
   rosterCache = null;
-  boardWeekSlot = "current";
   document.getElementById("duty-roster-modal").classList.remove("open");
   await renderRosterView();
-  toast("הלוח פורסם וכעת פעיל ✓ — \"שבוע הבא\" התרוקן");
+  toast("הלוח פורסם — גלוי לכולם כ״שבוע הבא״ ✓");
 }
 /* תצוגה מקדימה — מציגה את הטיוטה בדיוק כמו הלוח השבועי אחרי הפרסום
    (אותו rosterBoardHtml, מסך מלא עם זום), לפני שמפרסמים. */
