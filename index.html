@@ -6716,6 +6716,43 @@ async function seedNewCustomRowDisabledElsewhere(id){
     }
   }
 }
+/* תיקון-עצמי חד-פעמי לשורות מותאמות-אישית שדלפו *לפני* שהזריעה למעלה
+   קיימת (seedNewCustomRowDisabledElsewhere חלה רק על שורות שנוצרות
+   מרגע התיקון והלאה — לא רטרואקטיבית). רץ אוטומטית בכל טעינת מסך
+   התורנויות, בלי דרישה מהמ״ע ללחוץ על שום מתג ידנית.
+   הכלל: שורה מותאמת-אישית שיש לה שיבוץ בפועל על חלק מהשבועות (current/
+   next/prev) אך לא על כולם — כלומר המסגרת בבירור *כן* משתמשת בה, רק לא
+   בכל שבוע — מסומנת מושבתת-מראש על השבועות שבהם היא ריקה, בדיוק כמו
+   שהיה קורה לו נוצרה אחרי התיקון. לא נוגעים בשורה שריקה **בכל** השבועות
+   (אין עדיין שום איתות למה היא שייכת) ולא בשורה שמשובצת **בכל** השבועות
+   (אין מה לתקן). אידמפוטנטי לגמרי: אחרי הריצה הראשונה זה תמיד no-op
+   (בודק disabledRows לפני כתיבה), ולכן בטוח להריץ בכל רינדור. */
+let _legacyCustomRowHealDone = false;
+async function healLegacyLeakedCustomRows(){
+  if(_legacyCustomRowHealDone) return;
+  _legacyCustomRowHealDone = true;
+  if(!rosterCustomRows.length) return;
+  const slots = ["current","next","prev"];
+  const boards = {};
+  for(const s of slots) boards[s] = await getDutyRoster(s);
+  const cols = [...ROSTER_ROTATING_DAYS, "חמישי"];
+  const hasAnyOnBoard = (board, field) => cols.some(dk=>{
+    const day = board.days[dk]; if(!day) return false;
+    const v = day[field]; return Array.isArray(v) && v.length>0;
+  });
+  for(const cr of rosterCustomRows){
+    const f = "custom_"+cr.id;
+    const staffedSlots = slots.filter(s => hasAnyOnBoard(boards[s], f));
+    if(staffedSlots.length === 0 || staffedSlots.length === slots.length) continue;
+    for(const s of slots){
+      if(staffedSlots.includes(s)) continue;
+      const board = boards[s];
+      if((board.disabledRows||[]).includes(cr.id)) continue;
+      board.disabledRows = [...(board.disabledRows||[]), cr.id];
+      await saveDutyRosterV2(board, s);
+    }
+  }
+}
 async function saveRosterCustomRowForm(){
   const label = (document.getElementById("roster-customrow-label").value||"").trim();
   const afterKey = document.getElementById("roster-customrow-anchor").value;
@@ -7008,6 +7045,7 @@ async function renderRosterView(){
   if(!box) return;
   await maybeRotateWeek();     // מעבר שבוע אוטומטי (שבת בחצות) לפני הרינדור
   await loadRosterCustomRows();
+  await healLegacyLeakedCustomRows();
   // ברירת מחדל לפי תפקיד: חיילים מתחילים ב"לוח יומי" (כרטיסי יום — קריא בנייד),
   // מ״ע/מפקד ב"לוח שבועי" (טבלה מלאה). המשתמש יכול להחליף בכל רגע.
   if(!_rosterViewInit){ _rosterViewInit = true; if(!isRosterManager && userRole!=="מפקד") rosterView = "day"; }
