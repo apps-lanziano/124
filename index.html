@@ -6695,19 +6695,43 @@ function renderRosterCustomRowsMgr(){
 }
 function editRosterCustomRow(id){ rosterCustomRowEditId = id; renderRosterCustomRowsMgr(); }
 function cancelRosterCustomRowEdit(){ rosterCustomRowEditId = null; renderRosterCustomRowsMgr(); }
+/* שורה מותאמת-אישית חדשה נוצרת תמיד מתוך עריכת שבוע ספציפי (current/next)
+   — המ״ע מוסיף אותה כי הוא צריך אותה *בשבוע הזה*, לא בהכרח בכל שבוע
+   אחר שכבר קיים. ברירת המחדל של disabledRows היא "לא מושבת = מוצג"
+   (ר' rosterBoardHtml), ולכן בלי הפעולה הזו שורה חדשה הייתה "מדליפה"
+   קדימה/אחורה ומופיעה ריקה על לוחות שאין להם שום קשר אליה — בדיוק הבאג
+   שדווח: שורות שנוספו תוך כדי בניית "שבוע הבא" הופיעו ריקות גם ב"נוכחי".
+   לכן: בשבוע הנערך היא נשארת מופעלת (ברירת המחדל), ובכל שבוע *קיים*
+   אחר (current/next/prev, לפי מה שרלוונטי) היא מסומנת מושבתת מראש —
+   חד-פעמי בזמן היצירה, לא סנכרון מתמשך. מ״ע יכול תמיד להפעיל אותה
+   ידנית משם דרך המתג הרגיל אם ירצה. הארכיון קפוא לנצח ולא נוגעים בו. */
+async function seedNewCustomRowDisabledElsewhere(id){
+  const editingSlot = rosterEditSlot || "current";
+  const otherSlots = ["current","next","prev"].filter(s=>s!==editingSlot);
+  for(const slot of otherSlots){
+    const board = await getDutyRoster(slot);
+    if(!(board.disabledRows||[]).includes(id)){
+      board.disabledRows = [...(board.disabledRows||[]), id];
+      await saveDutyRosterV2(board, slot);
+    }
+  }
+}
 async function saveRosterCustomRowForm(){
   const label = (document.getElementById("roster-customrow-label").value||"").trim();
   const afterKey = document.getElementById("roster-customrow-anchor").value;
   if(!label){ toast("הזן שם לשורה"); return; }
   const list = rosterCustomRows.slice();
+  let newRowId = null;
   if(rosterCustomRowEditId){
     const cr = list.find(c=>c.id===rosterCustomRowEditId);
     if(cr){ cr.label = label; cr.afterKey = afterKey; }
   } else {
-    list.push({id:"cr_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), label, afterKey});
+    newRowId = "cr_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    list.push({id:newRowId, label, afterKey});
   }
   const ok = await saveRosterCustomRows(list);
   if(ok === false){ toast("⚠️ השמירה נכשלה — נסה שוב"); return; }
+  if(newRowId) await seedNewCustomRowDisabledElsewhere(newRowId);
   rosterCustomRowEditId = null;
   renderRosterCustomRowsMgr();
   rosterCache = null;
