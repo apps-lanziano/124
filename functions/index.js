@@ -28,6 +28,7 @@ const {validateTestNotificationRequest} = require("./lib/test_notification");
 const {dumpCollection} = require("./lib/backup");
 const {decide, SHED_NAMES} = require("./lib/notify");
 const {shouldAuthorize} = require("./lib/authorize");
+const crypto = require("crypto");
 
 initializeApp();
 const db = getFirestore();
@@ -55,7 +56,23 @@ exports.markAuthorized = onCall(
     if (!shouldAuthorize(request.auth)) {
       throw new HttpsError("permission-denied", "רק כניסה עם קוד תקף מאושרת");
     }
-    await getAuth().setCustomUserClaims(request.auth.uid, {authorized: true});
+
+    // קרא את התפקיד מ-authprofile בצד השרת — לא סומך על הלקוח.
+    // אימייל בפורמט u<code>@sq124.app; מפתח המסמך = sha256("sq124code|" + code).
+    const email = request.auth.token.email || "";
+    const codeMatch = email.match(/^u(\d+)@/);
+    let role = "חייל"; // ברירת מחדל בטוחה
+    if (codeMatch) {
+      const code = codeMatch[1];
+      const hash = crypto.createHash("sha256").update("sq124code|" + code).digest("hex");
+      const profSnap = await db.doc("sq124/authprofile_" + hash).get();
+      const prof = profSnap.exists ? profSnap.data().v : null;
+      if (prof && typeof prof.role === "string" && prof.role.length > 0) {
+        role = prof.role;
+      }
+    }
+
+    await getAuth().setCustomUserClaims(request.auth.uid, {authorized: true, role});
     return {ok: true};
   },
 );
@@ -73,6 +90,21 @@ exports.analyzeBoardImage = onCall(
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "נדרש להיות מחובר");
     }
+
+    // מכסה יומית: 10 קריאות לאנתרופיק לכל משתמש (Firestore transaction אטומי).
+    const today = new Date().toISOString().slice(0, 10);
+    const quotaRef = db.doc("sq124/ai_quota_" + request.auth.uid);
+    const DAILY_LIMIT = 10;
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(quotaRef);
+      const data = snap.exists ? snap.data() : null;
+      const count = (data && data.date === today) ? (data.count || 0) : 0;
+      if (count >= DAILY_LIMIT) {
+        throw new HttpsError("resource-exhausted", "הגעת למכסה היומית של ניתוח לוח. נסה שוב מחר.");
+      }
+      tx.set(quotaRef, {date: today, count: count + 1});
+    });
+
     const imageDataUrl = request.data && request.data.image;
     if (!imageDataUrl || typeof imageDataUrl !== "string") {
       throw new HttpsError("invalid-argument", "חסרה תמונה לניתוח");

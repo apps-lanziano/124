@@ -44,11 +44,20 @@ service cloud.firestore {
     function isAuthorized() {
       return request.auth != null && request.auth.token.authorized == true;
     }
+    // מסמכים רגישים: admin_*, authprofile_*, ai_quota_*
+    // כתיבה/מחיקה מוגבלת למפקד בלבד (role claim נקבע server-side ע"י markAuthorized).
+    function isSensitiveDoc(docId) {
+      return docId.matches('^(admin_|authprofile_|ai_quota_).*');
+    }
+    // תפקיד בעל הרשאה גבוהה — role claim מוטמע ע"י markAuthorized, לא נקבע ע"י הלקוח
+    function isPrivileged() {
+      return isAuthorized() && request.auth.token.role == "מפקד";
+    }
 
     match /sq124/{docId} {
       allow get:            if isAuthorized();
-      allow create, update: if isAuthorized();
-      allow delete:         if isAuthorized();  // האפליקציה מוחקת תמונות/קבצים — חייב אימות מאושר
+      allow create, update: if isAuthorized() && (!isSensitiveDoc(docId) || isPrivileged());
+      allow delete:         if isAuthorized() && (!isSensitiveDoc(docId) || isPrivileged());
       allow list:           if false;           // בלי שאיבה המונית של כל המסד
     }
 

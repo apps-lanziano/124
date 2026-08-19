@@ -224,3 +224,53 @@ PIN אישי שנאכף בשרת (Blaze).
   **אכיפת App Check על Auth** (שלב 1ב, בוצע 2026-08-16 — חוסמת ניחוש אוטומטי
   ברמת השרת) נחשבים חזקים מספיק לצרכי האפליקציה, והארכה הייתה מוסיפה חיכוך
   למשתמשים בלי תמורה מספקת.
+
+---
+
+## שלב 8 — הטמעת תפקיד ב-Custom Claims + הגבלת כתיבה למסמכים רגישים (2026-08-19)
+
+### הבעיה שנסגרה
+
+עם כללי הגרסה 3 (authorized:true בלבד), כל משתמש מאומת — ולא רק מפקד — יכול היה
+לכתוב לכל מסמך ב-Firestore, כולל `admin_*`, `authprofile_*` ו-`push_tokens_*`.
+**וקטור ההתקפה:** משתמש מאומת (חייל) פותח DevTools, קורא ל-Firestore SDK ישירות,
+וכותב `{v: {role: "מפקד"}}` לתוך מסמך ה-`authprofile_<hash>` של עצמו. בטעינה הבאה,
+האפליקציה קוראת את התפקיד משם → הרמת-הרשאות שלמה בצד הלקוח, ללא כל פעולה בשרת.
+
+### הפתרון
+
+**1. `markAuthorized` קורא את התפקיד מ-Firestore בצד השרת** (לא סומך על הלקוח):
+- מחלץ את הקוד מהאימייל (`u<code>@sq124.app`), מחשב `sha256("sq124code|"+code)`,
+  קורא את מסמך `authprofile_<hash>` דרך Admin SDK (עוקף כללים — מחוץ לשליטת הלקוח).
+- מטמיע `role` ב-Custom Claims יחד עם `authorized:true`. הלקוח מקבל `role` בטוקן
+  ה-JWT — ולא יכול לשנות אותו.
+
+**2. כללי Firestore (גרסה 3 מורחבת) בודקים `role` על מסמכים רגישים:**
+```
+function isSensitiveDoc(docId) {
+  return docId.matches('^(admin_|authprofile_|ai_quota_).*');
+}
+function isPrivileged() {
+  return isAuthorized() && request.auth.token.role == "מפקד";
+}
+// כתיבה/מחיקה למסמכים רגישים — מפקד בלבד:
+allow create, update: if isAuthorized() && (!isSensitiveDoc(docId) || isPrivileged());
+allow delete:         if isAuthorized() && (!isSensitiveDoc(docId) || isPrivileged());
+```
+
+**3. מכסה יומית על `analyzeBoardImage`** (10 קריאות/משתמש/יום, Firestore transaction):
+- חוסמת ניצול לרעה של ה-API בלי לחסום שימוש לגיטימי.
+- מסמך המכסה (`ai_quota_<uid>`) נכתב ע"י Admin SDK בלבד, ומוגן מפני מחיקה ידנית
+  ע"י `isSensitiveDoc`.
+
+**מה נדרש לפרסם:**
+```bash
+firebase deploy --only functions,firestore:rules
+```
+או ידנית בקונסולה: עדכן את כללי Firestore (כולל הפונקציות החדשות `isSensitiveDoc` +
+`isPrivileged`) ופרוס מחדש את `markAuthorized`.
+
+> **הערה חשובה לגבי אימות ה-role הראשון:** משתמשים שנכנסו *לפני* פריסה זו מחזיקים
+> טוקן ישן עם `authorized:true` בלבד, ללא `role`. הם ימשיכו לעבוד בגישה לכל המסמכים
+> הלא-רגישים. בכניסה הבאה שלהם (רענון טוקן / כניסה מחדש), `markAuthorized` יטמיע
+> גם את ה-`role`. לא נדרש כלום מהמשתמשים.
