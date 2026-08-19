@@ -1019,12 +1019,18 @@ nav{
 .rblk-c{font-size:10.5px;color:var(--ink-3);font-weight:700}
 .rblk-toggle-lbl{display:inline-flex;align-items:center;gap:5px}
 .rblk-toggle-lbl.off{opacity:.55;text-decoration:line-through}
-.rblk-toggle-btn{display:inline-flex;align-items:center;justify-content:center;margin-inline-start:6px;
-  border:1.5px solid var(--line);background:#fff;border-radius:20px;font-size:12px;line-height:1;
-  padding:3px 7px;cursor:pointer;flex:0 0 auto;font-family:inherit}
-.rblk-toggle-btn:active{transform:scale(.9)}
-.rblk-toggle-btn.off{background:var(--red-soft);border-color:var(--red-line)}
-.rrow .rblk-toggle-btn{padding:2px 6px}
+/* מתג on/off אמיתי (track + כדור) — direction:ltr קבוע כדי שהכדור תמיד
+   ינוע לאותו צד במצב "פעיל", בלי קשר לכיוון RTL של שאר העמוד. */
+.rblk-toggle-btn{display:inline-flex;align-items:center;direction:ltr;margin-inline-start:6px;
+  width:32px;height:18px;border-radius:20px;padding:2px;border:1.5px solid var(--line);
+  background:#d7dbe0;cursor:pointer;flex:0 0 auto}
+.rblk-toggle-btn:active{transform:scale(.94)}
+.rblk-toggle-btn:not(.off){background:var(--green);border-color:var(--green)}
+.rblk-toggle-knob{width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);
+  transition:transform .15s}
+.rblk-toggle-btn:not(.off) .rblk-toggle-knob{transform:translateX(14px)}
+.rrow .rblk-toggle-btn{width:28px;height:16px}
+.rrow .rblk-toggle-btn:not(.off) .rblk-toggle-knob{transform:translateX(12px)}
 .rrow{display:grid;grid-template-columns:80px 1fr;border-bottom:1px solid var(--bg);align-items:center}
 .rrow:last-child{border-bottom:0}
 .rrow-k{padding:8px 9px;font-size:11px;font-weight:700;color:var(--ink-3);border-inline-end:1px solid var(--bg);
@@ -2812,7 +2818,7 @@ nav{
       <div id="roster-ed-daystrip"></div>
       <div id="roster-ed-body"></div>
       <div id="roster-ed-preview"></div>
-      <button type="button" class="m-btn ghost" style="width:100%;margin-top:10px" onclick="previewRosterDraft()">👁️ תצוגה מקדימה של הלוח</button>
+      <button type="button" class="m-btn ghost" style="width:100%;margin-top:10px" onclick="previewRosterDraft()">⤢ תצוגה מקדימה של הלוח</button>
       <div class="modal-actions" style="margin-top:10px">
         <button class="m-btn ghost hidden" id="roster-ed-savedraft" onclick="saveRosterDraftNext()" style="flex:1">💾 שמור טיוטה</button>
         <button class="m-btn primary" id="roster-ed-publish" onclick="rosterPrimaryAction()" style="flex:1">📢 פרסם שבוע</button>
@@ -6573,8 +6579,9 @@ const ROSTER_DEFAULT_REST_WINDOW = "14:00-16:00";
    מותאמות-אישית שמ״ע תורנויות מוסיף ידנית (ר' rosterCustomRows). */
 const STANDARD_ROSTER_ROWS = [
   {key:"manager", label:"מנהל"}, {key:"lead", label:"ר״צ"}, {key:"deputyLead", label:"ל/ ר״צ"},
-  {key:"fixedAug", label:"מתגבר"}, {key:"pilot", label:"מטיס"}, {key:"driver", label:"נהג"}, {key:"tools", label:"כלים"},
+  {key:"fixedAug", label:"מתגבר"}, {key:"pilot", label:"מטיס"}, {key:"driver", label:"נהג"},
   {key:"pf", label:"PF"}, {key:"pfRest", label:"נחים PF"}, {key:"pms", label:"PMS"}, {key:"pmsRest", label:"PMS נחים"},
+  {key:"tools", label:"כלים"},
   {key:"reserve", label:"מילואים"}, {key:"basic", label:"תורנות"}, {key:"squadronDuty", label:"תורן טייסת"},
 ];
 /* שורות מותאמות-אישית שמ״ע תורנויות הגדיר: {id, label, afterKey}.
@@ -6653,17 +6660,15 @@ async function toggleRosterRowDisabled(key){
    את הצגתה בלוח הצוות. הלחצן קיים גם במצב "מוצג" (לא רק כשמושבת),
    כדי שיהיה ברור מיד שיש כאן פעולה זמינה. אייקון בלבד (בלי טקסט בתוך
    הכפתור) כדי שיישאר קומפקטי גם בתוך עמודת rrow-k הצרה (80px). */
-/* אייקוני עין / עין-חצויה בקו דק (SVG), באותה שפת עיצוב כמו שאר אייקוני
-   האפליקציה (.uic) — במקום אמוג'י, למראה מקצועי יותר. */
-const ROSTER_ROW_TOGGLE_ICON_ON =
-  `<svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.8-6.5 10-6.5S22 12 22 12s-3.8 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.8"/></svg>`;
-const ROSTER_ROW_TOGGLE_ICON_OFF =
-  `<svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 4.5 19.5 19.5"/><path d="M9.9 5.7A9.6 9.6 0 0 1 12 5.5c6.2 0 10 6.5 10 6.5a17.7 17.7 0 0 1-3.2 4M7 7.2C4 9 2 12 2 12s3.8 6.5 10 6.5c1.4 0 2.7-.33 3.8-.86"/><path d="M9.9 9.9a2.8 2.8 0 0 0 3.9 3.9"/></svg>`;
+/* מתג הפעלה/השבתה אמיתי (track + כדור נע) — לא אייקון עין/אמוג'י, אלא
+   פקד on/off סטנדרטי שאי-אפשר לפרש כסמל אחר. כיוון הפריסה כפוי ל-LTR
+   בתוך הכפתור עצמו כדי שמצב "פעיל" תמיד יזיז את הכדור לאותו צד, בלי
+   תלות בכיוון RTL של שאר העמוד. */
 function rosterRowToggleHtml(key, label){
   const off = isRosterRowDisabled(key);
   return `<span class="rblk-toggle-lbl ${off?"off":""}">${label}${off?" — מוסתר בלוח":""}</span>` +
     `<button type="button" class="rblk-toggle-btn ${off?"off":""}" onclick="event.stopPropagation();toggleRosterRowDisabled('${key}')"
-      title="הקש כדי ${off?"להציג":"להסתיר"} בלוח הצוות" aria-label="${off?"הצג בלוח הצוות":"הסתר מלוח הצוות"}">${off?ROSTER_ROW_TOGGLE_ICON_OFF:ROSTER_ROW_TOGGLE_ICON_ON}</button>`;
+      title="הקש כדי ${off?"להציג":"להסתיר"} בלוח הצוות" aria-label="${off?"הצג בלוח הצוות":"הסתר מלוח הצוות"}"><span class="rblk-toggle-knob"></span></button>`;
 }
 
 /* ===== ניהול שורות מותאמות-אישית (מ״ע תורנויות) ===== */
@@ -7464,10 +7469,14 @@ function rosterBoardHtml(r, today, mode, weekSlot){
 /* מסך מלא — הלוח כולו כמסמך אחד, עם אותה התנהגות זום שכבר מוכרת
    למשתמשים מצפייה בצילום הלוח (imgZoom*). */
 async function openRosterFull(){
-  const r = rosterCache || (rosterCache = await getDutyRoster());
-  document.getElementById("roster-full-inner").innerHTML = rosterBoardHtml(r, todayHebrewDay(), "wide");
+  // חייב לכבד את השבוע המוצג כרגע (boardWeekSlot) — לא תמיד "נוכחי",
+  // אחרת צפייה ב"שבוע הבא" ולחיצה על "מסך מלא" הייתה מציגה בטעות את
+  // הלוח הנוכחי במקום את השבוע שבאמת נצפה.
+  const r = boardWeekSlot==="current" ? (rosterCache || (rosterCache = await getDutyRoster())) : await getDutyRoster(boardWeekSlot);
+  document.getElementById("roster-full-inner").innerHTML = rosterBoardHtml(r, todayHebrewDay(), "wide", boardWeekSlot);
+  const slotLabel = boardWeekSlot==="next" ? " · שבוע הבא" : boardWeekSlot==="prev" ? " · שבוע שעבר" : "";
   document.getElementById("roster-full-title").textContent =
-    "לוח צוות" + (r.weekNumber ? (" · שבוע " + r.weekNumber) : "");
+    "לוח צוות" + (r.weekNumber ? (" · שבוע " + r.weekNumber) : "") + slotLabel;
   document.getElementById("roster-full").classList.add("open");
   initRosterFullGestures();
   // ממתינים לפריסת הטבלה לפני מדידת הרוחב הטבעי, ואז מתאימים למסך
@@ -8504,7 +8513,9 @@ async function openRosterEditor(aiDays, slot){
     rosterPrevSat = new Set(rosterDayAssigned(cur.days["שבת"] || {}));
   }
   if(aiDays) applyAiDaysToDraft(aiDays);
-  rosterEdDay = rosterEditKey(todayHebrewDay());
+  // בניית לוח עתידי תמיד מתחילה מיום ראשון (לא מ"היום") — הרי מדובר
+  // בשבוע שטרם החל, אז "היום" לא רלוונטי כברירת מחדל לעריכה.
+  rosterEdDay = rosterEditSlot==="next" ? "ראשון" : rosterEditKey(todayHebrewDay());
   document.getElementById("roster-ed-title").textContent =
     rosterEditSlot==="next" ? "🔮 בניית לוח עתידי" : "✏️ עריכת לוח נוכחי";
   // לוח עתידי: "שמור טיוטה" (שומר וממשיך לערוך, לא מפרסם) + "פרסם לוח צוות"
@@ -8549,6 +8560,8 @@ function renderRosterEditor(){
       <label>חלון הנחים</label>
       <input class="m-input" value="${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}"
         oninput="rosterDraft.restWindow=this.value" placeholder="14:00-16:00">
+      <button type="button" class="m-btn ghost" style="width:100%;margin-top:8px;font-size:12px;padding:8px;border-color:var(--red-line);color:var(--red-deep)"
+        onclick="clearRosterDraft()">🗑️ מחק את כל הלוח</button>
     </div>`;
 
   // פס ימים — עם מונה משובצים וסימון יום שחסרה בו משבצת חובה
@@ -8639,11 +8652,8 @@ function renderRosterEditor(){
       ${listRow(escapeHTML(cr.label), f)}</div>`;
   }).join("");
 
-  html += `<button type="button" class="m-btn ghost" style="width:100%;font-size:12px;padding:9px;margin-bottom:6px"
-    onclick="openRosterCustomRowsMgr()">➕ הוסף שורה מותאמת אישית ללוח</button>`;
-
   html += `<button type="button" class="m-btn ghost" style="width:100%;font-size:12px;padding:9px"
-    onclick="previewDutyRosterNotification('${rosterEdDay}')">🔔 שלח לי תצוגה מקדימה של ההתראה ליום זה</button>`;
+    onclick="openRosterCustomRowsMgr()">➕ הוסף שורה מותאמת אישית ללוח</button>`;
   document.getElementById("roster-ed-body").innerHTML = html;
   renderRosterCompliance();
 }
@@ -8865,6 +8875,17 @@ async function copyRosterFromLastWeek(){
   renderRosterEditor();
   toast(filled ? `הועתקו ${filled} שדות מהלוח הנוכחי ✓` : "אין מה להעתיק — הכל כבר מלא");
 }
+/* מחיקת כל הלוח — מאפסת את הטיוטה בעריכה לגמרי (כל הימים, כל השדות).
+   כמו כל שינוי אחר בעורך, זו רק טיוטה בזיכרון — צריך עדיין ללחוץ
+   "שמור"/"פרסם" כדי שהאיפוס יחול בפועל על הלוח השמור. */
+function clearRosterDraft(){
+  if(!confirm("למחוק את כל השיבוצים בלוח הזה?\n\nהפעולה תאפס את כל הימים והשדות בטיוטה. עדיין צריך ללחוץ \"שמור\"/\"פרסם\" כדי שהמחיקה תחול בפועל.")) return;
+  const weekKey = rosterDraft.weekKey;
+  rosterDraft = migrateRosterToV2(null);
+  rosterDraft.weekKey = weekKey;
+  renderRosterEditor();
+  toast("הלוח אופס — לחץ \"שמור\"/\"פרסם\" כדי להחיל 🗑️");
+}
 /* פרסום/שמירה — לא חוסם בשום תנאי (לבקשת מ"ע תורנויות): אפשר לשמור לוח
    חלקי או כזה שלא לפי החוקים. אם חסרה משבצת חובה מציגים אזהרה מיידעת
    בלבד, וממשיכים לשמור. נשמר לפי הסלוט הפעיל: נוכחי או עתידי. */
@@ -8921,7 +8942,7 @@ async function publishFutureRoster(){
 function previewRosterDraft(){
   if(!rosterDraft) return;
   document.getElementById("roster-full-title").textContent =
-    "👁️ תצוגה מקדימה — " + (rosterEditSlot==="next" ? "לוח עתידי" : "לוח נוכחי");
+    "⤢ תצוגה מקדימה — " + (rosterEditSlot==="next" ? "לוח עתידי" : "לוח נוכחי");
   document.getElementById("roster-full-inner").innerHTML =
     rosterBoardHtml(rosterDraft, todayHebrewDay(), "wide", rosterEditSlot);
   document.getElementById("roster-full").classList.add("open");
@@ -8960,42 +8981,6 @@ async function analyzeLatestBoardWithAI(){
     toast("ניתוח ה-AI נכשל — אפשר למלא ידנית ⚠️");
   }
 }
-/* שולחת התראת-בדיקה אמיתית (FCM) על התוכן הנוכחי בעורך, ליום נבחר —
-   אך ורק למכשיר של מי שלחץ (fcmToken של המכשיר הנוכחי), באותו נוסח
-   בדיוק שהתזכורת האוטומטית (dutyRosterDigest, functions/index.js)
-   הייתה שולחת למפקד המסגרת שלו. לא נוגעת באף מפקד אחר ולא כותבת
-   ל-board_roster — רק עוזרת לראות איך ההתראה נראית לפני שסומכים עליה.
-   מסננת לפי שם מדויק (כמו resolveNameToShed בשרת) — שמות שלא הושלמו
-   לשם מלא (טיוטת AI שעדיין לא נשמרה) לא יזוהו, בכוונה, כדי שהתצוגה
-   המקדימה תשקף בדיוק את מה שהתזכורת האמיתית הייתה שולחת. */
-async function previewDutyRosterNotification(day){
-  if(!fcmToken){ toast("אין הרשאת התראות במכשיר הזה — אשר קודם התראות ונסה שוב 🔕"); return; }
-  const d = (rosterDraft && rosterDraft.days[rosterEditKey(day)]) || emptyRosterDay(isWeekendDay(day));
-  const dutyNames = rosterDayAssigned(d);
-  const restNames = (d.pfRest || []).concat(d.pmsRest || []);
-  const allPersonnel = rosterAllPersonnel || await fetchAllPersonnelByShed();
-  const mine = new Set((allPersonnel[currentShed.id]||[]).map(p=>p.name));
-  const myDuty = dutyNames.filter(n=>mine.has(n));
-  const myRest = restNames.filter(n=>mine.has(n));
-  if(!myDuty.length && !myRest.length){
-    toast(`אף אחד מ${currentShed.name} לא מזוהה ביום ${day} (ודא ששמות נשמרו כשם מלא) — אין מה לתצוגה מקדימה`);
-    return;
-  }
-  const parts = [];
-  if(myDuty.length) parts.push(`צוות תורן: ${myDuty.join(", ")}`);
-  if(myRest.length) parts.push(`נח: ${myRest.join(", ")}`);
-  try{
-    const fnMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js");
-    const functions = fnMod.getFunctions(fbAuth.app, "me-west1");
-    const sendFn = fnMod.httpsCallable(functions, "sendTestNotificationToSelf");
-    await sendFn({token: fcmToken, title: `📋 תורנויות היום (${day}) · ${currentShed.name}`, body: parts.join(" · ")});
-    toast("נשלחה תצוגה מקדימה למכשיר שלך 🔔");
-  }catch(e){
-    console.error("previewDutyRosterNotification", e);
-    toast("שליחת התצוגה המקדימה נכשלה ⚠️");
-  }
-}
-
 /* כפתור "העלאת לוח צוות חדש":
    - אחראי הדרכה (isAdmin) — ישר לכל המסגרות, בלי לשאול (כמו תמיד).
    - כל מפקד מסגרת — בוחר בעצמו לאן, ע"י שני באנרים ברורים (למסגרת שלי /
