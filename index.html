@@ -6574,6 +6574,11 @@ const ROSTER_ROTATING_DAYS = ["ראשון","שני","שלישי","רביעי"];
 const ROSTER_EDIT_DAYS = [...ROSTER_ROTATING_DAYS, "חמישי"];   // "חמישי" מייצג את כל הסופ"ש
 const BASIC_DUTY_TYPES = ["אבט״ש","רס״ר","מטבח","שמירות"];
 const ROSTER_DEFAULT_REST_WINDOW = "14:00-16:00";
+/* שורה מותאמת-אישית שהתווית שלה מזהה אותה כשורת "נחים" (למשל "PF יום
+   ולילה"/"מילואים יום ולילה") מקבלת עיצוב ירוק אחיד — בדיוק כמו שורות
+   הנחים המובנות (נחים PF / PMS נחים) — הן בלוח והן בעורך, במקום הצבע
+   הניטרלי שכל שורה מותאמת-אישית מקבלת כברירת מחדל. */
+function isRestRowLabel(label){ return /נחים|יום ולילה/.test(label||""); }
 
 /* שורות קבועות בלוח הצוות (סדר קבוע) — משמשות גם לחישוב מיקום שורות
    מותאמות-אישית שמ״ע תורנויות מוסיף ידנית (ר' rosterCustomRows). */
@@ -7443,7 +7448,8 @@ function rosterBoardHtml(r, today, mode, weekSlot){
   // מאוישת = לא מוצגת", ומוכנסות למיקום שנקבע להן (ר' buildRosterRowOrder).
   (rosterCustomRows||[]).forEach(cr=>{
     const f = "custom_"+cr.id;
-    if(shown(cr.id, hasAny(f))) rowHtml[cr.id] = row(escapeHTML(cr.label), "", d=>chips(d[f]));
+    const rest = isRestRowLabel(cr.label);
+    if(shown(cr.id, hasAny(f))) rowHtml[cr.id] = row(escapeHTML(cr.label), rest?"restz":"", d=>chips(d[f], rest?"rest":""));
   });
 
   let html = `<table class="roster-grid ${fit?"fit":"wide"}"><thead><tr><th class="rlbl wk">${r.weekNumber?("שבוע "+r.weekNumber):"שבוע"}</th>${th}</tr></thead><tbody>`;
@@ -8617,7 +8623,13 @@ function renderRosterEditor(){
     ${listRow("מילואים","reserve","res")}</div>`;
 
   html += `<div class="rblk"><div class="rblk-h pmsz"><span>${rosterRowToggleHtml("pms","PMS")}</span><span class="rblk-c">${(d.pms||[]).length}</span></div>
-    ${listRow("PMS","pms","pms")}${!wknd?listRow(rosterRowToggleHtml("pmsRest","PMS נחים"),"pmsRest","rest"):""}</div>`;
+    ${listRow("PMS","pms","pms")}</div>`;
+
+  if(!wknd){
+    html += `<div class="rblk"><div class="rblk-h restz"><span>${rosterRowToggleHtml("pmsRest","PMS נחים")}</span>
+      <span class="rblk-c">${(d.pmsRest||[]).length}</span></div>
+      ${listRow("PMS נחים","pmsRest","rest")}</div>`;
+  }
 
   html += `<div class="rblk"><div class="rblk-h"><span>${rosterRowToggleHtml("basic","תורנות בסיסית")}</span><span class="rblk-c">${(d.basic||[]).length}</span></div>
     ${(d.basic||[]).map((b,i)=>`<div class="rrow">
@@ -8636,8 +8648,9 @@ function renderRosterEditor(){
   // בחירת שם מבנק החיילים כמו כל שורת רשימה אחרת, וגם ניתנות להשבתה.
   html += (rosterCustomRows||[]).map(cr=>{
     const f = "custom_"+cr.id;
-    return `<div class="rblk"><div class="rblk-h"><span>${rosterRowToggleHtml(cr.id, escapeHTML(cr.label))}</span><span class="rblk-c">${(d[f]||[]).length}</span></div>
-      ${listRow(escapeHTML(cr.label), f)}</div>`;
+    const rest = isRestRowLabel(cr.label);
+    return `<div class="rblk"><div class="rblk-h ${rest?"restz":""}"><span>${rosterRowToggleHtml(cr.id, escapeHTML(cr.label))}</span><span class="rblk-c">${(d[f]||[]).length}</span></div>
+      ${listRow(escapeHTML(cr.label), f, rest?"rest":"")}</div>`;
   }).join("");
 
   html += `<button type="button" class="m-btn ghost" style="width:100%;font-size:12px;padding:9px"
