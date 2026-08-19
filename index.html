@@ -7419,46 +7419,45 @@ function rosterBoardHtml(r, today, mode, weekSlot){
     return tagged("ה׳",thu) + tagged("ו׳–ש׳",fri);
   };
 
-  // שורות קבוצתיות (רשימות שמות) שאינן מאוישות באף יום השבוע לא מוצגות
-  // כלל בלוח — מקטין רעש חזותי כשמסגרת לא משתמשת בתפקיד מסוים. שורות
-  // שהושבתו ידנית ע"י מ״ע תורנויות (r.disabledRows — שדה על הלוח הזה
-  // בדיוק, לא הגדרה גלובלית) לא מוצגות בכלל, גם אם יש בהן שיבוץ בפועל —
-  // זו הכרעת מדיניות לשבוע הזה בלבד, לא נגזרת מהנתונים ולא דולפת
-  // לשבועות/ארכיון אחרים.
-  const hasAny = field => cols.some(dk=>{
-    const day = r.days[dk]; if(!day) return false;
-    const v = day[field]; return Array.isArray(v) && v.length>0;
-  });
+  // שורות קבוצתיות (רשימות שמות) מוצגות תמיד — הצגה נשלטת **רק** ע"י
+  // ההשבתה הידנית (r.disabledRows, שדה על הלוח הזה בדיוק, לא הגדרה
+  // גלובלית), לא ע"י כמות השיבוץ בפועל השבוע. שורה ריקה השבוע (עדיין
+  // לא מולאה, או שבוע חלש בשיבוץ) עדיין מציגה את הכותרת שלה עם תאים
+  // ריקים — לא נעלמת. זה תוקן אחרי באג אמיתי: מ״ע תורנויות שהשתמש
+  // בשורות מותאמות-אישית במקום השדות הסטנדרטיים (PF/PMS/מילואים) ראה
+  // חלק מהצופים מקבלים לוח "חצי" — לא כי משהו הושבת, אלא כי ההסתרה
+  // האוטומטית-לפי-נתונים הפכה בלתי-צפויה לחלוטין ברגע שהשיבוץ בפועל
+  // חי בשדות מותאמים-אישית ולא בשדה הסטנדרטי שהיא בדקה. הצגה חייבת
+  // להיות דטרמיניסטית לפי המתג שהמ״ע קבע, לא ניחוש לפי הנתונים.
   const disabled = new Set(r.disabledRows||[]);
-  const shown = (key, staffed) => !disabled.has(key) && staffed;
-  const fixedAugStaffed = hasAny("fixedAug") || (Array.isArray(friDay.fixedAug) && friDay.fixedAug.length>0);
+  const shown = key => !disabled.has(key);
 
   const rowHtml = {};
   rowHtml.manager = row("מנהל", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.manager, friDay.manager, false) : one(d.manager));
   rowHtml.lead = row("ר״צ", "", d=>one(d.lead));
   rowHtml.deputyLead = row("ל/ ר״צ", "", d=>one(d.deputyLead));
-  if(shown("fixedAug", fixedAugStaffed)) rowHtml.fixedAug = row("מתגבר", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.fixedAug, friDay.fixedAug, true) : chips(d.fixedAug));
+  if(shown("fixedAug")) rowHtml.fixedAug = row("מתגבר", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.fixedAug, friDay.fixedAug, true) : chips(d.fixedAug));
   rowHtml.pilot = row("מטיס", "", d=>one(d.pilot));
   rowHtml.driver = row("נהג", "", d=>one(d.driver));
   rowHtml.tools = row("כלים", "", d=>one(d.tools));
-  if(shown("pf", hasAny("pf"))) rowHtml.pf = row("PF", "pfz", d=>(d.pf||[]).map(p=>
+  if(shown("pf")) rowHtml.pf = row("PF", "pfz", d=>(d.pf||[]).map(p=>
     `<span class="rc ${p.name===user?"me":pfClass(p)}" data-rn="${escapeHTML(p.name)}">${escapeHTML(nm(p.name))}</span>`).join(""));
-  if(shown("pfRest", hasAny("pfRest"))) rowHtml.pfRest = row(`נחים PF<br><small>${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</small>`, "restz",
+  if(shown("pfRest")) rowHtml.pfRest = row(`נחים PF<br><small>${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</small>`, "restz",
     d=> d.pfRest === null ? `<span class="rnone">רצוף</span>` : chips(d.pfRest, "rest"));
-  if(shown("pms", hasAny("pms"))) rowHtml.pms = row("PMS", "pmsz", d=>chips(d.pms, "pms"));
-  if(shown("pmsRest", hasAny("pmsRest"))) rowHtml.pmsRest = row("PMS נחים", "restz", d=>chips(d.pmsRest, "rest"));
-  if(shown("reserve", hasAny("reserve"))) rowHtml.reserve = row("מילואים", "", d=>chips(d.reserve, "res"));
-  if(shown("basic", hasAny("basic"))) rowHtml.basic = row("תורנות", "", d=>(d.basic||[]).map(b=>
+  if(shown("pms")) rowHtml.pms = row("PMS", "pmsz", d=>chips(d.pms, "pms"));
+  if(shown("pmsRest")) rowHtml.pmsRest = row("PMS נחים", "restz", d=>chips(d.pmsRest, "rest"));
+  if(shown("reserve")) rowHtml.reserve = row("מילואים", "", d=>chips(d.reserve, "res"));
+  if(shown("basic")) rowHtml.basic = row("תורנות", "", d=>(d.basic||[]).map(b=>
     `<span class="rc ${b.name===user?"me":""}" data-rn="${escapeHTML(b.name)}">${escapeHTML(nm(b.name))}<small> ${escapeHTML(b.type||"")}</small></span>`).join(""));
   // תורן טייסת — ערך שבועי אחד, לכן תא ממוזג על פני כל העמודות (כמו בגיליון)
   rowHtml.squadronDuty = `<tr><td class="rlbl sqz">תורן טייסת</td>` +
     `<td class="sqz sq-cell" colspan="${cols.length}">${r.squadronDuty ? escapeHTML(rosterSquadronDutyName(r.squadronDuty)) : "—"}</td></tr>`;
-  // שורות מותאמות-אישית שמ״ע תורנויות הוסיף — כפופות לאותו כלל "לא
-  // מאוישת = לא מוצגת", ומוכנסות למיקום שנקבע להן (ר' buildRosterRowOrder).
+  // שורות מותאמות-אישית שמ״ע תורנויות הוסיף — כפופות לאותו כלל: מוצגות
+  // תמיד אלא אם הושבתו ידנית, ומוכנסות למיקום שנקבע להן (ר' buildRosterRowOrder).
   (rosterCustomRows||[]).forEach(cr=>{
     const f = "custom_"+cr.id;
     const rest = isRestRowLabel(cr.label);
-    if(shown(cr.id, hasAny(f))) rowHtml[cr.id] = row(escapeHTML(cr.label), rest?"restz":"", d=>chips(d[f], rest?"rest":""));
+    if(shown(cr.id)) rowHtml[cr.id] = row(escapeHTML(cr.label), rest?"restz":"", d=>chips(d[f], rest?"rest":""));
   });
 
   let html = `<table class="roster-grid ${fit?"fit":"wide"}"><thead><tr><th class="rlbl wk">${r.weekNumber?("שבוע "+r.weekNumber):"שבוע"}</th>${th}</tr></thead><tbody>`;
@@ -8927,43 +8926,10 @@ function rosterPrimaryAction(){ return rosterEditSlot==="next" ? publishFutureRo
    נשמר ל-board_roster_next בלבד, לא נוגע בלוח הפעיל שההתראה קוראת.
    העורך נשאר פתוח כדי להמשיך לערוך. */
 async function saveRosterDraftNext(){
-  if(rosterDraft.published && !(await confirmRosterCompletenessBeforeVisible(rosterDraft))) return;
   rosterDraft.weekKey = todayKey();
   const ok = await saveDutyRosterV2(rosterDraft, "next");
   if(ok === false){ toast("⚠️ שמירת הטיוטה נכשלה — נסה שוב"); return; }
   toast("הטיוטה נשמרה — אפשר להמשיך לערוך ✓");
-}
-/* שדות "שורה קבוצתית" (אותן שורות שמוסתרות ב-rosterBoardHtml כשאין בהן
-   שיבוץ, ר' hasAny שם) המאוישים בלוח r — עוזר לזהות טיוטה "חצי מלאה"
-   לפני שהיא נחשפת לכולם. עצמאי מהרינדור עצמו, לא משתף איתו קוד. */
-function rosterStaffedGroupFields(r, customRows){
-  const cols = [...ROSTER_ROTATING_DAYS, "חמישי"];
-  const hasAny = field => cols.some(dk=>{
-    const day = r.days[dk]; if(!day) return false;
-    const v = day[field]; return Array.isArray(v) && v.length>0;
-  });
-  const friDay = r.days["שישי"] || {};
-  const staffed = new Set();
-  if(hasAny("fixedAug") || (Array.isArray(friDay.fixedAug) && friDay.fixedAug.length>0)) staffed.add("fixedAug");
-  ["pf","pfRest","pms","pmsRest","reserve","basic"].forEach(f=>{ if(hasAny(f)) staffed.add(f); });
-  (customRows||[]).forEach(cr=>{ if(hasAny("custom_"+cr.id)) staffed.add(cr.id); });
-  return staffed;
-}
-/* לפני שחושפים טיוטה עתידית לכולם (פרסום ראשוני, או המשך שמירה אחרי
-   שכבר פורסמה) — מזהירים אם שורה קבוצתית שמאוישת בלוח הנוכחי (כלומר
-   המסגרת בפועל משתמשת בתפקיד הזה) עדיין ריקה בטיוטה. זה בדיוק המצב
-   שגורם למשתמשים לראות "חצי לוח": hasAny מסתיר שורות ריקות, ומ"ע
-   תורנויות עלול לפרסם בטעות לפני שסיים למלא PF/PMS/מילואים/תורנות
-   וכו'. לא חוסם — רק מוודא אישור מודע לפני חשיפה. */
-async function confirmRosterCompletenessBeforeVisible(draft){
-  let cur;
-  try{ cur = await getDutyRoster("current"); }catch(e){ return true; }
-  const curStaffed = rosterStaffedGroupFields(cur, rosterCustomRows);
-  const draftStaffed = rosterStaffedGroupFields(draft, rosterCustomRows);
-  const missing = [...curStaffed].filter(k=>!draftStaffed.has(k));
-  if(!missing.length) return true;
-  const labels = missing.map(k=>rosterCustomRowLabel(k)).join(", ");
-  return confirm(`השורות הבאות מאוישות בלוח הנוכחי אך עדיין ריקות בטיוטה: ${labels}.\n\nהלוח ייראה "חצי מלא" לכל מי שיצפה בו. להמשיך בכל זאת?`);
 }
 /* פרסום הלוח העתידי: הופך אותו לגלוי לכולם כ"שבוע הבא" (roster.published)
    — נשאר בסלוט "הבא" ולא נוגע בלוח הפעיל (current) שההתראה היומית קוראת
@@ -8971,7 +8937,6 @@ async function confirmRosterCompletenessBeforeVisible(draft){
    ביודעין מתי שהוא בוחר — הבאנר "↩️ קבע את הלוח הזה כ'לוח נוכחי'"
    בתצוגת "שבוע הבא" (ר' restoreWeekToCurrent), לא אוטומטית בפרסום. */
 async function publishFutureRoster(){
-  if(!(await confirmRosterCompletenessBeforeVisible(rosterDraft))) return;
   rosterDraft.weekKey = todayKey();
   rosterDraft.published = true;
   const ok = await saveDutyRosterV2(rosterDraft, "next");

@@ -40,8 +40,9 @@ const out = await page.evaluate(async ()=>{
   const boardHtml = document.getElementById("roster-view").innerHTML;
   r.hasGrid       = !!document.querySelector(".roster-grid");
   r.hasRoleRows   = ["ר״צ","מתגבר","כלים","PF","נחים","מילואים","PMS","תורנות"].every(x=>boardHtml.includes(x));
-  // שורה קבוצתית ריקה בכל השבוע (PMS נחים לא שובץ בתרחיש הזה) — לא מוצגת כלל
-  r.pmsRestHidden = !boardHtml.includes("PMS נחים");
+  // שורה קבוצתית ריקה בכל השבוע (PMS נחים לא שובץ בתרחיש הזה) — עדיין
+  // מוצגת (הצגה נשלטת רק ע"י השבתה ידנית, לא ע"י שיבוץ בפועל)
+  r.pmsRestShownEvenEmpty = boardHtml.includes("PMS נחים");
   r.hasReserveName= !!document.querySelector(".roster-grid .rc.res");
   r.hasSquadron   = boardHtml.includes("תורן טייסת");
   r.hasCourseChip = !!document.querySelector(".roster-grid .rc.course");
@@ -105,7 +106,7 @@ record("חייל רגיל אינו מ״ע תורנויות", out.isManager === f
 record("באנרי העריכה מוסתרים לחייל רגיל", out.editHiddenForSoldier, String(out.editHiddenForSoldier));
 record("תצוגת לוח: הטבלה מוצגת", out.hasGrid, String(out.hasGrid));
 record("תצוגת לוח: כל שורות התפקידים מהגיליון קיימות (כולל מילואים)", out.hasRoleRows, String(out.hasRoleRows));
-record("תצוגת לוח: שורה קבוצתית לא-מאוישת בכל השבוע מוסתרת (PMS נחים)", out.pmsRestHidden, String(out.pmsRestHidden));
+record("תצוגת לוח: שורה קבוצתית לא-מאוישת בכל השבוע עדיין מוצגת (PMS נחים)", out.pmsRestShownEvenEmpty, String(out.pmsRestShownEvenEmpty));
 record("תצוגת לוח: שם מילואים מוצג בשורה", out.hasReserveName, String(out.hasReserveName));
 record("תצוגת לוח: תורן טייסת שבועי מוצג", out.hasSquadron, String(out.hasSquadron));
 record("תצוגת לוח: חייל בקורס מסומן", out.hasCourseChip, String(out.hasCourseChip));

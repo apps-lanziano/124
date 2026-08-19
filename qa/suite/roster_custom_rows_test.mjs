@@ -1,6 +1,9 @@
 /* שורות מותאמות-אישית בלוח צוות תורן: הוספה ידנית ע"י מ"ע תורנויות,
-   כולל קביעת מיקום בלוח, הסתרה כשלא מאוישות, ושמירה/קריאה מהאחסון
-   בלי איבוד הנתונים (migrateRosterToV2 חייב לשמר שדות custom_<id>). */
+   כולל קביעת מיקום בלוח, ושמירה/קריאה מהאחסון בלי איבוד הנתונים
+   (migrateRosterToV2 חייב לשמר שדות custom_<id>). הצגה נשלטת רק ע"י
+   ההשבתה הידנית (disabledRows) — שורה ריקה עדיין מוצגת (ר' באג אמיתי:
+   הסתרה אוטומטית-לפי-נתונים גרמה ללוח "חצי" למשתמשים שהעבירו שיבוץ
+   משדה סטנדרטי לשורה מותאמת-אישית). */
 import { newPage, closeBrowser, loginAsFramework } from '../lib/harness.mjs';
 
 const results = [];
@@ -20,11 +23,12 @@ const out = await page.evaluate(async ()=>{
   await saveRosterCustomRows(rows);
   r.savedLoaded = rosterCustomRows.length === 2;
 
-  // שורה ריקה (אין שיבוץ באף יום) — לא מוצגת בלוח
+  // שורה ריקה (אין שיבוץ באף יום) — עדיין מוצגת בלוח (עם תאים ריקים);
+  // הצגה נשלטת רק ע"י ההשבתה הידנית, לא ע"י כמות השיבוץ בפועל
   const empty = migrateRosterToV2(null);
   empty.days["ראשון"].pilot = "מטיס א";
   const htmlEmpty = rosterBoardHtml(empty, "", "wide");
-  r.emptyCustomHidden = !htmlEmpty.includes("רכב תורן") && !htmlEmpty.includes("תדריך בוקר");
+  r.emptyCustomShown = htmlEmpty.includes("רכב תורן") && htmlEmpty.includes("תדריך בוקר");
 
   // שיבוץ שם בשורה המותאמת-אישית — מוצגת עם השם, ובמיקום הנכון
   const draft = migrateRosterToV2(null);
@@ -66,7 +70,7 @@ const out = await page.evaluate(async ()=>{
 
 record("התחברות", login.ok, JSON.stringify(login));
 record("הגדרות שורות מותאמות-אישית נשמרות ונטענות", out.savedLoaded, String(out.savedLoaded));
-record("שורה מותאמת-אישית ריקה כל השבוע לא מוצגת", out.emptyCustomHidden, String(out.emptyCustomHidden));
+record("שורה מותאמת-אישית ריקה כל השבוע עדיין מוצגת (הצגה = לפי המתג בלבד)", out.emptyCustomShown, String(out.emptyCustomShown));
 record("שורה מותאמת-אישית מוצגת עם שיבוץ בפועל", out.customShown, String(out.customShown));
 record("שורה שנייה (מיקום שונה) מוצגת עם שיבוץ", out.customShown2, String(out.customShown2));
 record("מיקום: שורה שעוגנה אחרי 'מטיס' מופיעה שם", out.afterPilotPos, String(out.afterPilotPos));

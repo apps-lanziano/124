@@ -1,5 +1,6 @@
 /* משבצות חדשות בלוח הצוות: "מנהל" ו"מטיס" (אדם בודד), ושורת "PMS נחים"
-   שמופיעה רק כשיש בה שיבוץ. וגם הסדר החדש של השורות. */
+   שמוצגת תמיד (הצגה נשלטת רק ע"י השבתה ידנית, לא ע"י שיבוץ בפועל).
+   וגם הסדר החדש של השורות. */
 import { newPage, closeBrowser, loginAsFramework } from '../lib/harness.mjs';
 
 const results = [];
@@ -16,15 +17,15 @@ const out = await page.evaluate(async ()=>{
   base.days["ראשון"].lead    = "ראש א";
   base.days["ראשון"].fixedAug = ["מתגבר א"];   // כדי שהשורה תוצג ובדיקת הסדר תהיה משמעותית
 
-  // ללא PMS נחים — השורה לא אמורה להופיע
+  // ללא PMS נחים — השורה עדיין מוצגת (ריקה)
   const html1 = rosterBoardHtml(base, "", "wide");
   r.hasManagerRow = html1.includes(">מנהל<");
   r.hasPilotRow   = html1.includes(">מטיס<");
-  r.pmsRestHidden = !html1.includes("PMS נחים");
+  r.pmsRestShownEvenEmpty = html1.includes("PMS נחים");
   r.managerName   = html1.includes("מנהל א");
   r.pilotName     = html1.includes("מטיס א");
 
-  // עם PMS נחים — השורה מופיעה
+  // עם PMS נחים — השורה מוצגת עם השם
   const r2 = migrateRosterToV2(null);
   r2.days["ראשון"].pmsRest = ["נח א"];
   const html2 = rosterBoardHtml(r2, "", "wide");
@@ -51,7 +52,7 @@ record("שורת 'מנהל' בלוח", out.hasManagerRow, String(out.hasManagerR
 record("שורת 'מטיס' בלוח", out.hasPilotRow, String(out.hasPilotRow));
 record("שם המנהל מוצג", out.managerName, String(out.managerName));
 record("שם המטיס מוצג", out.pilotName, String(out.pilotName));
-record("PMS נחים מוסתר כשאין שיבוץ", out.pmsRestHidden, String(out.pmsRestHidden));
+record("PMS נחים מוצג גם כשאין שיבוץ (הצגה = לפי המתג בלבד)", out.pmsRestShownEvenEmpty, String(out.pmsRestShownEvenEmpty));
 record("PMS נחים מופיע כשיש שיבוץ", out.pmsRestShown, String(out.pmsRestShown));
 record("סדר: מנהל לפני ר״צ", out.orderManagerFirst, String(out.orderManagerFirst));
 record("סדר: מטיס בין מתגבר לנהג", out.orderPilot, String(out.orderPilot));
