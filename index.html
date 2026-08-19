@@ -804,7 +804,6 @@ nav{
 .today-flag.duty{background:linear-gradient(135deg,var(--red-deep),var(--red))}
 .today-flag.tom{background:linear-gradient(135deg,#8a6500,var(--gold))}
 .today-flag.rest{background:linear-gradient(135deg,#2f6b52,var(--green))}
-.today-flag .tf-ic{font-size:26px;flex:0 0 auto}
 .today-flag .tf-tx{display:flex;flex-direction:column;line-height:1.3}
 .today-flag .tf-tx b{font-size:16px;font-weight:800}
 .today-flag .tf-tx span{font-size:12px;opacity:.9}
@@ -888,6 +887,8 @@ nav{
 .roster-banner.arc .rb-tx b{color:#5b3fa0}
 .roster-banner.cns{background:#e9f7f4;border-color:#c3e8e0}
 .roster-banner.cns .rb-tx b{color:#0d7a68}
+.roster-banner.cst{background:#f0f5ea;border-color:#d3e3c0}
+.roster-banner.cst .rb-tx b{color:#4c6b2b}
 .cns-person{padding:11px 4px;border-bottom:1px solid var(--line)}
 .cns-person:last-child{border-bottom:0}
 .cns-person-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
@@ -2908,6 +2909,29 @@ nav{
       <div id="roster-archive-body" style="max-height:56vh;overflow-y:auto"></div>
       <div class="modal-actions" style="margin-top:10px">
         <button class="m-btn ghost" onclick="document.getElementById('roster-archive-modal').classList.remove('open')" style="width:100%">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- שורות מותאמות-אישית בלוח צוות תורן (מ"ע תורנויות) -->
+  <div class="modal-bg" id="roster-customrows-modal">
+    <div class="modal">
+      <h3>➕ שורות מותאמות אישית</h3>
+      <div class="m-sub">שורות נוספות ללוח הצוות, מעבר לשורות הקבועות. החיילים בכל שורה נבחרים מבנק החיילים כמו בכל שורה אחרת.</div>
+      <div id="roster-customrows-list" style="margin-bottom:12px"></div>
+      <div class="rblk">
+        <div class="rblk-h"><span id="roster-customrow-formtitle">הוספת שורה חדשה</span></div>
+        <label style="display:block;margin:6px 0 3px;font-size:12px;color:var(--ink-3)">שם השורה</label>
+        <input class="m-input" id="roster-customrow-label" placeholder="לדוגמה: רכב תורן" style="margin-bottom:8px">
+        <label style="display:block;margin:6px 0 3px;font-size:12px;color:var(--ink-3)">מיקום בלוח</label>
+        <select class="m-input" id="roster-customrow-anchor" style="margin-bottom:10px"></select>
+        <div class="modal-actions">
+          <button class="m-btn primary" style="flex:1" onclick="saveRosterCustomRowForm()">שמור שורה</button>
+          <button class="m-btn ghost" style="flex:0 0 auto" onclick="cancelRosterCustomRowEdit()">נקה</button>
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top:10px">
+        <button class="m-btn ghost" onclick="document.getElementById('roster-customrows-modal').classList.remove('open')" style="width:100%">סגור</button>
       </div>
     </div>
   </div>
@@ -6538,6 +6562,121 @@ const ROSTER_ROTATING_DAYS = ["ראשון","שני","שלישי","רביעי"];
 const ROSTER_EDIT_DAYS = [...ROSTER_ROTATING_DAYS, "חמישי"];   // "חמישי" מייצג את כל הסופ"ש
 const BASIC_DUTY_TYPES = ["אבט״ש","רס״ר","מטבח","שמירות"];
 const ROSTER_DEFAULT_REST_WINDOW = "14:00-16:00";
+
+/* שורות קבועות בלוח הצוות (סדר קבוע) — משמשות גם לחישוב מיקום שורות
+   מותאמות-אישית שמ״ע תורנויות מוסיף ידנית (ר' rosterCustomRows). */
+const STANDARD_ROSTER_ROWS = [
+  {key:"manager", label:"מנהל"}, {key:"lead", label:"ר״צ"}, {key:"deputyLead", label:"ל/ ר״צ"},
+  {key:"fixedAug", label:"מתגבר"}, {key:"pilot", label:"מטיס"}, {key:"driver", label:"נהג"}, {key:"tools", label:"כלים"},
+  {key:"pf", label:"PF"}, {key:"pfRest", label:"נחים PF"}, {key:"pms", label:"PMS"}, {key:"pmsRest", label:"PMS נחים"},
+  {key:"reserve", label:"מילואים"}, {key:"basic", label:"תורנות"}, {key:"squadronDuty", label:"תורן טייסת"},
+];
+/* שורות מותאמות-אישית שמ״ע תורנויות הגדיר: {id, label, afterKey}.
+   afterKey = מפתח שורה קבועה / id של שורה מותאמת-אישית אחרת / "__start__".
+   מוגדרות גלובלית (לא לכל שבוע בנפרד) — התוכן בפועל (מי משובץ) חי בכל
+   יום תחת השדה "custom_<id>", כמו שאר שדות הרשימה. */
+let rosterCustomRows = [];
+let _rosterCustomRowsLoaded = false;
+async function loadRosterCustomRows(force){
+  if(_rosterCustomRowsLoaded && !force) return rosterCustomRows;
+  rosterCustomRows = (await sGet("roster_custom_rows")) || [];
+  _rosterCustomRowsLoaded = true;
+  return rosterCustomRows;
+}
+async function saveRosterCustomRows(list){
+  rosterCustomRows = list;
+  _rosterCustomRowsLoaded = true;
+  return await sSet("roster_custom_rows", list);
+}
+/* מרכיב את סדר השורות הסופי בלוח: שורות קבועות בסדר קבוע, עם שורות
+   מותאמות-אישית משוכנות לפי afterKey. עומס לא-מוגבל (עוגן חסר/מעגלי)
+   נופל לסוף הלוח כדי שלא ייעלם משום שגיאת נתונים. */
+function buildRosterRowOrder(customRows){
+  const order = STANDARD_ROSTER_ROWS.map(x=>x.key);
+  const pending = (customRows||[]).slice();
+  let progress = true;
+  while(pending.length && progress){
+    progress = false;
+    for(let i=pending.length-1;i>=0;i--){
+      const cr = pending[i];
+      if(cr.afterKey==="__start__"){ order.unshift(cr.id); pending.splice(i,1); progress = true; continue; }
+      const idx = order.indexOf(cr.afterKey);
+      if(idx>=0){ order.splice(idx+1,0,cr.id); pending.splice(i,1); progress = true; }
+    }
+  }
+  pending.forEach(cr=>order.push(cr.id));
+  return order;
+}
+function rosterCustomRowLabel(key){
+  const std = STANDARD_ROSTER_ROWS.find(x=>x.key===key);
+  if(std) return std.label;
+  const cr = rosterCustomRows.find(x=>x.id===key);
+  return cr ? cr.label : key;
+}
+
+/* ===== ניהול שורות מותאמות-אישית (מ״ע תורנויות) ===== */
+let rosterCustomRowEditId = null;   // null = טופס הוספה; אחרת עריכת שורה קיימת
+async function openRosterCustomRowsMgr(){
+  if(!isRosterManager){ toast("רק מ״ע תורנויות יכול לנהל שורות 🔒"); return; }
+  await loadRosterCustomRows();
+  rosterCustomRowEditId = null;
+  renderRosterCustomRowsMgr();
+  document.getElementById("roster-customrows-modal").classList.add("open");
+}
+/* אפשרויות "מיקום בלוח" — כל שורה קיימת (קבועה + מותאמת-אישית) לפי
+   הסדר המוצג בפועל, פרט לשורה שנמצאת כרגע בעריכה (לא ניתן לעגן לעצמה). */
+function rosterCustomRowAnchorOptions(excludeId){
+  const order = buildRosterRowOrder(rosterCustomRows.filter(c=>c.id!==excludeId));
+  return `<option value="__start__">— בתחילת הלוח —</option>` +
+    order.map(k=>`<option value="${escapeHTML(k)}">אחרי: ${escapeHTML(rosterCustomRowLabel(k))}</option>`).join("");
+}
+function renderRosterCustomRowsMgr(){
+  const box = document.getElementById("roster-customrows-list");
+  box.innerHTML = rosterCustomRows.length ? rosterCustomRows.map(cr=>`
+    <div class="rrow"><div class="rrow-k">${escapeHTML(cr.label)}</div>
+      <div class="rrow-v">
+        <span class="rc add" onclick="editRosterCustomRow('${cr.id}')">✏️ ערוך</span>
+        <span class="rc-x" onclick="deleteRosterCustomRow('${cr.id}')">✕</span>
+      </div></div>`).join("") : `<div class="rnone-b">אין עדיין שורות מותאמות אישית</div>`;
+  const editing = rosterCustomRowEditId ? rosterCustomRows.find(c=>c.id===rosterCustomRowEditId) : null;
+  document.getElementById("roster-customrow-label").value = editing ? editing.label : "";
+  const anchorSel = document.getElementById("roster-customrow-anchor");
+  anchorSel.innerHTML = rosterCustomRowAnchorOptions(editing ? editing.id : null);
+  if(editing) anchorSel.value = editing.afterKey;
+  document.getElementById("roster-customrow-formtitle").textContent = editing ? "עריכת שורה" : "הוספת שורה חדשה";
+}
+function editRosterCustomRow(id){ rosterCustomRowEditId = id; renderRosterCustomRowsMgr(); }
+function cancelRosterCustomRowEdit(){ rosterCustomRowEditId = null; renderRosterCustomRowsMgr(); }
+async function saveRosterCustomRowForm(){
+  const label = (document.getElementById("roster-customrow-label").value||"").trim();
+  const afterKey = document.getElementById("roster-customrow-anchor").value;
+  if(!label){ toast("הזן שם לשורה"); return; }
+  const list = rosterCustomRows.slice();
+  if(rosterCustomRowEditId){
+    const cr = list.find(c=>c.id===rosterCustomRowEditId);
+    if(cr){ cr.label = label; cr.afterKey = afterKey; }
+  } else {
+    list.push({id:"cr_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), label, afterKey});
+  }
+  const ok = await saveRosterCustomRows(list);
+  if(ok === false){ toast("⚠️ השמירה נכשלה — נסה שוב"); return; }
+  rosterCustomRowEditId = null;
+  renderRosterCustomRowsMgr();
+  rosterCache = null;
+  await renderRosterView();
+  toast("נשמר ✓");
+}
+async function deleteRosterCustomRow(id){
+  if(!confirm("למחוק את השורה מהלוח? שיבוצים קיימים בה יישארו מוסתרים בהיסטוריה.")) return;
+  const list = rosterCustomRows.filter(c=>c.id!==id);
+  const ok = await saveRosterCustomRows(list);
+  if(ok === false){ toast("⚠️ המחיקה נכשלה — נסה שוב"); return; }
+  if(rosterCustomRowEditId===id) rosterCustomRowEditId = null;
+  renderRosterCustomRowsMgr();
+  rosterCache = null;
+  await renderRosterView();
+  toast("נמחק ✓");
+}
 /* תורן טייסת — תורנות שבועית שמתחלפת בין הסככות, בלי סככה 5 */
 const SQUADRON_DUTY_SHEDS = ["shed1","shed2","shed3","shed4"];
 /* אחריות ועריכה על הלוח. ברירת המחדל היא מ"ע התורנויות בפועל; הרשימה
@@ -6676,6 +6815,9 @@ function migrateRosterToV2(raw){
         day2.pf = (d.duty||[]).map(n=>({name:n}));
         day2.pfRest = isWeekendDay(day) ? null : (d.rest||[]).slice();
       }
+      // שדות שורות מותאמות-אישית ("custom_<id>") — לא חלק מהמבנה הקבוע,
+      // ולכן חייבים העתקה מפורשת כאן כדי שלא ייעלמו בכל קריאה מהאחסון.
+      Object.keys(d).forEach(k=>{ if(k.indexOf("custom_")===0 && Array.isArray(d[k])) day2[k] = d[k].slice(); });
     }
     out.days[day] = day2;
   });
@@ -6787,6 +6929,7 @@ async function renderRosterView(){
   const box = document.getElementById("roster-view");
   if(!box) return;
   await maybeRotateWeek();     // מעבר שבוע אוטומטי (שבת בחצות) לפני הרינדור
+  await loadRosterCustomRows();
   // ברירת מחדל לפי תפקיד: חיילים מתחילים ב"לוח יומי" (כרטיסי יום — קריא בנייד),
   // מ״ע/מפקד ב"לוח שבועי" (טבלה מלאה). המשתמש יכול להחליף בכל רגע.
   if(!_rosterViewInit){ _rosterViewInit = true; if(!isRosterManager && userRole!=="מפקד") rosterView = "day"; }
@@ -6816,7 +6959,9 @@ async function renderRosterView(){
     <button class="roster-banner cns" onclick="openConstraintsBoard()" style="width:100%;margin-bottom:10px">
         <span class="rb-ic">📋</span><span class="rb-tx"><b>לוח אילוצים מרוכז<span id="roster-cns-badge" class="rb-badge hidden"></span></b><small>מי זמין ומי לא — כל האילוצים במקום אחד</small></span></button>
     <button class="roster-banner arc" onclick="openRosterArchive()" style="width:100%;margin-bottom:10px">
-        <span class="rb-ic">🗄️</span><span class="rb-tx"><b>ארכיון לוחות<span id="roster-arc-badge" class="rb-badge hidden"></span></b><small>היסטוריית הלוחות השבועיים למעקב</small></span></button>` : "";
+        <span class="rb-ic">🗄️</span><span class="rb-tx"><b>ארכיון לוחות<span id="roster-arc-badge" class="rb-badge hidden"></span></b><small>היסטוריית הלוחות השבועיים למעקב</small></span></button>
+    <button class="roster-banner cst" onclick="openRosterCustomRowsMgr()" style="width:100%;margin-bottom:10px">
+        <span class="rb-ic">➕</span><span class="rb-tx"><b>שורות מותאמות אישית</b><small>הוספת שורה חדשה ללוח, כולל מיקום</small></span></button>` : "";
   // "תורן טייסת" מוצג כשורה בתוך הלוח (מתחת ל"תורנות"), לא כבאנר נפרד;
   // בתצוגות "יום"/"רק אני" נשאר באנר קצר כי אין שם טבלה.
   // בורר שבוע — שעבר / נוכחי / הבא (אפשר גם להחליק ימינה/שמאלה על הלוח)
@@ -7216,28 +7361,43 @@ function rosterBoardHtml(r, today, mode, weekSlot){
     return tagged("ה׳",thu) + tagged("ו׳–ש׳",fri);
   };
 
-  let html = `<table class="roster-grid ${fit?"fit":"wide"}"><thead><tr><th class="rlbl wk">${r.weekNumber?("שבוע "+r.weekNumber):"שבוע"}</th>${th}</tr></thead><tbody>`;
-  html += row("מנהל", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.manager, friDay.manager, false) : one(d.manager));
-  html += row("ר״צ", "", d=>one(d.lead));
-  html += row("ל/ ר״צ", "", d=>one(d.deputyLead));
-  html += row("מתגבר", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.fixedAug, friDay.fixedAug, true) : chips(d.fixedAug));
-  html += row("מטיס", "", d=>one(d.pilot));
-  html += row("נהג", "", d=>one(d.driver));
-  html += row("כלים", "", d=>one(d.tools));
-  html += row("PF", "pfz", d=>(d.pf||[]).map(p=>
+  // שורות קבוצתיות (רשימות שמות) שאינן מאוישות באף יום השבוע לא מוצגות
+  // כלל בלוח — מקטין רעש חזותי כשמסגרת לא משתמשת בתפקיד מסוים.
+  const hasAny = field => cols.some(dk=>{
+    const day = r.days[dk]; if(!day) return false;
+    const v = day[field]; return Array.isArray(v) && v.length>0;
+  });
+  const fixedAugStaffed = hasAny("fixedAug") || (Array.isArray(friDay.fixedAug) && friDay.fixedAug.length>0);
+
+  const rowHtml = {};
+  rowHtml.manager = row("מנהל", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.manager, friDay.manager, false) : one(d.manager));
+  rowHtml.lead = row("ר״צ", "", d=>one(d.lead));
+  rowHtml.deputyLead = row("ל/ ר״צ", "", d=>one(d.deputyLead));
+  if(fixedAugStaffed) rowHtml.fixedAug = row("מתגבר", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.fixedAug, friDay.fixedAug, true) : chips(d.fixedAug));
+  rowHtml.pilot = row("מטיס", "", d=>one(d.pilot));
+  rowHtml.driver = row("נהג", "", d=>one(d.driver));
+  rowHtml.tools = row("כלים", "", d=>one(d.tools));
+  if(hasAny("pf")) rowHtml.pf = row("PF", "pfz", d=>(d.pf||[]).map(p=>
     `<span class="rc ${p.name===user?"me":pfClass(p)}" data-rn="${escapeHTML(p.name)}">${escapeHTML(nm(p.name))}</span>`).join(""));
-  html += row(`נחים PF<br><small>${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</small>`, "restz",
+  if(hasAny("pfRest")) rowHtml.pfRest = row(`נחים PF<br><small>${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</small>`, "restz",
     d=> d.pfRest === null ? `<span class="rnone">רצוף</span>` : chips(d.pfRest, "rest"));
-  html += row("PMS", "pmsz", d=>chips(d.pms, "pms"));
-  // PMS נחים — מופיע רק כשיש שם שיבוץ בפועל באחד מימי השבוע
-  if(cols.some(x=> r.days[x] && (r.days[x].pmsRest||[]).length))
-    html += row("PMS נחים", "restz", d=>chips(d.pmsRest, "rest"));
-  html += row("מילואים", "", d=>chips(d.reserve, "res"));
-  html += row("תורנות", "", d=>(d.basic||[]).map(b=>
+  if(hasAny("pms")) rowHtml.pms = row("PMS", "pmsz", d=>chips(d.pms, "pms"));
+  if(hasAny("pmsRest")) rowHtml.pmsRest = row("PMS נחים", "restz", d=>chips(d.pmsRest, "rest"));
+  if(hasAny("reserve")) rowHtml.reserve = row("מילואים", "", d=>chips(d.reserve, "res"));
+  if(hasAny("basic")) rowHtml.basic = row("תורנות", "", d=>(d.basic||[]).map(b=>
     `<span class="rc ${b.name===user?"me":""}" data-rn="${escapeHTML(b.name)}">${escapeHTML(nm(b.name))}<small> ${escapeHTML(b.type||"")}</small></span>`).join(""));
   // תורן טייסת — ערך שבועי אחד, לכן תא ממוזג על פני כל העמודות (כמו בגיליון)
-  html += `<tr><td class="rlbl sqz">תורן טייסת</td>` +
+  rowHtml.squadronDuty = `<tr><td class="rlbl sqz">תורן טייסת</td>` +
     `<td class="sqz sq-cell" colspan="${cols.length}">${r.squadronDuty ? escapeHTML(rosterSquadronDutyName(r.squadronDuty)) : "—"}</td></tr>`;
+  // שורות מותאמות-אישית שמ״ע תורנויות הוסיף — כפופות לאותו כלל "לא
+  // מאוישת = לא מוצגת", ומוכנסות למיקום שנקבע להן (ר' buildRosterRowOrder).
+  (rosterCustomRows||[]).forEach(cr=>{
+    const f = "custom_"+cr.id;
+    if(hasAny(f)) rowHtml[cr.id] = row(escapeHTML(cr.label), "", d=>chips(d[f]));
+  });
+
+  let html = `<table class="roster-grid ${fit?"fit":"wide"}"><thead><tr><th class="rlbl wk">${r.weekNumber?("שבוע "+r.weekNumber):"שבוע"}</th>${th}</tr></thead><tbody>`;
+  html += buildRosterRowOrder(rosterCustomRows).map(k=>rowHtml[k]||"").join("");
   html += `</tbody></table>`;
   if(mode === "wide") return html;
   return `<div class="roster-grid-wrap">${html}</div>
@@ -7312,17 +7472,17 @@ async function renderToday(){
     let html = "";
     // 1) דגל ראשי — היום שלי
     if(onDutyToday){
-      html += `<div class="today-flag duty"><div class="tf-ic">🗓️</div>
+      html += `<div class="today-flag duty">
         <div class="tf-tx"><b>אתה תורן היום</b><span>${myRolesToday.map(escapeHTML).join(" · ")}</span></div></div>`;
     } else if(restToday){
-      html += `<div class="today-flag rest"><div class="tf-ic">😌</div>
+      html += `<div class="today-flag rest">
         <div class="tf-tx"><b>אתה נח היום</b><span>${escapeHTML(roster.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</span></div></div>`;
     } else if(nextDuty){
       const dl = nextDuty.day==="חמישי" ? "בסופ״ש" : nextDuty.day;
-      html += `<div class="today-flag next"><div class="tf-ic">⏭️</div>
+      html += `<div class="today-flag next">
         <div class="tf-tx"><b>התורנות הבאה שלך — ${escapeHTML(dl)}</b><span>${nextDuty.roles.map(escapeHTML).join(" · ")}</span></div></div>`;
     } else {
-      html += `<div class="today-flag off"><div class="tf-ic">✅</div>
+      html += `<div class="today-flag off">
         <div class="tf-tx"><b>אין לך תורנות היום</b><span>${myDutyCount?`${myDutyCount} תורנויות שלך השבוע`:"אין לך תורנויות השבוע"}</span></div></div>`;
     }
 
@@ -8266,6 +8426,7 @@ let rosterEditSlot = "current";   // "current" | "next"
 async function openRosterEditor(aiDays, slot){
   if(!isRosterManager){ toast("רק מ״ע תורנויות יכול לערוך את הלוח 🔒"); return; }
   rosterEditSlot = slot || "current";
+  await loadRosterCustomRows();
   rosterAllPersonnel = await fetchAllPersonnelByShed();
   rosterPfNames = await fetchPfNames();
   rosterConstraints = await fetchApprovedConstraintsByName();
@@ -8407,6 +8568,14 @@ function renderRosterEditor(){
       <div class="rrow-v"><span class="rc add" onclick="openRosterPick('basic')">+ שם (יום זה)</span>
       <span class="rc add" onclick="openBasicInterval()">+ טווח ימים</span></div></div></div>`;
 
+  // שורות מותאמות-אישית שהוגדרו דרך "שורות מותאמות אישית" — אותה חוויית
+  // בחירת שם מבנק החיילים כמו כל שורת רשימה אחרת.
+  html += (rosterCustomRows||[]).map(cr=>{
+    const f = "custom_"+cr.id;
+    return `<div class="rblk"><div class="rblk-h"><span>${escapeHTML(cr.label)}</span><span class="rblk-c">${(d[f]||[]).length}</span></div>
+      ${listRow(escapeHTML(cr.label), f)}</div>`;
+  }).join("");
+
   html += `<button type="button" class="m-btn ghost" style="width:100%;font-size:12px;padding:9px"
     onclick="previewDutyRosterNotification('${rosterEdDay}')">🔔 שלח לי תצוגה מקדימה של ההתראה ליום זה</button>`;
   document.getElementById("roster-ed-body").innerHTML = html;
@@ -8504,11 +8673,14 @@ let rosterPickMulti = false;
 let rosterPickSel = new Set();
 function openRosterPick(field){
   rosterPickCtx = {field};
-  rosterPickMulti = ROSTER_MULTI_FIELDS.includes(field);
+  rosterPickMulti = ROSTER_MULTI_FIELDS.includes(field) || field.indexOf("custom_")===0;
   rosterPickSel = new Set();
   const labels = {manager:"מנהל · ה׳", managerWknd:"מנהל · ו׳–ש׳", lead:"ר״צ", deputyLead:"ל/ ר״צ", pilot:"מטיס", driver:"נהג", tools:"פקיד כלים",
     fixedAug:"מתגבר · ה׳", fixedAugWknd:"מתגבר · ו׳–ש׳", pf:"PF", pfRest:"נחים", reserve:"מילואים", pms:"PMS", pmsRest:"PMS נחים", basic:"תורנות בסיסית"};
-  document.getElementById("roster-pick-title").textContent = "משבצת: " + (labels[field]||field);
+  const fieldLabel = field.indexOf("custom_")===0
+    ? ((rosterCustomRows.find(c=>("custom_"+c.id)===field)||{}).label || field)
+    : (labels[field]||field);
+  document.getElementById("roster-pick-title").textContent = "משבצת: " + fieldLabel;
   document.getElementById("roster-pick-sub").textContent =
     (rosterEdDay==="חמישי" ? "חמישי–שבת" : rosterEdDay) +
     (rosterPickMulti ? " · סמן כמה שמות ואז לחץ אישור" : " · הקש על שם כדי לשבץ");
@@ -8575,6 +8747,11 @@ function rosterAddName(f, name){
   const d = rosterDraft.days[rosterEdDay];
   if(f==="pf"){ if(!d.pf.some(p=>p.name===name)) d.pf.push({name}); }
   else if(f==="basic"){ d.basic.push({name, type:BASIC_DUTY_TYPES[0]}); }
+  else if(ROSTER_MULTI_FIELDS.includes(f) || f.indexOf("custom_")===0){
+    // שדה רשימה — כולל שורות מותאמות-אישית שאולי טרם קיימות על היום הזה
+    if(!Array.isArray(d[f])) d[f] = [];
+    if(!d[f].includes(name)) d[f].push(name);
+  }
   else if(Array.isArray(d[f])){ if(!d[f].includes(name)) d[f].push(name); }
   else d[f] = name;
 }
