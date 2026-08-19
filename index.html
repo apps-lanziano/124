@@ -6629,41 +6629,26 @@ function rosterCustomRowLabel(key){
 
 /* שורות שהושבתו ידנית ע"י מ״ע תורנויות — לא מוצגות בלוח הצוות בשום
    מצב, גם אם יש בהן שיבוץ בפועל (בשונה מ"לא מאוישת" שמתעדכן אוטומטית
-   לפי הנתונים). גלובלי — משפיע גם על לוח נוכחי וגם על לוח עתידי, כי זו
-   החלטת מדיניות ("אנחנו לא עושים PMS השבוע"), לא נתון של שבוע ספציפי. */
-let rosterDisabledRows = [];
-let _rosterDisabledRowsLoaded = false;
-async function loadRosterDisabledRows(force){
-  if(_rosterDisabledRowsLoaded && !force) return rosterDisabledRows;
-  rosterDisabledRows = (await sGet("roster_disabled_rows")) || [];
-  _rosterDisabledRowsLoaded = true;
-  return rosterDisabledRows;
-}
-async function saveRosterDisabledRows(list){
-  rosterDisabledRows = list;
-  _rosterDisabledRowsLoaded = true;
-  return await sSet("roster_disabled_rows", list);
-}
-function isRosterRowDisabled(key){ return rosterDisabledRows.includes(key); }
-/* הקשה על כותרת שורה בעורך מפעילה/מכבה אותה. עובד גם בעריכת לוח נוכחי
-   וגם עתידי — אותו טופס עורך, אותה הגדרה גלובלית. */
-async function toggleRosterRowDisabled(key){
-  if(!isRosterManager) return;
-  const list = isRosterRowDisabled(key) ? rosterDisabledRows.filter(k=>k!==key) : [...rosterDisabledRows, key];
-  const ok = await saveRosterDisabledRows(list);
-  if(ok === false){ toast("⚠️ השמירה נכשלה — נסה שוב"); return; }
+   לפי הנתונים). שדה על גוף הלוח עצמו (`roster.disabledRows`, לצד
+   weekNumber/squadronDuty/restWindow) — לא הגדרה גלובלית נפרדת. חובה:
+   כל לוח (נוכחי/עתידי/שעבר/ארכיון) הוא תמונת-מצב עצמאית, כך שהשבתת
+   שורה בעריכת לוח אחד לעולם לא "דולפת" לשבועות/ארכיון אחרים — היא רק
+   טיוטה עד "שמור"/"פרסם", בדיוק כמו כל שינוי אחר בעורך. */
+function isRosterRowDisabled(key){ return !!(rosterDraft && (rosterDraft.disabledRows||[]).includes(key)); }
+/* הקשה על כותרת שורה בעורך מסמנת/מבטלת השבתה בטיוטה בזיכרון בלבד —
+   כמו כל שדה אחר בעורך (restWindow, squadronDuty וכו') — ורק "שמור"/
+   "פרסם" מחיל את זה בפועל על הלוח שנערך (נוכחי או עתידי, לא שניהם). */
+function toggleRosterRowDisabled(key){
+  if(!isRosterManager || !rosterDraft) return;
+  const list = rosterDraft.disabledRows || (rosterDraft.disabledRows = []);
+  const idx = list.indexOf(key);
+  if(idx>=0) list.splice(idx,1); else list.push(key);
   renderRosterEditor();
-  rosterCache = null;
-  toast(isRosterRowDisabled(key) ? "השורה מוסתרת בלוח הצוות" : "השורה תוצג שוב בלוח הצוות");
 }
-/* כותרת שורה בעורך + כפתור נראה-לעין (לא רק טקסט לחיץ) שמשבית/מפעיל
-   את הצגתה בלוח הצוות. הלחצן קיים גם במצב "מוצג" (לא רק כשמושבת),
-   כדי שיהיה ברור מיד שיש כאן פעולה זמינה. אייקון בלבד (בלי טקסט בתוך
-   הכפתור) כדי שיישאר קומפקטי גם בתוך עמודת rrow-k הצרה (80px). */
-/* מתג הפעלה/השבתה אמיתי (track + כדור נע) — לא אייקון עין/אמוג'י, אלא
-   פקד on/off סטנדרטי שאי-אפשר לפרש כסמל אחר. כיוון הפריסה כפוי ל-LTR
-   בתוך הכפתור עצמו כדי שמצב "פעיל" תמיד יזיז את הכדור לאותו צד, בלי
-   תלות בכיוון RTL של שאר העמוד. */
+/* כותרת שורה בעורך + מתג הפעלה/השבתה אמיתי (track + כדור נע) — לא
+   אייקון עין/אמוג'י, אלא פקד on/off סטנדרטי שאי-אפשר לפרש כסמל אחר.
+   כיוון הפריסה כפוי ל-LTR בתוך הכפתור עצמו כדי שמצב "פעיל" תמיד יזיז
+   את הכדור לאותו צד, בלי תלות בכיוון RTL של שאר העמוד. */
 function rosterRowToggleHtml(key, label){
   const off = isRosterRowDisabled(key);
   return `<span class="rblk-toggle-lbl ${off?"off":""}">${label}${off?" — מוסתר בלוח":""}</span>` +
@@ -6843,7 +6828,8 @@ function rosterEditKey(day){ return isWeekendDay(day) ? "חמישי" : day; }
    מבנה חדש על נתון שאיש לא אישר. */
 function migrateRosterToV2(raw){
   const out = {v:2, weekNumber: raw && raw.weekNumber || null, weekKey: (raw && raw.weekKey) || "",
-    squadronDuty: (raw && raw.squadronDuty) || "", restWindow: (raw && raw.restWindow) || ROSTER_DEFAULT_REST_WINDOW, days:{}};
+    squadronDuty: (raw && raw.squadronDuty) || "", restWindow: (raw && raw.restWindow) || ROSTER_DEFAULT_REST_WINDOW,
+    disabledRows: Array.isArray(raw && raw.disabledRows) ? raw.disabledRows.slice() : [], days:{}};
   const src = (raw && raw.days) || {};
   WEEK_DAYS_HE.forEach(day=>{
     const d = src[day];
@@ -6930,7 +6916,8 @@ async function getDutyRoster(slot){
    כדי שההתראה היומית הקיימת תמשיך לעבוד בלי שינוי בצד השרת. */
 async function saveDutyRosterV2(roster, slot){
   const out = {v:2, weekNumber: roster.weekNumber||null, weekKey: roster.weekKey || todayKey(),
-    squadronDuty: roster.squadronDuty||"", restWindow: roster.restWindow || ROSTER_DEFAULT_REST_WINDOW, days:{}};
+    squadronDuty: roster.squadronDuty||"", restWindow: roster.restWindow || ROSTER_DEFAULT_REST_WINDOW,
+    disabledRows: Array.isArray(roster.disabledRows) ? roster.disabledRows.slice() : [], days:{}};
   WEEK_DAYS_HE.forEach(day=>{
     const src = roster.days[rosterEditKey(day)] || emptyRosterDay(isWeekendDay(day));
     const d = JSON.parse(JSON.stringify(src));
@@ -6989,7 +6976,6 @@ async function renderRosterView(){
   if(!box) return;
   await maybeRotateWeek();     // מעבר שבוע אוטומטי (שבת בחצות) לפני הרינדור
   await loadRosterCustomRows();
-  await loadRosterDisabledRows();
   // ברירת מחדל לפי תפקיד: חיילים מתחילים ב"לוח יומי" (כרטיסי יום — קריא בנייד),
   // מ״ע/מפקד ב"לוח שבועי" (טבלה מלאה). המשתמש יכול להחליף בכל רגע.
   if(!_rosterViewInit){ _rosterViewInit = true; if(!isRosterManager && userRole!=="מפקד") rosterView = "day"; }
@@ -7421,13 +7407,15 @@ function rosterBoardHtml(r, today, mode, weekSlot){
 
   // שורות קבוצתיות (רשימות שמות) שאינן מאוישות באף יום השבוע לא מוצגות
   // כלל בלוח — מקטין רעש חזותי כשמסגרת לא משתמשת בתפקיד מסוים. שורות
-  // שהושבתו ידנית ע"י מ״ע תורנויות (rosterDisabledRows) לא מוצגות בכלל,
-  // גם אם יש בהן שיבוץ בפועל — זו הכרעת מדיניות, לא נגזרת מהנתונים.
+  // שהושבתו ידנית ע"י מ״ע תורנויות (r.disabledRows — שדה על הלוח הזה
+  // בדיוק, לא הגדרה גלובלית) לא מוצגות בכלל, גם אם יש בהן שיבוץ בפועל —
+  // זו הכרעת מדיניות לשבוע הזה בלבד, לא נגזרת מהנתונים ולא דולפת
+  // לשבועות/ארכיון אחרים.
   const hasAny = field => cols.some(dk=>{
     const day = r.days[dk]; if(!day) return false;
     const v = day[field]; return Array.isArray(v) && v.length>0;
   });
-  const disabled = new Set(rosterDisabledRows||[]);
+  const disabled = new Set(r.disabledRows||[]);
   const shown = (key, staffed) => !disabled.has(key) && staffed;
   const fixedAugStaffed = hasAny("fixedAug") || (Array.isArray(friDay.fixedAug) && friDay.fixedAug.length>0);
 
@@ -8493,7 +8481,6 @@ async function openRosterEditor(aiDays, slot){
   if(!isRosterManager){ toast("רק מ״ע תורנויות יכול לערוך את הלוח 🔒"); return; }
   rosterEditSlot = slot || "current";
   await loadRosterCustomRows();
-  await loadRosterDisabledRows();
   rosterAllPersonnel = await fetchAllPersonnelByShed();
   rosterPfNames = await fetchPfNames();
   rosterConstraints = await fetchApprovedConstraintsByName();
@@ -8602,7 +8589,8 @@ function renderRosterEditor(){
     ${slot("מטיס","pilot",false)}${slot("נהג","driver",false)}${slot("כלים","tools",true)}</div>`;
 
   // כל שורה קבוצתית (רשימה) להלן ניתנת להשבתה ידנית — הקשה על הכותרת
-  // מסתירה/מציגה אותה בלוח הצוות (rosterDisabledRows), ללא קשר לשיבוץ בפועל.
+  // מסתירה/מציגה אותה בלוח הזה בלבד (rosterDraft.disabledRows), ללא קשר
+  // לשיבוץ בפועל, ורק אחרי שמירה/פרסום — לא משפיע על שבועות אחרים.
   const augRows = wknd
     ? listRow("מתגבר · ה׳","fixedAug") + listRow("מתגבר · ו׳–ש׳","fixedAugWknd")
     : listRow("מתגבר","fixedAug");
