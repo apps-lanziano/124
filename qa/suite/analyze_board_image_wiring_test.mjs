@@ -36,10 +36,11 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
   const importsLib = /require\("\.\/lib\/board_ai_analyze"\)/.test(fn);
   const usesCore = /analyzeBoardImageCore\(imageDataUrl, apiKey, \{rosterNames\}\)/.test(fn);
   const throwsOnFailure = /if \(!result\.ok\) \{\s*throw new HttpsError\("internal"/.test(fn);
-  const doesNotWriteFirestore = !/exports\.analyzeBoardImage[\s\S]{0,900}db\.doc\(/.test(fn.slice(0, fn.indexOf("exports.notifyOnPublish")));
-  record("משתמשת בלוגיקה הטהורה מ-lib/board_ai_analyze, נכשלת בבירור בכשל, ולא כותבת ל-Firestore בעצמה",
-    importsLib && usesCore && throwsOnFailure && doesNotWriteFirestore,
-    JSON.stringify({importsLib, usesCore, throwsOnFailure, doesNotWriteFirestore}));
+  // מאז הוספת מכסת שימוש יומית — הפונקציה כותבת ל-ai_quota_<uid> בלבד, לא לנתוני לוח
+  const hasRateLimit = /DAILY_LIMIT/.test(fn) && /runTransaction/.test(fn) && /ai_quota_/.test(fn);
+  record("משתמשת בלוגיקה הטהורה מ-lib/board_ai_analyze, נכשלת בבירור בכשל, ומגבילה קריאות ע\"י מכסה יומית",
+    importsLib && usesCore && throwsOnFailure && hasRateLimit,
+    JSON.stringify({importsLib, usesCore, throwsOnFailure, hasRateLimit}));
 }
 
 {
