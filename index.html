@@ -1019,8 +1019,14 @@ nav{
 .rblk-h.restz{background:#eef4ea;color:#3f6b32}
 .rblk-h.pmsz{background:#faeeee;color:#8a4444}
 .rblk-c{font-size:10.5px;color:var(--ink-3);font-weight:700}
-.rblk-toggle{cursor:pointer}
-.rblk-toggle.off{opacity:.55;text-decoration:line-through}
+.rblk-toggle-lbl{display:inline-flex;align-items:center;gap:5px}
+.rblk-toggle-lbl.off{opacity:.55;text-decoration:line-through}
+.rblk-toggle-btn{display:inline-flex;align-items:center;justify-content:center;margin-inline-start:6px;
+  border:1.5px solid var(--line);background:#fff;border-radius:20px;font-size:12px;line-height:1;
+  padding:3px 7px;cursor:pointer;flex:0 0 auto;font-family:inherit}
+.rblk-toggle-btn:active{transform:scale(.9)}
+.rblk-toggle-btn.off{background:var(--red-soft);border-color:var(--red-line)}
+.rrow .rblk-toggle-btn{padding:2px 6px}
 .rrow{display:grid;grid-template-columns:80px 1fr;border-bottom:1px solid var(--bg);align-items:center}
 .rrow:last-child{border-bottom:0}
 .rrow-k{padding:8px 9px;font-size:11px;font-weight:700;color:var(--ink-3);border-inline-end:1px solid var(--bg);
@@ -6645,11 +6651,15 @@ async function toggleRosterRowDisabled(key){
   rosterCache = null;
   toast(isRosterRowDisabled(key) ? "השורה מוסתרת בלוח הצוות" : "השורה תוצג שוב בלוח הצוות");
 }
-/* כותרת שורה בעורך שאפשר להקיש עליה כדי להשבית/להפעיל את הצגתה בלוח. */
+/* כותרת שורה בעורך + כפתור נראה-לעין (לא רק טקסט לחיץ) שמשבית/מפעיל
+   את הצגתה בלוח הצוות. הלחצן קיים גם במצב "מוצג" (לא רק כשמושבת),
+   כדי שיהיה ברור מיד שיש כאן פעולה זמינה. אייקון בלבד (בלי טקסט בתוך
+   הכפתור) כדי שיישאר קומפקטי גם בתוך עמודת rrow-k הצרה (80px). */
 function rosterRowToggleHtml(key, label){
   const off = isRosterRowDisabled(key);
-  return `<span class="rblk-toggle ${off?"off":""}" onclick="toggleRosterRowDisabled('${key}')"
-    title="הקש כדי ${off?"להציג":"להסתיר"} בלוח הצוות">${off?"🚫 ":""}${label}${off?" — מוסתר בלוח":""}</span>`;
+  return `<span class="rblk-toggle-lbl ${off?"off":""}">${label}${off?" — מוסתר בלוח":""}</span>` +
+    `<button type="button" class="rblk-toggle-btn ${off?"off":""}" onclick="event.stopPropagation();toggleRosterRowDisabled('${key}')"
+      title="הקש כדי ${off?"להציג":"להסתיר"} בלוח הצוות" aria-label="${off?"הצג בלוח הצוות":"הסתר מלוח הצוות"}">${off?"🚫":"👁️"}</button>`;
 }
 
 /* ===== ניהול שורות מותאמות-אישית (מ״ע תורנויות) ===== */
