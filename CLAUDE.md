@@ -129,7 +129,7 @@ rosterView = "board" | "day" | "mine"
 ## Service Worker
 
 `CACHE_NAME` בקובץ `service-worker.js` חייב להתעדכן בכל batch שנפרס.
-גרסה נוכחית: **v47**.
+גרסה נוכחית: **v48**.
 
 משתמש ב-`SKIP_WAITING` message (לא `skipWaiting()` אוטומטי) — עדכון נשאר "ממתין" עד שהמשתמש לוחץ "גרסה חדשה זמינה".
 
