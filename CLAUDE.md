@@ -189,6 +189,11 @@ node qa/suite/<test>.mjs    # הרץ בדיקה בודדת
 
 ## Git workflow
 
+**מדיניות מיזוג ל-main: אוטומטית, בכל סשן — לא לחכות לאישור.**
+בסיום עבודה על משימה (אחרי שהבדיקות עוברות ונדחף לענף הפיתוח), למזג
+ישירות ל-`main` בלי לשאול. אם המשתמש לא רוצה מיזוג הפעם, הוא יגיד
+זאת **מראש** (לפני שהעבודה מתחילה/מסתיימת) — במקרה כזה לא למזג.
+
 ```bash
 # ענף פיתוח:
 git checkout claude/github-pages-site-review-b11uiu
@@ -205,7 +210,7 @@ git add -A
 git commit -m "תיאור בעברית"
 git push -u origin claude/github-pages-site-review-b11uiu
 
-# מיזוג ל-main (לאחר אישור המשתמש):
+# מיזוג ל-main (אוטומטית — ר' "מדיניות מיזוג" למעלה):
 git checkout main
 git fetch origin main
 git merge origin/main
