@@ -1,49 +1,43 @@
-/* משוב משתמש (חוזר): הכפתור האדום הצף "לדשבורד" ריחף מעל חלונות, תפריט
-   "עוד", הקורא ותצוגת הלוח, וחסם אותם — לחיצה עליו לא סגרה את השכבה
-   ("לא עושה כלום"). השורש: z-index של #back-to-dash היה 60, גבוה מכל
-   שכבות-העל. התיקון: להוריד אותו מתחת לכל שכבת-על ומעל המסך/הסרגל בלבד.
-   בדיקת מקור: מוודאת את סדר ה-z-index הנכון כדי שהבאג לא יחזור. */
+/* משוב משתמש (חוזר): הכפתור האדום "לדשבורד" היה FAB עגול שצף מעל תוכן
+   המסך (position:absolute + bottom/inset-inline-start), וחפף פריטי רשימה
+   אחרונים במסכים כמו חדר כלים. התיקון: הכפתור עבר לגור בתוך ה-header
+   הקבוע (מחוץ ל-main הגלילי) יחד עם פעמון ההתראות, בזרימת מסמך רגילה —
+   ולכן לעולם לא יכול לרחף מעל תוכן, סרגל ניווט, או שכבות-על (חלונות,
+   תפריט "עוד", הקורא, תצוגת הלוח), שכולן position:absolute + inset:0
+   שמכסה את כל #app כולל ה-header.
+   בדיקת מקור: מוודאת שהכפתור יושב בתוך ה-header ולא צף עצמאית עם
+   position:absolute/fixed משלו, כדי שהבאג המקורי (חפיפה עם תוכן) לא יחזור. */
 import { readFileSync } from 'fs';
 import { ROOT } from '../lib/repo-root.mjs';
 
 const results = [];
 function record(name, pass, detail){ results.push({name, pass, detail}); }
-const css = readFileSync(`${ROOT}/index.html`, 'utf8');
+const html = readFileSync(`${ROOT}/index.html`, 'utf8');
 
-/* מחלץ את ערך ה-z-index של הסלקטור הראשון שתואם (מהבלוק שלו) */
-function zIndexOf(selector){
-  // בורח מתווים מיוחדים בסלקטור לצורך regex
+const headerMatch = /<header>([\s\S]*?)<\/header>/.exec(html);
+const headerHtml = headerMatch ? headerMatch[1] : "";
+
+record('הכפתור #back-to-dash ממוקם בתוך ה-header (לא צף מעל main)',
+  headerHtml.includes('id="back-to-dash"'),
+  headerHtml.includes('id="back-to-dash"') ? "found in header" : "not found in header");
+
+record('הכפתור נמצא בתוך .hdr-actions יחד עם פעמון ההתראות',
+  /<div class="hdr-actions">[\s\S]*?id="back-to-dash"[\s\S]*?alert-bell[\s\S]*?<\/div>/.test(headerHtml),
+  "hdr-actions wraps back-to-dash + alert-bell");
+
+function cssBlockOf(selector){
   const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(esc + "\\s*\\{[^}]*?z-index:\\s*(\\d+)", "s");
-  const m = re.exec(css);
-  return m ? Number(m[1]) : null;
+  const re = new RegExp(esc + "\\s*\\{([^}]*)\\}", "s");
+  const m = re.exec(html);
+  return m ? m[1] : null;
 }
 
-const zBack   = zIndexOf("#back-to-dash");
-const zNav    = zIndexOf("nav");
-const zModal  = zIndexOf(".modal-bg");
-const zSheet  = zIndexOf(".sheet-bg");
-const zReader = zIndexOf("#doc-reader");
-const zBoard  = zIndexOf("#board-viewer");
+const backCss = cssBlockOf("#back-to-dash");
+record("נמצא בלוק CSS עבור #back-to-dash", !!backCss, backCss ?? "missing");
 
-record("נמצאו כל ערכי ה-z-index הנדרשים",
-  [zBack,zNav,zModal,zSheet,zReader,zBoard].every(v=>typeof v==="number"),
-  JSON.stringify({zBack,zNav,zModal,zSheet,zReader,zBoard}));
-
-record("הכפתור מעל הסרגל התחתון (nav) — כדי שיישאר נגיש מעל המסך הרגיל",
-  zBack > zNav, JSON.stringify({zBack, zNav}));
-
-record("הכפתור מתחת לחלונות (.modal-bg) — לא מרחף מעליהם",
-  zBack < zModal, JSON.stringify({zBack, zModal}));
-
-record('הכפתור מתחת לתפריט "עוד" (.sheet-bg) — לא מרחף מעליו',
-  zBack < zSheet, JSON.stringify({zBack, zSheet}));
-
-record("הכפתור מתחת לקורא הקרא-וחתום (#doc-reader) — לא חוסם את כפתור האישור",
-  zBack < zReader, JSON.stringify({zBack, zReader}));
-
-record("הכפתור מתחת לתצוגת לוח הצוות (#board-viewer)",
-  zBack < zBoard, JSON.stringify({zBack, zBoard}));
+record("הכפתור אינו position:absolute/fixed (לא יכול לרחף מעל תוכן/שכבות-על)",
+  !!backCss && !/position\s*:\s*(absolute|fixed)/.test(backCss),
+  backCss ?? "missing");
 
 console.log("\n=== SUMMARY ===");
 let allPass = true;

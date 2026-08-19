@@ -1315,18 +1315,17 @@ nav{
 .cd .cd-q{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;background:none;border:none;font-family:inherit;color:var(--ink-2)}
 .cd .cd-qi{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-size:18px;background:var(--card);border:1px solid var(--line);color:var(--red);box-shadow:var(--shadow)}
 .cd .cd-q span{font-size:10.5px;font-weight:700}
-/* כפתור חזרה לדשבורד המפקד — צף מעל תוכן המסכים והסרגל התחתון (nav=30),
-   אך *מתחת* לכל שכבת-על: קורא/תצוגת לוח (40), חלונות (.modal-bg=55),
-   ותפריט "עוד" (.sheet-bg=56). קודם ה-z-index היה 60 ולכן הכפתור ריחף
-   מעל חלונות ותפריטים וחסם אותם — לחיצה עליו רק החליפה את המסך שמתחת
-   בלי לסגור את השכבה ("לא עושה כלום"). z-index:35 שומר אותו מעל המסך
-   הרגיל בלבד, וכל שכבת-על מכסה אותו כראוי. */
-#back-to-dash{position:absolute;bottom:calc(var(--nav-h, 80px) + 12px);inset-inline-start:14px;z-index:35;display:none;
-  align-items:center;justify-content:center;background:linear-gradient(135deg,var(--red-deep),var(--red));color:#fff;
-  border:none;border-radius:50%;width:44px;height:44px;padding:0;font-family:inherit;font-weight:800;font-size:22px;line-height:1;
-  cursor:pointer;box-shadow:0 8px 20px -5px rgba(179,15,38,.55)}
+/* כפתור חזרה לדשבורד המפקד — יושב בכותרת העליונה (header), לא צף מעל
+   תוכן המסכים. הכותרת קבועה מחוץ ל-main הגלילי (#app הוא flex column:
+   header / main{flex:1;overflow-y:auto} / nav), ולכן הכפתור לעולם לא
+   חופף שורות תוכן בתחתית הרשימות — בעבר היה FAB עגול צף מעל ה-main,
+   שחפף פריטי רשימה אחרונים (למשל בחדר כלים). */
+.hdr-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+#back-to-dash{display:none;align-items:center;justify-content:center;background:var(--bg);color:var(--red);
+  border:1px solid var(--line);border-radius:12px;width:40px;height:40px;padding:0;font-family:inherit;font-weight:800;font-size:19px;line-height:1;
+  cursor:pointer;flex-shrink:0;transition:transform .2s}
 #back-to-dash.show{display:inline-flex}
-#back-to-dash:active{transform:scale(.96)}
+#back-to-dash:active{transform:scale(.92)}
 /* דוח קרא-וחתום */
 .sr-box{background:var(--card);border-radius:14px;padding:16px}
 .sr-head h3{font-size:16px;font-weight:800;margin:0}
@@ -1608,9 +1607,12 @@ nav{
         </div>
       </div>
 
-      <button class="alert-bell" id="alert-bell" onclick="openAlerts()" style="display:none">
-        🔔<span class="alert-bell-count hidden" id="alert-bell-count">0</span>
-      </button>
+      <div class="hdr-actions">
+        <button id="back-to-dash" onclick="go('scr-cmd',document.getElementById('nav-cmd'))" aria-label="חזרה לדשבורד" title="חזרה לדשבורד">→</button>
+        <button class="alert-bell" id="alert-bell" onclick="openAlerts()" style="display:none">
+          🔔<span class="alert-bell-count hidden" id="alert-bell-count">0</span>
+        </button>
+      </div>
 
     </div>
     <div class="hdr-user">
@@ -2341,7 +2343,6 @@ nav{
   </div>
 
   <!-- NAV -->
-  <button id="back-to-dash" onclick="go('scr-cmd',document.getElementById('nav-cmd'))" aria-label="חזרה לדשבורד" title="חזרה לדשבורד">→</button>
   <nav>
     <button class="nav-btn hidden" id="nav-cmd" data-scr="scr-cmd" onclick="go('scr-cmd',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.4 4.8L20 8.6l-4 3.9.9 5.5L12 15.6l-4.9 2.4.9-5.5-4-3.9 5.6-.8Z"/></svg></span><span>מפקד</span></button>
     <button class="nav-btn hidden" id="nav-today" data-scr="scr-today" onclick="go('scr-today',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg></span><span>היום שלי</span><span class="nav-badge hidden" id="badge-today">0</span></button>

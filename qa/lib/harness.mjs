@@ -214,9 +214,9 @@ export async function findOccludedControls(page, contextLabel){
       if(!hit) continue;
       if(el === hit || el.contains(hit) || hit.contains(el)) continue;   // קינון לגיטימי
       if(hit.closest && hit.closest('button, a[href], [role="button"]') === el) continue;
-      // כיסוי ע"י "כרום" קבוע (סרגל ניווט תחתון), או ע"י הכפתור הצף במסך
-      // רגיל — אינו באג לחיצה אמיתי כי התוכן נגלל מסביבו. אבל בשכבת-על
-      // (שלא נגללת) כל כיסוי הוא באג ולכן נשמר.
+      // כיסוי ע"י "כרום" קבוע (סרגל ניווט תחתון, או כפתור "לדשבורד" שיושב
+      // כיום בתוך ה-header הקבוע) — אינו באג לחיצה אמיתי כי הוא מחוץ לאזור
+      // הגלילה של התוכן. אבל בשכבת-על (שלא נגללת) כל כיסוי הוא באג ולכן נשמר.
       const coveredByChrome = hit.closest && (hit.closest("nav") || (!overlay && hit.closest("#back-to-dash")));
       if(coveredByChrome) continue;
       bad.push({
