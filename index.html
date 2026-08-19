@@ -887,8 +887,6 @@ nav{
 .roster-banner.arc .rb-tx b{color:#5b3fa0}
 .roster-banner.cns{background:#e9f7f4;border-color:#c3e8e0}
 .roster-banner.cns .rb-tx b{color:#0d7a68}
-.roster-banner.cst{background:#f0f5ea;border-color:#d3e3c0}
-.roster-banner.cst .rb-tx b{color:#4c6b2b}
 .cns-person{padding:11px 4px;border-bottom:1px solid var(--line)}
 .cns-person:last-child{border-bottom:0}
 .cns-person-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
@@ -7010,9 +7008,7 @@ async function renderRosterView(){
     <button class="roster-banner cns" onclick="openConstraintsBoard()" style="width:100%;margin-bottom:10px">
         <span class="rb-ic">📋</span><span class="rb-tx"><b>לוח אילוצים מרוכז<span id="roster-cns-badge" class="rb-badge hidden"></span></b><small>מי זמין ומי לא — כל האילוצים במקום אחד</small></span></button>
     <button class="roster-banner arc" onclick="openRosterArchive()" style="width:100%;margin-bottom:10px">
-        <span class="rb-ic">🗄️</span><span class="rb-tx"><b>ארכיון לוחות<span id="roster-arc-badge" class="rb-badge hidden"></span></b><small>היסטוריית הלוחות השבועיים למעקב</small></span></button>
-    <button class="roster-banner cst" onclick="openRosterCustomRowsMgr()" style="width:100%;margin-bottom:10px">
-        <span class="rb-ic">➕</span><span class="rb-tx"><b>שורות מותאמות אישית</b><small>הוספת שורה חדשה ללוח, כולל מיקום</small></span></button>` : "";
+        <span class="rb-ic">🗄️</span><span class="rb-tx"><b>ארכיון לוחות<span id="roster-arc-badge" class="rb-badge hidden"></span></b><small>היסטוריית הלוחות השבועיים למעקב</small></span></button>` : "";
   // "תורן טייסת" מוצג כשורה בתוך הלוח (מתחת ל"תורנות"), לא כבאנר נפרד;
   // בתצוגות "יום"/"רק אני" נשאר באנר קצר כי אין שם טבלה.
   // בורר שבוע — שעבר / נוכחי / הבא (אפשר גם להחליק ימינה/שמאלה על הלוח)
