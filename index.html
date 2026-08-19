@@ -1019,6 +1019,8 @@ nav{
 .rblk-h.restz{background:#eef4ea;color:#3f6b32}
 .rblk-h.pmsz{background:#faeeee;color:#8a4444}
 .rblk-c{font-size:10.5px;color:var(--ink-3);font-weight:700}
+.rblk-toggle{cursor:pointer}
+.rblk-toggle.off{opacity:.55;text-decoration:line-through}
 .rrow{display:grid;grid-template-columns:80px 1fr;border-bottom:1px solid var(--bg);align-items:center}
 .rrow:last-child{border-bottom:0}
 .rrow-k{padding:8px 9px;font-size:11px;font-weight:700;color:var(--ink-3);border-inline-end:1px solid var(--bg);
@@ -6614,6 +6616,42 @@ function rosterCustomRowLabel(key){
   return cr ? cr.label : key;
 }
 
+/* שורות שהושבתו ידנית ע"י מ״ע תורנויות — לא מוצגות בלוח הצוות בשום
+   מצב, גם אם יש בהן שיבוץ בפועל (בשונה מ"לא מאוישת" שמתעדכן אוטומטית
+   לפי הנתונים). גלובלי — משפיע גם על לוח נוכחי וגם על לוח עתידי, כי זו
+   החלטת מדיניות ("אנחנו לא עושים PMS השבוע"), לא נתון של שבוע ספציפי. */
+let rosterDisabledRows = [];
+let _rosterDisabledRowsLoaded = false;
+async function loadRosterDisabledRows(force){
+  if(_rosterDisabledRowsLoaded && !force) return rosterDisabledRows;
+  rosterDisabledRows = (await sGet("roster_disabled_rows")) || [];
+  _rosterDisabledRowsLoaded = true;
+  return rosterDisabledRows;
+}
+async function saveRosterDisabledRows(list){
+  rosterDisabledRows = list;
+  _rosterDisabledRowsLoaded = true;
+  return await sSet("roster_disabled_rows", list);
+}
+function isRosterRowDisabled(key){ return rosterDisabledRows.includes(key); }
+/* הקשה על כותרת שורה בעורך מפעילה/מכבה אותה. עובד גם בעריכת לוח נוכחי
+   וגם עתידי — אותו טופס עורך, אותה הגדרה גלובלית. */
+async function toggleRosterRowDisabled(key){
+  if(!isRosterManager) return;
+  const list = isRosterRowDisabled(key) ? rosterDisabledRows.filter(k=>k!==key) : [...rosterDisabledRows, key];
+  const ok = await saveRosterDisabledRows(list);
+  if(ok === false){ toast("⚠️ השמירה נכשלה — נסה שוב"); return; }
+  renderRosterEditor();
+  rosterCache = null;
+  toast(isRosterRowDisabled(key) ? "השורה מוסתרת בלוח הצוות" : "השורה תוצג שוב בלוח הצוות");
+}
+/* כותרת שורה בעורך שאפשר להקיש עליה כדי להשבית/להפעיל את הצגתה בלוח. */
+function rosterRowToggleHtml(key, label){
+  const off = isRosterRowDisabled(key);
+  return `<span class="rblk-toggle ${off?"off":""}" onclick="toggleRosterRowDisabled('${key}')"
+    title="הקש כדי ${off?"להציג":"להסתיר"} בלוח הצוות">${off?"🚫 ":""}${label}${off?" — מוסתר בלוח":""}</span>`;
+}
+
 /* ===== ניהול שורות מותאמות-אישית (מ״ע תורנויות) ===== */
 let rosterCustomRowEditId = null;   // null = טופס הוספה; אחרת עריכת שורה קיימת
 async function openRosterCustomRowsMgr(){
@@ -6664,6 +6702,7 @@ async function saveRosterCustomRowForm(){
   renderRosterCustomRowsMgr();
   rosterCache = null;
   await renderRosterView();
+  if(rosterDraft && document.getElementById("duty-roster-modal").classList.contains("open")) renderRosterEditor();
   toast("נשמר ✓");
 }
 async function deleteRosterCustomRow(id){
@@ -6675,6 +6714,7 @@ async function deleteRosterCustomRow(id){
   renderRosterCustomRowsMgr();
   rosterCache = null;
   await renderRosterView();
+  if(rosterDraft && document.getElementById("duty-roster-modal").classList.contains("open")) renderRosterEditor();
   toast("נמחק ✓");
 }
 /* תורן טייסת — תורנות שבועית שמתחלפת בין הסככות, בלי סככה 5 */
@@ -6930,6 +6970,7 @@ async function renderRosterView(){
   if(!box) return;
   await maybeRotateWeek();     // מעבר שבוע אוטומטי (שבת בחצות) לפני הרינדור
   await loadRosterCustomRows();
+  await loadRosterDisabledRows();
   // ברירת מחדל לפי תפקיד: חיילים מתחילים ב"לוח יומי" (כרטיסי יום — קריא בנייד),
   // מ״ע/מפקד ב"לוח שבועי" (טבלה מלאה). המשתמש יכול להחליף בכל רגע.
   if(!_rosterViewInit){ _rosterViewInit = true; if(!isRosterManager && userRole!=="מפקד") rosterView = "day"; }
@@ -7362,29 +7403,33 @@ function rosterBoardHtml(r, today, mode, weekSlot){
   };
 
   // שורות קבוצתיות (רשימות שמות) שאינן מאוישות באף יום השבוע לא מוצגות
-  // כלל בלוח — מקטין רעש חזותי כשמסגרת לא משתמשת בתפקיד מסוים.
+  // כלל בלוח — מקטין רעש חזותי כשמסגרת לא משתמשת בתפקיד מסוים. שורות
+  // שהושבתו ידנית ע"י מ״ע תורנויות (rosterDisabledRows) לא מוצגות בכלל,
+  // גם אם יש בהן שיבוץ בפועל — זו הכרעת מדיניות, לא נגזרת מהנתונים.
   const hasAny = field => cols.some(dk=>{
     const day = r.days[dk]; if(!day) return false;
     const v = day[field]; return Array.isArray(v) && v.length>0;
   });
+  const disabled = new Set(rosterDisabledRows||[]);
+  const shown = (key, staffed) => !disabled.has(key) && staffed;
   const fixedAugStaffed = hasAny("fixedAug") || (Array.isArray(friDay.fixedAug) && friDay.fixedAug.length>0);
 
   const rowHtml = {};
   rowHtml.manager = row("מנהל", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.manager, friDay.manager, false) : one(d.manager));
   rowHtml.lead = row("ר״צ", "", d=>one(d.lead));
   rowHtml.deputyLead = row("ל/ ר״צ", "", d=>one(d.deputyLead));
-  if(fixedAugStaffed) rowHtml.fixedAug = row("מתגבר", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.fixedAug, friDay.fixedAug, true) : chips(d.fixedAug));
+  if(shown("fixedAug", fixedAugStaffed)) rowHtml.fixedAug = row("מתגבר", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.fixedAug, friDay.fixedAug, true) : chips(d.fixedAug));
   rowHtml.pilot = row("מטיס", "", d=>one(d.pilot));
   rowHtml.driver = row("נהג", "", d=>one(d.driver));
   rowHtml.tools = row("כלים", "", d=>one(d.tools));
-  if(hasAny("pf")) rowHtml.pf = row("PF", "pfz", d=>(d.pf||[]).map(p=>
+  if(shown("pf", hasAny("pf"))) rowHtml.pf = row("PF", "pfz", d=>(d.pf||[]).map(p=>
     `<span class="rc ${p.name===user?"me":pfClass(p)}" data-rn="${escapeHTML(p.name)}">${escapeHTML(nm(p.name))}</span>`).join(""));
-  if(hasAny("pfRest")) rowHtml.pfRest = row(`נחים PF<br><small>${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</small>`, "restz",
+  if(shown("pfRest", hasAny("pfRest"))) rowHtml.pfRest = row(`נחים PF<br><small>${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</small>`, "restz",
     d=> d.pfRest === null ? `<span class="rnone">רצוף</span>` : chips(d.pfRest, "rest"));
-  if(hasAny("pms")) rowHtml.pms = row("PMS", "pmsz", d=>chips(d.pms, "pms"));
-  if(hasAny("pmsRest")) rowHtml.pmsRest = row("PMS נחים", "restz", d=>chips(d.pmsRest, "rest"));
-  if(hasAny("reserve")) rowHtml.reserve = row("מילואים", "", d=>chips(d.reserve, "res"));
-  if(hasAny("basic")) rowHtml.basic = row("תורנות", "", d=>(d.basic||[]).map(b=>
+  if(shown("pms", hasAny("pms"))) rowHtml.pms = row("PMS", "pmsz", d=>chips(d.pms, "pms"));
+  if(shown("pmsRest", hasAny("pmsRest"))) rowHtml.pmsRest = row("PMS נחים", "restz", d=>chips(d.pmsRest, "rest"));
+  if(shown("reserve", hasAny("reserve"))) rowHtml.reserve = row("מילואים", "", d=>chips(d.reserve, "res"));
+  if(shown("basic", hasAny("basic"))) rowHtml.basic = row("תורנות", "", d=>(d.basic||[]).map(b=>
     `<span class="rc ${b.name===user?"me":""}" data-rn="${escapeHTML(b.name)}">${escapeHTML(nm(b.name))}<small> ${escapeHTML(b.type||"")}</small></span>`).join(""));
   // תורן טייסת — ערך שבועי אחד, לכן תא ממוזג על פני כל העמודות (כמו בגיליון)
   rowHtml.squadronDuty = `<tr><td class="rlbl sqz">תורן טייסת</td>` +
@@ -7393,7 +7438,7 @@ function rosterBoardHtml(r, today, mode, weekSlot){
   // מאוישת = לא מוצגת", ומוכנסות למיקום שנקבע להן (ר' buildRosterRowOrder).
   (rosterCustomRows||[]).forEach(cr=>{
     const f = "custom_"+cr.id;
-    if(hasAny(f)) rowHtml[cr.id] = row(escapeHTML(cr.label), "", d=>chips(d[f]));
+    if(shown(cr.id, hasAny(f))) rowHtml[cr.id] = row(escapeHTML(cr.label), "", d=>chips(d[f]));
   });
 
   let html = `<table class="roster-grid ${fit?"fit":"wide"}"><thead><tr><th class="rlbl wk">${r.weekNumber?("שבוע "+r.weekNumber):"שבוע"}</th>${th}</tr></thead><tbody>`;
@@ -8427,6 +8472,7 @@ async function openRosterEditor(aiDays, slot){
   if(!isRosterManager){ toast("רק מ״ע תורנויות יכול לערוך את הלוח 🔒"); return; }
   rosterEditSlot = slot || "current";
   await loadRosterCustomRows();
+  await loadRosterDisabledRows();
   rosterAllPersonnel = await fetchAllPersonnelByShed();
   rosterPfNames = await fetchPfNames();
   rosterConstraints = await fetchApprovedConstraintsByName();
@@ -8522,18 +8568,23 @@ function renderRosterEditor(){
 
   let html = "";
   if(wknd) html += `<div class="roster-wknd">משמרת רצופה — כל שינוי כאן חל על חמישי, שישי ושבת. אין שורת נחים.</div>`;
-  // בסופ"ש (חמישי): מנהל ומתגבר מתחלפים — חמישי מול שישי–שבת (שני שדות)
+  // בסופ"ש (חמישי): מנהל מתחלף — חמישי מול שישי–שבת (שני שדות)
   const managerRows = wknd
     ? slot("מנהל · ה׳","manager",false) + slot("מנהל · ו׳–ש׳","managerWknd",false)
     : slot("מנהל","manager",false);
+  html += `<div class="rblk"><div class="rblk-h"><span>שלד</span><span class="rblk-c">חובה *</span></div>
+    ${managerRows}${slot("ר״צ","lead",true)}${slot("ל/ ר״צ","deputyLead",false)}
+    ${slot("מטיס","pilot",false)}${slot("נהג","driver",false)}${slot("כלים","tools",true)}</div>`;
+
+  // כל שורה קבוצתית (רשימה) להלן ניתנת להשבתה ידנית — הקשה על הכותרת
+  // מסתירה/מציגה אותה בלוח הצוות (rosterDisabledRows), ללא קשר לשיבוץ בפועל.
   const augRows = wknd
     ? listRow("מתגבר · ה׳","fixedAug") + listRow("מתגבר · ו׳–ש׳","fixedAugWknd")
     : listRow("מתגבר","fixedAug");
-  html += `<div class="rblk"><div class="rblk-h"><span>שלד</span><span class="rblk-c">חובה *</span></div>
-    ${managerRows}${slot("ר״צ","lead",true)}${slot("ל/ ר״צ","deputyLead",false)}
-    ${augRows}${slot("מטיס","pilot",false)}${slot("נהג","driver",false)}${slot("כלים","tools",true)}</div>`;
+  html += `<div class="rblk"><div class="rblk-h"><span>${rosterRowToggleHtml("fixedAug","מתגבר")}</span></div>
+    ${augRows}</div>`;
 
-  html += `<div class="rblk"><div class="rblk-h"><span>PF</span><span class="rblk-c">${(d.pf||[]).length}</span></div>
+  html += `<div class="rblk"><div class="rblk-h"><span>${rosterRowToggleHtml("pf","PF")}</span><span class="rblk-c">${(d.pf||[]).length}</span></div>
     <div class="rpool">${(d.pf||[]).map((p,i)=>
       `<span class="rc ${pfClass(p)} ${lc(p.name)}" onclick="rosterCyclePf(${i})">${lk(p.name)}${escapeHTML(p.name)}${pfTagHtml(p)}</span>
        <span class="rc-x" onclick="rosterRemovePf(${i})">✕</span>`).join("")}
@@ -8541,21 +8592,21 @@ function renderRosterEditor(){
     <div class="rblk-note">הקש על שם כדי לסמן: רגיל → בקורס (עד 20:00). למילואים — שורת "מילואים" נפרדת.</div></div>`;
 
   if(wknd){
-    html += `<div class="rblk"><div class="rblk-h restz"><span>נחים</span></div>
+    html += `<div class="rblk"><div class="rblk-h restz"><span>${rosterRowToggleHtml("pfRest","נחים")}</span></div>
       <div class="rnone-b">אין נחים במשמרת רצופה</div></div>`;
   } else {
-    html += `<div class="rblk"><div class="rblk-h restz"><span>נחים · ${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</span>
+    html += `<div class="rblk"><div class="rblk-h restz"><span>${rosterRowToggleHtml("pfRest",`נחים · ${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}`)}</span>
       <span class="rblk-c">${(d.pfRest||[]).length}</span></div>
       ${listRow("נחים","pfRest","rest")}</div>`;
   }
 
-  html += `<div class="rblk"><div class="rblk-h"><span>מילואים</span><span class="rblk-c">${(d.reserve||[]).length}</span></div>
+  html += `<div class="rblk"><div class="rblk-h"><span>${rosterRowToggleHtml("reserve","מילואים")}</span><span class="rblk-c">${(d.reserve||[]).length}</span></div>
     ${listRow("מילואים","reserve","res")}</div>`;
 
-  html += `<div class="rblk"><div class="rblk-h pmsz"><span>PMS</span><span class="rblk-c">${(d.pms||[]).length}</span></div>
-    ${listRow("PMS","pms","pms")}${!wknd?listRow("PMS נחים","pmsRest","rest"):""}</div>`;
+  html += `<div class="rblk"><div class="rblk-h pmsz"><span>${rosterRowToggleHtml("pms","PMS")}</span><span class="rblk-c">${(d.pms||[]).length}</span></div>
+    ${listRow("PMS","pms","pms")}${!wknd?listRow(rosterRowToggleHtml("pmsRest","PMS נחים"),"pmsRest","rest"):""}</div>`;
 
-  html += `<div class="rblk"><div class="rblk-h"><span>תורנות בסיסית</span><span class="rblk-c">${(d.basic||[]).length}</span></div>
+  html += `<div class="rblk"><div class="rblk-h"><span>${rosterRowToggleHtml("basic","תורנות בסיסית")}</span><span class="rblk-c">${(d.basic||[]).length}</span></div>
     ${(d.basic||[]).map((b,i)=>`<div class="rrow">
       <div class="rrow-k">${lk(b.name)}${escapeHTML(b.name)}</div>
       <div class="rrow-v">
@@ -8569,12 +8620,15 @@ function renderRosterEditor(){
       <span class="rc add" onclick="openBasicInterval()">+ טווח ימים</span></div></div></div>`;
 
   // שורות מותאמות-אישית שהוגדרו דרך "שורות מותאמות אישית" — אותה חוויית
-  // בחירת שם מבנק החיילים כמו כל שורת רשימה אחרת.
+  // בחירת שם מבנק החיילים כמו כל שורת רשימה אחרת, וגם ניתנות להשבתה.
   html += (rosterCustomRows||[]).map(cr=>{
     const f = "custom_"+cr.id;
-    return `<div class="rblk"><div class="rblk-h"><span>${escapeHTML(cr.label)}</span><span class="rblk-c">${(d[f]||[]).length}</span></div>
+    return `<div class="rblk"><div class="rblk-h"><span>${rosterRowToggleHtml(cr.id, escapeHTML(cr.label))}</span><span class="rblk-c">${(d[f]||[]).length}</span></div>
       ${listRow(escapeHTML(cr.label), f)}</div>`;
   }).join("");
+
+  html += `<button type="button" class="m-btn ghost" style="width:100%;font-size:12px;padding:9px;margin-bottom:6px"
+    onclick="openRosterCustomRowsMgr()">➕ הוסף שורה מותאמת אישית ללוח</button>`;
 
   html += `<button type="button" class="m-btn ghost" style="width:100%;font-size:12px;padding:9px"
     onclick="previewDutyRosterNotification('${rosterEdDay}')">🔔 שלח לי תצוגה מקדימה של ההתראה ליום זה</button>`;
