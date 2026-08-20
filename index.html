@@ -5003,6 +5003,10 @@ function logout(){
   user=null; userRole=null; isCmd=false; isAdmin=false; isVehicleOfficer=false; isBudgetOfficer=false; isTechOfficer=false; isToolsResp=false; isVehiclesResp=false;
   isHearingResp=false; isRangeResp=false; isBoardPublisher=false; isRosterManager=false;
   isOwner=false; impersonating=null; isSuperAdmin=false; superAdminSelf=null;
+  // איפוס קאש לוח הצוות בזיכרון — בלי זה, נתונים שנטענו עבור משתמש אחד
+  // "נדבקים" למשתמש הבא באותה טעינת-עמוד. זה מה שגרם לכך שהחלפת משתמש
+  // הסתירה את באג הסככה של roster_custom_rows (ר' שם) והקשתה על האבחון.
+  rosterCache = null; rosterCustomRows = []; _rosterCustomRowsLoaded = false;
   // נטישת זהות המסגרת ב-Firebase וחזרה לזהות אנונימית ניטרלית, כדי שכניסה
   // הבאה תתחיל נקייה ולא תישאר מחוברת כמסגרת הקודמת.
   if(AUTH_MODE === "scoped" && fbAuth && fbAuth._am){
@@ -6629,16 +6633,46 @@ const STANDARD_ROSTER_ROWS = [
    יום תחת השדה "custom_<id>", כמו שאר שדות הרשימה. */
 let rosterCustomRows = [];
 let _rosterCustomRowsLoaded = false;
+/* ⚠️ גלובלי (sGetRaw/sSetRaw), בדיוק כמו הלוח עצמו — **לא** scoped לסככה.
+   זה היה הבאג הראשי מאחורי "יוזרים רואים חצי לוח": הלוח (`board_roster`)
+   הוא מסמך גלובלי אחד לכל הטייסת, וכולל את השיבוץ בפועל תחת `custom_<id>`;
+   אבל הגדרות השורות עצמן נשמרו דרך `sGet`/`sSet` שמוסיפים תחילית סככה
+   (`shed2_roster_custom_rows`). כלומר: **השמות** היו גלויים לכולם, אבל
+   **ההגדרות** רק למי שבסככה של מ״ע התורנויות שיצר אותן. לכל השאר
+   `rosterCustomRows` חזר ריק, השורות לא רונדרו בכלל, והלוח נראה חצי —
+   בלי קשר ל-disabledRows, לגרסה, או לתזמון. זה גם מסביר בדיוק למה
+   "כניסה עם יוזר תקין ואז חזרה" תיקנה: הכניסה כמשתמש מהסככה של המ״ע
+   טענה את ההגדרות לזיכרון, ו-logout לא ניקה אותן — אז הן נשארו זמינות
+   ליוזר הבא באותה טעינת-עמוד. אל תחזירו את זה ל-sGet/sSet. */
+const ROSTER_CUSTOM_ROWS_KEY = "roster_custom_rows";
+/* אימוץ חד-פעמי של הגדרות שנשמרו בעבר תחת מפתח פר-סככה: מאחדות לפי id
+   מכל הסככות (מ״עים שונים יצרו שורות בסככות שונות) וכותב פעם אחת
+   למפתח הגלובלי. בלי זה, התיקון היה "מוחק" למ״ע את השורות שכבר הגדיר. */
+async function adoptLegacyPerShedCustomRows(){
+  const byId = new Map();
+  for(const s of SHEDS){
+    let legacy = null;
+    try{ legacy = await sGetRaw(s.id + "_" + ROSTER_CUSTOM_ROWS_KEY); }catch(e){ continue; }
+    if(!Array.isArray(legacy)) continue;
+    legacy.forEach(cr=>{ if(cr && cr.id && !byId.has(cr.id)) byId.set(cr.id, cr); });
+  }
+  if(!byId.size) return null;
+  const merged = [...byId.values()];
+  await sSetRaw(ROSTER_CUSTOM_ROWS_KEY, merged);
+  return merged;
+}
 async function loadRosterCustomRows(force){
   if(_rosterCustomRowsLoaded && !force) return rosterCustomRows;
-  rosterCustomRows = (await sGet("roster_custom_rows")) || [];
+  let list = await sGetRaw(ROSTER_CUSTOM_ROWS_KEY);
+  if(!Array.isArray(list) || !list.length) list = await adoptLegacyPerShedCustomRows();
+  rosterCustomRows = Array.isArray(list) ? list : [];
   _rosterCustomRowsLoaded = true;
   return rosterCustomRows;
 }
 async function saveRosterCustomRows(list){
   rosterCustomRows = list;
   _rosterCustomRowsLoaded = true;
-  return await sSet("roster_custom_rows", list);
+  return await sSetRaw(ROSTER_CUSTOM_ROWS_KEY, list);
 }
 /* מרכיב את סדר השורות הסופי בלוח: שורות קבועות בסדר קבוע, עם שורות
    מותאמות-אישית משוכנות לפי afterKey. עומס לא-מוגבל (עוגן חסר/מעגלי)
