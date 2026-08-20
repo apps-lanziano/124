@@ -57,12 +57,20 @@ const out = await page.evaluate(async ()=>{
   await sSetRaw("board_rotated_week", "2000-01-02");            // סימון ישן → עברנו שבוע
   const cur = migrateRosterToV2(null); cur.days["ראשון"].lead = "ישן";
   const nxt = migrateRosterToV2(null); nxt.days["ראשון"].lead = "חדש";
-  await saveDutyRosterV2(cur, "current"); await saveDutyRosterV2(nxt, "next");
+  // דחיפות מפורשות שונות על current ו-next לפני הרוטציה — מדמה שמ״ע
+  // תורנויות פרסם את שניהם בעבר, בזמנים שונים. אחרי רוטציה אוטומטית
+  // שקטה, pushedAt של ה-current החדש חייב להישאר כמו שהיה ל-current
+  // *הישן* (לא להתחלף בזה של next) — כדי ש-notifyOnPublish לא יזהה את
+  // הרוטומציה כדחיפה מפורשת וישלח בטעות התראת "עדכון" לכל הטייסת.
+  await saveDutyRosterV2(cur, "current", true);
+  await saveDutyRosterV2(nxt, "next", true);
+  const curPushedAtBefore = (await getDutyRoster("current")).pushedAt;
   await maybeRotateWeek();
   r.rotated = (await getDutyRoster("current")).days["ראשון"].lead === "חדש";
   r.oldToPrev = (await getDutyRoster("prev")).days["ראשון"].lead === "ישן";
   r.nextCleared = (await getDutyRoster("next")).days["ראשון"].lead === "";
   r.marked = (await sGetRaw("board_rotated_week")) === isoOfDate(thisWeekSunday());
+  r.pushedAtNotLeaked = (await getDutyRoster("current")).pushedAt === curPushedAtBefore;
 
   // אין לוח עתידי → לא דורסים את הנוכחי לריק
   _rotateTried = false;
@@ -87,6 +95,7 @@ record("מעבר שבוע: העתידי הפך לנוכחי", out.rotated, Strin
 record("מעבר שבוע: הנוכחי הקודם עבר ל'שבוע שעבר'", out.oldToPrev, String(out.oldToPrev));
 record("מעבר שבוע: העתידי התפנה", out.nextCleared, String(out.nextCleared));
 record("מעבר שבוע: סומן שהשבוע טופל", out.marked, String(out.marked));
+record("מעבר שבוע: pushedAt נשאר של ה-current הישן (רוטציה שקטה, לא דחיפה מפורשת)", out.pushedAtNotLeaked, String(out.pushedAtNotLeaked));
 record("אין לוח עתידי → הנוכחי לא נדרס לריק", out.emptyNextKeepsCurrent, String(out.emptyNextKeepsCurrent));
 
 await closeBrowser();

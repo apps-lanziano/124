@@ -154,6 +154,60 @@ rosterView = "board" | "day" | "mine"
 ⚠️ זה שינוי מכוון מההתנהגות הישנה (שבה "פרסם" קידם אוטומטית ללוח
 הנוכחי ורוקן את "שבוע הבא"). אל תחזירו את זה.
 
+**`restoreWeekToCurrent(slot)` — אותה לוגיקה בשני הכיוונים** (slot="next"
+מהבאנר בתצוגת "שבוע הבא", slot="prev" מהבאנר בתצוגת "שבוע שעבר"):
+1. הלוח מה-slot שנבחר הופך ל-"current" (זו "דחיפה מפורשת", ר' סעיף
+   ההתראות למטה).
+2. הלוח שהיה "current" לפני הפעולה עובר תמיד ל-"שבוע שעבר" (`prev`) —
+   לא נמחק.
+3. רק כש-slot="next": "שבוע הבא" מתרוקן לגמרי אחרי ההעברה (`migrateRosterToV2(null)`,
+   כמו ב-`maybeRotateWeek`) — אין סיבה לכפל לוחות, התוכן שלו כבר שוכפל
+   ל-current. כש-slot="prev" אין צורך בריקון נפרד: "שבוע שעבר" כבר הוחלף
+   בשלב 2 (התוכן הישן שלו כבר נקרא ל-src *לפני* הכתיבה, ולכן לא אובד —
+   הוא זה שהפך ל-current).
+4. מכיוון ש"שבוע הבא" חוזר ל-`published:false` אחרי ריקון, כלל היוזרים
+   מפסיקים לראות אותו **אוטומטית** — לפי אותו כלל פרטיות שכבר קיים
+   (סעיף למעלה), בלי מנגנון הסתרה נפרד.
+
+⚠️ שחזור מהארכיון (`restoreArchivedToCurrent`, המודל "🗄️ ארכיון") הוא
+פיצ'ר נפרד ולא חלק מהלוגיקה הזו — הוא ממשיך להחליף את ה-current ישירות
+בלי לארכב אותו, ולא נוגע ב"שבוע הבא". אל תאחדו בין השניים.
+
+---
+
+## התראות לוח צוות תורן (`board_roster`/`board_roster_next`)
+
+לוח הצוות (Roster v2) **גלובלי לכל הטייסת** (לא לפי מסגרת — ר' `rosterStorageKey`
+למעלה), ולכן ההתראה עליו משודרת לכל המסגרות בבת אחת, לא רק לאחת. הלוגיקה
+יושבת ב-`functions/lib/notify.js` (`classify`/`decide`), עם דגל שידור מיוחד
+`BROADCAST_SHED` ש-`notifyOnPublish` (`functions/index.js`) מזהה ומריץ
+עליו לולאה על כל `SHED_IDS` (במקום פנייה ל-`push_tokens_<shedId>` בודד).
+
+| אירוע | title | מתי |
+|---|---|---|
+| `board_roster_next` עובר `published:false→true` | "פורסם לוח צוות חדש" | לחיצה על "פרסם לוח צוות" ב"בניית לוח עתידי" (`publishFutureRoster`) |
+| כתיבה ל-`board_roster` (הנוכחי), או ל-`board_roster_next` שכבר `published` | "בוצע עדכון ללוח צוות תורן" | `publishRoster`/`saveRosterDraftNext`/`restoreWeekToCurrent` |
+
+**רק בדחיפה מפורשת של מ״ע תורנויות — לא בכתיבת-מערכת שקטה.** שדה
+`pushedAt` (טוקן, על גוף מסמך הלוח עצמו — עובר דרך `migrateRosterToV2`/
+`saveDutyRosterV2` כמו `published`/`disabledRows`) מקבל ערך **חדש** רק
+כש-`saveDutyRosterV2(roster, slot, true)` נקרא (הפרמטר השלישי, `manualPush`)
+— כלומר רק מ-`publishRoster`, `publishFutureRoster`, `saveRosterDraftNext`,
+ומ-`restoreWeekToCurrent` (רק על הכתיבה ל-"current", לא על ארכוב ה-prev/
+ריקון ה-next). `decide()` ב-notify.js שולח התראה רק אם `pushedAt` השתנה
+בין before ל-after — לא סתם כי המסמך נכתב.
+
+⚠️ **`maybeRotateWeek` (הרוטציה השבועית האוטומטית) חייבת לשמר את `pushedAt`
+הישן במפורש** לפני הכתיבה ל-"current" (`next.pushedAt = cur.pushedAt;`),
+אחרת הרוטציה השקטה — שרצה ברקע כל פעם שמ״ע תורנויות פותח את האפליקציה
+בשבוע חדש, בלי לחיצת כפתור — תיראה כמו דחיפה מפורשת ותשלח בטעות התראת
+"עדכון" לכל הטייסת. זו הנגיעה היחידה שמותרת בפונקציה הזו (ר' "מה לא
+לשנות" למטה) — לא לגעת בלוגיקת ה-3-retry או ברוטציה עצמה מעבר לשורה הזו.
+
+בדיקות: `qa/suite/roster_notify_lib_test.mjs` (לוגיקת decide/pushedAt),
+`qa/suite/roster_restore_test.mjs` (restoreWeekToCurrent, שני הכיוונים),
+`qa/suite/naat_constraint_and_rotate_test.mjs` (שהרוטציה לא "מדליפה" pushedAt).
+
 ---
 
 ## Service Worker
@@ -192,7 +246,7 @@ node scripts/sw-cache-name.mjs --write   # כותב את הערך הנכון ל-
 node qa/suite/<test>.mjs    # הרץ בדיקה בודדת
 ```
 
-**112 בדיקות, כולן עוברות** נכון ל-2026-08-19.
+**115 בדיקות, כולן עוברות** נכון ל-2026-08-20.
 
 קבצי בדיקות קיימים:
 - `roster_cards_view_test.mjs` — לשוניות + כרטיסי יום
@@ -340,6 +394,6 @@ git push origin main
 ## מה **לא** לשנות
 
 - זרימת ה-login (קריאות serial — `fbReadFailed` global דורש זאת)
-- `maybeRotateWeek` — יש 3-retry read כנגד transient failures
+- `maybeRotateWeek` — יש 3-retry read כנגד transient failures. חריג מותר יחיד: שימור `pushedAt` (ר' סעיף "התראות לוח צוות תורן" למעלה) — לא לגעת בשום דבר אחר בפונקציה
 - מינימיזציה (`build/`) — workflow דורמנטי, לא לשנות בלי הוראה מפורשת
 - `roster.disabledRows` — **לעולם לא** להפוך בחזרה להגדרה גלובלית משותפת (`sGet`/`sSet` על מפתח נפרד). זה חייב להישאר שדה על גוף הלוח עצמו (כמו `restWindow`), כדי שהשבתת שורה בלוח אחד לא תדלוף לשבועות/ארכיון אחרים — היה באג חמור שתוקן (ר' `roster_row_toggle_test.mjs`)
