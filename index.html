@@ -7563,24 +7563,45 @@ function rosterBoardHtml(r, today, mode, weekSlot){
     return tagged("ה׳",thu) + tagged("ו׳–ש׳",fri);
   };
 
-  // שורות קבוצתיות (רשימות שמות) מוצגות תמיד — הצגה נשלטת **רק** ע"י
-  // ההשבתה הידנית (r.disabledRows, שדה על הלוח הזה בדיוק, לא הגדרה
-  // גלובלית), לא ע"י כמות השיבוץ בפועל השבוע. שורה ריקה השבוע (עדיין
-  // לא מולאה, או שבוע חלש בשיבוץ) עדיין מציגה את הכותרת שלה עם תאים
-  // ריקים — לא נעלמת. זה תוקן אחרי באג אמיתי: מ״ע תורנויות שהשתמש
-  // בשורות מותאמות-אישית במקום השדות הסטנדרטיים (PF/PMS/מילואים) ראה
-  // חלק מהצופים מקבלים לוח "חצי" — לא כי משהו הושבת, אלא כי ההסתרה
-  // האוטומטית-לפי-נתונים הפכה בלתי-צפויה לחלוטין ברגע שהשיבוץ בפועל
-  // חי בשדות מותאמים-אישית ולא בשדה הסטנדרטי שהיא בדקה. הצגה חייבת
-  // להיות דטרמיניסטית לפי המתג שהמ״ע קבע, לא ניחוש לפי הנתונים.
+  /* ⛔ כלל-ברזל: שורה שיש בה שיבוץ בפועל השבוע — **תמיד מוצגת**.
+     `disabledRows` יכול להסתיר אך ורק שורה **ריקה**.
+
+     זה לא "עוד תנאי" — זו ערובה מבנית שהופכת את כל מחלקת הבאגים של
+     "לוח חצי" לבלתי-אפשרית: אי אפשר יותר ששם של חייל ששובץ לא יופיע
+     על המסך, לא משנה מה כתוב ב-disabledRows, מי כתב אותו, מתי, ובאיזה
+     מצב-ביניים. כל התיקונים הקודמים ניסו לוודא ש-disabledRows יהיה
+     *נכון* בכל רגע (זריעה בעת יצירה, ריפוי רטרואקטיבי, רוטציה) — וכל
+     אחד מהם השאיר עוד פינה שבה ערך שגוי הסתיר נתונים אמיתיים. במקום
+     לרדוף אחרי עוד מקרה-קצה, הופכים את הנתונים עצמם למקור-האמת העליון:
+     השבתה היא העדפה תצוגתית לשורות ריקות בלבד, ולעולם לא צנזורה של
+     שיבוץ קיים.
+
+     ⚠️ זה שינוי מכוון מהתנהגות קודמת שבה שורה מושבתת לא הוצגה "בשום
+     מצב, גם עם שיבוץ בפועל". אל תחזירו את זה: זה בדיוק מה שגרם למ״ע
+     שהשביתה של שורה סטנדרטית (כי הוא עובד עם שורה מותאמת-אישית
+     מקבילה) הפכה לוח מאויש ללוח חצי אצל חלק מהצופים.
+
+     מה שכן נשמר: שורה ריקה שהמ״ע השבית במפורש — לא מוצגת (זו בדיוק
+     המטרה של המתג: להוריד מהלוח תפקיד שהמסגרת לא משתמשת בו השבוע).
+     שורה ריקה שלא הושבתה — מוצגת עם תאים ריקים, כמו קודם. */
   const disabled = new Set(r.disabledRows||[]);
-  const shown = key => !disabled.has(key);
+  const rowHasNames = field => cols.some(dk=>{
+    const day = r.days[dk]; if(!day) return false;
+    const v = day[field];
+    return Array.isArray(v) && v.length > 0;
+  });
+  const shown = (key, field) => {
+    if(!disabled.has(key)) return true;                 // לא הושבת — מוצג תמיד
+    return rowHasNames(field || key);                   // הושבת — מוצג רק אם יש שיבוץ בפועל
+  };
 
   const rowHtml = {};
   rowHtml.manager = row("מנהל", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.manager, friDay.manager, false) : one(d.manager));
   rowHtml.lead = row("ר״צ", "", d=>one(d.lead));
   rowHtml.deputyLead = row("ל/ ר״צ", "", d=>one(d.deputyLead));
-  if(shown("fixedAug")) rowHtml.fixedAug = row("מתגבר", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.fixedAug, friDay.fixedAug, true) : chips(d.fixedAug));
+  // מתגבר: גם משמרת שישי–שבת (friDay.fixedAug) נחשבת "שיבוץ בפועל" לעניין כלל-הברזל
+  const fixedAugHasNames = rowHasNames("fixedAug") || (Array.isArray(friDay.fixedAug) && friDay.fixedAug.length > 0);
+  if(!disabled.has("fixedAug") || fixedAugHasNames) rowHtml.fixedAug = row("מתגבר", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.fixedAug, friDay.fixedAug, true) : chips(d.fixedAug));
   rowHtml.pilot = row("מטיס", "", d=>one(d.pilot));
   rowHtml.driver = row("נהג", "", d=>one(d.driver));
   rowHtml.tools = row("כלים", "", d=>one(d.tools));
@@ -7601,7 +7622,7 @@ function rosterBoardHtml(r, today, mode, weekSlot){
   (rosterCustomRows||[]).forEach(cr=>{
     const f = "custom_"+cr.id;
     const rest = isRestRowLabel(cr.label);
-    if(shown(cr.id)) rowHtml[cr.id] = row(escapeHTML(cr.label), rest?"restz":"", d=>chips(d[f], rest?"rest":""));
+    if(shown(cr.id, f)) rowHtml[cr.id] = row(escapeHTML(cr.label), rest?"restz":"", d=>chips(d[f], rest?"rest":""));
   });
 
   let html = `<table class="roster-grid ${fit?"fit":"wide"}"><thead><tr><th class="rlbl wk">${r.weekNumber?("שבוע "+r.weekNumber):"שבוע"}</th>${th}</tr></thead><tbody>`;

@@ -28,9 +28,19 @@ const out = await page.evaluate(async ()=>{
   const htmlBefore = rosterBoardHtml(draft, "", "wide");
   r.pfShownBeforeToggle = htmlBefore.includes(">PF<") && htmlBefore.includes("חייל פ א");
 
+  // ⛔ כלל-ברזל: שורה מושבתת שיש בה שיבוץ בפועל — עדיין מוצגת. השבתה
+  // מסתירה אך ורק שורה ריקה. זו ערובה שאי-אפשר "לאבד" שיבוץ מהמסך.
   draft.disabledRows = ["pf"];
-  const htmlAfter = rosterBoardHtml(draft, "", "wide");
-  r.pfHiddenAfterDisable = !htmlAfter.includes(">PF<") && !htmlAfter.includes("חייל פ א");
+  const htmlAfterStaffed = rosterBoardHtml(draft, "", "wide");
+  r.staffedRowShownDespiteDisable = htmlAfterStaffed.includes(">PF<") && htmlAfterStaffed.includes("חייל פ א");
+
+  // אותה שורה, בלי שיבוץ בכלל → ההשבתה כן מסתירה אותה (זו מטרת המתג)
+  const emptyDraft = migrateRosterToV2(null);
+  emptyDraft.disabledRows = ["pf"];
+  r.emptyRowHiddenWhenDisabled = !rosterBoardHtml(emptyDraft, "", "wide").includes(">PF<");
+  // ובלי השבתה — שורה ריקה עדיין מוצגת (תאים ריקים, לא נעלמת)
+  const emptyNoDisable = migrateRosterToV2(null);
+  r.emptyRowShownWhenNotDisabled = rosterBoardHtml(emptyNoDisable, "", "wide").includes(">PF<");
 
   // *** הבדיקה הקריטית נגד הבאג: לוח אחר (לא זה עם disabledRows) לא מושפע ***
   const otherDraft = migrateRosterToV2(null);
@@ -117,7 +127,9 @@ const out = await page.evaluate(async ()=>{
 
 record("התחברות", login.ok, JSON.stringify(login));
 record("PF מוצג לפני השבתה", out.pfShownBeforeToggle, String(out.pfShownBeforeToggle));
-record("PF מוסתר אחרי השבתה ידנית — גם עם שיבוץ בפועל", out.pfHiddenAfterDisable, String(out.pfHiddenAfterDisable));
+record("⛔ כלל-ברזל: שורה מושבתת עם שיבוץ בפועל — עדיין מוצגת (אי-אפשר לאבד שיבוץ)", out.staffedRowShownDespiteDisable, String(out.staffedRowShownDespiteDisable));
+record("שורה ריקה + מושבתת → מוסתרת (זו מטרת המתג)", out.emptyRowHiddenWhenDisabled, String(out.emptyRowHiddenWhenDisabled));
+record("שורה ריקה בלי השבתה → מוצגת עם תאים ריקים", out.emptyRowShownWhenNotDisabled, String(out.emptyRowShownWhenNotDisabled));
 record("🔒 באג נגד רגרסיה: לוח אחר לא מושפע מהשבתה בלוח הזה", out.otherRosterUnaffected, String(out.otherRosterUnaffected));
 record("PF חוזר להופיע אחרי הפעלה מחדש", out.pfShownAfterReenable, String(out.pfShownAfterReenable));
 record("disabledRows נשמר וניתן לקריאה חוזרת (migrate/save)", out.persistedThroughSaveAndReread, String(out.persistedThroughSaveAndReread));
