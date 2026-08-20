@@ -81,6 +81,23 @@ const out = await page.evaluate(async ()=>{
   await maybeRotateWeek();
   r.emptyNextKeepsCurrent = (await getDutyRoster("current")).days["שני"].lead === "נשאר";
 
+  // *** הבדיקה הקריטית נגד הבאג: מעבר שבוע רץ גם כשהצופה אינו מ"ע
+  // תורנויות. אם זה היה מותנה ב-isRosterManager (כפי שהיה בעבר), חייל
+  // רגיל שנכנס ראשון אחרי גבול השבוע היה תקוע רואה "הבא" ישן/לא-מרוענן
+  // (כולל disabledRows שדלף מהגדרה קודמת) עד שמ"ע נכנס בעצמו — בדיוק
+  // הדפוס שדווח בפועל ("כניסה עם יוזר אחר מסדרת את זה"). ***
+  isRosterManager = false;
+  _rotateTried = false;
+  await sSetRaw("board_rotated_week", "2000-01-02");
+  const curNM = migrateRosterToV2(null); curNM.days["ראשון"].lead = "ישן-לא-מ״ע";
+  const nxtNM = migrateRosterToV2(null); nxtNM.days["ראשון"].lead = "חדש-לא-מ״ע";
+  nxtNM.disabledRows = ["pf","pms"];   // הגדרה ישנה שהייתה על "הבא" — צריכה "להתאפס" בלוח החדש
+  await saveDutyRosterV2(curNM, "current"); await saveDutyRosterV2(nxtNM, "next");
+  await maybeRotateWeek();
+  r.rotatesForNonManager = (await getDutyRoster("current")).days["ראשון"].lead === "חדש-לא-מ״ע";
+  r.freshNextClearsStaleDisabledRows = !((await getDutyRoster("next")).disabledRows||[]).includes("pf");
+  isRosterManager = true;
+
   return r;
 });
 
@@ -97,6 +114,8 @@ record("מעבר שבוע: העתידי התפנה", out.nextCleared, String(out
 record("מעבר שבוע: סומן שהשבוע טופל", out.marked, String(out.marked));
 record("מעבר שבוע: pushedAt נשאר של ה-current הישן (רוטציה שקטה, לא דחיפה מפורשת)", out.pushedAtNotLeaked, String(out.pushedAtNotLeaked));
 record("אין לוח עתידי → הנוכחי לא נדרס לריק", out.emptyNextKeepsCurrent, String(out.emptyNextKeepsCurrent));
+record("🔒 באג נגד רגרסיה: מעבר שבוע רץ גם עבור צופה שאינו מ״ע תורנויות", out.rotatesForNonManager, String(out.rotatesForNonManager));
+record("🔒 באג נגד רגרסיה: 'הבא' החדש מתאפס — לא סוחב disabledRows ישן", out.freshNextClearsStaleDisabledRows, String(out.freshNextClearsStaleDisabledRows));
 
 await closeBrowser();
 
