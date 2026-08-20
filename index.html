@@ -6936,7 +6936,14 @@ function migrateRosterToV2(raw){
   const out = {v:2, weekNumber: raw && raw.weekNumber || null, weekKey: (raw && raw.weekKey) || "",
     squadronDuty: (raw && raw.squadronDuty) || "", restWindow: (raw && raw.restWindow) || ROSTER_DEFAULT_REST_WINDOW,
     disabledRows: Array.isArray(raw && raw.disabledRows) ? raw.disabledRows.slice() : [],
-    published: !!(raw && raw.published), days:{}};
+    published: !!(raw && raw.published),
+    // מזהה "דחיפה מפורשת" של מ״ע תורנויות (ראו saveDutyRosterV2) — לא ניחוש
+    // לפי תוכן, אלא ערך שמתעדכן רק בפעולה מכוונת (פרסם/שמור טיוטה/קבע
+    // כלוח נוכחי). notifyOnPublish (functions/lib/notify.js) שולח התראת
+    // "עדכון"/"פרסום" רק כשהערך הזה משתנה — כדי שרוטציה שבועית אוטומטית
+    // שקטה (maybeRotateWeek) לא תיראה כמו דחיפה מפורשת ותשלח התראה בטעות.
+    pushedAt: (raw && raw.pushedAt) || null,
+    days:{}};
   const src = (raw && raw.days) || {};
   WEEK_DAYS_HE.forEach(day=>{
     const d = src[day];
@@ -7021,11 +7028,17 @@ async function getDutyRoster(slot){
 }
 /* שמירה: משכפלת את משמרת הסופ"ש לשלושת ימיה, וגוזרת duty/rest לכל יום
    כדי שההתראה היומית הקיימת תמשיך לעבוד בלי שינוי בצד השרת. */
-async function saveDutyRosterV2(roster, slot){
+async function saveDutyRosterV2(roster, slot, manualPush){
   const out = {v:2, weekNumber: roster.weekNumber||null, weekKey: roster.weekKey || todayKey(),
     squadronDuty: roster.squadronDuty||"", restWindow: roster.restWindow || ROSTER_DEFAULT_REST_WINDOW,
     disabledRows: Array.isArray(roster.disabledRows) ? roster.disabledRows.slice() : [],
-    published: !!roster.published, days:{}};
+    published: !!roster.published,
+    // manualPush=true רק בפעולה מפורשת של מ״ע תורנויות (פרסם/שמור טיוטה/קבע
+    // כלוח נוכחי) — מייצר ערך חדש לגמרי, כדי ש-notifyOnPublish יזהה שינוי
+    // אמיתי. בלי manualPush משמרים את הערך הקיים על האובייקט שנשמר (roster.pushedAt)
+    // כפי שהוא — כתיבות מערכת (כמו הרוטציה השבועית האוטומטית) לא נוגעות בו.
+    pushedAt: manualPush ? (Date.now()+"_"+Math.random().toString(36).slice(2,8)) : (roster.pushedAt || null),
+    days:{}};
   WEEK_DAYS_HE.forEach(day=>{
     const src = roster.days[rosterEditKey(day)] || emptyRosterDay(isWeekendDay(day));
     const d = JSON.parse(JSON.stringify(src));
@@ -7237,15 +7250,32 @@ function applyRosterHighlight(name){
     note.style.color = hits ? "#1c5f96" : "var(--ink-3)";
   }
 }
-/* שחזור: קובע את השבוע המוצג (שעבר/הבא) כ"לוח הנוכחי" הפעיל. מעתיק רק
-   ל-current — לא נוגע ב"שבוע הבא" ולא ב"שבוע שעבר", כך שכלום לא אובד. */
+/* קביעת "לוח נוכחי" — אותה לוגיקה בדיוק לשני הכיוונים (שבוע הבא/שבוע שעבר):
+   1. הלוח מה-slot שנבחר הופך ל-"current" (דחיפה מפורשת — מזוהה ב-notify.js).
+   2. הלוח הנוכחי הקודם (לפני ההחלפה) עובר ל-"שבוע שעבר" — לא נמחק.
+   3. רק כש-slot="next": "שבוע הבא" מתרוקן לגמרי (כמו maybeRotateWeek) —
+      אין סיבה לכפל לוחות; הוא כבר שוכפל ל-current. כש-slot="prev": אין מה
+      לרוקן בנפרד — "שבוע שעבר" כבר הוחלף בשלב 2 (התוכן הישן שלו כבר
+      נקרא ל-src לפני הכתיבה, כך שהוא לא אובד — הוא זה שהפך ל-current).
+   ריקון "שבוע הבא" (published:false) גם מסתיר אותו אוטומטית מכלל היוזרים —
+   לפי הכלל הקיים ש"הבא" הלא-מפורסם גלוי רק למ״ע תורנויות. */
 async function restoreWeekToCurrent(slot){
   const label = slot==="prev" ? "שבוע שעבר" : "שבוע הבא";
-  if(!confirm(`לקבוע את הלוח של "${label}" כלוח הנוכחי הפעיל?\n\n• הלוח הנוכחי הקיים יוחלף בו.\n• "${label}" עצמו לא ישתנה.\n• מכאן ההתראה היומית תקרא מהלוח הזה.`)) return;
+  const extra = slot==="next"
+    ? '• "שבוע הבא" יתרוקן לגמרי אחרי ההעברה (אין כפל לוחות).'
+    : '• "שבוע שעבר" יוחלף בלוח שרץ עד עכשיו.';
+  if(!confirm(`לקבוע את הלוח של "${label}" כלוח הנוכחי הפעיל?\n\n• הלוח הנוכחי הקיים יעבור ל"שבוע שעבר".\n${extra}\n• מכאן ההתראה היומית תקרא מהלוח הזה.`)) return;
+  const oldCurrent = await getDutyRoster("current");
   const src = await getDutyRoster(slot);
   src.weekKey = todayKey();
-  const ok = await saveDutyRosterV2(src, "current");
+  const ok = await saveDutyRosterV2(src, "current", true);
   if(ok === false){ toast("⚠️ השחזור נכשל — בדוק חיבור ונסה שוב"); return; }
+  const archived = await saveDutyRosterV2(oldCurrent, "prev");
+  if(archived === false){ toast("⚠️ הלוח הנוכחי עודכן, אך העברת הישן ל\"שבוע שעבר\" נכשלה"); }
+  if(slot==="next"){
+    const wiped = await saveDutyRosterV2(migrateRosterToV2(null), "next");
+    if(wiped === false){ toast("⚠️ הלוח הנוכחי עודכן, אך ריקון \"שבוע הבא\" נכשל"); }
+  }
   rosterCache = null; boardWeekSlot = "current";
   await renderRosterView();
   toast("הלוח הנוכחי עודכן ✓");
@@ -7362,6 +7392,10 @@ async function maybeRotateWeek(){
       const cur = await getDutyRoster("current");
       if(WEEK_DAYS_HE.some(d=>rosterDayCount(cur.days[d])>0)) await saveDutyRosterV2(cur, "prev");
       next.weekKey = todayKey();
+      // רוטציה אוטומטית שקטה — לא דחיפה מפורשת: משמרים את pushedAt הישן של
+      // הלוח הנוכחי (לא זה שהגיע עם "next") כדי ש-notifyOnPublish לא יזהה
+      // כאן "שינוי" וישלח בטעות התראת עדכון לכל הטייסת. ראו saveDutyRosterV2.
+      next.pushedAt = cur.pushedAt;
       await saveDutyRosterV2(next, "current");
       await saveDutyRosterV2(migrateRosterToV2(null), "next");   // מתפנה לשבוע הבא
       rosterCache = null; boardWeekSlot = "current";
@@ -9005,7 +9039,7 @@ async function publishRoster(){
     return rosterDayCount(d) > 0 && (!d.lead || !d.tools);
   });
   rosterDraft.weekKey = todayKey();
-  const ok = await saveDutyRosterV2(rosterDraft, rosterEditSlot);
+  const ok = await saveDutyRosterV2(rosterDraft, rosterEditSlot, true);
   if(ok === false){ toast("⚠️ שמירת הלוח נכשלה — בדוק חיבור ונסה שוב"); return; }
   rosterCache = null;
   document.getElementById("duty-roster-modal").classList.remove("open");
@@ -9027,7 +9061,7 @@ function rosterPrimaryAction(){ return rosterEditSlot==="next" ? publishFutureRo
    העורך נשאר פתוח כדי להמשיך לערוך. */
 async function saveRosterDraftNext(){
   rosterDraft.weekKey = todayKey();
-  const ok = await saveDutyRosterV2(rosterDraft, "next");
+  const ok = await saveDutyRosterV2(rosterDraft, "next", true);
   if(ok === false){ toast("⚠️ שמירת הטיוטה נכשלה — נסה שוב"); return; }
   toast("הטיוטה נשמרה — אפשר להמשיך לערוך ✓");
 }
@@ -9039,7 +9073,7 @@ async function saveRosterDraftNext(){
 async function publishFutureRoster(){
   rosterDraft.weekKey = todayKey();
   rosterDraft.published = true;
-  const ok = await saveDutyRosterV2(rosterDraft, "next");
+  const ok = await saveDutyRosterV2(rosterDraft, "next", true);
   if(ok === false){ toast("⚠️ הפרסום נכשל — בדוק חיבור ונסה שוב"); return; }
   rosterCache = null;
   document.getElementById("duty-roster-modal").classList.remove("open");

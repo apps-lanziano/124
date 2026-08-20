@@ -62,17 +62,23 @@ function decide({docId, before, after}) {
   let newItems = [];
   let shedId;
   if (kind === "roster_current") {
-    // כל כתיבה ללוח הצוות הפעיל (הנוכחי) = עדכון לכולם. יצירה ראשונה של
-    // המסמך (before===undefined) לא נחשבת "עדכון" בעיני משתמש — מדלגים.
-    if (before === undefined) return null;
+    // כל כתיבה ללוח הצוות הפעיל (הנוכחי) עלולה לבוא גם מכתיבת-מערכת שקטה
+    // (רוטציה שבועית אוטומטית, maybeRotateWeek ב-index.html) — לא רק
+    // מדחיפה מפורשת של מ״ע תורנויות. שולחים רק כש-pushedAt השתנה לערך חדש
+    // (נקבע ורק בפעולה מכוונת — ראו saveDutyRosterV2/manualPush); רוטציה
+    // אוטומטית משמרת בכוונה את pushedAt הישן כדי לא "להיראות" כמו שינוי.
+    if (before === undefined) return null;   // יצירה ראשונה — לא "עדכון" בעיני משתמש
+    if (!after || !after.pushedAt || after.pushedAt === (before && before.pushedAt)) return null;
     shedId = BROADCAST_SHED;
   } else if (kind === "roster_next") {
     // "next" גלוי לכולם רק אחרי שסומן published (ראו publishFutureRoster
     // ב-index.html) — לפני זה רק מ״ע תורנויות רואה, ואין למי להודיע.
     // מעבר false→true = פרסום לוח חדש; כתיבה נוספת כשכבר published מקודם
-    // = עדכון ללוח שכבר גלוי (אותו מלל כמו עדכון ללוח הנוכחי).
+    // = עדכון ללוח שכבר גלוי (אותו מלל כמו עדכון ללוח הנוכחי) — וגם שם
+    // נדרש pushedAt חדש בפועל, מאותה סיבה כמו למעלה.
     if (!(after && after.published)) return null;
     const wasPublished = !!(before && before.published);
+    if (wasPublished && (!after.pushedAt || after.pushedAt === (before && before.pushedAt))) return null;
     kind = wasPublished ? "roster_current" : "roster_publish";
     shedId = BROADCAST_SHED;
   } else if (kind === "rollcall") {
