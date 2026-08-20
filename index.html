@@ -6501,6 +6501,8 @@ async function getBoards(){ return (await sGet("boards_list")) || []; }
 
 async function renderBoard(){
   rosterCache = null;                 // רענון מהמקור בכל כניסה למסך
+  await loadRosterCustomRows();
+  await healLegacyLeakedCustomRows(); // ריפוי-עצמי טרי בכל כניסה למסך (ר' שם למה לא דגל קבוע)
   await renderRosterView();
   await renderBoardArchive();
 }
@@ -6716,21 +6718,27 @@ async function seedNewCustomRowDisabledElsewhere(id){
     }
   }
 }
-/* תיקון-עצמי חד-פעמי לשורות מותאמות-אישית שדלפו *לפני* שהזריעה למעלה
-   קיימת (seedNewCustomRowDisabledElsewhere חלה רק על שורות שנוצרות
-   מרגע התיקון והלאה — לא רטרואקטיבית). רץ אוטומטית בכל טעינת מסך
-   התורנויות, בלי דרישה מהמ״ע ללחוץ על שום מתג ידנית.
+/* תיקון-עצמי לשורות מותאמות-אישית שדלפו *לפני* שהזריעה למעלה קיימת
+   (seedNewCustomRowDisabledElsewhere חלה רק על שורות שנוצרות מרגע
+   התיקון והלאה — לא רטרואקטיבית). נקרא מ-renderBoard() — פעם אחת בכל
+   כניסה למסך התורנויות (כמו rosterCache, ר' שם), לא פעם אחת לכל הסשן.
+   ⚠️ קריטי: לא לשמור דגל "בוצע כבר" ברמת המודול/הסשן (כמו שהיה בגרסה
+   קודמת) — renderBoard() נקרא גם דרך refreshAll() ב-Promise.all מקביל
+   לשלל בקשות רשת אחרות מיד אחרי כניסה, כך שריצה מוקדמת עלולה לקרוא
+   לוחות עם מצב חלקי/זמני ("אין שום שיבוץ באף שבוע" כרגע) ולא למצוא מה
+   לתקן — ואם הדגל היה ננעל אחרי זה, הריפוי לא היה מנסה שוב לעולם באותו
+   סשן, גם כשהנתונים בפועל כבר תקינים. זה בדיוק מה שגרם לבאג שדווח:
+   טלפון נשאר "תקוע" עם לוח חצי עד שהתבצעה כניסה מחדש (שמאלצת ריצה
+   טרייה). בלי דגל קבוע, כל כניסה למסך התורנויות מנסה מחדש עם המצב
+   העדכני באמת — פעולה זולה ואידמפוטנטית (בודקת disabledRows לפני
+   כתיבה), אז אין בעיה לחזור עליה בכל ביקור.
    הכלל: שורה מותאמת-אישית שיש לה שיבוץ בפועל על חלק מהשבועות (current/
    next/prev) אך לא על כולם — כלומר המסגרת בבירור *כן* משתמשת בה, רק לא
    בכל שבוע — מסומנת מושבתת-מראש על השבועות שבהם היא ריקה, בדיוק כמו
    שהיה קורה לו נוצרה אחרי התיקון. לא נוגעים בשורה שריקה **בכל** השבועות
    (אין עדיין שום איתות למה היא שייכת) ולא בשורה שמשובצת **בכל** השבועות
-   (אין מה לתקן). אידמפוטנטי לגמרי: אחרי הריצה הראשונה זה תמיד no-op
-   (בודק disabledRows לפני כתיבה), ולכן בטוח להריץ בכל רינדור. */
-let _legacyCustomRowHealDone = false;
+   (אין מה לתקן). */
 async function healLegacyLeakedCustomRows(){
-  if(_legacyCustomRowHealDone) return;
-  _legacyCustomRowHealDone = true;
   if(!rosterCustomRows.length) return;
   const slots = ["current","next","prev"];
   const boards = {};
@@ -7045,7 +7053,6 @@ async function renderRosterView(){
   if(!box) return;
   await maybeRotateWeek();     // מעבר שבוע אוטומטי (שבת בחצות) לפני הרינדור
   await loadRosterCustomRows();
-  await healLegacyLeakedCustomRows();
   // ברירת מחדל לפי תפקיד: חיילים מתחילים ב"לוח יומי" (כרטיסי יום — קריא בנייד),
   // מ״ע/מפקד ב"לוח שבועי" (טבלה מלאה). המשתמש יכול להחליף בכל רגע.
   if(!_rosterViewInit){ _rosterViewInit = true; if(!isRosterManager && userRole!=="מפקד") rosterView = "day"; }
