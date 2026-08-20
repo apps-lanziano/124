@@ -7671,6 +7671,14 @@ function rosterMyRoles(d, name){
   if(me) roles.push(me.course ? "PF · בקורס עד 20:00" : (me.reserve ? "PF · מילואים" : "PF"));
   if((d.pms||[]).includes(name)) roles.push("PMS");
   (d.basic||[]).forEach(b=>{ if(b.name===name) roles.push(b.type||"תורנות"); });
+  // שורות מותאמות-אישית — שיבוץ בהן הוא תורנות לכל דבר. בלי זה, חייל
+  // ששובץ ל"PF יום בלבד" (במקום שדה PF הסטנדרטי) לא היה רואה את עצמו
+  // ב"רק אני"/כרטיסי היום ולא היה מקבל חיווי "אתה תורן" — שיבוץ אמיתי
+  // שנעלם מהמסך, בדיוק מה שכלל-הברזל בא למנוע. מוצג בשם השורה כפי
+  // שמ״ע הגדיר אותה — לא מנחשים משמעות מתוך התווית.
+  (rosterCustomRows||[]).forEach(cr=>{
+    if((d["custom_"+cr.id]||[]).includes(name)) roles.push(cr.label);
+  });
   return roles;
 }
 function hebDayOffset(n){ return WEEK_DAYS_HE[(new Date().getDay()+n+7)%7]; }
@@ -8412,6 +8420,12 @@ function rosterMineHtml(r, today){
     if((d.reserve||[]).includes(user)) roles.push("מילואים");
     if((d.pms||[]).includes(user)) roles.push("PMS");
     (d.basic||[]).forEach(b=>{ if(b.name===user) roles.push(b.type||"תורנות"); });
+    // שורות מותאמות-אישית — שיבוץ בהן נספר בדיוק כמו כל תורנות אחרת
+    // (ר' rosterMyRoles). מוצג בשם השורה כפי שמ״ע הגדיר אותה, כי רק הוא
+    // יודע מה המשמעות שלה; לא מנחשים "תורנות מול מנוחה" מתוך התווית.
+    (rosterCustomRows||[]).forEach(cr=>{
+      if((d["custom_"+cr.id]||[]).includes(user)) roles.push(cr.label);
+    });
     const resting = (d.pfRest||[]).includes(user) || (d.pmsRest||[]).includes(user);
     if(!roles.length && !resting) return;
     rows.push(`<div class="rmine ${rosterEditKey(today)===day?"now":""}">
@@ -8450,20 +8464,32 @@ function rosterCardsHtml(r, today){
     const iRest = (d.pfRest||[]).includes(user) || (d.pmsRest||[]).includes(user);
     const meHint = myRoles.length ? `<span class="rcd-me duty">אתה תורן · ${escapeHTML(myRoles[0])}</span>`
       : (iRest ? `<span class="rcd-me rest">אתה נח</span>` : "");
-    let rows = "";
-    rows += rowIf("מנהל", isWk ? wkndPair(d.manager, fri.manager, false) : chip(d.manager));
-    rows += rowIf("ר״צ", chip(d.lead));
-    rows += rowIf("ל/ ר״צ", chip(d.deputyLead));
-    rows += rowIf("מתגבר", isWk ? wkndPair(d.fixedAug, fri.fixedAug, true) : chips(d.fixedAug));
-    rows += rowIf("מטיס", chip(d.pilot));
-    rows += rowIf("נהג", chip(d.driver));
-    rows += rowIf("כלים", chip(d.tools));
-    rows += rowIf("PF", (d.pf||[]).map(p=>`<span class="rc ${p.name===user?"me":pfClass(p)}">${escapeHTML(p.name)}${pfTagHtml(p)}</span>`).join(""));
-    if(!isWk) rows += rowIf(`נחים · ${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}`, chips(d.pfRest, "rest"));
-    rows += rowIf("PMS", chips(d.pms, "pms"));
-    rows += rowIf("PMS נחים", chips(d.pmsRest, "rest"));
-    rows += rowIf("מילואים", chips(d.reserve, "res"));
-    rows += rowIf("תורנות", (d.basic||[]).map(b=>`<span class="rc ${b.name===user?"me":""}">${escapeHTML(b.name)}${b.type?` <small>${escapeHTML(b.type)}</small>`:""}</span>`).join(""));
+    /* אותו כלל-ברזל של הלוח השבועי: שיבוץ בפועל לעולם לא נעלם מהמסך.
+       כאן זה מתבטא בכך ששורות מותאמות-אישית מרונדרות ממש כמו שדה
+       סטנדרטי — אחרת מ״ע שמעביר שיבוץ מ-PF/מילואים לשורה מקבילה שהוא
+       הגדיר ("PF יום בלבד" וכו') גורם לכך שכל השיבוץ הזה פשוט לא קיים
+       בתצוגת "לוח יומי", והכרטיס נראה כאילו הוא מציג לוח ישן/חלקי.
+       הסדר נפתר ע"י אותו buildRosterRowOrder של הלוח השבועי, כדי ששתי
+       התצוגות יישארו עקביות ולא יתפצלו לשני מקורות-אמת. */
+    const cell = {};
+    cell.manager = rowIf("מנהל", isWk ? wkndPair(d.manager, fri.manager, false) : chip(d.manager));
+    cell.lead = rowIf("ר״צ", chip(d.lead));
+    cell.deputyLead = rowIf("ל/ ר״צ", chip(d.deputyLead));
+    cell.fixedAug = rowIf("מתגבר", isWk ? wkndPair(d.fixedAug, fri.fixedAug, true) : chips(d.fixedAug));
+    cell.pilot = rowIf("מטיס", chip(d.pilot));
+    cell.driver = rowIf("נהג", chip(d.driver));
+    cell.tools = rowIf("כלים", chip(d.tools));
+    cell.pf = rowIf("PF", (d.pf||[]).map(p=>`<span class="rc ${p.name===user?"me":pfClass(p)}">${escapeHTML(p.name)}${pfTagHtml(p)}</span>`).join(""));
+    cell.pfRest = isWk ? "" : rowIf(`נחים · ${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}`, chips(d.pfRest, "rest"));
+    cell.pms = rowIf("PMS", chips(d.pms, "pms"));
+    cell.pmsRest = rowIf("PMS נחים", chips(d.pmsRest, "rest"));
+    cell.reserve = rowIf("מילואים", chips(d.reserve, "res"));
+    cell.basic = rowIf("תורנות", (d.basic||[]).map(b=>`<span class="rc ${b.name===user?"me":""}">${escapeHTML(b.name)}${b.type?` <small>${escapeHTML(b.type)}</small>`:""}</span>`).join(""));
+    (rosterCustomRows||[]).forEach(cr=>{
+      const rest = isRestRowLabel(cr.label);
+      cell[cr.id] = rowIf(escapeHTML(cr.label), chips(d["custom_"+cr.id], rest?"rest":""));
+    });
+    let rows = buildRosterRowOrder(rosterCustomRows).map(k=>cell[k]||"").join("");
     if(!rows) rows = `<div class="rcd-empty">— אין שיבוץ ליום זה —</div>`;
     return `<div class="rcd ${isToday?"today":""}">
       <div class="rcd-h"><b>${isWk?"סופ״ש · ה׳–ש׳":escapeHTML(day)}</b><i>${dateLbl(day)}</i>${isToday?'<span class="rcd-now">היום</span>':""}${meHint}</div>
