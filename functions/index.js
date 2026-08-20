@@ -16,7 +16,6 @@ const {getFirestore} = require("firebase-admin/firestore");
 const {getMessaging} = require("firebase-admin/messaging");
 const {getStorage} = require("firebase-admin/storage");
 const {getAuth} = require("firebase-admin/auth");
-const {findUnsignedReminders} = require("./lib/reminders");
 const {findExpiringCerts} = require("./lib/cert_expiry_reminders");
 const {findOverdueReserves} = require("./lib/reserve_refresh_reminders");
 const {findVoIssues} = require("./lib/vo_reminders");
@@ -26,7 +25,7 @@ const {analyzeBoardImage: analyzeBoardImageCore} = require("./lib/board_ai_analy
 const {isQuietDay} = require("./lib/quiet_days");
 const {validateTestNotificationRequest} = require("./lib/test_notification");
 const {dumpCollection} = require("./lib/backup");
-const {decide, SHED_NAMES} = require("./lib/notify");
+const {decide, SHED_NAMES, BROADCAST_SHED} = require("./lib/notify");
 const {shouldAuthorize} = require("./lib/authorize");
 const crypto = require("crypto");
 
@@ -144,83 +143,46 @@ exports.notifyOnPublish = onDocumentWritten(
   if (!decision) return;
   const {kind, shedId, title, body, count, commandersOnly} = decision;
 
-  // הטוקנים של המסגרת הזו — מסדר בוקר נשלח רק למפקדים, שאר הסוגים לכולם
-  const tokRef = db.doc("sq124/push_tokens_" + shedId);
-  const tokSnap = await tokRef.get();
-  const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
-  const tokens = commandersOnly
-    ? Object.entries(tokMap).filter(([, m]) => m && m.role === "מפקד").map(([t]) => t)
-    : Object.keys(tokMap);
-  if (!tokens.length) return;
+  // לוח צוות תורן (roster_publish/roster_current) הוא גלובלי — לא שייך
+  // למסגרת בודדת — decide() מסמן זאת עם BROADCAST_SHED, ואז שולחים בלולאה
+  // על כל המסגרות במקום פנייה יחידה ל-push_tokens_<shedId>.
+  const shedIds = shedId === BROADCAST_SHED ? Object.keys(SHED_NAMES) : [shedId];
 
-  // data-only: ה-Service Worker מציג את ההתראה ומעדכן את ה-badge (נדרש לאייפון)
-  const resp = await getMessaging().sendEachForMulticast({
-    tokens,
-    data: {title, body, kind, n: String(count)},
-  });
+  for (const sid of shedIds) {
+    // הטוקנים של המסגרת הזו — מסדר בוקר נשלח רק למפקדים, שאר הסוגים לכולם
+    const tokRef = db.doc("sq124/push_tokens_" + sid);
+    const tokSnap = await tokRef.get();
+    const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
+    const tokens = commandersOnly
+      ? Object.entries(tokMap).filter(([, m]) => m && m.role === "מפקד").map(([t]) => t)
+      : Object.keys(tokMap);
+    if (!tokens.length) continue;
 
-  // ניקוי טוקנים שכבר לא תקפים
-  const bad = [];
-  resp.responses.forEach((r, i) => {
-    if (!r.success) {
-      const code = r.error && r.error.code;
-      if (code === "messaging/registration-token-not-registered" ||
-          code === "messaging/invalid-registration-token" ||
-          code === "messaging/invalid-argument") {
-        bad.push(tokens[i]);
+    // data-only: ה-Service Worker מציג את ההתראה ומעדכן את ה-badge (נדרש לאייפון)
+    const resp = await getMessaging().sendEachForMulticast({
+      tokens,
+      data: {title, body, kind, n: String(count)},
+    });
+
+    // ניקוי טוקנים שכבר לא תקפים
+    const bad = [];
+    resp.responses.forEach((r, i) => {
+      if (!r.success) {
+        const code = r.error && r.error.code;
+        if (code === "messaging/registration-token-not-registered" ||
+            code === "messaging/invalid-registration-token" ||
+            code === "messaging/invalid-argument") {
+          bad.push(tokens[i]);
+        }
       }
+    });
+    if (bad.length) {
+      bad.forEach((t) => delete tokMap[t]);
+      await tokRef.set({v: tokMap, updated: Date.now()}, {merge: true});
     }
-  });
-  if (bad.length) {
-    bad.forEach((t) => delete tokMap[t]);
-    await tokRef.set({v: tokMap, updated: Date.now()}, {merge: true});
+    console.log(`push ${kind}→${sid}: ${resp.successCount}/${tokens.length} נשלחו, ${bad.length} טוקנים נוקו`);
   }
-  console.log(`push ${kind}→${shedId}: ${resp.successCount}/${tokens.length} נשלחו, ${bad.length} טוקנים נוקו`);
 });
-
-/* ===== תזכורת אוטומטית — קרא-וחתום שלא נסגר =====
-   רץ כל בוקר. שולח פוש רק למפקדי המסגרת (לא לכל הצוות) — המטרה היא
-   לדחוף למי שיכול לרדוף אחרי החותמים, לא להציף את כל הסככה. פריט
-   שכבר קיבל תזכורת ב-3 הימים האחרונים לא נשלח שוב (ראו lib/reminders). */
-exports.remindUnsignedDaily = onSchedule(
-  {
-    schedule: "0 7 * * *",
-    timeZone: "Asia/Jerusalem",
-    region: "me-west1", // אותו אזור כמו notifyOnPublish — עקביות, בלי תלות שקטה באזור ברירת המחדל
-    memory: "256MiB",
-    timeoutSeconds: 120,
-  },
-  async () => {
-    if (isQuietDay(Date.now())) { console.log("תזכורות חתימות: יום שקט (שישי/שבת) — מדלג"); return; }
-    const {toSend, updatedLog} = await findUnsignedReminders(db);
-    if (!toSend.length) return;
-
-    let sentCount = 0;
-    for (const item of toSend) {
-      const tokRef = db.doc("sq124/push_tokens_" + item.shedId);
-      const tokSnap = await tokRef.get();
-      const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
-      const cmdTokens = Object.entries(tokMap)
-        .filter(([, m]) => m && m.role === "מפקד")
-        .map(([t]) => t);
-      if (!cmdTokens.length) continue;
-
-      const shedName = SHED_NAMES[item.shedId] || item.shedId;
-      await getMessaging().sendEachForMulticast({
-        tokens: cmdTokens,
-        data: {
-          title: "⏳ תזכורת חתימות · " + shedName,
-          body: `"${item.title}" — ${item.missing} עדיין לא חתמו`,
-          kind: "reminder",
-          n: String(item.missing),
-        },
-      });
-      sentCount++;
-    }
-    await db.doc("sq124/_reminder_log").set({v: updatedLog, updated: Date.now()}, {merge: true});
-    console.log(`תזכורות חתימות: ${toSend.length} פריטים דורשים תזכורת, ${sentCount} נשלחו בפועל`);
-  },
-);
 
 /* ===== תזכורת אוטומטית — הסמכות שפגו/עומדות לפוג =====
    רץ כל בוקר, שולח פוש מרוכז למפקד המסגרת (לא לכל חייל בנפרד) — רשימת

@@ -38,18 +38,44 @@ function classify(docId) {
   if (docId.endsWith("_daily_rollcall_report")) return "morning_rollcall";
   // אילוצים/החלפות שממתינים לאישור מ״ע תורנויות (מסמך duty_requests של מסגרת)
   if (docId.endsWith("_duty_requests")) return "duty_naat";
+  // לוח צוות תורן (Roster v2) — מסמך גלובלי אחד לכל הטייסת (לא לפי מסגרת,
+  // בשונה מכל שאר הסוגים למעלה) — ראו rosterStorageKey/saveDutyRosterV2
+  // ב-index.html. "current" הוא הלוח הפעיל שכולם רואים כברירת מחדל;
+  // "next" הוא לוח השבוע הבא, גלוי לכולם רק אחרי שסומן published.
+  if (docId === "board_roster") return "roster_current";
+  if (docId === "board_roster_next") return "roster_next";
   return null;
 }
 
 /* מחזירה את ההחלטה (מה לשלוח, לאיזו מסגרת) או null אם אין לשלוח כלום —
    בדיוק אותה לוגיקה שהייתה בתוך notifyOnPublish, רק כפונקציה טהורה. */
+// לוח צוות תורן משודר לכל הטייסת (כל המסגרות) ולא למסגרת בודדת — אין
+// docId עם קידומת מסגרת לחלץ ממנו shedId, ולכן משתמשים בדגל מיוחד זה;
+// notifyOnPublish (functions/index.js) מזהה אותו ושולח בלולאה על כל
+// SHED_IDS, במקום לפנות ל-push_tokens_<shedId> בודד כמו כל שאר הסוגים.
+const BROADCAST_SHED = "__broadcast__";
+
 function decide({docId, before, after}) {
-  const kind = classify(docId);
+  let kind = classify(docId);
   if (!kind) return null;
 
   let newItems = [];
   let shedId;
-  if (kind === "rollcall") {
+  if (kind === "roster_current") {
+    // כל כתיבה ללוח הצוות הפעיל (הנוכחי) = עדכון לכולם. יצירה ראשונה של
+    // המסמך (before===undefined) לא נחשבת "עדכון" בעיני משתמש — מדלגים.
+    if (before === undefined) return null;
+    shedId = BROADCAST_SHED;
+  } else if (kind === "roster_next") {
+    // "next" גלוי לכולם רק אחרי שסומן published (ראו publishFutureRoster
+    // ב-index.html) — לפני זה רק מ״ע תורנויות רואה, ואין למי להודיע.
+    // מעבר false→true = פרסום לוח חדש; כתיבה נוספת כשכבר published מקודם
+    // = עדכון ללוח שכבר גלוי (אותו מלל כמו עדכון ללוח הנוכחי).
+    if (!(after && after.published)) return null;
+    const wasPublished = !!(before && before.published);
+    kind = wasPublished ? "roster_current" : "roster_publish";
+    shedId = BROADCAST_SHED;
+  } else if (kind === "rollcall") {
     if (!(after === true && before !== true)) return null;
     shedId = docId.slice(0, docId.indexOf("_rollcall_active"));
   } else if (kind === "morning_rollcall") {
@@ -104,6 +130,8 @@ function decide({docId, before, after}) {
     rollcall: "🚨 נכס · " + shedName,
     morning_rollcall: "📋 מסדר בוקר · " + shedName,
     duty_naat: "🔄 אישורי מ״ע תורנויות",
+    roster_publish: "פורסם לוח צוות חדש",
+    roster_current: "בוצע עדכון ללוח צוות תורן",
   };
   const title = KIND_TITLES[kind];
   const body = kind === "rollcall" ? "הופעל נכס — יש לסמן נוכחות עכשיו"
@@ -112,14 +140,16 @@ function decide({docId, before, after}) {
     : kind === "board" ? String(item.label || "")
     : kind === "binui_fault" ? (item.shedName ? item.shedName + ": " : "") + String(item.title || "")
     : kind === "duty_naat" ? `${newItems.length} פריטים ממתינים לאישורך`
+    : kind === "roster_publish" ? "לוח הצוות התורן לשבוע הבא זמין לצפייה"
+    : kind === "roster_current" ? "לחצו כדי לצפות בשיבוץ המעודכן"
     : String(item.title || item.fname || "");
 
   // מסדר בוקר/תקלה רגילה/תקלת בינוי נשלחים רק למפקדים — לא לכל הצוות
-  // (בשונה מהודעה/קרא-וחתום/לוח/הדרכה, שמגיעים לכולם). אישורי מ״ע נשלחים
-  // לכל הטוקנים שרשומים ב-push_tokens_naat — שם ממילא נרשמים רק מ״ע תורנויות.
+  // (בשונה מהודעה/קרא-וחתום/לוח/הדרכה/לוח צוות, שמגיעים לכולם). אישורי
+  // מ״ע נשלחים לכל הטוקנים שרשומים ב-push_tokens_naat (רק מ״ע תורנויות).
   const commandersOnly = kind === "morning_rollcall" || kind === "fault" || kind === "binui_fault";
 
   return {kind, shedId, shedName, title, body, count: kind==="morning_rollcall" ? (after.absentCount||0) : (newItems.length || 1), commandersOnly};
 }
 
-module.exports = {SHED_NAMES, classify, decide};
+module.exports = {SHED_NAMES, classify, decide, BROADCAST_SHED};

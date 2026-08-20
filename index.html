@@ -113,7 +113,7 @@ header{
   padding:2px;box-shadow:var(--shadow);
 }
 .hdr-title h1{font-family:'Assistant';font-size:19px;font-weight:800;letter-spacing:.3px;color:var(--ink)}
-.hdr-title small{display:block;font-family:'Assistant';font-size:11.5px;font-weight:500;color:var(--ink-3);letter-spacing:.6px}
+.hdr-title small{display:block;font-family:'Assistant';font-size:11.5px;font-weight:700;color:var(--ink-2);letter-spacing:.6px}
 .role-chip{
   border:1px solid var(--line);background:var(--bg);color:var(--ink-2);
   padding:7px 13px;border-radius:99px;font-size:12px;font-weight:500;cursor:pointer;
@@ -121,9 +121,10 @@ header{
 }
 .role-chip:active{transform:scale(.95)}
 .role-chip.cmd{background:var(--red);border-color:var(--red);color:#fff;font-weight:800}
-.hdr-user{position:relative;z-index:1;margin-top:10px;font-size:13px;font-weight:300;color:var(--ink-2);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hdr-user{position:relative;z-index:1;margin-top:10px;font-size:13px;font-weight:500;color:var(--ink-2);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .hdr-user b{font-weight:600;color:var(--ink)}
-.rank-tag{background:var(--bg);border:1px solid var(--line);color:var(--ink-2);font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:99px}
+.rank-tag{background:var(--bg);border:1px solid var(--line);color:var(--ink-2);font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:99px;display:inline-flex;align-items:center;gap:4px}
+.rank-tag svg.uic{width:12px;height:12px}
 .switch-user{background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;font-family:'Assistant';text-decoration:underline;text-underline-offset:3px}
 
 /* ---------- MAIN ---------- */
@@ -1546,7 +1547,7 @@ nav{
           <button type="button" class="login-go secondary" id="quick-faceid-btn" onclick="quickLoginBiometric()" style="margin-top:0;margin-bottom:8px"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 7.5-2"/></svg> המשך עם Face ID</button>
           <div style="text-align:center;color:var(--ink-3);font-size:12px">— או הקלד PIN —</div>
         </div>
-        <input id="quick-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
+        <input id="quick-pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off"
           placeholder="🔒 הזן PIN אישי"
           style="width:100%;padding:15px 18px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font-family:'Assistant';font-size:16px;text-align:center;letter-spacing:6px;outline:none;box-shadow:var(--shadow)">
         <button class="login-go" id="quick-go-btn" onclick="quickLogin()" style="margin-top:14px">כניסה ←</button>
@@ -1585,7 +1586,7 @@ nav{
       </div>
       <div id="login-pin-wrap" style="display:none;margin-top:12px">
         <div id="login-pin-label" style="font-size:12.5px;color:var(--ink-2);margin-bottom:6px;font-weight:600"></div>
-        <input id="login-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
+        <input id="login-pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off"
           placeholder="4 ספרות"
           style="width:100%;padding:15px 18px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font-family:'Assistant';font-size:16px;text-align:center;letter-spacing:6px;outline:none;box-shadow:var(--shadow)">
       </div>
@@ -2334,6 +2335,27 @@ nav{
       <div id="users-list"></div>
     </section>
 
+    <!-- ===== SUPPORT — תמיכה: דיווח באג/הערה, וריכוזם למנהל-על (SUPER_ADMIN_NAME) ===== -->
+    <section class="screen" id="scr-support">
+      <div class="sec-head">
+        <div>
+          <h2>תמיכה <svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19v-2M12 15a3 3 0 1 0-3-3"/><circle cx="12" cy="12" r="9"/></svg></h2>
+          <p>נתקלת בבאג או יש לך הצעה לשיפור? כתוב כאן — ההערה מרוכזת לטיפול</p>
+        </div>
+      </div>
+      <div class="card" style="padding:14px;margin-bottom:14px">
+        <textarea class="m-input" id="support-text" rows="4" placeholder="תאר בקצרה את הבאג או ההצעה…" style="resize:vertical;margin-bottom:10px"></textarea>
+        <button class="m-btn primary" style="width:100%" onclick="submitSupportTicket()"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-3-6-7-2Z"/></svg> שלח הערה</button>
+      </div>
+      <div id="support-admin-wrap" class="hidden">
+        <div class="sec-head" style="margin-top:4px">
+          <div><h2 style="font-size:16px">רשימת ההערות</h2><p>גלוי רק למנהל-על</p></div>
+          <button class="m-btn ghost" onclick="exportSupportTickets()"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg> ייצוא</button>
+        </div>
+        <div id="support-list"></div>
+      </div>
+    </section>
+
   </main>
 
   <!-- באנר "כניסה בתור" — מוצג למנהל המערכת בזמן צפייה/עריכה בתור משתמש אחר -->
@@ -2348,7 +2370,7 @@ nav{
     <button class="nav-btn hidden" id="nav-today" data-scr="scr-today" onclick="go('scr-today',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg></span><span>היום שלי</span><span class="nav-badge hidden" id="badge-today">0</span></button>
     <button class="nav-btn active" id="nav-safety" data-scr="scr-safety" onclick="go('scr-safety',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M9 13.5l2 2 4-4.5"/></svg></span><span>קרא וחתום</span><span class="nav-badge hidden" id="badge-safety">0</span></button>
     <button class="nav-btn" id="nav-morning" data-scr="scr-morning" onclick="go('scr-morning',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg></span><span>מטלות</span><span class="nav-badge hidden" id="badge-morning">0</span></button>
-    <button class="nav-btn" id="nav-board" data-scr="scr-board" onclick="go('scr-board',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg></span><span>תורנויות</span></button>
+    <button class="nav-btn" id="nav-board" data-scr="scr-board" onclick="go('scr-board',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2.5l4 4-4 4"/><path d="M3 12.5v-2a4 4 0 0 1 4-4h14"/><path d="M7 21.5l-4-4 4-4"/><path d="M21 11.5v2a4 4 0 0 1-4 4H3"/></svg></span><span>תורנויות</span></button>
     <button class="nav-btn hidden" id="nav-certs" data-scr="scr-certs" onclick="go('scr-certs',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg></span><span>הסמכות</span></button>
     <button class="nav-btn hidden" id="nav-trainhub" data-scr="scr-trainhub" onclick="go('scr-trainhub',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg></span><span>הדרכה</span></button>
     <button class="nav-btn hidden" id="nav-medchecks" data-scr="scr-medchecks" onclick="go('scr-medchecks',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15a8 8 0 0 1 16 0v2H4v-2Z"/><path d="M2 17h20M9 15v-3M15 15v-3"/></svg></span><span>כשירות חיילים</span></button>
@@ -2442,9 +2464,9 @@ nav{
       <input class="m-input" id="ue-release" type="date" style="margin-bottom:10px">
       <div style="border-top:1px solid var(--line);padding-top:10px;margin-bottom:10px">
         <label style="font-size:11.5px;color:var(--ink-3);display:flex;justify-content:space-between;margin-bottom:3px">
-          <span><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#a16207" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg> PIN אישי (4 ספרות)</span><span id="ue-pin-status" style="font-weight:800"></span>
+          <span><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#a16207" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg> PIN אישי (4 ספרות; 6 למנהל-על)</span><span id="ue-pin-status" style="font-weight:800"></span>
         </label>
-        <input class="m-input" id="ue-pin" type="text" inputmode="numeric" maxlength="4" autocomplete="off"
+        <input class="m-input" id="ue-pin" type="text" inputmode="numeric" maxlength="6" autocomplete="off"
           placeholder="השאר ריק — ללא שינוי" style="margin-bottom:6px">
         <label style="font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:6px;cursor:pointer">
           <input type="checkbox" id="ue-pin-remove" style="width:auto;margin:0"> הסר PIN קיים (כניסה ללא נעילה)
@@ -2519,6 +2541,7 @@ nav{
       <div class="sheet-item" id="more-rollcall-item" onclick="closeMoreAnd('scr-rollcall')"><div class="s-ic" style="color:#a16207;background:#fdf3d8"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.2 8.4-7 10-3.8-1.6-7-5-7-10V6l7-3Z"/></svg></div><div class="s-tx"><b>נכס</b><span>סימון תקינות וזמינות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-binui-item" onclick="closeMoreAnd('scr-binui-faults')"><div class="s-ic" style="color:#ea580c;background:#fdeee7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l5 16H7L12 3Z"/><path d="M9 13h6M8 16h8"/></svg></div><div class="s-tx"><b>תקלות בינוי</b><span>דיווח ליקויי מבנה, עם תמונה</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-maintdept-item" onclick="closeMoreAnd('scr-maint-dept')"><div class="s-ic" style="color:#c2410c;background:#fdeee7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></div><div class="s-tx"><b>אחזקה</b><span>הזמנת חומרים ומעקב כלים מוטוריים</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item" id="sheet-support" onclick="closeMoreAnd('scr-support')"><div class="s-ic" style="color:#0891b2;background:#e3f6fa"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19v-2M12 15a3 3 0 1 0-3-3"/><circle cx="12" cy="12" r="9"/></svg></div><div class="s-tx"><b>תמיכה</b><span>דיווח באג או הצעה לשיפור</span></div><span class="s-chev">‹</span></div>
     </div>
   </div>
 
@@ -2622,9 +2645,9 @@ nav{
         <div id="tm-custom-fields"></div>
         <div style="border-top:1px solid var(--line);padding-top:10px;margin-bottom:10px">
           <label style="font-size:11.5px;color:var(--ink-3);display:flex;justify-content:space-between;margin-bottom:3px">
-            <span><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#a16207" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg> PIN אישי (4 ספרות)</span><span id="tm-pin-status" style="font-weight:800"></span>
+            <span><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#a16207" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg> PIN אישי (4 ספרות; 6 למנהל-על)</span><span id="tm-pin-status" style="font-weight:800"></span>
           </label>
-          <input class="m-input" id="tm-pin" type="text" inputmode="numeric" maxlength="4" autocomplete="off"
+          <input class="m-input" id="tm-pin" type="text" inputmode="numeric" maxlength="6" autocomplete="off"
             placeholder="השאר ריק — ללא שינוי" style="margin-bottom:6px">
           <label style="font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:6px;cursor:pointer">
             <input type="checkbox" id="tm-pin-remove" style="width:auto;margin:0"> הסר PIN קיים (כניסה ללא נעילה)
@@ -3944,7 +3967,11 @@ async function upgradePinIfLegacy(person, pin){
    להשוות מולם: הכניסה נעשית מול השרת, וה-PIN הוא נעילה אישית נפרדת. לכן אין קוד
    "שמור" — כל PIN בן 4 ספרות מותר. (השארנו את הפונקציה כדי לא לשבור קריאות קיימות.) */
 function isReservedCode(pin){ return false; }
-function validPinFormat(pin){ return /^\d{4}$/.test(pin); }
+/* מנהל-העל (SUPER_ADMIN_NAME) מזוהה ע"פ שם אישי בלבד — לכן ה-PIN שלו
+   בפרט מחוזק ל-6 ספרות (במקום 4) כדי שפריצה ל-4 ספרות (10,000 צירופים)
+   לא תיתן גישת אדמין. לכל שאר המשתמשים נשאר 4 ספרות כרגיל. */
+function requiredPinLength(name){ return name === SUPER_ADMIN_NAME ? 6 : 4; }
+function validPinFormat(pin, name){ return new RegExp("^\\d{"+requiredPinLength(name)+"}$").test(pin); }
 /* מאמת PIN מול רשומת אדם. אם אין ל-אדם PIN — עובר (אין נעילה). */
 async function verifyPin(person, pin){
   if(!person || !person.pinHash) return true;
@@ -4701,12 +4728,13 @@ function onLoginNameChange(){
   pin.value = "";
   if(!person){ wrap.style.display = "none"; return; }
   wrap.style.display = "block";
+  const pinLen = requiredPinLength(person.name);
   if(person.pinHash){
     label.textContent = "🔒 הזן PIN אישי";
-    pin.placeholder = "4 ספרות";
+    pin.placeholder = pinLen+" ספרות";
   } else {
     label.textContent = "🔒 כניסה ראשונה — הגדר PIN אישי (חובה)";
-    pin.placeholder = "בחר 4 ספרות";
+    pin.placeholder = "בחר "+pinLen+" ספרות";
   }
 }
 
@@ -4736,7 +4764,7 @@ async function verifyLoginPin(person){
   } else {
     // אין PIN — הגדרה חובה בכניסה ראשונה (אי אפשר לדלג)
     if(!entered){ toast("כניסה ראשונה — יש להגדיר PIN אישי 🔒"); pinEl.focus(); return false; }
-    if(!validPinFormat(entered)){ toast("PIN חייב להיות 4 ספרות ⛔"); pinEl.focus(); return false; }
+    if(!validPinFormat(entered, person.name)){ toast("PIN חייב להיות "+requiredPinLength(person.name)+" ספרות ⛔"); pinEl.focus(); return false; }
     if(isReservedCode(entered)){ toast("קוד זה שמור למסגרת — בחר קוד אחר ⛔"); pinEl.value=""; pinEl.focus(); return false; }
     const pinFields = await buildPinFields(entered);
     const setAt = new Date().toLocaleDateString("he-IL");
@@ -4759,7 +4787,9 @@ async function verifyLoginPin(person){
    (גלובלי) בתוך התהליך, בדיוק כמו במקור. */
 async function applyLoginUiForRole(person){
   document.getElementById("hdr-username").textContent = user;
-  document.getElementById("hdr-rank").textContent = userRole === "מפקד" ? "🎖️ מפקד" : "👤 חייל";
+  document.getElementById("hdr-rank").innerHTML = userRole === "מפקד"
+    ? '<svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.4 4.8L20 8.6l-4 3.9.9 5.5L12 15.6l-4.9 2.4.9-5.5-4-3.9 5.6-.8Z"/></svg> מפקד'
+    : '<svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg> חייל';
   const shedLabel = (currentShed.isDept && personDept(person)) ? personDept(person) : currentShed.name;
   document.getElementById("hdr-shed").textContent = "דרג א' · " + shedLabel;
   // מנהל-על — הרשאה נוספת מעל התפקיד הרגיל, לפי זהות אישית (SUPER_ADMIN_NAME) ולא מסלול כניסה נפרד. נגיש מתפריט "עוד" (לא סרגל קבוע) — שימוש נדיר.
@@ -5047,6 +5077,7 @@ function go(id, btn){
   if(id==="scr-budget-officer") renderBoOverview();
   if(id==="scr-rollcall") renderRollcallPage();
   if(id==="scr-users"){ ensureShed2Seed(); ensureAllShedsSeed(); ensureAllFrameworkTeamsSeed(); renderUsersAdmin(); }
+  if(id==="scr-support") renderSupportPage();
   if(id!=="scr-vo-overview" && id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-morning-rollcall" && id!=="scr-binui-admin" && id!=="scr-budget-officer" && id!=="scr-users"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי מ״ע אחזקה/תקלות בינוי/אחראי תקציבים (אין להם סככה)
   // כפתור "לדשבורד" — מוצג בכל מסך שאינו הדשבורד, רק למי שיש לו דשבורד מפקד (nav-cmd גלוי)
   const backBtn = document.getElementById("back-to-dash");
@@ -5586,12 +5617,12 @@ async function toggleTask(id){
   const key = "team_morning_"+todayKey();
   const done = (await sGet(key)) || {};
   if(done[id]){
-    delete done[id];
-    toast("הסימון בוטל");
-  } else {
-    done[id] = {by:user, time:new Date().toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})};
-    toast("סומן כבוצע ✓");
+    // מטלה שסומנה כבוצעה נעולה לשאר היום — לא ניתן לבטל את הסימון
+    toast("המטלה כבר סומנה כבוצעה היום ולא ניתן לבטל");
+    return;
   }
+  done[id] = {by:user, time:new Date().toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})};
+  toast("סומן כבוצע ✓");
   await sSet(key, done);
   await recordDailyHistory();
   renderTasks();
@@ -9752,6 +9783,8 @@ const NOTIF_NAV_MAP = {
   cert_reminder: "scr-certs",
   reserve_reminder: "scr-certs",
   vo_reminder: "scr-vo-overview",
+  roster_publish: "scr-board",
+  roster_current: "scr-board",
 };
 function handleNotificationNav(kind){
   try{
@@ -10574,7 +10607,7 @@ async function saveTeamMember(){
   let pinFields = null;
   if(pinRemove){ pinFields = {remove:true}; }
   else if(pinInput){
-    if(!validPinFormat(pinInput)){ toast("PIN חייב להיות 4 ספרות ⛔"); return; }
+    if(!validPinFormat(pinInput, name)){ toast("PIN חייב להיות "+requiredPinLength(name)+" ספרות ⛔"); return; }
     if(isReservedCode(pinInput)){ toast("קוד זה שמור למסגרת — בחר קוד אחר ⛔"); return; }
     pinFields = await buildPinFields(pinInput);
   }
@@ -10992,6 +11025,60 @@ async function clearMasterPin(){
   document.getElementById("master-pin-modal").classList.remove("open");
 }
 
+/* ===== תמיכה — כל משתמש יכול לשלוח הערה/דיווח באג; הרשימה המרוכזת
+   נשמרת גלובלית (לא לפי סככה) תחת support_tickets, וגלויה רק למנהל-על
+   (SUPER_ADMIN_NAME) — בדיוק כמו admin_messages, ראו sGetRaw/sSetRaw. */
+async function submitSupportTicket(){
+  const el = document.getElementById("support-text");
+  const text = (el.value||"").trim();
+  if(!text){ toast("נא לכתוב הערה"); return; }
+  const list = (await sGetRaw("support_tickets")) || [];
+  list.unshift({
+    id: Date.now()+"_"+Math.random().toString(36).slice(2,8),
+    text,
+    by: user || "אנונימי",
+    role: userRole || "",
+    shed: currentShed ? currentShed.name : "",
+    ts: Date.now(),
+  });
+  const ok = await sSetRaw("support_tickets", list);
+  if(!ok){ toast("⚠️ השליחה נכשלה — בדוק חיבור ונסה שוב"); return; }
+  el.value = "";
+  toast("ההערה נשלחה, תודה 🙏");
+  if(isSuperAdmin) renderSupportList();
+}
+async function renderSupportPage(){
+  document.getElementById("support-admin-wrap").classList.toggle("hidden", !isSuperAdmin);
+  if(isSuperAdmin) await renderSupportList();
+}
+async function renderSupportList(){
+  const list = (await sGetRaw("support_tickets")) || [];
+  const box = document.getElementById("support-list");
+  if(!list.length){ box.innerHTML = '<p style="color:var(--ink-3);text-align:center;padding:20px 0">אין הערות עדיין</p>'; return; }
+  box.innerHTML = list.map(t=>`
+    <div class="card" style="padding:12px;margin-bottom:10px">
+      <p style="white-space:pre-wrap;margin-bottom:8px">${escapeHTML(t.text)}</p>
+      <small style="color:var(--ink-3)">${escapeHTML(t.by||"")} · ${escapeHTML(t.shed||"")} · ${escapeHTML(new Date(t.ts).toLocaleString("he-IL"))}</small>
+    </div>`).join("");
+}
+function supportCsvEscape(s){
+  const v = String(s==null?"":s);
+  return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;
+}
+async function exportSupportTickets(){
+  const list = (await sGetRaw("support_tickets")) || [];
+  if(!list.length){ toast("אין נתונים לייצוא"); return; }
+  const rows = [["תאריך","שם","תפקיד","סככה","הערה"]];
+  list.forEach(t=>rows.push([new Date(t.ts).toLocaleString("he-IL"), t.by||"", t.role||"", t.shed||"", t.text||""]));
+  const csv = "﻿" + rows.map(r=>r.map(supportCsvEscape).join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "support-tickets-"+todayKey()+".csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
 async function renderUsersAdmin(){
   const box = document.getElementById("users-list");
   const statsBox = document.getElementById("users-stats");
@@ -11111,7 +11198,7 @@ async function saveUserEdit(){
   let pinFields = null;   // null=ללא שינוי | {remove:true} | {pinHash,pinSalt}
   if(pinRemove){ pinFields = {remove:true}; }
   else if(pinInput){
-    if(!validPinFormat(pinInput)){ toast("PIN חייב להיות 4 ספרות ⛔"); return; }
+    if(!validPinFormat(pinInput, name)){ toast("PIN חייב להיות "+requiredPinLength(name)+" ספרות ⛔"); return; }
     if(isReservedCode(pinInput)){ toast("קוד זה שמור למסגרת — בחר קוד אחר ⛔"); return; }
     pinFields = await buildPinFields(pinInput);
   }

@@ -9,22 +9,15 @@ const results = [];
 function record(name, pass, detail){ results.push({name, pass, detail}); }
 const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
 
-// 1. תזכורת חתימות — מתוזמנת, בשעה סבירה, בטיימזון ישראל, ומחוברת ללוגיקה הטהורה
+// 1. תזכורת חתימות (remindUnsignedDaily) הוסרה במכוון — "חתימות חסרות" לא
+// נשלחת יותר כתזכורת מתוזמנת (הבקשה: "להוריד התראת חתימות חסרות"). לוגיקת
+// findUnsignedReminders עצמה נשארת ב-lib/reminders.js כי dailyDigest עדיין
+// משתמש בה (ראו 5ה/5ג) — רק הפונקציה המתוזמנת הנפרדת הוסרה.
 {
-  const hasSchedule = /remindUnsignedDaily\s*=\s*onSchedule/.test(fn);
-  const hasTZ = /timeZone:\s*"Asia\/Jerusalem"/.test(fn);
-  const usesLib = /findUnsignedReminders\(db\)/.test(fn);
-  const importsLib = /require\("\.\/lib\/reminders"\)/.test(fn);
-  record("תזכורת חתימות: מתוזמנת עם onSchedule, בטיימזון ישראל, ומשתמשת בלוגיקה מ-lib/reminders",
-    hasSchedule && hasTZ && usesLib && importsLib,
-    JSON.stringify({hasSchedule, hasTZ, usesLib, importsLib}));
-}
-
-// 2. שולחת רק למפקדים — לא מציפה את כל הסככה
-{
-  const filtersToCommander = /filter\(\(\[, m\]\)\s*=>\s*m\s*&&\s*m\.role\s*===\s*"מפקד"\)/.test(fn);
-  record("תזכורת חתימות: מסננת טוקנים לתפקיד מפקד בלבד לפני השליחה",
-    filtersToCommander, String(filtersToCommander));
+  const noScheduledFn = !/remindUnsignedDaily\s*=\s*onSchedule/.test(fn);
+  const noDeadImport = !/const \{findUnsignedReminders\} = require\("\.\/lib\/reminders"\)/.test(fn);
+  record("תזכורת חתימות (remindUnsignedDaily) הוסרה — אין יותר תזכורת מתוזמנת נפרדת לחתימות חסרות",
+    noScheduledFn && noDeadImport, JSON.stringify({noScheduledFn, noDeadImport}));
 }
 
 // 3. תזכורת הסמכות — מתוזמנת, בטיימזון ישראל, מחוברת ללוגיקה הטהורה, מסננת למפקדים
@@ -46,13 +39,13 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
 }
 
 // 5. תזכורות + מסדר בוקר (notifyOnPublish) + סקירת מ״ע אחזקה מסננים טוקנים
-// למפקדים בלבד (אותה תבנית כמו remindUnsignedDaily). תקציר יומי (dailyDigest)
-// לא נכלל כאן — הוא עבר לסינון ייעודי (רשימה סגורה, ראו 5ה). שיבוץ התורנויות
-// אינו עוד פונקציה נפרדת — הוא אוחד לתוך תקציר היומי (ראו 5ד).
+// למפקדים בלבד. תקציר יומי (dailyDigest) לא נכלל כאן — הוא עבר לסינון ייעודי
+// (רשימה סגורה, ראו 5ה). שיבוץ התורנויות אינו עוד פונקציה נפרדת — הוא אוחד
+// לתוך תקציר היומי (ראו 5ד). תזכורת חתימות הוסרה (ראו 1) — לכן 4 מקומות, לא 5.
 {
   const filterCount = (fn.match(/filter\(\(\[, m\]\)\s*=>\s*m\s*&&\s*m\.role\s*===\s*"מפקד"\)/g) || []).length;
-  record("סה״כ 5 מקומות מסננים למפקד בלבד (חתימות, הסמכות, מילואים, מסדר בוקר, סקירת מ״ע אחזקה)",
-    filterCount===5, String(filterCount));
+  record("סה״כ 4 מקומות מסננים למפקד בלבד (הסמכות, מילואים, מסדר בוקר, סקירת מ״ע אחזקה)",
+    filterCount===4, String(filterCount));
 }
 
 // 5ו. רישיונות עומדים לפוג ממשיכים להתדווח רק במסגרת סקירת מ״ע אחזקה
@@ -133,7 +126,6 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
 {
   const importsQuietDays = /require\("\.\/lib\/quiet_days"\)/.test(fn);
   const scheduledFns = [
-    ["remindUnsignedDaily", "תזכורות חתימות"],
     ["remindCertExpiryDaily", "תזכורות הסמכות"],
     ["remindReserveRefreshDaily", "תזכורות מילואים"],
     ["remindVoIssuesDaily", "תזכורת מ״ע אחזקה"],
@@ -145,7 +137,7 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
     const fnBody = fnStart >= 0 ? fn.slice(fnStart, fnStart + 1200) : "";
     if (!/if \(isQuietDay\(Date\.now\(\)\)\)/.test(fnBody)) missing.push(name);
   }
-  record("כל חמש התזכורות המתוזמנות בודקות isQuietDay בתחילת הריצה ומדלגות בשישי/שבת",
+  record("כל ארבע התזכורות המתוזמנות בודקות isQuietDay בתחילת הריצה ומדלגות בשישי/שבת",
     importsQuietDays && missing.length === 0,
     JSON.stringify({importsQuietDays, missing}));
 
@@ -159,7 +151,7 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
 
   const notifyOnPublishHasNoQuietCheck = (() => {
     const start = fn.indexOf("exports.notifyOnPublish = onDocumentWritten(");
-    const end = fn.indexOf("exports.remindUnsignedDaily");
+    const end = fn.indexOf("exports.remindCertExpiryDaily");
     const body = start >= 0 && end > start ? fn.slice(start, end) : "";
     return !/isQuietDay/.test(body);
   })();
@@ -173,6 +165,17 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
   const branchesOnFlag = /commandersOnly\s*\?\s*Object\.entries\(tokMap\)\.filter\(\(\[, m\]\)\s*=>\s*m\s*&&\s*m\.role\s*===\s*"מפקד"\)/.test(fn);
   record("notifyOnPublish: דיווח מסדר בוקר (commandersOnly) מסונן למפקדים בזמן אמת, שאר הסוגים לכולם",
     destructuresFlag && branchesOnFlag, JSON.stringify({destructuresFlag, branchesOnFlag}));
+}
+
+// 8. notifyOnPublish: לוח צוות תורן (roster_publish/roster_current) הוא גלובלי —
+// BROADCAST_SHED גורם ללולאה על כל המסגרות במקום פנייה יחידה ל-shedId בודד
+{
+  const importsBroadcast = /const \{decide, SHED_NAMES, BROADCAST_SHED\} = require\("\.\/lib\/notify"\)/.test(fn);
+  const loopsOverShedIds = /const shedIds = shedId === BROADCAST_SHED \? Object\.keys\(SHED_NAMES\) : \[shedId\]/.test(fn);
+  const iteratesLoop = /for \(const sid of shedIds\)/.test(fn);
+  record("notifyOnPublish: לוח צוות תורן (BROADCAST_SHED) משודר בלולאה לכל המסגרות ב-SHED_NAMES",
+    importsBroadcast && loopsOverShedIds && iteratesLoop,
+    JSON.stringify({importsBroadcast, loopsOverShedIds, iteratesLoop}));
 }
 
 console.log("\n=== SUMMARY ===");
