@@ -7073,14 +7073,41 @@ async function saveDutyRosterV2(roster, slot, manualPush){
     // כפי שהוא — כתיבות מערכת (כמו הרוטציה השבועית האוטומטית) לא נוגעות בו.
     pushedAt: manualPush ? (Date.now()+"_"+Math.random().toString(36).slice(2,8)) : (roster.pushedAt || null),
     days:{}};
+  /* שאר התפקידים (ר״צ/מתגבר... לא — מתגבר בכלל מטופל למטה; ר״צ/כלים/PF/
+     PMS/מילואים/תורנות) הם משמרת רצופה אחת: חמישי+שישי+שבת תמיד מכווצים
+     ונקראים מ-"חמישי" (rosterEditKey). מנהל+מתגבר לבדם מתחלפים בסופ"ש
+     (משמרת א׳/ב׳), ולכן טופלים בנפרד למטה — לא דרך ה-src הכללי. */
+  /* פיצול מנהל/מתגבר (`managerWknd`/`fixedAugWknd` על יום "חמישי") הוא
+     **עזר-עריכה שקיים רק בטיוטת העורך**, ומורכב שם ע"י openRosterEditor.
+     לכן מותר לגזור ממנו שישי/שבת אך ורק כששומרים טיוטת עורך אמיתית —
+     מזוהה ע"י `_wkndEdit` (מוגדר ב-openRosterEditor) או ע"י ערך בפועל
+     בעזר-הפיצול (מכסה אובייקטים שנבנים ידנית כטיוטה).
+     ⚠️ **בלי זה היה כאן אובדן נתונים אמיתי:** כל שמירה של לוח שנקרא
+     מהאחסון ולא עבר בעורך (העברת "הבא"→"נוכחי", ארכוב הנוכחי ל"שעבר",
+     הרוטציה השבועית, שחזור מארכיון, כתיבות-רקע) גזרה מנהל+מתגבר
+     שישי–שבת מ-managerWknd/fixedAugWknd שאינם קיימים על לוח כזה —
+     ומחקה אותם לריק. "הלוח שרץ השבוע" איבד את משמרת הסופ"ש שלו ברגע
+     שהועבר ל"שבוע שעבר". כשאין סימון עורך, משמרים את מנהל/מתגבר של
+     שישי/שבת **כפי שהם כבר על היום עצמו** (לא נגזרים מ"חמישי"). */
+  const thuDay = roster.days["חמישי"] || {};
+  const editorSplit = !!roster._wkndEdit || !!thuDay.managerWknd ||
+    (Array.isArray(thuDay.fixedAugWknd) && thuDay.fixedAugWknd.length > 0);
   WEEK_DAYS_HE.forEach(day=>{
+    const isWkndTail = (day==="שישי" || day==="שבת");
     const src = roster.days[rosterEditKey(day)] || emptyRosterDay(isWeekendDay(day));
     const d = JSON.parse(JSON.stringify(src));
-    // תפקידים שמתחלפים בסופ"ש: חמישי = משמרת א׳ (manager/fixedAug), שישי+שבת
-    // = משמרת ב׳ (managerWknd/fixedAugWknd). שאר הימים ושאר התפקידים כרגיל.
-    if(day==="שישי" || day==="שבת"){
-      d.manager = src.managerWknd || "";
-      d.fixedAug = Array.isArray(src.fixedAugWknd) ? src.fixedAugWknd.slice() : [];
+    if(isWkndTail){
+      if(editorSplit){
+        // טיוטת עורך: מנהל/מתגבר של שישי+שבת = משמרת ב׳ (managerWknd/fixedAugWknd)
+        const thu = roster.days["חמישי"] || {};
+        d.manager = thu.managerWknd || "";
+        d.fixedAug = Array.isArray(thu.fixedAugWknd) ? thu.fixedAugWknd.slice() : [];
+      } else {
+        // לא עורך: משמרים את הערך שכבר קיים על היום עצמו, לא נגזר מ"חמישי"
+        const ownDay = roster.days[day] || {};
+        d.manager = ownDay.manager || "";
+        d.fixedAug = Array.isArray(ownDay.fixedAug) ? ownDay.fixedAug.slice() : [];
+      }
     }
     delete d.managerWknd; delete d.fixedAugWknd;       // עזר-עריכה — לא נשמר כשדה ליום
     if(isWeekendDay(day)) d.pfRest = null;             // משמרת רצופה — אין נחים
@@ -8730,6 +8757,9 @@ async function openRosterEditor(aiDays, slot){
     const thu = rosterDraft.days["חמישי"], fri = rosterDraft.days["שישי"] || {};
     thu.managerWknd = fri.manager || "";
     thu.fixedAugWknd = Array.isArray(fri.fixedAug) ? fri.fixedAug.slice() : [];
+    // מסמן שזו טיוטת עורך שנושאת את עזר-הפיצול — רק עליה saveDutyRosterV2
+    // רשאי לגזור את שישי/שבת מ-managerWknd/fixedAugWknd (ר' שם).
+    rosterDraft._wkndEdit = true;
   }
   // חוק אצבע: מי שעשה שבת בלוח הנוכחי — לא לשבץ בראשון של השבוע הבא.
   // בבניית לוח עתידי נצבע אותם צהוב בבנק האנשים.
@@ -9118,6 +9148,7 @@ function clearRosterDraft(){
   const weekKey = rosterDraft.weekKey;
   rosterDraft = migrateRosterToV2(null);
   rosterDraft.weekKey = weekKey;
+  rosterDraft._wkndEdit = true;   // עדיין טיוטת עורך — עזר פיצול הסופ"ש נשאר תקף (ר' saveDutyRosterV2)
   renderRosterEditor();
   toast("הלוח אופס — לחץ \"שמור\"/\"פרסם\" כדי להחיל 🗑️");
 }
