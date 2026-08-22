@@ -37,6 +37,11 @@ jobs:
         with:
           node-version: '20'
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
       - name: התקנת תלויות הפונקציות
         run: npm --prefix functions ci
 
