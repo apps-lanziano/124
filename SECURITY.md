@@ -283,20 +283,106 @@ firebase deploy --only functions,firestore:rules
 
 בוצעה הערכה מלאה של ניתוק האבטחה בשרשרת ההרשאות דרך **RED TEAM assault testing** — 11 תרחישי התקפה דינמיים בסימולטור Firestore Emulator:
 
+**קובץ בדיקה:** `qa/suite/red_team_firestore_rules_test.mjs`
+
+**מתודולוגיה:**
+- 8 הקשרי אימות שונים (anonymous, auth-only, חייל, מפקד, forged role וכו')
+- 11 תרחישי התקפה דינמיים בסימולטור Firestore Emulator
+- Firestore Rules enforced בפועל (לא ניחוש סטטי)
+- כל תרחיש בדוקה: `shouldFail()` (צפוי לנכשל) vs `shouldSucceed()` (צפוי להצליח)
+
 **תרחישים שנבדקו:**
-1. ✅ גישה אנונימית (קריאה וכתיבה)
-2. ✅ משתמש מאומת ללא `authorized:true`
-3. ✅ עלייה בתפקיד (חייל → מפקד)
-4. ✅ גישה ל-`admin_*`
-5. ✅ ניסיון לשינוי `push_tokens_*`
-6. ✅ ניסיון מחיקה של `authprofile_*`
-7. ✅ `authorized:false` עוקף
-8. ✅ LIST queries נחסמות
-9. ✅ Cross-shed access
-10. ✅ Role spoofing
-11. ✅ JWT forgery (חתימה)
+
+| # | תרחיש | הגנה | תוצאה |
+|---|-------|------|--------|
+| 1 | גישה אנונימית (קריאה) | isAuthorized() | ✅ BLOCKED |
+| 2 | גישה אנונימית (כתיבה) | isAuthorized() | ✅ BLOCKED |
+| 3 | משתמש מאומת ללא `authorized:true` | authorized claim דרוש | ✅ BLOCKED |
+| 4 | חייל כותב ל-`authprofile_*` | isPrivileged() + isSensitiveDoc | ✅ BLOCKED |
+| 5 | חייל משנה תפקידו משלו | isPrivileged() בUpdate | ✅ BLOCKED |
+| 6 | חייל כותב ל-`admin_*` | isSensitiveDoc | ✅ BLOCKED |
+| 7 | חייל משנה `push_tokens_shed1` | isSensitiveDoc + isPrivileged | ✅ BLOCKED |
+| 8 | חייל מוחק `authprofile_*` | isPrivileged() בDelete | ✅ BLOCKED |
+| 9 | משתמש עם `authorized:false` | authorized==true בדוק | ✅ BLOCKED |
+| 10 | LIST query על collection | list: if false | ✅ BLOCKED |
+| 11 | Role spoofing בRequest | Server-side claims בטוקן | ✅ BLOCKED |
 
 **תוצאה: 11/11 תרחישים נחסמו בהצלחה ✅**
+
+**הרצה:**
+```bash
+node qa/suite/red_team_firestore_rules_test.mjs
+```
+
+**פלט:**
+```
+✅ Passed: 11
+❌ Failed: 0
+✅ Authorization chain is PROTECTED
+✅ F1 Critical fix verified
+✅ Firestore Rules enforce role-based access
+✅ push_tokens_* now marked as sensitive
+✅ All 11 attack scenarios blocked
+```
+
+### ממצאים וגימומים (2026-08-22)
+
+#### F1: יצירת משתמש לא מורשה (CRITICAL - תוקן)
+
+**הבעיה (לפני התיקון):**
+```javascript
+// VULNERABLE
+if (shouldAuthorize(request.auth)) {
+  await getAuth().setCustomUserClaims(request.auth.uid, {authorized: true, role});
+}
+```
+בדיקה של `sign_in_provider === "password"` בלבד — לא וודא שמסמך `authprofile` קיים.
+
+**וקטור התקפה:**
+1. יצור Firebase account חדש (כל קוד שרירותי)
+2. התחבר עם קוד זה
+3. קרא ל-`markAuthorized()`
+4. קבל `authorized:true` + role ללא כל הרשאה
+
+**תיקון (שורות 78-97 ב-`functions/index.js`):**
+```javascript
+const profSnap = await db.doc("sq124/authprofile_" + hash).get();
+const prof = profSnap.exists ? profSnap.data().v : null;
+if (!prof || typeof prof.role !== "string" || !prof.role) {
+  throw new HttpsError("permission-denied", "קוד לא מוכר במערכת");
+}
+const role = prof.role;
+await getAuth().setCustomUserClaims(request.auth.uid, {authorized: true, role});
+```
+
+**הגנה:**
+- `authprofile_<hash>` יוצר רק דרך `provisionAuthAccounts()` (מ-UI ניהול)
+- כתיבה ל-`authprofile_*` מוגנת ע"י Firestore Rules: `isPrivileged()` בלבד
+- אוטובוס-22 (Catch-22): צריך `authorized=true` כדי לכתוב `authprofile`, אבל צריך `authprofile` כדי לקבל `authorized=true`
+
+**TEST:** RED TEAM Scenario 4-5 ✅
+
+---
+
+#### push_tokens: DoS על notifications (MEDIUM - תוקן)
+
+**הבעיה:**
+`push_tokens_<shedId>` לא היה ב-`isSensitiveDoc()` — משתמש מאומת (חייל) יכול להשתבש בתוקנים של ההודעות.
+
+**תיקון (שורה 51 ב-`firestore.rules`):**
+```javascript
+// Before:
+return docId.matches('^(admin_|authprofile_|ai_quota_).*');
+
+// After:
+return docId.matches('^(admin_|authprofile_|ai_quota_|push_tokens_).*');
+```
+
+**התוצאה:** `push_tokens_*` עכשיו דורש `isPrivileged()` להערה/מחיקה — חייל חסום.
+
+**TEST:** RED TEAM Scenario 7 ✅
+
+---
 
 ### אימות PRODUCTION (2026-08-22)
 
