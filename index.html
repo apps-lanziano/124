@@ -3643,7 +3643,24 @@ let MORNING_TASKS = MORNING_TASKS_SEED.slice();
    commit 4ec3d73). מחזירה {done, failed}: done=true — הפעולה כבר בוצעה,
    לצאת מוקדם; failed=true — לא הצלחנו לוודא בכלל, ולכן גם עדיף לא לרוץ
    (עדיף לדלג הפעם מאשר לסכן דריסה על בסיס ניחוש שגוי). */
+/* מטמון-דגלים מקומי (localStorage): דגל של מיגרציה/זריעה חד-פעמית הוא
+   *בלתי-הפיך* — נכתב פעם אחת ל-true (גלובלית, sSetRaw) ולעולם לא חוזר
+   ל-false או נמחק. לכן ברגע שראינו אותו "בוצע", אין שום צורך לשאול את
+   Firestore עליו שוב אף פעם. בלי המטמון, כל כניסה לאפליקציה שילמה
+   ~15-20 קריאות רשת *טוריות* (loadRuntimeLists→ensureAllShedsSeed וכו')
+   רק כדי לוודא דגלים שכבר בוצעו מזמן — כל קריאה round-trip נפרד עם
+   timeout של 9ש', מה שגרם ל"נתקע על טוען" זמן רב אחרי הקוד/PIN. המטמון
+   מוריד את זה ל-0 קריאות למשתמש חוזר (השימוש היומיומי הרגיל ב-PWA).
+   מטמון רק את "בוצע" (בטוח לחלוטין — לא הופך בחזרה); "טרם בוצע"/כשל
+   לעולם לא נשמרים, כדי שמיגרציה שבאמת ממתינה עדיין תרוץ כרגיל. */
+function onceFlagCached(flagKey){
+  try{ return localStorage.getItem("once_"+flagKey) === "1"; }catch(e){ return false; }
+}
+function onceFlagRemember(flagKey){
+  try{ localStorage.setItem("once_"+flagKey, "1"); }catch(e){}
+}
 async function onceFlagDone(flagKey){
+  if(onceFlagCached(flagKey)) return {done:true, failed:false};
   let val = null;
   for(let attempt=0; attempt<3; attempt++){
     fbReadFailed = false;
@@ -3652,6 +3669,7 @@ async function onceFlagDone(flagKey){
     await new Promise(r=>setTimeout(r, 300*(attempt+1)));
   }
   if(fbReadFailed){ console.error(`onceFlagDone(${flagKey}): לא הצלחתי לוודא את הדגל — מדלג הפעם`); return {done:false, failed:true}; }
+  if(val) onceFlagRemember(flagKey);   // בוצע — לזכור מקומית, לדלג על הרשת בכניסות הבאות
   return {done: !!val, failed:false};
 }
 
