@@ -14,6 +14,7 @@
 import { writeFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { closeBrowser } from './lib/harness.mjs';
+import { summarizeError } from './lib/report_util.mjs';
 import { IDEAS as UPGRADE_IDEAS } from './improvement_ideas.mjs';
 
 import { ROOT } from './lib/pw.mjs';   // שורש המאגר — נגזר, לא מקובע
@@ -176,7 +177,7 @@ for(const [label, loader] of [
     sections.push(await mod.run());
   }catch(e){
     sections.push({ name:label, summary:{}, findings:[
-      {sev:"high", area:label, title:`הסוכן "${label}" נכשל בריצה`, detail:String(e && e.message), where:"qa/"}]});
+      {sev:"high", area:label, title:`הסוכן "${label}" נכשל בריצה`, detail:summarizeError(e), where:"qa/"}]});
   }
 }
 await closeBrowser();

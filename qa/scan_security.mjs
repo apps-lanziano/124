@@ -12,6 +12,7 @@
 import { readFileSync, existsSync, readdirSync } from 'fs';
 
 import { ROOT } from './lib/pw.mjs';   // שורש המאגר — נגזר, לא מקובע
+import { summarizeError } from './lib/report_util.mjs';
 const findings = [];
 function add(sev, title, detail, where){ findings.push({sev, area:"אבטחה", title, detail, where}); }
 
@@ -179,7 +180,7 @@ export async function run(){
     const { runXssProbe } = await import('./lib/xss_probe.mjs');
     findings.push(...await runXssProbe());
   }catch(e){
-    findings.push({sev:"med", area:"אבטחה", title:"בדיקת XSS לא רצה", detail:String(e && e.message), where:"qa/lib/xss_probe.mjs"});
+    findings.push({sev:"med", area:"אבטחה", title:"בדיקת XSS לא רצה", detail:summarizeError(e), where:"qa/lib/xss_probe.mjs"});
   }
   const bySev = s => findings.filter(f=>f.sev===s).length;
   return {
