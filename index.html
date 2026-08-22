@@ -3659,6 +3659,11 @@ function onceFlagCached(flagKey){
 function onceFlagRemember(flagKey){
   try{ localStorage.setItem("once_"+flagKey, "1"); }catch(e){}
 }
+/* מסומן ל-true כל אימת ש-onceFlagDone נכשל לוודא דגל (כשל רשת חולף). משמש
+   את שער-העל של הזריעות (ensureAllShedsSeed) כדי לא "לנעול" את השער כשחלק
+   מהבדיקות לא הצליחו לרוץ — ר' שם. אינו נשען על מקביליות: הזריעות רצות
+   טורית בתוך loadRuntimeLists, והשדה מאופס מיד לפני הבלוק ונקרא מיד אחריו. */
+let _seedTransientFail = false;
 async function onceFlagDone(flagKey){
   if(onceFlagCached(flagKey)) return {done:true, failed:false};
   let val = null;
@@ -3668,10 +3673,16 @@ async function onceFlagDone(flagKey){
     if(val !== null || !fbReadFailed) break;
     await new Promise(r=>setTimeout(r, 300*(attempt+1)));
   }
-  if(fbReadFailed){ console.error(`onceFlagDone(${flagKey}): לא הצלחתי לוודא את הדגל — מדלג הפעם`); return {done:false, failed:true}; }
+  if(fbReadFailed){ console.error(`onceFlagDone(${flagKey}): לא הצלחתי לוודא את הדגל — מדלג הפעם`); _seedTransientFail = true; return {done:false, failed:true}; }
   if(val) onceFlagRemember(flagKey);   // בוצע — לזכור מקומית, לדלג על הרשת בכניסות הבאות
   return {done: !!val, failed:false};
 }
+/* גרסת-מניפסט של בלוק הזריעות/מיגרציות החד-פעמיות ב-ensureAllShedsSeed.
+   🔴 חובה לבמפ (לשנות את המחרוזת) בכל פעם שמוסיפים/מסירים/משנים פונקציית
+   זריעה או מיגרציה חד-פעמית בבלוק ההוא — אחרת שער-העל (seeds_done_<ver>_
+   <shed>) ידלג על הזריעה החדשה למי שכבר עבר את השער. שינוי הגרסה מייצר
+   מפתח-שער חדש, כך שהבלוק ירוץ שוב לכולם וייסגר מחדש. */
+const SEED_MANIFEST_VER = "v1-2026-08-22";
 
 /* מיגרציה חד-פעמית: נתוני v14 (סככה 2) נשמרו ללא פרפיקס — מעבירים ל-shed2_.
    שני מנגנוני הגנה, כי זו כתיבה שדורסת נתונים חיים בסככה 2:
@@ -3814,7 +3825,9 @@ async function loadRuntimeLists(){
   if(t && Array.isArray(t) && t.length){ MORNING_TASKS = t; }
   else { MORNING_TASKS = MORNING_TASKS_SEED.slice(); await sSet("cfg_tasks", MORNING_TASKS); }
 
-  if(currentShed && currentShed.id === "shed2"){ await seedShed2Certs(); await ensureExtraCertsSeed(currentShed.id); }
+  // shed2 אינו עובר דרך ensureAllShedsSeed, ולכן ריפוי-עצמי (שהוצא
+  // מ-ensureExtraCertsSeed) נקרא כאן במפורש — רץ בכל כניסה כמו קודם.
+  if(currentShed && currentShed.id === "shed2"){ await seedShed2Certs(); await ensureExtraCertsSeed(currentShed.id); await selfHealShedCertsAndRoster(currentShed.id); }
   if(currentShed && currentShed.id !== "shed2"){ await ensureAllShedsSeed(currentShed.id); await reloadPersonnelIfSeeded(); }
   if(currentShed && currentShed.isDept){
     await ensureDeptOfficers();
@@ -12091,6 +12104,28 @@ async function reloadPersonnelIfSeeded(){
    רץ פעם אחת (דגל לכל סככה). מפקד/מנהל/חייל — כולם רואים.
    ============================================================ */
 async function ensureAllShedsSeed(scopeShedId){
+  // שער-על: אם בלוק הזריעות/מיגרציות החד-פעמיות של הסככה הזו כבר הושלם,
+  // מדלגים עליו כולו אחרי *קריאת רשת אחת* (הדגל) במקום ~15 קריאות טוריות —
+  // מה שמאיץ במיוחד את הכניסה הראשונה במכשיר (אין עדיין מטמון localStorage
+  // לדגלים הבודדים). ריפוי-עצמי (selfHealShedCertsAndRoster) אינו חד-פעמי
+  // ולכן רץ *תמיד*, מחוץ לשער. אם השער סגור → 1 קריאה + ריפוי; אם פתוח →
+  // הבלוק רץ פעם אחת ואז נסגר. גרסת SEED_MANIFEST_VER מגִנה מפני "חסימת"
+  // מיגרציה חדשה (ר' שם).
+  const gateKey = "seeds_done_" + SEED_MANIFEST_VER + "_" + (scopeShedId || "all");
+  const gate = await onceFlagDone(gateKey);
+  if(!gate.done){
+    _seedTransientFail = false;
+    await runShedOneTimeSeeds(scopeShedId);
+    // סוגרים את השער רק אחרי מעבר נקי לגמרי — אם ולו בדיקת-דגל אחת נכשלה
+    // (כשל רשת חולף), לא נועלים: הכניסה הבאה תריץ שוב את הבלוק ותסגור אז.
+    if(!_seedTransientFail && !gate.failed) await sSetRaw(gateKey, true);
+  }
+  // ריפוי-עצמי — בכל כניסה, לא חד-פעמי (ר' healLegacyLeakedCustomRows/CLAUDE.md)
+  await selfHealShedCertsAndRoster(scopeShedId);
+}
+/* הבלוק החד-פעמי בלבד (בלי ריפוי-עצמי) — מופרד כדי ששער-העל למעלה יעטוף
+   אותו. 🔴 כל שינוי כאן (הוספת/הסרת פונקציית זריעה) מחייב במפ ל-SEED_MANIFEST_VER. */
+async function runShedOneTimeSeeds(scopeShedId){
   await migrateNameFixes();
   await backfillNewRafCerts();
   await seedVehiclesFromSheet();
@@ -12276,8 +12311,11 @@ async function cleanupAllCertsForToolsClerk(){
   console.log("✅ כל רשומות ההסמכות של פקידי כלים נוקו");
 }
 
+/* ⚠️ ריפוי-עצמי (selfHealShedCertsAndRoster) הוצא מכאן והועבר לקוראים
+   (ensureAllShedsSeed מריץ אותו תמיד מחוץ לשער; ה-shed2/dept ב-loadRuntimeLists
+   מריצים אותו במפורש) — כדי שֶשער-העל של ensureAllShedsSeed יוכל לדלג על
+   הבלוק החד-פעמי הזה בלי לוותר על הריפוי שרץ בכל כניסה. */
 async function ensureExtraCertsSeed(scopeShedId){
-  await selfHealShedCertsAndRoster(scopeShedId);
   await ensurePfBackfill();
   await cleanupPfForToolsClerk();
   await cleanupAllCertsForToolsClerk();
