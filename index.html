@@ -12963,10 +12963,12 @@ async function computeAdminSigLog(){
       sGetIn(shed.id, "cfg_personnel").then(v=>v||[]),
       sGetIn(shed.id, "safety_events").then(v=>v||[]),
     ]);
+    // סנן מילואים — לא נדרשים לחתום על קרא-וחתום
+    const regularPersonnel = personnel.filter(p => !p.reserve);
     const eventIds = new Set(events.map(e=>e.id));
-    const sigsArr = await Promise.all(personnel.map(p => sGetSigsIn(shed.id, p.name)));
-    const sigsBy = {}; personnel.forEach((p,i)=> sigsBy[p.name] = sigsArr[i]);
-    return {shed, personnel, eventIds, sigsBy};
+    const sigsArr = await Promise.all(regularPersonnel.map(p => sGetSigsIn(shed.id, p.name)));
+    const sigsBy = {}; regularPersonnel.forEach((p,i)=> sigsBy[p.name] = sigsArr[i]);
+    return {shed, personnel: regularPersonnel, eventIds, sigsBy};
   }));
   return {adminItems, perShed};
 }
