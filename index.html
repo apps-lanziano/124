@@ -927,6 +927,11 @@ nav{
   color:var(--ink-3);background:var(--bg);border:1px solid var(--line);cursor:pointer}
 .roster-weeksel div.on{background:var(--red-soft);color:var(--red-deep);border-color:var(--red-line)}
 .roster-wkrange{text-align:center;font-size:11.5px;font-weight:700;color:var(--ink-3);margin:-4px 0 10px}
+.roster-wkfix-tog{color:#2563eb;cursor:pointer;font-weight:800;margin-inline-start:6px}
+.roster-wkfix{display:flex;align-items:center;gap:6px;margin:-2px 0 4px}
+.roster-wkfix .m-input{flex:1;min-width:0;margin-bottom:0}
+.roster-wkfix .m-btn{flex:0 0 auto;padding:8px 12px;font-size:12px}
+.roster-wkfix-hint{text-align:center;font-size:10.5px;color:var(--ink-3);margin:0 0 10px}
 .roster-wkbar{background:var(--red-soft);border:1px solid var(--red-line);border-radius:11px;
   padding:9px 12px;margin-bottom:10px;font-size:12.5px;font-weight:600;color:var(--red-deep)}
 .roster-grid-wrap{border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden}
@@ -7266,6 +7271,9 @@ let rosterView = "board";      // cards | board | day | mine
    לפתוח תמיד ב"לוח שבועי"). המעקב מזהה שינוי זהות ומאפס. */
 let _rosterViewSeenAs = null;
 let boardWeekSlot = "current"; // prev | current | next — איזה שבוע מוצג בלוח
+/* פתיחת מתקן-התאריך הידני (ר' rosterWkFixHtml/applyRosterWkFix) — נסגר
+   אוטומטית במעבר שבוע/תצוגה כדי לא "לדלוף" בין לוחות שונים. */
+let rosterWkFixOpen = false;
 let rosterDaySel = null;       // היום שנבחר בתצוגת "יום"
 let rosterCache = null;
 
@@ -7301,7 +7309,7 @@ async function renderRosterView(){
   await loadRosterCustomRows();
   // זהות הצפייה השתנתה (למשל "החלף משתמש"/התחזות) — מאפסים ל"לוח שבועי"
   // כדי שלא "נירש" את הלשונית שהזהות הקודמת השאירה. ר' _rosterViewSeenAs.
-  if(_rosterViewSeenAs !== user){ _rosterViewSeenAs = user; rosterView = "board"; }
+  if(_rosterViewSeenAs !== user){ _rosterViewSeenAs = user; rosterView = "board"; rosterWkFixOpen = false; }
   // ⚠️ ברירת המחדל אחידה לכולם — "לוח שבועי" (rosterView נפתח כ-"board").
   // פעם חיילים נפתחו ב"לוח יומי"; זה שונה בכוונה לבקשת המשתמשים: הלוח
   // השבועי הוא התמונה שכולם עובדים לפיה (כמו צילום הגיליון), והפתיחה
@@ -7346,12 +7354,27 @@ async function renderRosterView(){
   // מתחת לבורר — טווח התאריכים האמיתי של הלוח המוצג (מה-weekStart ששמור
   // עליו), כדי שגם ב"לוח יומי"/"רק אני" ובלוח שקודם מוקדם ברור על איזה
   // שבוע מסתכלים ולא רק "נוכחי/הבא".
+  // תיקון תאריך ידני — רק למ״ע תורנויות, ורק על "נוכחי"/"שבוע שעבר"
+  // ("שבוע הבא" כבר יש לו בורר תאריכים משלו בתוך עורך "בניית לוח עתידי").
+  // קיים למקרה של נתון legacy מלפני שהיה weekStart על הלוח (או שהוזן בטעות):
+  // מאז ש-rosterWeekStartOf כבר לא "מתקן" תאריך ישן בזמן התצוגה (ר' שם),
+  // התיקון היחיד לתאריך שגוי שכבר שמור הוא ידני — אין דרך לנחש אותו
+  // אוטומטית מתוך תוכן השיבוץ עצמו.
+  const wkFixToggle = (isRosterManager && boardWeekSlot!=="next")
+    ? `<span class="roster-wkfix-tog" onclick="toggleRosterWkFix()">✏️ תקן תאריך</span>` : "";
+  const wkFixBox = (isRosterManager && boardWeekSlot!=="next" && rosterWkFixOpen)
+    ? `<div class="roster-wkfix">
+         <input type="date" class="m-input" id="roster-wkfix-inp" value="${escapeHTML(rosterWeekStartOf(r, boardWeekSlot))}" aria-label="תאריך נכון לשבוע זה">
+         <button class="m-btn primary" onclick="applyRosterWkFix()">✓ עדכן</button>
+       </div>
+       <div class="roster-wkfix-hint">לתיקון לוח שמוצג עם תאריכים שגויים (למשל נתון ישן). התאריך ייצמד לראשון של אותו שבוע.</div>` : "";
   const weekSel = `<div class="roster-weeksel">
       <div class="${boardWeekSlot==="prev"?"on":""}" onclick="setBoardWeek('prev')">שבוע שעבר</div>
       <div class="${boardWeekSlot==="current"?"on":""}" onclick="setBoardWeek('current')">נוכחי</div>
       ${nextVisible ? `<div class="${boardWeekSlot==="next"?"on":""}" onclick="setBoardWeek('next')">שבוע הבא</div>` : ""}
     </div>
-    <div class="roster-wkrange">🗓️ ${escapeHTML(weekRangeLabelOf(rosterWeekStartOf(r, boardWeekSlot)))} · ראשון–שבת</div>`;
+    <div class="roster-wkrange">🗓️ ${escapeHTML(weekRangeLabelOf(rosterWeekStartOf(r, boardWeekSlot)))} · ראשון–שבת ${wkFixToggle}</div>
+    ${wkFixBox}`;
   // כשמ"ע צופה ב"שבוע שעבר"/"שבוע הבא" — כפתור לקבוע אותו כ"לוח נוכחי"
   // (שחזור בטוח: מעתיק את השבוע המוצג ל-current, בלי לגעת בשאר).
   const restoreBar = (isRosterManager && boardWeekSlot!=="current" && anyData)
@@ -7494,13 +7517,32 @@ async function restoreWeekToCurrent(slot){
    ל"הבא" (מ״ע תורנויות, או כולם אחרי פרסום) בודקת renderRosterView
    באופן אסינכרוני ומתקנת בחזרה ל"נוכחי" אם צריך — כאן רק קובעים כוונה. */
 function setBoardWeek(slot){
-  boardWeekSlot = slot; return renderRosterView();
+  boardWeekSlot = slot; rosterWkFixOpen = false; return renderRosterView();
 }
 function rosterWeekShift(delta){
   const order = ["prev","current","next"];
   const cur = Math.max(0, order.indexOf(boardWeekSlot));
   const i = Math.min(order.length-1, Math.max(0, cur + delta));
-  if(order[i] !== boardWeekSlot){ boardWeekSlot = order[i]; return renderRosterView(); }
+  if(order[i] !== boardWeekSlot){ boardWeekSlot = order[i]; rosterWkFixOpen = false; return renderRosterView(); }
+}
+function toggleRosterWkFix(){ rosterWkFixOpen = !rosterWkFixOpen; return renderRosterView(); }
+/* תיקון ידני לתאריך לוח שגוי (למשל נתון legacy מלפני weekStart, או
+   שהוזן בטעות) — רק למ״ע תורנויות, ורק על "נוכחי"/"שבוע שעבר". שינוי
+   מטא-דאטה בלבד (לא מוגדר manualPush) — לא אמור לשלוח התראה, בניגוד
+   לפרסום/שמירה רגילים. ר' rosterWeekStartOf: אין יותר תיקון-קסם אוטומטי
+   בזמן התצוגה, ולכן זו הדרך היחידה לתקן תאריך שגוי שכבר נשמר. */
+async function applyRosterWkFix(){
+  if(!isRosterManager || boardWeekSlot==="next") return;
+  const iso = document.getElementById("roster-wkfix-inp").value;
+  const sun = sundayIsoOf(iso);
+  if(!sun){ toast("תאריך לא תקין"); return; }
+  const r = await getDutyRoster(boardWeekSlot);
+  r.weekStart = sun;
+  const ok = await saveDutyRosterV2(r, boardWeekSlot);
+  if(ok === false){ toast("⚠️ העדכון נכשל — בדוק חיבור ונסה שוב"); return; }
+  rosterWkFixOpen = false; rosterCache = null;
+  await renderRosterView();
+  toast(`התאריך עודכן ל-${weekRangeLabelOf(sun)} ✓`);
 }
 let _rosterSwipeBound = false;
 function initRosterSwipe(){

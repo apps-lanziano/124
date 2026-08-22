@@ -196,6 +196,39 @@ const out = await page.evaluate(async ()=>{
     r.identitySwitchResetsToBoard = rosterView === "board";
   }
 
+  // --- 9. תיקון תאריך ידני (rosterWkFix) — מ״ע תורנויות בלבד, על
+  //        "נוכחי"/"שבוע שעבר" בלבד, לתיקון לוח legacy עם תאריך שגוי
+  //        (אין דרך אוטומטית לנחש את התאריך הנכון מתוך תוכן השיבוץ).
+  {
+    user = "טל מלכה"; userRole = "מ״ע"; isRosterManager = true;
+    const badPrev = migrateRosterToV2(null);
+    badPrev.weekStart = "2026-08-09";           // legacy: תאריך שגוי
+    badPrev.days["ראשון"].lead = "תוכן של השבוע האמיתי";
+    await saveDutyRosterV2(badPrev, "prev");
+    rosterCache = null; boardWeekSlot = "prev"; rosterWkFixOpen = false;
+    await renderRosterView();
+    r.wkFixToggleVisibleForManager = document.getElementById("roster-view").innerHTML.includes("תקן תאריך");
+    rosterWkFixOpen = true; await renderRosterView();
+    r.wkFixBoxOpens = !!document.getElementById("roster-wkfix-inp");
+    document.getElementById("roster-wkfix-inp").value = "2026-08-19";   // אמצע השבוע הנכון
+    await applyRosterWkFix();
+    const fixed = await getDutyRoster("prev");
+    r.wkFixSnapsToSunday = fixed.weekStart === "2026-08-16";
+    r.wkFixClosesAfterApply = rosterWkFixOpen === false;
+    r.wkFixKeepsContent = fixed.days["ראשון"].lead === "תוכן של השבוע האמיתי";
+
+    // לא זמין ב"שבוע הבא" (יש שם בורר תאריכים ייעודי בעורך)
+    boardWeekSlot = "next";
+    await renderRosterView();
+    r.wkFixHiddenOnNext = !document.getElementById("roster-view").innerHTML.includes("תקן תאריך");
+
+    // לא זמין למי שאינו מ״ע תורנויות
+    boardWeekSlot = "prev";
+    isRosterManager = false; userRole = "חייל";
+    await renderRosterView();
+    r.wkFixHiddenForNonManager = !document.getElementById("roster-view").innerHTML.includes("תקן תאריך");
+  }
+
   return r;
 });
 
@@ -230,6 +263,13 @@ record("עורך הלוח: כפתור מחיקה לשורה מותאמת-איש�
 record("עורך הלוח: המחיקה מסירה את השורה בפועל", out.customRowDeletedFromEditor, String(out.customRowDeletedFromEditor));
 record("מפקד שהחליף ל'לוח יומי' — הלשונית אכן מוצגת", out.commanderOnDayTab, String(out.commanderOnDayTab));
 record("⛔ מעבר בין זהויות מאפס ל'לוח שבועי' (לא יורש לשונית קודמת)", out.identitySwitchResetsToBoard, String(out.identitySwitchResetsToBoard));
+record("תיקון תאריך ידני: הכפתור מוצג למ״ע תורנויות", out.wkFixToggleVisibleForManager, String(out.wkFixToggleVisibleForManager));
+record("תיקון תאריך ידני: תיבת התאריך נפתחת", out.wkFixBoxOpens, String(out.wkFixBoxOpens));
+record("תיקון תאריך ידני: התאריך נצמד לראשון ונשמר", out.wkFixSnapsToSunday, String(out.wkFixSnapsToSunday));
+record("תיקון תאריך ידני: התיבה נסגרת אחרי עדכון", out.wkFixClosesAfterApply, String(out.wkFixClosesAfterApply));
+record("תיקון תאריך ידני: לא נוגע בתוכן השיבוץ", out.wkFixKeepsContent, String(out.wkFixKeepsContent));
+record("תיקון תאריך ידני: מוסתר ב'שבוע הבא'", out.wkFixHiddenOnNext, String(out.wkFixHiddenOnNext));
+record("תיקון תאריך ידני: מוסתר למי שאינו מ״ע תורנויות", out.wkFixHiddenForNonManager, String(out.wkFixHiddenForNonManager));
 
 await closeBrowser();
 
