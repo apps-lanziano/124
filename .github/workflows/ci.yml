@@ -26,6 +26,14 @@ jobs:
         with:
           node-version: '22'
 
+      # נדרש ל-Firestore Emulator (qa/suite/firestore_rules_test.mjs,
+      # red_team_firestore_rules_test.mjs) — בלעדיו "firebase emulators:exec"
+      # נכשל כי אין Java runtime על ה-runner.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
       - name: בדיקת סנכרון גרסת Service Worker
         run: node scripts/sw-cache-name.mjs --check
 
