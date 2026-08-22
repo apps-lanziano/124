@@ -13946,7 +13946,7 @@ function daysSinceJoined(person){
 function isOnboarding(person){
   // כמו מסלול השלבים/PF — לא רלוונטי במחלקות, רק בסככות
   if(currentShed && currentShed.isDept) return false;
-  if(!person || person.role!=="חייל" || person.reserve) return false;
+  if(!person || person.role!=="חייל" || person.reserve || person.onboardingCompleted) return false;
   const d = daysSinceJoined(person);
   return d!==null && d>=0 && d<=ONBOARDING_WINDOW_DAYS;
 }
@@ -13983,6 +13983,7 @@ function onboardingCardHtml(pIdx, p, tpl, certs, editable){
       <input class="m-input" id="onb-new-item-${pIdx}" type="text" placeholder="מטלה/הסמכה חדשה…" style="margin-bottom:0">
       <button class="m-btn primary" style="flex:0 0 auto" onclick="addOnboardingItemTpl(${pIdx})">+ הוסף</button>
     </div>` : "";
+  const completeBtn = editable ? `<button class="m-btn primary" style="margin-top:10px;width:100%" onclick="completeOnboarding(${pIdx})">✓ סיים תהליך קליטה</button>` : "";
   return `<div class="card onboarding-card">
     <div style="display:flex;align-items:center;gap:10px">
       <div class="avatar">${initials(p.name)}</div>
@@ -13993,6 +13994,7 @@ function onboardingCardHtml(pIdx, p, tpl, certs, editable){
     <div class="progress-bar" style="margin-top:10px"><div class="progress-fill ${pct>=100?'full':''}" style="width:${pct}%"></div></div>
     <div style="margin-top:10px">${itemRows}</div>
     ${addRow}
+    ${completeBtn}
   </div>`;
 }
 /* מסך "קליטת חייל חדש" — מרוכז: מפקד רואה כרטיס מלא (וניתן לעריכה)
@@ -14056,6 +14058,21 @@ async function toggleOnboardingTask(pIdx, itemIdx){
   renderOnboardingScreen();
   renderOnboardingDetailSheet();
   renderTeamMgmt();
+}
+async function completeOnboarding(pIdx){
+  const p = PERSONNEL[pIdx];
+  if(!p){ toast("⚠️ חייל לא נמצא"); return; }
+  if(!confirm(`סיום קליטה של ${p.name}? הוא לא יופיע יותר ברשימת הקליטה.`)) return;
+  const saved = await mutatePersonnel(list=>{
+    const m = list.find(x=>x.name===p.name);
+    if(!m) return false;
+    m.onboardingCompleted = true;
+  });
+  if(!saved){ toast("⚠️ השמירה נכשלה — נסה שוב"); return; }
+  renderOnboardingScreen();
+  renderOnboardingDetailSheet();
+  renderTeamMgmt();
+  toast("סיום קליטה נשמר ✓");
 }
 /* גיליון קליטה שמפקד פותח מתוך שורת איש הצוות בניהול צוות — אותו כרטיס
    בדיוק שרואה החייל/החונך, ושרואה גם ברשימת "קליטת חייל חדש" — קיצור
