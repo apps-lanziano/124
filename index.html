@@ -4817,9 +4817,8 @@ async function applyLoginUiForRole(person){
     addBtn.classList.add("hidden");
     if(repBtn) repBtn.classList.add("hidden");
   }
-  // חומרי הדרכה — לשונית קבועה בסרגל לחיילים. אצל מפקד הפריט חי בתוך
-  // מסך-השער "הדרכה" (ראו בלוק "עולם ההדרכה" למטה) ולכן אינו לשונית.
-  document.getElementById("nav-training").classList.toggle("hidden", userRole === "מפקד");
+  // חומרי הדרכה — לשונית בסרגל לכל המשתמשים (חיילים ומפקדים)
+  document.getElementById("nav-training").classList.remove("hidden");
   // "היום שלי" — מסך פתיחה לחיילים בלבד. כדי לפנות לו מקום בסרגל, הסמכות
   // עוברת לתפריט "עוד" אצל חיילים (לבקשת המשתמש); אצל מפקד נשאר כרגיל.
   const isSoldier = userRole !== "מפקד";
