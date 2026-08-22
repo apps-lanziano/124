@@ -907,6 +907,8 @@ nav{
 .arc-row:last-child{border-bottom:0}
 .arc-row b{font-size:13.5px;font-weight:800;display:block}
 .arc-row small{font-size:11px;color:var(--ink-3)}
+.arc-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.arc-acts .m-btn{flex:0 0 auto;font-size:11px;padding:6px 9px}
 .roster-banner .rb-ic{font-size:20px;flex:0 0 auto}
 .roster-banner .rb-tx{display:flex;flex-direction:column;line-height:1.25;min-width:0}
 .roster-banner .rb-tx b{font-size:13px;font-weight:800}
@@ -924,6 +926,7 @@ nav{
 .roster-weeksel div{flex:1;text-align:center;font-size:12px;font-weight:800;padding:8px 2px;border-radius:10px;
   color:var(--ink-3);background:var(--bg);border:1px solid var(--line);cursor:pointer}
 .roster-weeksel div.on{background:var(--red-soft);color:var(--red-deep);border-color:var(--red-line)}
+.roster-wkrange{text-align:center;font-size:11.5px;font-weight:700;color:var(--ink-3);margin:-4px 0 10px}
 .roster-wkbar{background:var(--red-soft);border:1px solid var(--red-line);border-radius:11px;
   padding:9px 12px;margin-bottom:10px;font-size:12.5px;font-weight:600;color:var(--red-deep)}
 .roster-grid-wrap{border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden}
@@ -1024,6 +1027,9 @@ nav{
 .rblk-h.restz{background:#eef4ea;color:#3f6b32}
 .rblk-h.pmsz{background:#faeeee;color:#8a4444}
 .rblk-c{font-size:10.5px;color:var(--ink-3);font-weight:700}
+.rblk-acts{display:inline-flex;align-items:center;gap:7px}
+.rblk-del{padding:3px 4px;line-height:0}
+.rblk-del .uic{width:15px;height:15px}
 .rblk-toggle-lbl{display:inline-flex;align-items:center;gap:5px}
 .rblk-toggle-lbl.off{opacity:.55;text-decoration:line-through}
 /* מתג on/off אמיתי (track + כדור) — direction:ltr קבוע כדי שהכדור תמיד
@@ -1060,6 +1066,10 @@ nav{
 .red-week{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:11px;margin-bottom:10px}
 .red-week label{font-size:11px;color:var(--ink-3);display:block;margin-bottom:3px;font-weight:600}
 .red-week .m-input{margin-bottom:0}
+.red-wkpick{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.red-wkpick .m-input{flex:1;min-width:0}
+.red-wkpick .m-btn{flex:0 0 auto;padding:8px 11px;font-size:15px;font-weight:800;line-height:1}
+.red-wkrange{font-size:11.5px;font-weight:700;color:var(--red-deep);margin-bottom:9px}
 .roster-daystrip div.bad{box-shadow:inset 0 0 0 1.5px var(--red);color:var(--red)}
 .roster-daystrip div small{display:block;font-size:9px;font-weight:700;opacity:.85}
 .rc.add{background:transparent;border:1.5px dashed var(--line);color:var(--ink-3);cursor:pointer}
@@ -6927,7 +6937,9 @@ async function saveRosterCustomRowForm(){
   toast("נשמר ✓");
 }
 async function deleteRosterCustomRow(id){
-  if(!confirm("למחוק את השורה מהלוח? שיבוצים קיימים בה יישארו מוסתרים בהיסטוריה.")) return;
+  const cr = (rosterCustomRows||[]).find(c=>c.id===id);
+  const nm = cr ? `"${cr.label}"` : "";
+  if(!confirm(`למחוק את השורה ${nm} מהלוח?\n\n• המחיקה חלה על כל השבועות (הגדרות השורות גלובליות).\n• להסתרה בשבוע אחד בלבד — השתמש במתג שליד שם השורה.\n• שיבוצים קיימים בה יישארו מוסתרים בהיסטוריה.`)) return;
   const list = rosterCustomRows.filter(c=>c.id!==id);
   const ok = await saveRosterCustomRows(list);
   if(ok === false){ toast("⚠️ המחיקה נכשלה — נסה שוב"); return; }
@@ -6958,13 +6970,49 @@ function isoAddDays(baseIso, n){
   d.setHours(0,0,0,0); d.setDate(d.getDate()+n);
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 }
-/* ראשון של השבוע שהעורך מתייחס אליו (current/next) כתאריך ISO */
+/* ראשון (ISO) של השבוע שאליו שייך תאריך נתון. לוח צוות הוא תמיד
+   ראשון→שבת, ולכן כל תאריך שנבחר "נצמד" לראשון של אותו שבוע. */
+function sundayIsoOf(iso){
+  if(!iso) return "";
+  const d = new Date(iso+"T00:00:00");
+  if(isNaN(d)) return "";
+  d.setHours(0,0,0,0); d.setDate(d.getDate()-d.getDay());
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+/* ראשון של השבוע שהעורך מתייחס אליו כתאריך ISO.
+   מקבל סלוט ("current"/"next"/"prev") — ואם קיבל תאריך ISO מפורש
+   (למשל weekStart שנשמר על גוף הלוח), מחזיר את הראשון של אותו שבוע.
+   כך כל קורא קיים (rosterDayLockDates וכו') יכול לקבל תאריך אמיתי
+   במקום היסק לפי "היום + היסט סלוט". */
 function rosterWeekSundayIso(slot){
+  if(typeof slot === "string" && /^\d{4}-\d{2}-\d{2}$/.test(slot)) return sundayIsoOf(slot);
   const d = new Date(); d.setHours(0,0,0,0);
   d.setDate(d.getDate()-d.getDay());                 // ראשון של השבוע הנוכחי
   if(slot==="next") d.setDate(d.getDate()+7);
   else if(slot==="prev") d.setDate(d.getDate()-7);
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+/* ⛔ התאריכים של לוח הם נתון על הלוח עצמו (`weekStart`), לא היסק מ"היום".
+   לפני כן כל תצוגת תאריך נגזרה מ"ראשון של השבוע הנוכחי + היסט הסלוט",
+   ולכן לוח שנשמר לארכיון הוצג עם התאריכים של *השבוע שבו צפו בו*, ולוח
+   עתידי שקודם ל"נוכחי" באמצע שבוע קלנדרי הציג את תאריכי השבוע הישן —
+   כלומר נתונים אמיתיים עם תאריכים שגויים. weekStart נשמר על גוף הלוח
+   (כמו published/disabledRows) ועובר איתו בכל העברה בין סלוטים.
+   חריג יחיד: לוח "נוכחי" עם weekStart *ישן* מהשבוע הקלנדרי הנוכחי —
+   כלומר לוח חי שלא סובב (לא נבנה שבוע הבא) — מוצג עם תאריכי השבוע
+   הנוכחי, כי זה הלוח שרץ בפועל עכשיו. weekStart עתידי (קידום מוקדם)
+   כן גובר, וזה בדיוק מה שנדרש. */
+function rosterWeekStartOf(r, slot){
+  const calc = rosterWeekSundayIso(slot || "current");
+  const stored = r && r.weekStart ? sundayIsoOf(r.weekStart) : "";
+  if(!stored) return calc;
+  if((slot||"current")==="current" && stored < calc) return calc;
+  return stored;
+}
+/* "24.8–30.8" לשבוע שמתחיל בראשון הנתון */
+function weekRangeLabelOf(sunIso){
+  if(!sunIso) return "";
+  return `${fmtHeShort(sunIso)}–${fmtHeShort(isoAddDays(sunIso,6))}`;
 }
 /* תאריך/י ISO של יום-בלוח. "חמישי" (מפתח משמרת סופ"ש) מחזיר את כל
    שלושת הימים חמישי–שבת, כדי שאילוץ באחד מהם ינעל את המשמרת הרצופה. */
@@ -7045,6 +7093,10 @@ function rosterEditKey(day){ return isWeekendDay(day) ? "חמישי" : day; }
    מבנה חדש על נתון שאיש לא אישר. */
 function migrateRosterToV2(raw){
   const out = {v:2, weekNumber: raw && raw.weekNumber || null, weekKey: (raw && raw.weekKey) || "",
+    // התאריכים של הלוח — ראשון של השבוע שהלוח הזה מתאר (ר' rosterWeekStartOf).
+    // נתון על הלוח עצמו, בדיוק כמו published/disabledRows, ולכן נוסע איתו
+    // בכל העברה בין סלוטים ולארכיון. ריק = לוח ישן שנשמר לפני הפיצ'ר.
+    weekStart: (raw && raw.weekStart) || "",
     squadronDuty: (raw && raw.squadronDuty) || "", restWindow: (raw && raw.restWindow) || ROSTER_DEFAULT_REST_WINDOW,
     disabledRows: Array.isArray(raw && raw.disabledRows) ? raw.disabledRows.slice() : [],
     published: !!(raw && raw.published),
@@ -7141,6 +7193,8 @@ async function getDutyRoster(slot){
    כדי שההתראה היומית הקיימת תמשיך לעבוד בלי שינוי בצד השרת. */
 async function saveDutyRosterV2(roster, slot, manualPush){
   const out = {v:2, weekNumber: roster.weekNumber||null, weekKey: roster.weekKey || todayKey(),
+    // התאריכים של הלוח — נשמרים כשדה, לא נגזרים מ"היום" בזמן התצוגה
+    weekStart: roster.weekStart ? sundayIsoOf(roster.weekStart) : "",
     squadronDuty: roster.squadronDuty||"", restWindow: roster.restWindow || ROSTER_DEFAULT_REST_WINDOW,
     disabledRows: Array.isArray(roster.disabledRows) ? roster.disabledRows.slice() : [],
     published: !!roster.published,
@@ -7200,7 +7254,8 @@ async function saveDutyRosterV2(roster, slot, manualPush){
    "יום" (יום אחד בפריסה קריאה), ו"רק אני" (הימים שבהם אני משובץ).
    שם קצר בתצוגת הלוח כדי שהעמודות יישארו צרות; בתצוגת היום שם מלא. */
 let rosterView = "board";      // cards | board | day | mine
-let _rosterViewInit = false;   // ברירת מחדל לפי תפקיד — חיילים מקבלים "כרטיסים"
+/* ⚠️ אין יותר ברירת מחדל לפי תפקיד — כולם (חייל/מ״ע/מפקד) נפתחים על
+   "לוח שבועי". ר' renderRosterView. */
 let boardWeekSlot = "current"; // prev | current | next — איזה שבוע מוצג בלוח
 let rosterDaySel = null;       // היום שנבחר בתצוגת "יום"
 let rosterCache = null;
@@ -7235,9 +7290,10 @@ async function renderRosterView(){
   if(!box) return;
   await maybeRotateWeek();     // מעבר שבוע אוטומטי (שבת בחצות) לפני הרינדור
   await loadRosterCustomRows();
-  // ברירת מחדל לפי תפקיד: חיילים מתחילים ב"לוח יומי" (כרטיסי יום — קריא בנייד),
-  // מ״ע/מפקד ב"לוח שבועי" (טבלה מלאה). המשתמש יכול להחליף בכל רגע.
-  if(!_rosterViewInit){ _rosterViewInit = true; if(!isRosterManager && userRole!=="מפקד") rosterView = "day"; }
+  // ⚠️ ברירת המחדל אחידה לכולם — "לוח שבועי" (rosterView נפתח כ-"board").
+  // פעם חיילים נפתחו ב"לוח יומי"; זה שונה בכוונה לבקשת המשתמשים: הלוח
+  // השבועי הוא התמונה שכולם עובדים לפיה (כמו צילום הגיליון), והפתיחה
+  // בכרטיס-יום בודד הסתירה אותה. המשתמש עדיין יכול להחליף לשונית בכל רגע.
   // "שבוע הבא" הוא תכנון פרטי של מ״ע תורנויות עד ללחיצה על "פרסם לוח
   // צוות" (roster.published) — מרגע הפרסום הוא גלוי לכולם כ"שבוע הבא",
   // בלי לקדם אותו אוטומטית ללוח הנוכחי (זו פעולה נפרדת ומפורשת: הבאנר
@@ -7275,11 +7331,15 @@ async function renderRosterView(){
   // בתצוגות "יום"/"רק אני" נשאר באנר קצר כי אין שם טבלה.
   // בורר שבוע — שעבר / נוכחי / הבא (אפשר גם להחליק ימינה/שמאלה על הלוח)
   // "שבוע הבא" מוצג לכולם רק אחרי פרסום; לפני כן רק למ״ע תורנויות (nextVisible)
+  // מתחת לבורר — טווח התאריכים האמיתי של הלוח המוצג (מה-weekStart ששמור
+  // עליו), כדי שגם ב"לוח יומי"/"רק אני" ובלוח שקודם מוקדם ברור על איזה
+  // שבוע מסתכלים ולא רק "נוכחי/הבא".
   const weekSel = `<div class="roster-weeksel">
       <div class="${boardWeekSlot==="prev"?"on":""}" onclick="setBoardWeek('prev')">שבוע שעבר</div>
       <div class="${boardWeekSlot==="current"?"on":""}" onclick="setBoardWeek('current')">נוכחי</div>
       ${nextVisible ? `<div class="${boardWeekSlot==="next"?"on":""}" onclick="setBoardWeek('next')">שבוע הבא</div>` : ""}
-    </div>`;
+    </div>
+    <div class="roster-wkrange">🗓️ ${escapeHTML(weekRangeLabelOf(rosterWeekStartOf(r, boardWeekSlot)))} · ראשון–שבת</div>`;
   // כשמ"ע צופה ב"שבוע שעבר"/"שבוע הבא" — כפתור לקבוע אותו כ"לוח נוכחי"
   // (שחזור בטוח: מעתיק את השבוע המוצג ל-current, בלי לגעת בשאר).
   const restoreBar = (isRosterManager && boardWeekSlot!=="current" && anyData)
@@ -7480,9 +7540,19 @@ async function updateRosterMgrBadges(){
    נשמר גלובלית (roster_archive) כמו הלוח עצמו. */
 async function getRosterArchive(){ return (await sGetRaw("roster_archive")) || []; }
 async function saveRosterArchive(list){ return await sSetRaw("roster_archive", list); }
-function weekRangeLabel(){
-  const s = thisWeekSunday(); const e = new Date(s); e.setDate(s.getDate()+6);
-  return `${fmtHeShort(isoOfDate(s))}–${fmtHeShort(isoOfDate(e))}`;
+/* התאריכים של רשומת ארכיון: קודם כל מה ששמור על הלוח עצמו (weekStart),
+   ואם זה לוח ישן שנשמר לפני שהשדה קיים — מפתח הרשומה, שהוא ממילא
+   הראשון של השבוע שנשמר (ר' archiveNow). כך לוח בארכיון מוצג לנצח עם
+   התאריכים שלו, ולא עם התאריכים של השבוע שבו במקרה פותחים אותו. */
+function archiveEntryWeekStart(a){
+  if(!a) return "";
+  return (a.roster && a.roster.weekStart) || a.weekStart || a.key || "";
+}
+/* לוח הארכיון כאובייקט v2 עם התאריכים המקוריים שלו */
+function archivedRosterOf(a){
+  const r = migrateRosterToV2(a && a.roster);
+  r.weekStart = archiveEntryWeekStart(a);
+  return r;
 }
 let _archiveTried = false;
 async function maybeArchiveRoster(){
@@ -7490,12 +7560,15 @@ async function maybeArchiveRoster(){
   _archiveTried = true;                         // פעם אחת לכל טעינת אפליקציה
   try{
     if(new Date().getDay() < 4) return;         // רק מיום חמישי ואילך
-    const key = isoOfDate(thisWeekSunday());
     const arc = await getRosterArchive();
-    if(arc.some(a=>a.key===key)) return;         // כבר נשמר לשבוע הזה
     const cur = await getDutyRoster("current");
+    // המפתח והתווית לפי השבוע שהלוח באמת מתאר (weekStart), לא לפי "היום" —
+    // אחרת לוח שקודם מוקדם היה נשמר תחת תאריכי השבוע הקלנדרי שבו נשמר.
+    const key = rosterWeekStartOf(cur, "current");
+    if(arc.some(a=>a.key===key)) return;         // כבר נשמר לשבוע הזה
     if(!WEEK_DAYS_HE.some(d=>rosterDayCount(cur.days[d])>0)) return;   // לוח ריק — לא לשמור
-    arc.unshift({key, label: weekRangeLabel(), savedAt: new Date().toISOString(), roster: cur});
+    cur.weekStart = key;                          // מקפיא את התאריכים עם הלוח
+    arc.unshift({key, weekStart:key, label: weekRangeLabelOf(key), savedAt: new Date().toISOString(), roster: cur});
     await saveRosterArchive(arc.slice(0, 8));    // לפחות 6, עד 8
   }catch(e){ console.error("maybeArchiveRoster", e); }
 }
@@ -7536,7 +7609,12 @@ async function maybeRotateWeek(){
     if(!rotated){ await sSetRaw("board_rotated_week", sun); return; }  // הפעלה ראשונה — רק מסמנים
     // עברנו לשבוע חדש (rotated ישן מ-sun) — מבצעים רוטציה אם יש לוח עתידי
     const next = await getDutyRoster("next");
-    if(WEEK_DAYS_HE.some(d=>rosterDayCount(next.days[d])>0)){
+    // ...ורק אם השבוע שהלוח העתידי מתאר (weekStart) כבר הגיע. מ״ע תורנויות
+    // יכול לבנות לוח לשבוע שאינו בהכרח "השבוע הבא" (בורר התאריכים בעורך),
+    // ולוח שנבנה לעוד שבועיים אסור שיהפוך לפעיל מוקדם. לוח ישן בלי
+    // weekStart מתנהג כמו קודם (מסתובב תמיד).
+    const nextReady = !next.weekStart || sundayIsoOf(next.weekStart) <= sun;
+    if(nextReady && WEEK_DAYS_HE.some(d=>rosterDayCount(next.days[d])>0)){
       const cur = await getDutyRoster("current");
       if(WEEK_DAYS_HE.some(d=>rosterDayCount(cur.days[d])>0)) await saveDutyRosterV2(cur, "prev");
       next.weekKey = todayKey();
@@ -7569,31 +7647,54 @@ async function renderRosterArchiveList(){
       <button class="m-btn ghost" style="margin-top:10px" onclick="archiveNow()">שמור את הלוח הנוכחי עכשיו</button></div>`;
     return;
   }
-  box.innerHTML = _archiveRows.map((a,i)=>`<div class="arc-row">
-      <div onclick="viewArchivedRoster(${i})" style="flex:1;cursor:pointer"><b>שבוע ${escapeHTML(a.label)}</b><small>נשמר ${new Date(a.savedAt).toLocaleDateString("he-IL",{day:"numeric",month:"long"})}</small></div>
-      <button class="m-btn ghost" style="flex:0 0 auto;font-size:11px;padding:6px 9px" onclick="restoreArchivedToCurrent(${i})">↩️ שחזר לנוכחי</button>
-      <span class="rpick-go" onclick="viewArchivedRoster(${i})" style="cursor:pointer">›</span></div>`).join("") +
+  // כל רשומה: כותרת עם טווח התאריכים האמיתי של הלוח (לא של השבוע שבו
+  // צופים בו), ושלוש פעולות מפורשות — הצגה, שחזור לנוכחי, ושחזור
+  // ל"שבוע שעבר" (למקרה ש"שבוע שעבר" נמחק/נדרס והמ״ע רוצה אותו בחזרה
+  // בלי לגעת בלוח שרץ עכשיו).
+  box.innerHTML = _archiveRows.map((a,i)=>{
+    const range = weekRangeLabelOf(archiveEntryWeekStart(a)) || a.label || "";
+    return `<div class="arc-row">
+      <div onclick="viewArchivedRoster(${i})" style="flex:1;cursor:pointer;min-width:0"><b>שבוע ${escapeHTML(range)}</b><small>נשמר ${new Date(a.savedAt).toLocaleDateString("he-IL",{day:"numeric",month:"long"})}</small>
+        <div class="arc-acts">
+          <button class="m-btn ghost" onclick="event.stopPropagation();viewArchivedRoster(${i})">👁️ הצג לוח</button>
+          <button class="m-btn ghost" onclick="event.stopPropagation();restoreArchivedToCurrent(${i})">↩️ שחזר לנוכחי</button>
+          <button class="m-btn ghost" onclick="event.stopPropagation();restoreArchivedToPrev(${i})">↩️ ל״שבוע שעבר״</button>
+        </div>
+      </div>
+      <span class="rpick-go" onclick="viewArchivedRoster(${i})" style="cursor:pointer">›</span></div>`;
+  }).join("") +
     `<button class="m-btn ghost" style="width:100%;margin-top:10px" onclick="archiveNow()"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3.5 20.5 9.5 17 13l-1 5-2-2-5 5-1-1 5-5-2-2 5-1 3.5-3.5Z"/></svg> שמור את הלוח הנוכחי עכשיו</button>`;
 }
-/* שחזור לוח מהארכיון אל "הלוח הנוכחי" — לא נוגע בשבוע הבא/שעבר. */
-async function restoreArchivedToCurrent(i){
+/* שחזור לוח מהארכיון אל סלוט חי — "current" (הלוח הפעיל) או "prev"
+   ("שבוע שעבר", כשהוא נמחק/נדרס והמ״ע רוצה אותו בחזרה בלי לגעת בלוח
+   שרץ עכשיו). לא נוגע ב"שבוע הבא" בשום מקרה, ולא מארכב את מה שהוחלף —
+   זה פיצ'ר נפרד מ-restoreWeekToCurrent, ר' CLAUDE.md. */
+async function restoreArchivedToSlot(i, slot){
   const a = _archiveRows[i]; if(!a || !a.roster) return;
-  if(!confirm(`לשחזר את הלוח של שבוע ${a.label} כלוח הנוכחי הפעיל?\n\n• הלוח הנוכחי הקיים יוחלף בו.\n• "שבוע הבא" לא ישתנה.`)) return;
-  const src = migrateRosterToV2(a.roster);
+  const range = weekRangeLabelOf(archiveEntryWeekStart(a)) || a.label || "";
+  const toPrev = slot === "prev";
+  const msg = toPrev
+    ? `לשחזר את הלוח של שבוע ${range} אל "שבוע שעבר"?\n\n• הלוח שנמצא כרגע ב"שבוע שעבר" יוחלף בו.\n• הלוח הנוכחי ו"שבוע הבא" לא ישתנו.`
+    : `לשחזר את הלוח של שבוע ${range} כלוח הנוכחי הפעיל?\n\n• הלוח הנוכחי הקיים יוחלף בו.\n• "שבוע הבא" לא ישתנה.`;
+  if(!confirm(msg)) return;
+  const src = archivedRosterOf(a);   // נושא איתו את התאריכים המקוריים
   src.weekKey = todayKey();
-  const ok = await saveDutyRosterV2(src, "current");
+  const ok = await saveDutyRosterV2(src, slot);
   if(ok === false){ toast("⚠️ השחזור נכשל"); return; }
-  rosterCache = null; boardWeekSlot = "current";
+  rosterCache = null; boardWeekSlot = slot;
   document.getElementById("roster-archive-modal").classList.remove("open");
   await renderRosterView();
-  toast(`הלוח של שבוע ${a.label} שוחזר לנוכחי ✓`);
+  toast(toPrev ? `הלוח של שבוע ${range} שוחזר ל״שבוע שעבר״ ✓` : `הלוח של שבוע ${range} שוחזר לנוכחי ✓`);
 }
+async function restoreArchivedToCurrent(i){ return restoreArchivedToSlot(i, "current"); }
+async function restoreArchivedToPrev(i){ return restoreArchivedToSlot(i, "prev"); }
 async function archiveNow(){
-  const key = isoOfDate(thisWeekSunday());
   const arc = await getRosterArchive();
   const cur = await getDutyRoster("current");
+  const key = rosterWeekStartOf(cur, "current");   // התאריכים של הלוח עצמו
+  cur.weekStart = key;                             // נשמרים איתו — קפואים לנצח
   const idx = arc.findIndex(a=>a.key===key);
-  const entry = {key, label: weekRangeLabel(), savedAt: new Date().toISOString(), roster: cur};
+  const entry = {key, weekStart:key, label: weekRangeLabelOf(key), savedAt: new Date().toISOString(), roster: cur};
   if(idx>=0) arc[idx] = entry; else arc.unshift(entry);
   const ok = await saveRosterArchive(arc.slice(0,8));
   if(ok===false){ toast("⚠️ השמירה נכשלה"); return; }
@@ -7602,8 +7703,14 @@ async function archiveNow(){
 }
 function viewArchivedRoster(i){
   const a = _archiveRows[i]; if(!a) return;
-  document.getElementById("roster-full-title").textContent = `🗄️ שבוע ${a.label}`;
-  document.getElementById("roster-full-inner").innerHTML = rosterBoardHtml(migrateRosterToV2(a.roster), "", "wide");
+  const r = archivedRosterOf(a);
+  const range = weekRangeLabelOf(archiveEntryWeekStart(a)) || a.label || "";
+  document.getElementById("roster-full-title").textContent = `🗄️ שבוע ${range}`;
+  // התאריכים מגיעים מהלוח הארכיוני עצמו — מעבירים אותם במפורש כ"שבוע
+  // המוצג" (ולא סלוט), כדי שכלל "לוח נוכחי שלא סובב" לא יחיל עליהם את
+  // תאריכי השבוע הנוכחי. ארכיון קפוא לנצח.
+  document.getElementById("roster-full-inner").innerHTML =
+    rosterBoardHtml(r, "", "wide", archiveEntryWeekStart(a) || undefined);
   document.getElementById("roster-full").classList.add("open");
   initRosterFullGestures();
   setTimeout(rosterFullZoomReset, 40);
@@ -7669,8 +7776,11 @@ function rosterBoardHtml(r, today, mode, weekSlot){
   const fit = mode !== "wide";
   const nm = n => fit ? shortName(n) : n;
   const cols = [...ROSTER_ROTATING_DAYS, "חמישי"];
-  // תאריך יומי לכל עמודה — לפי השבוע המוצג (נוכחי/שעבר/הבא; סופ"ש = טווח)
-  const wk = weekSlot || "current";
+  // תאריך יומי לכל עמודה — לפי התאריכים ששמורים על הלוח עצמו
+  // (r.weekStart), ורק בהיעדרם לפי הסלוט המוצג. ר' rosterWeekStartOf:
+  // כך לוח מהארכיון מציג את התאריכים של השבוע שלו, ולוח עתידי שקודם
+  // מוקדם מציג את התאריכים האמיתיים שלו ולא של השבוע הקלנדרי הנוכחי.
+  const wk = rosterWeekStartOf(r, weekSlot || "current");
   const dateLbl = d => {
     const ds = rosterDayLockDates(d, wk);
     return d==="חמישי" ? `${fmtHeShort(ds[0])}–${fmtHeShort(ds[2])}` : fmtHeShort(ds[0]);
@@ -7780,8 +7890,9 @@ async function openRosterFull(){
   const r = boardWeekSlot==="current" ? (rosterCache || (rosterCache = await getDutyRoster())) : await getDutyRoster(boardWeekSlot);
   document.getElementById("roster-full-inner").innerHTML = rosterBoardHtml(r, todayHebrewDay(), "wide", boardWeekSlot);
   const slotLabel = boardWeekSlot==="next" ? " · שבוע הבא" : boardWeekSlot==="prev" ? " · שבוע שעבר" : "";
+  const rangeLabel = " · " + weekRangeLabelOf(rosterWeekStartOf(r, boardWeekSlot));
   document.getElementById("roster-full-title").textContent =
-    "לוח צוות" + (r.weekNumber ? (" · שבוע " + r.weekNumber) : "") + slotLabel;
+    "לוח צוות" + (r.weekNumber ? (" · שבוע " + r.weekNumber) : "") + slotLabel + rangeLabel;
   document.getElementById("roster-full").classList.add("open");
   initRosterFullGestures();
   // ממתינים לפריסת הטבלה לפני מדידת הרוחב הטבעי, ואז מתאימים למסך
@@ -8581,7 +8692,9 @@ function rosterMineHtml(r, today){
    השם שלי מודגש, היום הנוכחי בולט, והסופ"ש מציג את הפיצול של מנהל/מתגבר. */
 function rosterCardsHtml(r, today){
   const days = [...ROSTER_ROTATING_DAYS, "חמישי"];
-  const dateLbl = d => { const ds=rosterDayLockDates(d, boardWeekSlot); return d==="חמישי"?`${fmtHeShort(ds[0])}–${fmtHeShort(ds[2])}`:fmtHeShort(ds[0]); };
+  // תאריכים לפי הלוח עצמו (r.weekStart), כמו בלוח השבועי — לא לפי "היום"
+  const cardsWk = rosterWeekStartOf(r, boardWeekSlot);
+  const dateLbl = d => { const ds=rosterDayLockDates(d, cardsWk); return d==="חמישי"?`${fmtHeShort(ds[0])}–${fmtHeShort(ds[2])}`:fmtHeShort(ds[0]); };
   const chip = (n, cls) => n ? `<span class="rc ${n===user?"me":(cls||"duty")}">${escapeHTML(n)}</span>` : "";
   const chips = (arr, cls) => (arr||[]).map(n=>chip(n, cls)).join("");
   const fri = r.days["שישי"] || {};
@@ -8828,6 +8941,10 @@ async function openRosterEditor(aiDays, slot){
   rosterPfNames = await fetchPfNames();
   rosterConstraints = await fetchApprovedConstraintsByName();
   rosterDraft = await getDutyRoster(rosterEditSlot);
+  // תאריכי הלוח: אם לא נשמרו עדיין (לוח ישן) — ברירת מחדל לפי הסלוט
+  // (נוכחי = השבוע הזה, עתידי = השבוע הבא). בלוח עתידי מ״ע יכול לבחור
+  // כל שבוע אחר דרך בורר התאריכים בעורך (setRosterDraftWeek).
+  if(!rosterDraft.weekStart) rosterDraft.weekStart = rosterWeekSundayIso(rosterEditSlot);
   // שחזור עזר-העריכה לפיצול הסופ"ש: הערך למשמרת שישי–שבת נשמר על ימי
   // שישי/שבת עצמם — מרכיבים אותו חזרה על יום העריכה "חמישי".
   {
@@ -8876,15 +8993,51 @@ function applyAiDaysToDraft(aiDays){
   rosterDraft._aiIssues = {ambiguous, unmatched};
 }
 function rosterEdSetDay(day){ rosterEdDay = day; renderRosterEditor(); }
+/* בחירת השבוע שהלוח (העתידי) מתאר. כל תאריך נצמד לראשון של אותו שבוע —
+   לוח צוות הוא תמיד ראשון→שבת כולל. נשמר בטיוטה בלבד (כמו restWindow/
+   squadronDuty); רק "שמור טיוטה"/"פרסם" מחילים אותו בפועל.
+   רינדור מחדש נדרש כי כל התאריכים בעורך (כולל נעילות אילוץ) נגזרים ממנו. */
+function setRosterDraftWeek(iso){
+  if(!rosterDraft) return;
+  const sun = sundayIsoOf(iso);
+  if(!sun){ renderRosterEditor(); return; }       // תאריך לא תקין — מחזירים את הקיים
+  rosterDraft.weekStart = sun;
+  renderRosterEditor();
+}
+function shiftRosterDraftWeek(delta){
+  if(!rosterDraft) return;
+  const base = rosterDraft.weekStart || rosterWeekSundayIso(rosterEditSlot);
+  setRosterDraftWeek(isoAddDays(base, 7*delta));
+}
+/* השבוע שהעורך מתייחס אליו לצורך תאריכים/אילוצים: התאריכים שנבחרו
+   לטיוטה אם קיימים, אחרת הסלוט (התנהגות ישנה). rosterDayLockDates
+   מקבל את שניהם. */
+function rosterEditWeekRef(){
+  return (rosterDraft && rosterDraft.weekStart) ? rosterDraft.weekStart : rosterEditSlot;
+}
 
 function renderRosterEditor(){
   const r = rosterDraft;
   const d = r.days[rosterEdDay];
   const wknd = isWeekendDay(rosterEdDay);
 
-  // שבועי: תורן טייסת + חלון הנחים
+  // שבועי: שבוע הלוח (עתידי בלבד) + תורן טייסת + חלון הנחים
+  // בורר השבוע מוצג רק ב"בניית לוח עתידי": הלוח הנוכחי הוא בהגדרה השבוע
+  // שרץ עכשיו, בעוד לוח עתידי אפשר לבנות לכל שבוע קדימה. כל תאריך שנבחר
+  // נצמד לראשון של אותו שבוע — לוח צוות הוא תמיד ראשון→שבת כולל.
+  const weekStartIso = r.weekStart || rosterWeekSundayIso(rosterEditSlot);
+  const weekPicker = rosterEditSlot!=="next" ? "" : `
+      <label>שבוע הלוח (ראשון–שבת)</label>
+      <div class="red-wkpick">
+        <button type="button" class="m-btn ghost" onclick="shiftRosterDraftWeek(-1)" aria-label="שבוע קודם">‹</button>
+        <input type="date" class="m-input" id="roster-ed-weekstart" value="${escapeHTML(weekStartIso)}"
+               aria-label="תאריך בשבוע הלוח" onchange="setRosterDraftWeek(this.value)">
+        <button type="button" class="m-btn ghost" onclick="shiftRosterDraftWeek(1)" aria-label="שבוע הבא">›</button>
+      </div>
+      <div class="red-wkrange">🗓️ הלוח נבנה לשבוע ${escapeHTML(weekRangeLabelOf(weekStartIso))} (ראשון–שבת)</div>`;
   document.getElementById("roster-ed-week").innerHTML = `
     <div class="red-week">
+      ${weekPicker}
       <label>תורן טייסת (שבועי)</label>
       <select class="m-input" style="margin-bottom:8px" aria-label="תורן טייסת שבועי" onchange="rosterDraft.squadronDuty=this.value">
         <option value="">— לא נקבע —</option>
@@ -8909,7 +9062,7 @@ function renderRosterEditor(){
 
   // 🔒/🎓 לצד שם ששובץ ויש לו אילוץ מאושר ביום זה (מזהיר, לא חוסם).
   // 🔒 = לא זמין (חופש/אפטר), 🎓 = קורס (זמין לצוות תורן עד 21:00, בלי נח)
-  const lkOf = name => constraintLockFor(name, rosterEdDay, rosterEditSlot, rosterConstraints);
+  const lkOf = name => constraintLockFor(name, rosterEdDay, rosterEditWeekRef(), rosterConstraints);
   const lk = name => { const l=lkOf(name); return l ? (l.soft?"🎓 ":"🔒 ") : ""; };
   const lc = name => { const l=lkOf(name); return l ? (l.soft?"softc":"locked") : ""; };
   const slot = (label, field, req) => {
@@ -8986,11 +9139,19 @@ function renderRosterEditor(){
       <span class="rc add" onclick="openBasicInterval()">+ טווח ימים</span></div></div></div>`;
 
   // שורות מותאמות-אישית שהוגדרו דרך "שורות מותאמות אישית" — אותה חוויית
-  // בחירת שם מבנק החיילים כמו כל שורת רשימה אחרת, וגם ניתנות להשבתה.
+  // בחירת שם מבנק החיילים כמו כל שורת רשימה אחרת, ניתנות להשבתה (מתג)
+  // וגם למחיקה ישירות מכאן (🗑). המחיקה נגישה בעורך עצמו ולא רק דרך
+  // מודל "שורות מותאמות אישית", כי שם נוספה השורה מלכתחילה — מ״ע שהוסיף
+  // שורה תוך כדי בניית לוח עתידי ציפה למחוק אותה באותו מקום.
+  // ⚠️ מחיקה היא גלובלית (ההגדרות אינן פר-שבוע) — להסתרה בשבוע אחד בלבד
+  // יש את המתג. ההבדל מפורש בטקסט האישור של deleteRosterCustomRow.
   html += (rosterCustomRows||[]).map(cr=>{
     const f = "custom_"+cr.id;
     const rest = isRestRowLabel(cr.label);
-    return `<div class="rblk"><div class="rblk-h ${rest?"restz":""}"><span>${rosterRowToggleHtml(cr.id, escapeHTML(cr.label))}</span><span class="rblk-c">${(d[f]||[]).length}</span></div>
+    return `<div class="rblk"><div class="rblk-h ${rest?"restz":""}"><span>${rosterRowToggleHtml(cr.id, escapeHTML(cr.label))}</span>
+      <span class="rblk-acts"><span class="rblk-c">${(d[f]||[]).length}</span>
+        <span class="rc-x rblk-del" title="מחק שורה זו מהלוח" onclick="deleteRosterCustomRow('${cr.id}')"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#b30f26" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.5A1.5 1.5 0 0 1 11 4h2a1.5 1.5 0 0 1 1.5 1.5V7M6.5 7l1 12.5A1.5 1.5 0 0 0 9 21h6a1.5 1.5 0 0 0 1.5-1.5L17.5 7"/></svg></span>
+      </span></div>
       ${listRow(escapeHTML(cr.label), f, rest?"rest":"")}</div>`;
   }).join("");
 
@@ -9007,7 +9168,7 @@ function renderRosterCompliance(){
   const box = document.getElementById("roster-ed-compliance");
   if(!box) return;
   const pool = (currentShed && rosterAllPersonnel && rosterAllPersonnel[currentShed.id]) || [];
-  const c = computeRosterCompliance(rosterDraft, rosterPfNames, pool, rosterConstraints, rosterEditSlot);
+  const c = computeRosterCompliance(rosterDraft, rosterPfNames, pool, rosterConstraints, rosterEditWeekRef());
   const bad = c.rows.filter(r=>!r.ok);
   const chip = (n,cls,lbl)=>`<span class="rcmp-chip ${cls}">${cls==="g"?"🟢":cls==="r"?"🔴":"⚪"} ${lbl}: ${n}</span>`;
   let html = `<div class="rcmp-bar" onclick="toggleRosterCompliance()">
@@ -9049,7 +9210,7 @@ function openBasicInterval(){
   }));
   const uniq = [...new Set(names)].sort((a,b)=>a.localeCompare(b,"he"));
   const dl = d => d==="חמישי"?"ה׳–ש׳":(DAY_LETTER[d]||d);
-  const dateOf = d => fmtHeShort(rosterDayLockDates(d, rosterEditSlot)[0]);
+  const dateOf = d => fmtHeShort(rosterDayLockDates(d, rosterEditWeekRef())[0]);
   document.getElementById("bi-name").innerHTML = uniq.map(n=>`<option>${escapeHTML(n)}</option>`).join("");
   document.getElementById("bi-type").innerHTML = BASIC_DUTY_TYPES.map(t=>`<option>${escapeHTML(t)}</option>`).join("");
   const dayOpts = ROSTER_EDIT_DAYS.map(d=>`<option value="${d}">${dl(d)} · ${dateOf(d)}</option>`).join("");
@@ -9125,7 +9286,7 @@ function renderRosterPickList(){
       if(!p || !p.name) return;
       if(p.release && p.release <= todayKey()) return;      // משוחרר — לא לשיבוץ
       if(q && !p.name.includes(q)) return;
-      const lock = constraintLockFor(p.name, rosterEdDay, rosterEditSlot, rosterConstraints);
+      const lock = constraintLockFor(p.name, rosterEdDay, rosterEditWeekRef(), rosterConstraints);
       const cnt = rotCount[p.name] || 0;                     // ספירה א׳–ד׳ בלבד
       const quota = rosterPfNames.has(p.name) ? 2 : 3;      // PF פעמיים, אחרת (PMS) שלוש
       const sat = nextSlot && rosterPrevSat.has(p.name);    // עשה שבת — לא לראשון
@@ -9223,8 +9384,10 @@ async function copyRosterFromLastWeek(){
 function clearRosterDraft(){
   if(!confirm("למחוק את כל השיבוצים בלוח הזה?\n\nהפעולה תאפס את כל הימים והשדות בטיוטה. עדיין צריך ללחוץ \"שמור\"/\"פרסם\" כדי שהמחיקה תחול בפועל.")) return;
   const weekKey = rosterDraft.weekKey;
+  const weekStart = rosterDraft.weekStart;   // התאריכים שנבחרו ללוח נשמרים — מוחקים שיבוצים, לא שבוע
   rosterDraft = migrateRosterToV2(null);
   rosterDraft.weekKey = weekKey;
+  rosterDraft.weekStart = weekStart;
   rosterDraft._wkndEdit = true;   // עדיין טיוטת עורך — עזר פיצול הסופ"ש נשאר תקף (ר' saveDutyRosterV2)
   renderRosterEditor();
   toast("הלוח אופס — לחץ \"שמור\"/\"פרסם\" כדי להחיל 🗑️");
@@ -9284,9 +9447,10 @@ async function publishFutureRoster(){
 function previewRosterDraft(){
   if(!rosterDraft) return;
   document.getElementById("roster-full-title").textContent =
-    "⤢ תצוגה מקדימה — " + (rosterEditSlot==="next" ? "לוח עתידי" : "לוח נוכחי");
+    "⤢ תצוגה מקדימה — " + (rosterEditSlot==="next" ? "לוח עתידי" : "לוח נוכחי") +
+    " · " + weekRangeLabelOf(rosterWeekStartOf(rosterDraft, rosterEditWeekRef()));
   document.getElementById("roster-full-inner").innerHTML =
-    rosterBoardHtml(rosterDraft, todayHebrewDay(), "wide", rosterEditSlot);
+    rosterBoardHtml(rosterDraft, todayHebrewDay(), "wide", rosterEditWeekRef());
   document.getElementById("roster-full").classList.add("open");
   initRosterFullGestures();
   setTimeout(rosterFullZoomReset, 40);
