@@ -1,6 +1,6 @@
-/* מוודא שדשבורד המפקד ("תמונת מצב — מפקד") הוסר מאחראי ההדרכה ומ״ע אחזקה
-   (שני אלה עברו למסכי הבית הייעודיים שלהם — מרכז שליטה / סקירה), ושלא
-   נפגעה שום זהות אחרת: מפקד סככה רגיל, וחייל. */
+/* מ״ע אחזקה — דשבורד המפקד ("תמונת מצב — מפקד") מוסר (עבר למסך "סקירה").
+   מ״ע הדרכה — לבקשת המשתמש (7.1) דשבורד המפקד הוחזר לסרגל *לצד* מרכז
+   השליטה. מוודא גם שלא נפגעה שום זהות אחרת: מפקד סככה רגיל, וחייל. */
 import { launchBrowser, APP_URL } from '../lib/pw.mjs';
 const b = await launchBrowser();
 const results = [];
@@ -46,12 +46,12 @@ async function applyIdentity(p, shed, role){
   }, {shed, role});
 }
 
-// 1. אחראי הדרכה — אין דשבורד מפקד, יש מרכז שליטה
+// 1. מ״ע הדרכה — דשבורד המפקד הוחזר לסרגל (7.1), לצד מרכז השליטה
 {
   const {p, errs} = await page();
   const out = await applyIdentity(p, {id:"training", name:"הדרכה", isTraining:true}, "מפקד");
-  record("אחראי הדרכה: דשבורד המפקד מוסתר, מרכז השליטה נשאר",
-    out.navCmdHidden===true && out.navAdminHidden===false, JSON.stringify(out));
+  record("מ״ע הדרכה: דשבורד המפקד גלוי (7.1), ומרכז השליטה נשאר",
+    out.navCmdHidden===false && out.navAdminHidden===false, JSON.stringify(out));
   console.log("errs1",errs); await p.close();
 }
 
