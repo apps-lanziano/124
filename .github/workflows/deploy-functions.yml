@@ -1,14 +1,20 @@
-name: פריסת Cloud Functions
+name: פריסת Cloud Functions + Firestore Rules
 
-# רץ אוטומטית על התשתית של GitHub בכל פעם ש-functions/** משתנה ב-main —
-# בלי תלות בטרמינל של אף אחד ובלי תלות בסשן פתוח. תנאי יחיד: הסוד
-# FIREBASE_TOKEN מוגדר במאגר (חד-פעמי, ראו הערה למטה). בלעדיו הריצה
+# רץ אוטומטית על התשתית של GitHub בכל פעם ש-functions/** או firestore.rules
+# משתנים ב-main — בלי תלות בטרמינל של אף אחד ובלי תלות בסשן פתוח. תנאי יחיד:
+# הסוד FIREBASE_TOKEN מוגדר במאגר (חד-פעמי, ראו הערה למטה). בלעדיו הריצה
 # מדלגת בבטחה על שלב הפריסה ומזהירה בלוג, בלי להיכשל.
+#
+# ⚠️ לפני שהוספנו את firestore.rules לטריגר (audit אבטחה, 2026-08-22),
+# פריסת הכללים הייתה שלב **ידני בלבד** ("firebase deploy --only firestore:rules")
+# — כלומר לא היה שום דבר שמבטיח ש-firestore.rules במאגר תואם למה שבאמת רץ
+# בפרודקשן. אל תניחו ש-GitHub==Production בלי הטריגר הזה.
 on:
   push:
     branches: [main]
     paths:
       - 'functions/**'
+      - 'firestore.rules'
       - '.github/workflows/deploy-functions.yml'
   workflow_dispatch:
 
@@ -59,14 +65,29 @@ jobs:
             echo "::endgroup::"
           done
 
+      # שער בטיחות שני, ייעודי לכללי Firestore: מריץ את הכללים האמיתיים
+      # (firestore.rules) על Firestore Emulator אמיתי ובודק את כל מטריצת
+      # ההרשאות (אנונימי/לא-מורשה/חייל/מפקד × get/list/create/update/delete).
+      # אם מישהו הרחיב כלל בטעות (רגרסיית אבטחה) — הפריסה נעצרת כאן,
+      # *לפני* שהכלל השגוי מגיע לפרודקשן.
+      - name: התקנת תלויות השורש (ל-emulator ולבדיקת הכללים)
+        run: npm ci --no-audit --no-fund
+
+      - name: שער בטיחות — בדיקת Firestore Rules על Emulator אמיתי
+        run: node qa/suite/firestore_rules_test.mjs
+
       # --force נדרש כדי שהפריסה תוכל למחוק פונקציות שהוסרו מהקוד (למשל
       # remindLicenseExpiryDaily שהוסרה בעבר) גם במצב לא-אינטראקטיבי.
       # בלי זה, firebase deploy עוצר את כל הפריסה (הכל-או-כלום) ברגע
       # שהוא מוצא פונקציה שקיימת בייצור אך לא בקוד המקומי — מה שגרם
       # לשתי פריסות רצופות להיכשל בשקט ולהשאיר את הייצור תקוע בגרסה ישנה.
-      - name: פריסה ל-Firebase (Cloud Functions)
+      #
+      # --only functions,firestore:rules: מפרסם את שניהם יחד תמיד, גם אם
+      # רק אחד מהם השתנה בפועל — כדי ש-firestore.rules שבמאגר יהיה תמיד
+      # מה שבאמת רץ בפרודקשן (ר' ההערה בראש הקובץ).
+      - name: פריסה ל-Firebase (Cloud Functions + Firestore Rules)
         if: ${{ env.FIREBASE_TOKEN != '' }}
-        run: npx firebase-tools@13 deploy --only functions --project squadron124-96357 --token "$FIREBASE_TOKEN" --non-interactive --force
+        run: npx firebase-tools@13 deploy --only functions,firestore:rules --project squadron124-96357 --token "$FIREBASE_TOKEN" --non-interactive --force
 
       - name: אזהרה אם אין טוקן פריסה מוגדר
         if: ${{ env.FIREBASE_TOKEN == '' }}

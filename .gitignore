@@ -4,5 +4,9 @@ qa/reports/*.md
 !qa/reports/latest.md
 node_modules/
 dist/
+firestore-debug.log
+firebase-debug.log
+ui-debug.log
+.firebase/
 qa/reports/latest_push.txt
 qa/reports/latest_personal.md

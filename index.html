@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!-- Referrer-Policy: מונע דליפת ה-URL המלא (כולל פרמטרים) של האפליקציה
+     בכותרת Referer לאתרים חיצוניים שנטענים מתוכה (למשל wa.me). לא ניתן
+     להגדיר X-Frame-Options/X-Content-Type-Options/CSP אמיתיים כאן — אלה
+     כותרות HTTP בלבד ו-GitHub Pages (האחסון הנוכחי) לא מאפשר כותרות
+     מותאמות-אישית; ר' SECURITY_AUDIT.md לפרטים והמלצה. -->
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <title>טייסת 124 · דרג א'</title>
 <meta name="theme-color" content="#f7f3ee">
 <meta name="apple-mobile-web-app-capable" content="yes">

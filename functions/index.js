@@ -45,7 +45,23 @@ const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
    שווידאה בעצמה בצד השרת (לא סומכת על הלקוח) שזו אכן כניסה עם
    email/password ולא סתם אימות אנונימי. כללי ה-Firestore (שלב הבא,
    רק אחרי אימות שהכניסה החיה אכן מקבלת את התגית) ידרשו authorized==true
-   בנוסף לאימות עצמו. */
+   בנוסף לאימות עצמו.
+
+   ⚠️ הקשחה קריטית (2026-08-22): sign_in_provider==="password" *לבד* לא
+   מספיק. חשבון "u<code>@sq124.app" נוצר דרך ה-SDK של הלקוח
+   (createUserWithEmailAndPassword ב-provisionAuthAccounts) — וזו פעולה
+   שכל דפדפן יכול לבצע בעצמו (Email/Password sign-up פתוח ב-Firebase
+   Auth כברירת מחדל, ו-App Check-על-Auth רק מוודא "דפדפן אמיתי באתר
+   האמיתי", לא "פעולה שהאתר עצמו יזם"). בלי הבדיקה למטה, תוקף חיצוני
+   בלי שום קוד/הרשאה יכול היה לפתוח את האתר האמיתי, לקרוא
+   ל-createUserWithEmailAndPassword ישירות מ-DevTools עבור קוד-בדוי
+   כלשהו (u9999@sq124.app וכו'), להתחבר לחשבון-שהוא-עצמו-יצר (שזו
+   כן כניסת password אמיתית — shouldAuthorize מחזיר true), ולקבל
+   authorized:true+role:"חייל" **בלי שאף מ״ע אישר אי-פעם את הקוד**.
+   הפתרון: authprofile_<hash> חייב להתקיים בפועל (הוא נכתב אך ורק
+   ע"י provisionAuthAccounts, יחד עם החשבון) — קוד שלא הוקצה מעולם
+   ע"י מ״ע נדחה כאן, לא רק מקבל role ברירת-מחדל. ר'
+   authorize_lib_test.mjs + firestore_rules_test.mjs לבדיקות רגרסיה. */
 exports.markAuthorized = onCall(
   {region: "me-west1", enforceAppCheck: true},
   async (request) => {
@@ -53,23 +69,33 @@ exports.markAuthorized = onCall(
       throw new HttpsError("unauthenticated", "נדרש להיות מחובר");
     }
     if (!shouldAuthorize(request.auth)) {
+      // אירוע אבטחה: ניסיון להשיג authorized:true בלי כניסה אמיתית עם קוד
+      // (למשל session אנונימי גולמי). בלי טוקן/סיסמה/PII — רק uid+ספק, לצורך ניטור.
+      console.warn(`markAuthorized: נדחה (ספק לא-password) — ספק=${request.auth.token.firebase && request.auth.token.firebase.sign_in_provider} uid=${request.auth.uid}`);
       throw new HttpsError("permission-denied", "רק כניסה עם קוד תקף מאושרת");
     }
 
     // קרא את התפקיד מ-authprofile בצד השרת — לא סומך על הלקוח.
     // אימייל בפורמט u<code>@sq124.app; מפתח המסמך = sha256("sq124code|" + code).
+    // קיום המסמך הזה (לא רק תוכנו) הוא ההוכחה שהקוד הוקצה בפועל ע"י מ״ע —
+    // חשבון-Auth לבדו לא מספיק, כי כל דפדפן יכול ליצור אחד לעצמו (ר' למעלה).
     const email = request.auth.token.email || "";
     const codeMatch = email.match(/^u(\d+)@/);
-    let role = "חייל"; // ברירת מחדל בטוחה
-    if (codeMatch) {
-      const code = codeMatch[1];
-      const hash = crypto.createHash("sha256").update("sq124code|" + code).digest("hex");
-      const profSnap = await db.doc("sq124/authprofile_" + hash).get();
-      const prof = profSnap.exists ? profSnap.data().v : null;
-      if (prof && typeof prof.role === "string" && prof.role.length > 0) {
-        role = prof.role;
-      }
+    if (!codeMatch) {
+      console.warn(`markAuthorized: נדחה (פורמט אימייל לא תקין) uid=${request.auth.uid}`);
+      throw new HttpsError("permission-denied", "חשבון לא מוכר");
     }
+    const code = codeMatch[1];
+    const hash = crypto.createHash("sha256").update("sq124code|" + code).digest("hex");
+    const profSnap = await db.doc("sq124/authprofile_" + hash).get();
+    const prof = profSnap.exists ? profSnap.data().v : null;
+    if (!prof || typeof prof.role !== "string" || !prof.role) {
+      // קוד עם חשבון-Auth קיים (עבר את shouldAuthorize) אך בלי authprofile —
+      // כלומר לא הוקצה מעולם ע"י מ״ע. זה בדיוק וקטור התקיפה שסגרנו כאן.
+      console.warn(`markAuthorized: נדחה (אין authprofile מוקצה) uid=${request.auth.uid}`);
+      throw new HttpsError("permission-denied", "קוד לא מוכר במערכת");
+    }
+    const role = prof.role;
 
     await getAuth().setCustomUserClaims(request.auth.uid, {authorized: true, role});
     return {ok: true};
@@ -99,6 +125,8 @@ exports.analyzeBoardImage = onCall(
       const data = snap.exists ? snap.data() : null;
       const count = (data && data.date === today) ? (data.count || 0) : 0;
       if (count >= DAILY_LIMIT) {
+        // אירוע אבטחה: מיצוי מכסה — יכול להעיד על ניצול-לרעה (proxy חינמי ל-Claude).
+        console.warn(`analyzeBoardImage: מכסה יומית מוצתה uid=${request.auth.uid}`);
         throw new HttpsError("resource-exhausted", "הגעת למכסה היומית של ניתוח לוח. נסה שוב מחר.");
       }
       tx.set(quotaRef, {date: today, count: count + 1});
@@ -107,6 +135,15 @@ exports.analyzeBoardImage = onCall(
     const imageDataUrl = request.data && request.data.image;
     if (!imageDataUrl || typeof imageDataUrl !== "string") {
       throw new HttpsError("invalid-argument", "חסרה תמונה לניתוח");
+    }
+    // תקרת גודל: תמונת לוח אמיתית (צילום/צילום מסך) היא כמה מאות KB עד
+    // כמה MB. בלי תקרה, משתמש מאומת (עם מכסה יומית של 10 קריאות) יכול
+    // עדיין לשלוח payload ענק בכל קריאה — יותר טוקנים ל-Claude = יותר עלות
+    // לכל קריאה בודדת, מעבר למה שמכסה-הכמות לבדה חוסמת. 8MB base64 ~ 6MB
+    // תמונה מקורית — נדיב בהרבה מכל תמונת לוח אמיתית.
+    const MAX_IMAGE_DATA_URL_LEN = 8 * 1024 * 1024;
+    if (imageDataUrl.length > MAX_IMAGE_DATA_URL_LEN) {
+      throw new HttpsError("invalid-argument", "התמונה גדולה מדי לניתוח");
     }
     const apiKey = ANTHROPIC_API_KEY.value();
     if (!apiKey) {
