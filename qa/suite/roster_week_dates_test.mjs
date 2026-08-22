@@ -9,7 +9,8 @@
    2. בורר שבוע ב"בניית לוח עתידי" — כל תאריך נצמד לראשון (לוח = ראשון→שבת).
    3. הלוח מציג את התאריכים של weekStart, כולל קידום מוקדם ("שבוע הבא"
       שהפך לנוכחי לפני שהשבוע הקלנדרי התחלף).
-   4. לוח "נוכחי" עם weekStart ישן (לא סובב) — מוצג עם תאריכי השבוע הנוכחי.
+   4. ⛔ weekStart ששמור מוצג תמיד כפי שהוא (בלי ניחוש-קסם ישן/עתידי) —
+      ו"עריכת לוח נוכחי" (publishRoster) מרעננת אותו לשבוע האמיתי בכל שמירה.
    5. ארכיון: התאריכים קפואים עם הלוח, כפתור "הצג לוח", ושחזור ל"שבוע שעבר".
    6. הרוטציה האוטומטית לא מקדמת לוח שנבנה לשבוע שטרם הגיע.
    7. מחיקת שורה מותאמת-אישית ישירות מעורך הלוח. */
@@ -77,13 +78,29 @@ const out = await page.evaluate(async ()=>{
     r.promotedCardsShowRealDates = rosterCardsHtml(b, "").includes(dOf(nextSun));
   }
 
-  // --- 4. לוח נוכחי עם weekStart ישן (לא סובב) — תאריכי השבוע הנוכחי ---
+  // --- 4. weekStart ששמור מוצג תמיד כפי שהוא — בלי "תיקון-קסם" לפי
+  //        ישן/עתידי (⛔ זה בדיוק מה שדרס שחזור/קידום מכוון). התיקון
+  //        לבעיה של "לוח נוכחי קפוא" הוא רענון בזמן שמירה (publishRoster),
+  //        לא ניחוש בזמן תצוגה.
   {
     const b = migrateRosterToV2(null);
-    b.weekStart = isoAddDays(thisSun, -21);
+    const oldWeek = isoAddDays(thisSun, -21);
+    b.weekStart = oldWeek;
     b.days["ראשון"].lead = "ר״צ ישן";
     const html = rosterBoardHtml(b, "", "wide", "current");
-    r.staleCurrentShowsThisWeek = html.includes(dOf(thisSun)) && !html.includes(dOf(isoAddDays(thisSun,-21)));
+    r.storedDateAlwaysWins = html.includes(dOf(oldWeek)) && !html.includes(">"+dOf(thisSun)+"<");
+  }
+  // publishRoster ("עריכת לוח נוכחי" — אין בו בורר תאריכים) מרענן את
+  // weekStart לשבוע הקלנדרי האמיתי בכל שמירה — כך מ״ע שרק עורך את אותו
+  // מסמך "נוכחי" שוב ושוב (בלי להשתמש ב"בניית לוח עתידי") לא נתקע לנצח
+  // עם תאריך קפוא, בלי צורך בניחוש-קסם בזמן התצוגה.
+  {
+    await openRosterEditor(null, "current");
+    rosterDraft.weekStart = isoAddDays(thisSun, -21);   // מדמה מסמך קפוא מזמן
+    rosterDraft.days["ראשון"].lead = "ר״צ מתעדכן";
+    window.confirm = ()=>true;
+    await publishRoster();
+    r.publishCurrentRefreshesWeekStart = (await getDutyRoster("current")).weekStart === thisSun;
   }
 
   // --- 5. ארכיון: תאריכים קפואים + הצגה + שחזור ל"שבוע שעבר" ---
@@ -163,6 +180,22 @@ const out = await page.evaluate(async ()=>{
     document.getElementById("duty-roster-modal").classList.remove("open");
   }
 
+  // --- 8. ⛔ מעבר בין זהויות (למשל "החלף משתמש"/התחזות) מאפס ללשונית
+  //        "לוח שבועי" — rosterView לא "נדבק" מהזהות הקודמת שהשאירה
+  //        אותו על "לוח יומי". בלי זה, מפקד שצפה ב"לוח יומי" ואז נכנס
+  //        בתור חייל היה רואה את החייל "יורש" את אותה לשונית.
+  {
+    isRosterManager = true; userRole = "מפקד";
+    await saveDutyRosterV2(migrateRosterToV2(null), "current"); rosterCache = null;
+    boardWeekSlot = "current";
+    await renderRosterView();
+    setRosterView("day");
+    r.commanderOnDayTab = rosterView === "day";
+    user = "חייל ב סככה 1"; userRole = "חייל"; isRosterManager = false;   // מדמה מעבר זהות
+    await renderRosterView();
+    r.identitySwitchResetsToBoard = rosterView === "board";
+  }
+
   return r;
 });
 
@@ -178,7 +211,8 @@ record("'מחק את כל הלוח' לא מאבד את השבוע שנבחר", o
 record("אין בורר שבוע בעריכת הלוח הנוכחי", out.noPickerInCurrent, String(out.noPickerInCurrent));
 record("⛔ קידום מוקדם — הלוח מציג את התאריכים האמיתיים שלו", out.promotedShowsRealDates, String(out.promotedShowsRealDates));
 record("⛔ קידום מוקדם — גם ב'לוח יומי'", out.promotedCardsShowRealDates, String(out.promotedCardsShowRealDates));
-record("לוח נוכחי שלא סובב מוצג עם תאריכי השבוע הנוכחי", out.staleCurrentShowsThisWeek, String(out.staleCurrentShowsThisWeek));
+record("⛔ weekStart ששמור מוצג תמיד כמו שהוא (בלי תיקון-קסם לישן/עתידי)", out.storedDateAlwaysWins, String(out.storedDateAlwaysWins));
+record("שמירת 'עריכת לוח נוכחי' מרעננת weekStart לשבוע האמיתי", out.publishCurrentRefreshesWeekStart, String(out.publishCurrentRefreshesWeekStart));
 record("ארכיון: המפתח לפי שבוע הלוח, לא לפי 'היום'", out.archiveKeyIsBoardWeek, String(out.archiveKeyIsBoardWeek));
 record("ארכיון: התווית לפי שבוע הלוח", out.archiveLabelIsBoardWeek, String(out.archiveLabelIsBoardWeek));
 record("ארכיון: הלוח השמור נושא את התאריכים שלו", out.archiveRosterCarriesWeek, String(out.archiveRosterCarriesWeek));
@@ -194,6 +228,8 @@ record("רוטציה לא מקדמת לוח לשבוע שטרם הגיע", out.f
 record("רוטציה כן מקדמת לוח שהשבוע שלו הגיע", out.dueWeekStillRotates, String(out.dueWeekStillRotates));
 record("עורך הלוח: כפתור מחיקה לשורה מותאמת-אישית", out.editorHasDeleteForCustomRow, String(out.editorHasDeleteForCustomRow));
 record("עורך הלוח: המחיקה מסירה את השורה בפועל", out.customRowDeletedFromEditor, String(out.customRowDeletedFromEditor));
+record("מפקד שהחליף ל'לוח יומי' — הלשונית אכן מוצגת", out.commanderOnDayTab, String(out.commanderOnDayTab));
+record("⛔ מעבר בין זהויות מאפס ל'לוח שבועי' (לא יורש לשונית קודמת)", out.identitySwitchResetsToBoard, String(out.identitySwitchResetsToBoard));
 
 await closeBrowser();
 

@@ -6998,16 +6998,19 @@ function rosterWeekSundayIso(slot){
    עתידי שקודם ל"נוכחי" באמצע שבוע קלנדרי הציג את תאריכי השבוע הישן —
    כלומר נתונים אמיתיים עם תאריכים שגויים. weekStart נשמר על גוף הלוח
    (כמו published/disabledRows) ועובר איתו בכל העברה בין סלוטים.
-   חריג יחיד: לוח "נוכחי" עם weekStart *ישן* מהשבוע הקלנדרי הנוכחי —
-   כלומר לוח חי שלא סובב (לא נבנה שבוע הבא) — מוצג עם תאריכי השבוע
-   הנוכחי, כי זה הלוח שרץ בפועל עכשיו. weekStart עתידי (קידום מוקדם)
-   כן גובר, וזה בדיוק מה שנדרש. */
+   🔒 **אין כאן חריג לפי "ישן/עתידי" — weekStart ששמור מוצג תמיד כפי
+   שהוא, בלי תיקון-קסם.** גרסה קודמת ניסתה "לתקן" לוח נוכחי שה-weekStart
+   שלו ישן מהשבוע הקלנדרי בחזרה לתאריכי השבוע הנוכחי — אבל זה בדיוק מה
+   שדרס שחזור/קידום מכוון: מ״ע ששחזר לוח מהארכיון או קידם לוח עתידי
+   ל"נוכחי" ציפה לראות את התאריכים ששחזר/קידם, לא ניחוש מחדש. הפתרון
+   הנכון לבעיה ש"לוח נוכחי שלא סובב נשאר עם weekStart קפוא" הוא לרענן
+   את `weekStart` **בזמן השמירה הרגילה** של הלוח הנוכחי (ר' `publishRoster`),
+   לא לנחש בזמן התצוגה. שחזור/קידום מכוון (`restoreWeekToCurrent`,
+   `restoreArchivedToSlot`) לא עוברים דרך `publishRoster` ולכן משמרים את
+   ה-weekStart שהביאו איתם. ר' `roster_week_dates_test.mjs`. */
 function rosterWeekStartOf(r, slot){
-  const calc = rosterWeekSundayIso(slot || "current");
   const stored = r && r.weekStart ? sundayIsoOf(r.weekStart) : "";
-  if(!stored) return calc;
-  if((slot||"current")==="current" && stored < calc) return calc;
-  return stored;
+  return stored || rosterWeekSundayIso(slot || "current");
 }
 /* "24.8–30.8" לשבוע שמתחיל בראשון הנתון */
 function weekRangeLabelOf(sunIso){
@@ -7255,7 +7258,13 @@ async function saveDutyRosterV2(roster, slot, manualPush){
    שם קצר בתצוגת הלוח כדי שהעמודות יישארו צרות; בתצוגת היום שם מלא. */
 let rosterView = "board";      // cards | board | day | mine
 /* ⚠️ אין יותר ברירת מחדל לפי תפקיד — כולם (חייל/מ״ע/מפקד) נפתחים על
-   "לוח שבועי". ר' renderRosterView. */
+   "לוח שבועי". ר' renderRosterView.
+   rosterView הוא משתנה גלובלי יחיד שלא מתאפס לבד — בלי המעקב הבא, מעבר
+   בין זהויות (למשל "החלף משתמש"/התחזות מפקד לחייל, בלי טעינת עמוד
+   מחדש) היה משמר את הלשונית שהזהות הקודמת השאירה (אם מ״ע/מפקד היה על
+   "לוח יומי" ואז עברו להתחזות לחייל, החייל "יורש" את "לוח יומי" במקום
+   לפתוח תמיד ב"לוח שבועי"). המעקב מזהה שינוי זהות ומאפס. */
+let _rosterViewSeenAs = null;
 let boardWeekSlot = "current"; // prev | current | next — איזה שבוע מוצג בלוח
 let rosterDaySel = null;       // היום שנבחר בתצוגת "יום"
 let rosterCache = null;
@@ -7290,6 +7299,9 @@ async function renderRosterView(){
   if(!box) return;
   await maybeRotateWeek();     // מעבר שבוע אוטומטי (שבת בחצות) לפני הרינדור
   await loadRosterCustomRows();
+  // זהות הצפייה השתנתה (למשל "החלף משתמש"/התחזות) — מאפסים ל"לוח שבועי"
+  // כדי שלא "נירש" את הלשונית שהזהות הקודמת השאירה. ר' _rosterViewSeenAs.
+  if(_rosterViewSeenAs !== user){ _rosterViewSeenAs = user; rosterView = "board"; }
   // ⚠️ ברירת המחדל אחידה לכולם — "לוח שבועי" (rosterView נפתח כ-"board").
   // פעם חיילים נפתחו ב"לוח יומי"; זה שונה בכוונה לבקשת המשתמשים: הלוח
   // השבועי הוא התמונה שכולם עובדים לפיה (כמו צילום הגיליון), והפתיחה
@@ -9401,6 +9413,15 @@ async function publishRoster(){
     return rosterDayCount(d) > 0 && (!d.lead || !d.tools);
   });
   rosterDraft.weekKey = todayKey();
+  // "עריכת לוח נוכחי" תמיד מתארת את השבוע שרץ עכשיו בפועל — אין כאן בורר
+  // תאריכים (בשונה מ"בניית לוח עתידי"), ולכן כל שמירה רגילה מרעננת את
+  // weekStart לשבוע הקלנדרי האמיתי של עכשיו. זה מונע מ-weekStart "להיתקע"
+  // על תאריך ישן אצל מ״ע שפשוט עורך את אותו מסמך "נוכחי" שוב ושוב בלי
+  // להשתמש ב"בניית לוח עתידי"/רוטציה — בלי הרענון הזה, ותוך שרוסטרWeekStartOf
+  // כבר לא "מתקן" תאריך ישן בזמן התצוגה (ר' שם), הלוח היה מוצג לנצח עם
+  // תאריך קפוא. שחזור/קידום מכוון (restoreWeekToCurrent/restoreArchivedToSlot)
+  // לא עוברים כאן — הם משמרים במכוון את ה-weekStart שהביאו איתם.
+  rosterDraft.weekStart = rosterWeekSundayIso("current");
   const ok = await saveDutyRosterV2(rosterDraft, rosterEditSlot, true);
   if(ok === false){ toast("⚠️ שמירת הלוח נכשלה — בדוק חיבור ונסה שוב"); return; }
   rosterCache = null;
