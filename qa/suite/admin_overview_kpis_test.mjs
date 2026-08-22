@@ -54,13 +54,15 @@ const out = await p.evaluate(async ()=>{
   };
 });
 
-// חישוב צפוי: shed1 - relevant=2 items, personnel=2 -> maxC=4, gotC=3 (דני:2, רון:1)
-// shed2 - relevant=1 item (ev1 בלבד), personnel=2 -> maxC=2, gotC=0
-// סה"כ: maxC=6, gotC=3 -> 50% ; missing=3 ; personnel=4 (סה"כ אנשי צוות מכל הסככות, כולל מילואים)
+// חישוב צפוי (מילואים לא נספרים במעקב קרא-וחתום — סעיף 6):
+// shed1 - relevant=2 items, personnel=2 (אין מילואים) -> maxC=4, gotC=3 (דני:2, רון:1)
+// shed2 - relevant=1 item (ev1 בלבד), personnel=1 (עידן בלבד; רזרביסט מוחרג) -> maxC=1, gotC=0
+// סה"כ מעקב: maxC=5, gotC=3 -> 60% ; missing=2
+// אבל "סה״כ אנשי צוות" הוא ספירת ראשים כללית וכולל מילואים -> personnel=4
 record("סה״כ אנשי צוות מכל המסגרות (כולל מילואים)", out.personnel==="4", JSON.stringify(out));
 record("קרא-וחתום פעילים", out.items==="2", JSON.stringify(out));
-record("אחוז חתימה כללי מחושב נכון על פני כל המסגרות", out.signrate==="50%", JSON.stringify(out));
-record("חתימות ממתינות מחושב נכון", out.missing==="3", JSON.stringify(out));
+record("אחוז חתימה כללי — בלי מילואים (סעיף 6)", out.signrate==="60%", JSON.stringify(out));
+record("חתימות ממתינות — בלי מילואים (סעיף 6)", out.missing==="2", JSON.stringify(out));
 record("אנשי מילואים נספרים בנפרד", out.reserves==="1", JSON.stringify(out));
 
 console.log("errs", errs);

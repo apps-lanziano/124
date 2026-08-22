@@ -44,6 +44,9 @@ function classify(docId) {
   // "next" הוא לוח השבוע הבא, גלוי לכולם רק אחרי שסומן published.
   if (docId === "board_roster") return "roster_current";
   if (docId === "board_roster_next") return "roster_next";
+  // פניות תמיכה — מסמך גלובלי אחד (support_tickets). התראה למנהל-העל בלבד
+  // (הטוקן שלו רשום ב-push_tokens_admin), לא למסגרת.
+  if (docId === "support_tickets") return "support";
   return null;
 }
 
@@ -115,6 +118,15 @@ function decide({docId, before, after}) {
     });
     if (!newItems.length) return null;
     shedId = "naat";
+  } else if (kind === "support") {
+    // פנייה חדשה בתמיכה — מזהים לפי id שלא היה קודם. תשובות של המנהל
+    // (עדכון פנייה קיימת) לא מוסיפות id חדש ולכן לא מפעילות התראה.
+    // הטוקן של מנהל-העל רשום ב-push_tokens_admin (ראו syncAdminPushToken).
+    if (!Array.isArray(after)) return null;
+    const beforeIds = new Set((Array.isArray(before) ? before : []).map((x) => x && x.id));
+    newItems = after.filter((x) => x && x.id && !beforeIds.has(x.id));
+    if (!newItems.length) return null;
+    shedId = "admin";
   } else {
     shedId = docId.replace(/_(messages_list|safety_events|boards_list|training_list|faults_list)$/, "");
     const afterArr = Array.isArray(after) ? after : [];
@@ -138,6 +150,7 @@ function decide({docId, before, after}) {
     duty_naat: "🔄 אישורי מ״ע תורנויות",
     roster_publish: "פורסם לוח צוות חדש",
     roster_current: "בוצע עדכון ללוח צוות תורן",
+    support: "📩 פנייה חדשה בתמיכה",
   };
   const title = KIND_TITLES[kind];
   const body = kind === "rollcall" ? "הופעל נכס — יש לסמן נוכחות עכשיו"
@@ -148,11 +161,13 @@ function decide({docId, before, after}) {
     : kind === "duty_naat" ? `${newItems.length} פריטים ממתינים לאישורך`
     : kind === "roster_publish" ? "לוח הצוות התורן לשבוע הבא זמין לצפייה"
     : kind === "roster_current" ? "לחצו כדי לצפות בשיבוץ המעודכן"
+    : kind === "support" ? (String(item.by || "משתמש") + ": " + String(item.text || "").slice(0, 120))
     : String(item.title || item.fname || "");
 
   // מסדר בוקר/תקלה רגילה/תקלת בינוי נשלחים רק למפקדים — לא לכל הצוות
   // (בשונה מהודעה/קרא-וחתום/לוח/הדרכה/לוח צוות, שמגיעים לכולם). אישורי
   // מ״ע נשלחים לכל הטוקנים שרשומים ב-push_tokens_naat (רק מ״ע תורנויות).
+  // פניות תמיכה נשלחות לכל הטוקנים ב-push_tokens_admin (רק מנהל-העל).
   const commandersOnly = kind === "morning_rollcall" || kind === "fault" || kind === "binui_fault";
 
   return {kind, shedId, shedName, title, body, count: kind==="morning_rollcall" ? (after.absentCount||0) : (newItems.length || 1), commandersOnly};

@@ -1962,6 +1962,11 @@ nav{
         <div id="mc-report-content"></div>
       </div>
 
+      <!-- חיפוש חיילים — מפקד מחפש איש צוות במסגרת ורואה סטטוס מהיר / קופץ לעריכה -->
+      <div class="cmd-section-title"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg> חיפוש חיילים</div>
+      <input class="m-input" id="cmd-soldier-search" type="text" placeholder="🔎 חיפוש לפי שם, מקצוע או תפקיד…" style="margin-bottom:8px" oninput="renderCmdSoldierSearch()">
+      <div id="cmd-soldier-results" style="margin-bottom:16px"></div>
+
       <!-- אילוצים — בקשות החיילים של המסגרת (קורס/חופש/אפטר/החלפה) לאישור המפקד -->
       <div class="cmd-section-title"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3.5 20.5 9.5 17 13l-1 5-2-2-5 5-1-1 5-5-2-2 5-1 3.5-3.5Z"/></svg> אילוצים</div>
       <div id="cmd-constraints-wrap"></div>
@@ -2352,6 +2357,11 @@ nav{
       <div class="card" style="padding:14px;margin-bottom:14px">
         <textarea class="m-input" id="support-text" rows="4" placeholder="תאר בקצרה את הבאג או ההצעה…" style="resize:vertical;margin-bottom:10px"></textarea>
         <button class="m-btn primary" style="width:100%" onclick="submitSupportTicket()"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-3-6-7-2Z"/></svg> שלח הערה</button>
+      </div>
+      <!-- הפניות שלי — כל משתמש רואה את הפניות ששלח ואת תשובת המנהל (אם ענה) -->
+      <div id="support-mine-wrap" class="hidden">
+        <div class="cmd-section-title"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-11.8 7.7L3 21l1.8-6.2A8.4 8.4 0 1 1 21 11.5Z"/></svg> הפניות שלי</div>
+        <div id="support-mine-list"></div>
       </div>
       <div id="support-admin-wrap" class="hidden">
         <div class="sec-head" style="margin-top:4px">
@@ -3721,7 +3731,33 @@ async function ensureConvertedFrameworksSeed(scope){
 
   if(doTraining){
     // מפקד הדרכה כבר שמור ב-Firestore — לא זורעים שם מהקוד (פרטיות)
+    await ensureTrainingOfficerNamed();
   }
+}
+
+/* שם מ״ע הדרכה (מפקד מסגרת "הדרכה") = "טומי לופוביץ" — לבקשת המשתמש.
+   השם שמור ב-Firestore ולכן משנים אותו במיגרציה חד-פעמית, לא בקוד-זריעה.
+   מגן מפני קיבוע דגל על נתונים חלקיים (רשימה ריקה מכשל רשת) — בדיוק כמו
+   שאר המיגרציות. מזהה את המפקד לפי role="מפקד" (מסגרת תפקידית = מפקד יחיד),
+   ומעדכן גם את רשומות ההסמכות אם קיימות תחת השם הישן. */
+async function ensureTrainingOfficerNamed(){
+  const flag = "training_officer_tomi_v1";
+  const fs = await onceFlagDone(flag);
+  if(fs.done || fs.failed) return;
+  const TARGET = "טומי לופוביץ";
+  const pers = (await sGetIn("training","cfg_personnel")) || [];
+  if(!pers.length) return;   // רשימה ריקה (אולי כשל רשת) — לא לקבע דגל על נתונים חלקיים
+  const cmds = pers.filter(p=>p.role==="מפקד");
+  if(cmds.length===1 && cmds[0].name!==TARGET && !pers.some(p=>p.name===TARGET)){
+    const oldName = cmds[0].name;
+    cmds[0].name = TARGET;
+    const ok = await sSetIn("training","cfg_personnel", pers);
+    if(!ok) return;   // כשל כתיבה — ננסה שוב בכניסה הבאה (בלי לקבע דגל)
+    let certs = (await sGetIn("training","certs_list")) || [];
+    let cch=false; certs.forEach(c=>{ if(c.person===oldName){ c.person=TARGET; cch=true; } });
+    if(cch) await sSetIn("training","certs_list", certs);
+  }
+  await sSetRaw(flag, true);
 }
 
 async function loadRuntimeLists(){
@@ -4817,8 +4853,9 @@ async function applyLoginUiForRole(person){
     addBtn.classList.add("hidden");
     if(repBtn) repBtn.classList.add("hidden");
   }
-  // חומרי הדרכה — לשונית בסרגל לכל המשתמשים (חיילים ומפקדים)
-  document.getElementById("nav-training").classList.remove("hidden");
+  // חומרי הדרכה — לשונית בסרגל לחיילים בלבד; מפקד סככה ניגש דרך שער ההדרכה.
+  // מ״ע הדרכה מקבל אותה בסרגל בנפרד (ר' applyTrainingCommanderPowers).
+  document.getElementById("nav-training").classList.toggle("hidden", userRole === "מפקד");
   // "היום שלי" — מסך פתיחה לחיילים בלבד. כדי לפנות לו מקום בסרגל, הסמכות
   // עוברת לתפריט "עוד" אצל חיילים (לבקשת המשתמש); אצל מפקד נשאר כרגיל.
   const isSoldier = userRole !== "מפקד";
@@ -5157,11 +5194,13 @@ async function renderDocs(){
   const isCmdr = userRole === "מפקד";
   /* למפקד: כמה חתמו על כל פריט, ישר כאן במסך קרא-וחתום — כדי שכפתור
      התזכורת לא יהיה נגיש רק דרך הדשבורד (מסלול חבוי שדרש כמה קליקים). */
+  // מילואים לא נדרשים למעקב קרא-וחתום — לא נספרים בסיכום/בספירת החתימות
+  const signPersonnel = PERSONNEL.filter(p=>!p.reserve);
   let sigMap = null;
-  if(isCmdr && PERSONNEL.length){
+  if(isCmdr && signPersonnel.length){
     sigMap = {};
-    const sigsArr = await Promise.all(PERSONNEL.map(p => sGetSigs(p.name)));
-    PERSONNEL.forEach((p,i)=>{ sigMap[p.name] = sigsArr[i]; });
+    const sigsArr = await Promise.all(signPersonnel.map(p => sGetSigs(p.name)));
+    signPersonnel.forEach((p,i)=>{ sigMap[p.name] = sigsArr[i]; });
   }
   // search box visibility
   document.getElementById("safety-search-box").style.display = events.length>=4 ? "flex" : "none";
@@ -5176,7 +5215,7 @@ async function renderDocs(){
   if(sigMap && events.length>0){
     let totalSigs = 0, fullSign = 0;
     const readsRows = [];
-    for(const p of PERSONNEL){
+    for(const p of signPersonnel){
       const sigs = sigMap[p.name];
       const rc = events.filter(e=>sigs[e.id]).length;
       totalSigs += rc;
@@ -5188,8 +5227,8 @@ async function renderDocs(){
     }
     document.getElementById("kpi-events").textContent = events.length;
     document.getElementById("kpi-read").textContent = totalSigs;
-    document.getElementById("kpi-pending").textContent = Math.max(0, PERSONNEL.length*events.length - totalSigs);
-    document.getElementById("kpi-fullsign").textContent = fullSign + "/" + PERSONNEL.length;
+    document.getElementById("kpi-pending").textContent = Math.max(0, signPersonnel.length*events.length - totalSigs);
+    document.getElementById("kpi-fullsign").textContent = fullSign + "/" + signPersonnel.length;
     document.getElementById("cmd-reads").innerHTML = readsRows.join("");
     summaryBox.classList.remove("hidden");
     itemsTitle.classList.remove("hidden");
@@ -5224,8 +5263,8 @@ async function renderDocs(){
       : `<div class="doc-thumb file-badge ${ft.badge}"><span class="doc-fileicon">${ft.emoji}</span></div>`;
     let cmdSigRow = "";
     if(sigMap){
-      const signed = PERSONNEL.filter(p=>sigMap[p.name][ev.id]).length;
-      const total = PERSONNEL.length;
+      const signed = signPersonnel.filter(p=>sigMap[p.name][ev.id]).length;
+      const total = signPersonnel.length;
       const done = total>0 && signed===total;
       const age = eventAgeDays(ev.id);
       const stale = (!done && age>=3);
@@ -5735,11 +5774,13 @@ async function renderTrainHub(){
   try{
     const events = await getEvents();
     safetyItems = events.length;
-    if(events.length && PERSONNEL.length){
-      const sigsArrS = await Promise.all(PERSONNEL.map(p => sGetSigs(p.name)));
+    // מילואים לא נדרשים למעקב קרא-וחתום — לא נספרים בחתימות החסרות
+    const signPersonnel = PERSONNEL.filter(p=>!p.reserve);
+    if(events.length && signPersonnel.length){
+      const sigsArrS = await Promise.all(signPersonnel.map(p => sGetSigs(p.name)));
       let totalSigs = 0;
       sigsArrS.forEach(sigs=>{ totalSigs += events.filter(e=>sigs[e.id]).length; });
-      safetyMissing = Math.max(0, PERSONNEL.length*events.length - totalSigs);
+      safetyMissing = Math.max(0, signPersonnel.length*events.length - totalSigs);
     }
   }catch(e){ console.error("trainhub safety", e); }
 
@@ -9547,7 +9588,44 @@ async function renderCommander(){
   renderTrends();
   renderMorningRollcallReport();
   renderCommanderConstraints();
+  renderCmdSoldierSearch();
   updateAlertBell();
+}
+/* חיפוש חיילים בדשבורד המפקד — מסנן את צוות המסגרת (במחלקות: רק המחלקה
+   של המפקד) לפי שם/מקצוע/תפקיד, ומציג כרטיס מצומצם עם סטטוס PF/שלב 7.
+   לחיצה פותחת את ניהול הצוות ישר על עריכת אותו חייל. ריק כשאין שאילתה. */
+async function renderCmdSoldierSearch(){
+  const box = document.getElementById("cmd-soldier-results");
+  const inp = document.getElementById("cmd-soldier-search");
+  if(!box || !inp) return;
+  const q = (inp.value||"").trim();
+  if(!q){ box.innerHTML = '<div style="text-align:center;color:var(--ink-3);font-size:12px;padding:8px 0">הקלד שם, מקצוע או תפקיד כדי לחפש איש צוות</div>'; return; }
+  const isDeptUnit = !!(currentShed && currentShed.isDept);
+  const myDept = (isDeptUnit && userRole==="מפקד") ? personDept(PERSONNEL.find(p=>p.name===user)) : null;
+  let list = PERSONNEL.map((p,i)=>({p,i}));
+  if(myDept) list = list.filter(x=>personDept(x.p)===myDept);
+  list = list.filter(x=>{
+    const hay = [x.p.name, x.p.role, x.p.profession, personDept(x.p)].filter(Boolean).join(" ");
+    return hay.includes(q);
+  });
+  if(!list.length){ box.innerHTML = '<div style="text-align:center;color:var(--ink-3);font-size:13px;padding:12px 0">לא נמצאו חיילים</div>'; return; }
+  const certs = isDeptUnit ? [] : await getCerts();
+  box.innerHTML = list.slice(0,30).map(({p,i})=>{
+    const pf = (!isDeptUnit && p.role==="חייל" && !p.reserve) ? pfStatus(p, certs) : null;
+    const pfTag = pf ? `<span class="pill ${pf.cls}" style="font-size:9px;margin-right:4px">${pf.tag}</span>` : "";
+    const st7 = (isDeptUnit || p.reserve) ? null : stage7Status(p, certs);
+    const st7Tag = st7 ? `<span class="pill ${st7.cls}" style="font-size:9px;margin-right:4px">${st7.tag}</span>` : "";
+    const deptTag = personDept(p) ? `<span class="role-mini">${escapeHTML(personDept(p))}</span>` : "";
+    const profTag = p.profession ? `<span class="role-mini">${escapeHTML(p.profession)}</span>` : "";
+    const reserveTag = p.reserve ? `<span class="role-mini" style="background:var(--gold-soft);color:var(--gold);border-color:#f0dfa8">🎖️ מילואים</span>` : "";
+    return `
+    <div class="mgmt-row" style="cursor:pointer" onclick="openTeamMgmt();startEditMember(${i})">
+      <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
+      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini ${p.role==='חייל'?'sol':''}">${p.role}</span> ${reserveTag} ${deptTag} ${profTag} ${pfTag} ${st7Tag}</b>
+        <span>${p.reserve ? '🎖️ מילואים' : ('🎂 '+(p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—'))}</span></div>
+      <span class="s-chev" style="color:var(--ink-3)">‹</span>
+    </div>`;
+  }).join("");
 }
 /* באנר אילוצים למפקד — כמה בקשות ממתינות לאישורו במסגרת, וכניסה לתיבה.
    מפקד רואה רק את בקשות המסגרת שלו (duty_requests מוגבל-לסככה). */
@@ -9620,7 +9698,9 @@ async function showSigDetail(evId){
   const rows = [];
   let signedCount = 0;
   const unsigned = [];
-  for(const p of PERSONNEL){
+  // מילואים לא נדרשים למעקב קרא-וחתום — לא מוצגים ולא נספרים
+  const signPersonnel = PERSONNEL.filter(p=>!p.reserve);
+  for(const p of signPersonnel){
     const sigs = await sGetSigs(p.name);
     const s = sigs[evId];
     if(s) signedCount++;
@@ -9632,7 +9712,7 @@ async function showSigDetail(evId){
     </div>`);
   }
   sigDetailCurrent = {title: ev.title, unsigned};
-  document.getElementById("sigdetail-sub").innerHTML = `${signedCount}/${PERSONNEL.length} אישרו · ${ev.date}`;
+  document.getElementById("sigdetail-sub").innerHTML = `${signedCount}/${signPersonnel.length} אישרו · ${ev.date}`;
   document.getElementById("sigdetail-list").innerHTML = rows.join("");
   document.getElementById("sigdetail-modal").classList.add("open");
 }
@@ -10036,7 +10116,21 @@ async function savePushToken(token){
     map[token] = { name:user, role:enteredRole, ts:Date.now() };
     await sSetRaw(key, map);
     await syncNaatPushToken();
+    await syncAdminPushToken();
   }catch(e){ console.error("savePushToken", e); }
+}
+/* רישום טוקן מנהל-העל (אלעד לנציאנו) במסמך גלובלי (push_tokens_admin) — כדי
+   שהשרת ישלח לו פוש כשמגיעה פנייה חדשה בתמיכה (support_tickets), מכל מסגרת. */
+async function syncAdminPushToken(){
+  if(!fcmToken) return;
+  try{
+    const key = "push_tokens_admin";
+    const map = (await sGetRaw(key)) || {};
+    if(isSuperAdmin) map[fcmToken] = { name:user, ts:Date.now() };
+    else if(map[fcmToken]) delete map[fcmToken];
+    else return;
+    await sSetRaw(key, map);
+  }catch(e){ console.error("syncAdminPushToken", e); }
 }
 /* רישום טוקן מ"ע תורנויות במסמך גלובלי (push_tokens_naat) — כדי שהשרת
    ישלח פוש למ"ע כשמגיע פריט לאישורו (החלפה/אילוץ מאוחר), מכל מסגרת. */
@@ -10947,7 +11041,8 @@ async function openSafetyReport(){
   modal.classList.add("open");
 
   const events = await getEvents();
-  const people = PERSONNEL.slice();
+  // מילואים לא נדרשים למעקב קרא-וחתום — לא נכללים בדוח
+  const people = PERSONNEL.filter(p=>!p.reserve);
   const sigsArr = await Promise.all(people.map(p => sGetSigs(p.name)));
   const sigsBy = {}; people.forEach((p,i)=> sigsBy[p.name] = sigsArr[i]);
   const total = people.length;
@@ -11099,6 +11194,23 @@ async function applyTrainingCommanderPowers(){
   isAdmin = true;
   document.getElementById("hdr-rank").textContent = "🏛️ אחראי הדרכה";
   document.getElementById("nav-admin").classList.remove("hidden");
+
+  /* סרגל מ״ע הדרכה — לבקשת המשתמש נחשף כמו בסככה (רץ *אחרי* applyLoginUiForRole
+     שמצמצם מסגרות תפקידיות, ולכן דורס במכוון את ההסתרות שם עבור התפקיד הזה):
+     7.1 דשבורד מפקד בסרגל · 7.2 חומרי הדרכה + לוח שנה מאוחד + תורנויות בסרגל ·
+     7.3 תקלות בינוי בתפריט "עוד" · 7.4 "עוד" נדחף לקצה שמאל (order גבוה). */
+  isCmd = true;
+  document.getElementById("nav-cmd").classList.remove("hidden");                 // 7.1
+  document.getElementById("add-event-btn").classList.remove("hidden");
+  { const rb=document.getElementById("safety-report-btn"); if(rb) rb.classList.remove("hidden"); }
+  document.getElementById("nav-training").classList.remove("hidden");            // 7.2 חומרי הדרכה
+  document.getElementById("nav-calendar").classList.remove("hidden");            // 7.2 לוח שנה מאוחד
+  document.getElementById("sheet-calendar").classList.add("hidden");             //     בלי כפילות ב"עוד"
+  document.getElementById("nav-board").classList.remove("hidden");               // 7.2 תורנויות
+  document.getElementById("sheet-duties").classList.remove("hidden");
+  document.getElementById("more-binui-item").classList.remove("hidden");         // 7.3 תקלות בינוי ב"עוד"
+  document.getElementById("nav-more").style.order = 99;                          // 7.4 "עוד" לצד שמאל
+
   await ensureShed2Seed();
   await ensureAllShedsSeed();   // ללא scope — הוא רואה את כל המסגרות
   await migrateLegacyReservesList();
@@ -11214,10 +11326,34 @@ async function submitSupportTicket(){
   el.value = "";
   toast("ההערה נשלחה, תודה 🙏");
   if(isSuperAdmin) renderSupportList();
+  renderMySupportTickets();
 }
 async function renderSupportPage(){
   document.getElementById("support-admin-wrap").classList.toggle("hidden", !isSuperAdmin);
+  await renderMySupportTickets();
   if(isSuperAdmin) await renderSupportList();
+}
+/* הפניות שלי — כל משתמש רואה את הפניות ששלח בעצמו + תשובת המנהל אם קיימת.
+   מנהל-העל עצמו לא רואה כאן כפילות (יש לו את הרשימה המלאה למטה). */
+async function renderMySupportTickets(){
+  const wrap = document.getElementById("support-mine-wrap");
+  const box = document.getElementById("support-mine-list");
+  if(!wrap || !box) return;
+  if(isSuperAdmin){ wrap.classList.add("hidden"); return; }
+  const list = (await sGetRaw("support_tickets")) || [];
+  const mine = list.filter(t=> t.by === user);
+  if(!mine.length){ wrap.classList.add("hidden"); return; }
+  wrap.classList.remove("hidden");
+  box.innerHTML = mine.map(t=>`
+    <div class="card" style="padding:12px;margin-bottom:10px">
+      <p style="white-space:pre-wrap;margin-bottom:6px">${escapeHTML(t.text)}</p>
+      <small style="color:var(--ink-3)">${escapeHTML(new Date(t.ts).toLocaleString("he-IL"))}</small>
+      ${t.reply ? `<div style="margin-top:10px;padding:10px;background:var(--green-soft);border:1px solid #bfe6c9;border-radius:12px">
+        <div style="font-size:11px;font-weight:800;color:var(--green);margin-bottom:4px">💬 תשובת התמיכה${t.replyBy?" · "+escapeHTML(t.replyBy):""}</div>
+        <p style="white-space:pre-wrap;margin:0">${escapeHTML(t.reply)}</p>
+        ${t.replyTs?`<small style="color:var(--ink-3)">${escapeHTML(new Date(t.replyTs).toLocaleString("he-IL"))}</small>`:""}
+      </div>` : `<div style="margin-top:8px;font-size:11px;color:var(--ink-3)">⏳ ממתין לתשובה</div>`}
+    </div>`).join("");
 }
 async function renderSupportList(){
   const list = (await sGetRaw("support_tickets")) || [];
@@ -11227,7 +11363,31 @@ async function renderSupportList(){
     <div class="card" style="padding:12px;margin-bottom:10px">
       <p style="white-space:pre-wrap;margin-bottom:8px">${escapeHTML(t.text)}</p>
       <small style="color:var(--ink-3)">${escapeHTML(t.by||"")} · ${escapeHTML(t.shed||"")} · ${escapeHTML(new Date(t.ts).toLocaleString("he-IL"))}</small>
+      ${t.reply ? `<div style="margin-top:10px;padding:10px;background:var(--green-soft);border:1px solid #bfe6c9;border-radius:12px">
+        <div style="font-size:11px;font-weight:800;color:var(--green);margin-bottom:4px">💬 המשוב שלך${t.replyBy?" · "+escapeHTML(t.replyBy):""}</div>
+        <p style="white-space:pre-wrap;margin:0">${escapeHTML(t.reply)}</p>
+      </div>` : ""}
+      <div style="margin-top:10px;display:flex;gap:6px">
+        <input class="m-input" id="support-reply-${escapeHTML(t.id)}" type="text" placeholder="${t.reply?'עדכן תשובה…':'כתוב משוב לפונה…'}" style="margin-bottom:0;flex:1">
+        <button class="m-btn primary" style="flex:0 0 auto;padding:8px 12px" onclick="replySupportTicket('${jsStr(t.id)}')">${t.reply?'עדכן':'שלח משוב'}</button>
+      </div>
     </div>`).join("");
+}
+/* מנהל-העל שולח משוב לפנייה — נשמר על הפנייה עצמה (reply/replyBy/replyTs).
+   הפונה רואה את התשובה ב"הפניות שלי" בכניסתו הבאה למסך התמיכה. */
+async function replySupportTicket(id){
+  const inp = document.getElementById("support-reply-"+id);
+  if(!inp) return;
+  const text = (inp.value||"").trim();
+  if(!text){ toast("נא לכתוב משוב"); return; }
+  const list = (await sGetRaw("support_tickets")) || [];
+  const t = list.find(x=>x.id===id);
+  if(!t){ toast("⚠️ הפנייה לא נמצאה"); return; }
+  t.reply = text; t.replyBy = user || "תמיכה"; t.replyTs = Date.now();
+  const ok = await sSetRaw("support_tickets", list);
+  if(!ok){ toast("⚠️ השליחה נכשלה — נסה שוב"); return; }
+  toast("המשוב נשלח ✓");
+  renderSupportList();
 }
 function supportCsvEscape(s){
   const v = String(s==null?"":s);
@@ -12177,10 +12337,10 @@ async function renderAdminDashboard(){
 async function renderAdminOverviewKpis(){
   const [{adminItems, perShed}, reserves] = await Promise.all([computeAdminSigLog(), getReserves()]);
   let totalPersonnel = 0, maxC = 0, gotC = 0;
-  for(const {personnel, eventIds, sigsBy} of perShed){
-    totalPersonnel += personnel.length;
+  for(const {personnel, allCount, eventIds, sigsBy} of perShed){
+    totalPersonnel += (allCount != null ? allCount : personnel.length);   // סה״כ ראשים — כולל מילואים
     const relevant = adminItems.filter(it=>eventIds.has(it.id));
-    maxC += personnel.length * relevant.length;
+    maxC += personnel.length * relevant.length;                            // מעקב חתימות — בלי מילואים
     relevant.forEach(it=> personnel.forEach(p=>{ if(sigsBy[p.name][it.id]) gotC++; }));
   }
   const rate = maxC>0 ? Math.round(gotC/maxC*100) : 100;
@@ -12963,12 +13123,14 @@ async function computeAdminSigLog(){
       sGetIn(shed.id, "cfg_personnel").then(v=>v||[]),
       sGetIn(shed.id, "safety_events").then(v=>v||[]),
     ]);
-    // סנן מילואים — לא נדרשים לחתום על קרא-וחתום
+    // סנן מילואים — לא נדרשים לחתום על קרא-וחתום. allCount נשמר בנפרד
+    // כי ספירת "סה״כ אנשי צוות" (KPI כללי) כוללת מילואים — רק מעקב
+    // החתימות (signrate/missing) מתעלם מהם.
     const regularPersonnel = personnel.filter(p => !p.reserve);
     const eventIds = new Set(events.map(e=>e.id));
     const sigsArr = await Promise.all(regularPersonnel.map(p => sGetSigsIn(shed.id, p.name)));
     const sigsBy = {}; regularPersonnel.forEach((p,i)=> sigsBy[p.name] = sigsArr[i]);
-    return {shed, personnel: regularPersonnel, eventIds, sigsBy};
+    return {shed, personnel: regularPersonnel, allCount: personnel.length, eventIds, sigsBy};
   }));
   return {adminItems, perShed};
 }
@@ -14582,7 +14744,7 @@ async function renderToolsPage(){
   const cards = filtered.map(t=>`
     <div class="cert-sum-card" style="cursor:default">
       <div class="cert-sum-head">
-        <div class="avatar" style="width:40px;height:40px;font-size:18px"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="9" width="19" height="11" rx="2"/><path d="M8 9V6.5A2.5 2.5 0 0 1 10.5 4h3A2.5 2.5 0 0 1 16 6.5V9M2.5 14h19"/></svg></div>
+        <div class="avatar" style="width:40px;height:40px;font-size:18px"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="9" width="19" height="11" rx="2"/><path d="M8 9V6.5A2.5 2.5 0 0 1 10.5 4h3A2.5 2.5 0 0 1 16 6.5V9M2.5 14h19"/></svg></div>
         <div class="cert-sum-name"><b>${escapeHTML(t.name)}</b>
           <span>${t.serial?("מספר סידורי: "+escapeHTML(t.serial)):"ללא מספר סידורי"}${(t.expiry && !t.inRepair)?` · 🗓️ תוקף עד ${new Date(t.expiry+"T00:00:00").toLocaleDateString("he-IL")}`:""}</span></div>
         <span class="pill ${t.st.cls}" style="font-size:10px;white-space:nowrap">${t.st.tag}</span>
@@ -14676,7 +14838,7 @@ async function renderVehiclesPage(){
   let banner = "";
   if(urgent.length>0){
     banner = `<div class="all-done-banner" style="display:block;background:linear-gradient(135deg,#7c2d12,#9a3412)">
-      <svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#b98900" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21.5 20h-19L12 3.5Z"/><path d="M12 10v4.5M12 17.5h.01"/></svg> ${urgent.length} רכבים מתקרבים למועד טיפול/טסט או שכבר עברו אותו
+      <svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21.5 20h-19L12 3.5Z"/><path d="M12 10v4.5M12 17.5h.01"/></svg> ${urgent.length} רכבים מתקרבים למועד טיפול/טסט או שכבר עברו אותו
       <small>${urgent.map(v=>escapeHTML(v.name)).join(" · ")}</small>
     </div>`;
   }
@@ -15139,7 +15301,7 @@ function vehicleCardHtml(v, actionsHtml, checks){
   // הפילה/כפתורים/החץ מול האמצע שלה ויוצר רושם של "תצוגה שבורה"/חתוכה
   return `<div class="cert-sum-card" onclick="this.classList.toggle('open')">
     <div class="cert-sum-head" style="align-items:flex-start">
-      <div class="avatar" style="width:40px;height:40px;font-size:18px"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V12l2-4.5h12L20 12v4"/><path d="M4 16h16M6 16v2M18 16v2"/><circle cx="7.5" cy="16" r="1.6"/><circle cx="16.5" cy="16" r="1.6"/></svg></div>
+      <div class="avatar" style="width:40px;height:40px;font-size:18px"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V12l2-4.5h12L20 12v4"/><path d="M4 16h16M6 16v2M18 16v2"/><circle cx="7.5" cy="16" r="1.6"/><circle cx="16.5" cy="16" r="1.6"/></svg></div>
       <div class="cert-sum-name"><b>${escapeHTML(v.name)}</b><span>${numberLine}</span>${monthlyCheck ? `<span style="display:block;margin-top:2px">${monthlyCheck.tag}</span>` : ""}</div>
       <span class="pill ${short.cls}" style="flex-shrink:0;max-width:130px;white-space:normal;line-height:1.3;text-align:center;display:inline-block">${escapeHTML(short.txt)}</span>
       <div onclick="event.stopPropagation()" style="display:flex;gap:6px">${actionsHtml}</div>

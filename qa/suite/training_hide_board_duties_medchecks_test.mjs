@@ -1,7 +1,7 @@
-/* "להוריד לחלוטין לוח צוות שבועי/תורניות/כשירויות חיילים" — לפי הבהרה
-   מפורשת של המשתמש, זה חל *רק* על יוזר אחראי הדרכה (מפקד מסגרת "הדרכה"),
-   לא על מפקדי סככות רגילות ולא על מ״ע אחזקה. בודק גם שהנראות מתאפסת
-   נכון כשמשתמש אחר נכנס אחר כך באותה טעינת-דף (toggle, לא add). */
+/* "כשירויות חיילים" מוסתר לאחראי הדרכה (מפקד מסגרת "הדרכה") — לא למפקדי
+   סככות ולא למ״ע אחזקה. תורנויות (nav-board) + סעיף התורנויות ב"עוד"
+   הוחזרו למ״ע הדרכה לבקשת המשתמש (7.2) — לכן הם גלויים לו כמו בסככה.
+   בודק גם שהנראות מתאפסת נכון כשמשתמש אחר נכנס אחר כך (toggle, לא add). */
 import { launchBrowser, APP_URL } from '../lib/pw.mjs';
 const b = await launchBrowser();
 const results = [];
@@ -47,11 +47,11 @@ async function loginAsShedCommander(shedId, shedName, extra={}){
   }, {shedId, shedName, extra});
 }
 
-// 1. אחראי הדרכה (מפקד "הדרכה"): שלושתם מוסתרים
+// 1. מ״ע הדרכה: תורנויות (לוח) גלויות (7.2), כשירויות חיילים מוסתר
 {
   const out = await loginAsShedCommander("training", "הדרכה", {isTraining:true});
-  record("אחראי הדרכה: לוח שבועי/תורניות/כשירויות חיילים מוסתרים",
-    out.boardHidden && out.dutiesHidden && out.medchecksHidden, JSON.stringify(out));
+  record("מ״ע הדרכה: תורנויות גלויות (7.2), כשירות חיילים מוסתר",
+    !out.boardHidden && !out.dutiesHidden && out.medchecksHidden, JSON.stringify(out));
 }
 
 // 2. מפקד סככה רגילה, מיד אחרי אחראי הדרכה באותה טעינת-דף: הנראות חוזרת (לא נשארת חבויה)
@@ -68,11 +68,11 @@ async function loginAsShedCommander(shedId, shedName, extra={}){
     !out.boardHidden && !out.dutiesHidden && !out.medchecksHidden, JSON.stringify(out));
 }
 
-// 4. שוב אחראי הדרכה, אחרי מ״ע אחזקה: שוב מוסתרים
+// 4. שוב מ״ע הדרכה, אחרי מ״ע אחזקה: תורנויות גלויות, כשירות חיילים מוסתר
 {
   const out = await loginAsShedCommander("training", "הדרכה", {isTraining:true});
-  record("אחראי הדרכה שוב (אחרי מ״ע אחזקה): שוב מוסתרים כראוי",
-    out.boardHidden && out.dutiesHidden && out.medchecksHidden, JSON.stringify(out));
+  record("מ״ע הדרכה שוב (אחרי מ״ע אחזקה): תורנויות גלויות, כשירות חיילים מוסתר",
+    !out.boardHidden && !out.dutiesHidden && out.medchecksHidden, JSON.stringify(out));
 }
 
 console.log("errs", errs);
