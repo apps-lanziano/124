@@ -14548,7 +14548,7 @@ async function renderToolsPage(){
   let banner = "";
   if(urgent.length>0){
     banner = `<div class="all-done-banner" style="display:block;background:linear-gradient(135deg,#7c2d12,#9a3412)">
-      <svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#b98900" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21.5 20h-19L12 3.5Z"/><path d="M12 10v4.5M12 17.5h.01"/></svg> ${urgent.length} כלים דורשים כיול תוך שבוע או שכבר פג תוקפם
+      <svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21.5 20h-19L12 3.5Z"/><path d="M12 10v4.5M12 17.5h.01"/></svg> ${urgent.length} כלים דורשים כיול תוך שבוע או שכבר פג תוקפם
       <small>${urgent.map(t=>escapeHTML(t.name)).join(" · ")}</small>
     </div>`;
   }
