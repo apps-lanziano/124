@@ -1,5 +1,5 @@
 /* תצוגת "כרטיסים" בלוח הצוות: כרטיס לכל יום, השם שלי מודגש, היום בולט,
-   פיצול סופ"ש (מנהל/מתגבר), וברירת מחדל לחיילים. */
+   פיצול סופ"ש (מנהל/מתגבר), וברירת המחדל האחידה (לוח שבועי לכולם). */
 import { newPage, closeBrowser, loginAsFramework } from '../lib/harness.mjs';
 
 const results = [];
@@ -25,13 +25,17 @@ const out = await page.evaluate(async ()=>{
   r.weekendSplit = html.includes("מנהל חמישי") && html.includes("מנהל שישבת") && html.includes("ו׳–ש׳");
   r.hasRoles = html.includes("ר״צ") && html.includes("PF");
 
-  // ברירת מחדל לפי תפקיד: חייל → "לוח יומי" (view=day), שמציג כרטיסים
-  _rosterViewInit = false; rosterView = "board";
+  // ⚠️ שינוי מכוון: אין יותר ברירת מחדל לפי תפקיד — גם חייל נפתח על
+  // "לוח שבועי". "לוח יומי" נשאר זמין ומרנדר כרטיסים כשבוחרים בו.
+  rosterView = "board";
   user = me; userRole = "חייל"; isRosterManager = false;
   await saveDutyRosterV2(roster, "current"); rosterCache = null;
   boardWeekSlot = "current";
   await renderRosterView();
-  r.soldierDefaultDay = rosterView === "day";
+  r.soldierDefaultBoard = rosterView === "board";
+  r.boardRendered = document.getElementById("roster-view").innerHTML.includes("roster-grid");
+  setRosterView("day");
+  await renderRosterView();
   r.cardsRendered = document.getElementById("roster-view").innerHTML.includes("rcd-h");
   const segs = document.getElementById("roster-view").innerHTML;
   r.tabsCorrect = segs.includes(">לוח שבועי<") && segs.includes(">לוח יומי<") && segs.includes(">רק אני<");
@@ -46,8 +50,9 @@ record("השם שלי מודגש בכרטיס", out.myNameHighlighted, String(ou
 record("תגית 'היום' על היום הנוכחי", out.todayBadge, String(out.todayBadge));
 record("פיצול סופ״ש (מנהל ה׳ מול ו׳–ש׳)", out.weekendSplit, String(out.weekendSplit));
 record("תפקידים מוצגים בכרטיס", out.hasRoles, String(out.hasRoles));
-record("חייל: ברירת מחדל = 'לוח יומי'", out.soldierDefaultDay, String(out.soldierDefaultDay));
-record("'לוח יומי' מרנדר כרטיסים בפועל", out.cardsRendered, String(out.cardsRendered));
+record("חייל: ברירת מחדל = 'לוח שבועי'", out.soldierDefaultBoard, String(out.soldierDefaultBoard));
+record("חייל: הלוח השבועי מרונדר בפועל בפתיחה", out.boardRendered, String(out.boardRendered));
+record("'לוח יומי' מרנדר כרטיסים כשבוחרים בו", out.cardsRendered, String(out.cardsRendered));
 record("לשוניות: לוח שבועי / לוח יומי / רק אני", out.tabsCorrect, String(out.tabsCorrect));
 record("לשונית 'כרטיסים' הוסרה", out.noCardsTab, String(out.noCardsTab));
 
