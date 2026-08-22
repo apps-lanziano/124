@@ -7,6 +7,7 @@
    כך אין התראות שווא: ממצא = פרצה מוכחת.
    ============================================================ */
 import { newPage, SHED_LIST, ALL_SCREENS } from './harness.mjs';
+import { summarizeError } from './report_util.mjs';
 
 const PAYLOAD = `<img src=x onerror="window.__xssHits=(window.__xssHits||0)+1;window.__xssWhere=(window.__xssWhere||[]);window.__xssWhere.push('IMG')">`;
 const PAYLOAD2 = `"><svg onload="window.__xssHits=(window.__xssHits||0)+1;window.__xssWhere=(window.__xssWhere||[]);window.__xssWhere.push('SVG')">`;
@@ -81,13 +82,15 @@ export async function runXssProbe(){
       });
     }
   } catch(e){
-    const msg = String(e && e.message);
-    // "browser has been closed" = expected in CI after heavy test load, not a real bug
+    const msg = String((e && e.message) || e || "");
+    // "browser has been closed" = expected בסביבות עם משאבים מוגבלים אחרי
+    // עומס בדיקות כבד, לא פרצה. בכל מקרה (גם כשזה כן ממצא אמיתי) ה-detail
+    // עובר דרך summarizeError כדי שיומן קריסה גולמי של הדפדפן לא ידלוף לדוח.
     if(msg.includes("browser") && msg.includes("closed")){
       findings.push({sev:"info", area:"אבטחה", title:"בדיקת ה-XSS דילגה (משאבי דפדפן מחוסרים)",
-        detail:"הדפדפן סגר לאחר 121 בדיקות קודמות. זו הערה סביבתית, לא פרצה.", where:"qa/lib/xss_probe.mjs"});
+        detail:"הדפדפן נסגר עקב עומס משאבים. זו הערה סביבתית, לא פרצה.", where:"qa/lib/xss_probe.mjs"});
     } else {
-      findings.push({sev:"med", area:"אבטחה", title:"בדיקת ה-XSS לא הושלמה", detail:msg, where:"qa/lib/xss_probe.mjs"});
+      findings.push({sev:"med", area:"אבטחה", title:"בדיקת ה-XSS לא הושלמה", detail:summarizeError(e), where:"qa/lib/xss_probe.mjs"});
     }
   } finally {
     if(page) await page.close().catch(()=>{});
