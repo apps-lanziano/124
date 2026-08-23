@@ -20,32 +20,44 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
     noScheduledFn && noDeadImport, JSON.stringify({noScheduledFn, noDeadImport}));
 }
 
-// 3. תזכורת הסמכות — מתוזמנת, בטיימזון ישראל, מחוברת ללוגיקה הטהורה, מסננת למפקדים
+// 3. תזכורת "הסמכות דורשות תשומת לב" הוסרה במכוון (בקשת המשתמש, 2026-08-23) —
+// בדיוק כמו תזכורת החתימות למעלה. הלוגיקה הטהורה (lib/cert_expiry_reminders)
+// נשארת כי התקציר היומי עדיין מדווח "הסמכות פגות השבוע" דרכה — רק הפונקציה
+// המתוזמנת הנפרדת והייבוא הישיר שלה ב-index.js ירדו.
 {
-  const hasSchedule = /remindCertExpiryDaily\s*=\s*onSchedule/.test(fn);
-  const usesLib = /findExpiringCerts\(db\)/.test(fn);
-  const importsLib = /require\("\.\/lib\/cert_expiry_reminders"\)/.test(fn);
-  record("תזכורת הסמכות: מתוזמנת עם onSchedule, ומשתמשת בלוגיקה מ-lib/cert_expiry_reminders",
-    hasSchedule && usesLib && importsLib, JSON.stringify({hasSchedule, usesLib, importsLib}));
+  const noScheduledFn = !/remindCertExpiryDaily/.test(fn);
+  const noDirectImport = !/const \{findExpiringCerts\} = require\("\.\/lib\/cert_expiry_reminders"\)/.test(fn);
+  const noCertLog = !/_cert_reminder_log/.test(fn);
+  record("תזכורת הסמכות (remindCertExpiryDaily) הוסרה — אין יותר התראה מתוזמנת נפרדת על הסמכות",
+    noScheduledFn && noDirectImport && noCertLog,
+    JSON.stringify({noScheduledFn, noDirectImport, noCertLog}));
 }
 
-// 4. תזכורת רענון מילואים — מתוזמנת, מחוברת ללוגיקה הטהורה
+// 4. תזכורת רענון מילואים — מתוזמנת, מחוברת ללוגיקה הטהורה, ומאז 2026-08-23
+// נשלחת **רק לאחראי הדרכה** (push_tokens_training) כסיכום טייסתי אחד —
+// לא למפקד כל מסגרת בנפרד, ולא ל-push_tokens_<shedId> של הקבוצה שדווחה
 {
   const hasSchedule = /remindReserveRefreshDaily\s*=\s*onSchedule/.test(fn);
   const usesLib = /findOverdueReserves\(db\)/.test(fn);
   const importsLib = /require\("\.\/lib\/reserve_refresh_reminders"\)/.test(fn);
-  record("תזכורת רענון מילואים: מתוזמנת עם onSchedule, ומשתמשת בלוגיקה מ-lib/reserve_refresh_reminders",
-    hasSchedule && usesLib && importsLib, JSON.stringify({hasSchedule, usesLib, importsLib}));
+  const start = fn.indexOf("exports.remindReserveRefreshDaily");
+  const end = fn.indexOf("exports.remindVoIssuesDaily");
+  const body = start >= 0 && end > start ? fn.slice(start, end) : "";
+  const targetsTrainingOnly = /db\.doc\("sq124\/push_tokens_training"\)/.test(body) &&
+    !/push_tokens_" \+ group\.shedId/.test(body) && !/for \(const group of toSend\)/.test(body);
+  record("תזכורת רענון מילואים: מתוזמנת, משתמשת ב-lib/reserve_refresh_reminders, ונשלחת רק לטוקני אחראי הדרכה",
+    hasSchedule && usesLib && importsLib && targetsTrainingOnly,
+    JSON.stringify({hasSchedule, usesLib, importsLib, targetsTrainingOnly}));
 }
 
-// 5. תזכורות + מסדר בוקר (notifyOnPublish) + סקירת מ״ע אחזקה מסננים טוקנים
-// למפקדים בלבד. תקציר יומי (dailyDigest) לא נכלל כאן — הוא עבר לסינון ייעודי
-// (רשימה סגורה, ראו 5ה). שיבוץ התורנויות אינו עוד פונקציה נפרדת — הוא אוחד
-// לתוך תקציר היומי (ראו 5ד). תזכורת חתימות הוסרה (ראו 1) — לכן 4 מקומות, לא 5.
+// 5. מסדר בוקר (notifyOnPublish) + רענון מילואים (אחראי הדרכה) + סקירת מ״ע
+// אחזקה מסננים טוקנים למפקדים בלבד. תקציר יומי (dailyDigest) לא נכלל כאן —
+// הוא עבר לסינון ייעודי (רשימה סגורה, ראו 5ה). שיבוץ התורנויות אוחד לתקציר
+// היומי (5ד), ותזכורות החתימות (1) וההסמכות (3) הוסרו — לכן 3 מקומות.
 {
   const filterCount = (fn.match(/filter\(\(\[, m\]\)\s*=>\s*m\s*&&\s*m\.role\s*===\s*"מפקד"\)/g) || []).length;
-  record("סה״כ 4 מקומות מסננים למפקד בלבד (הסמכות, מילואים, מסדר בוקר, סקירת מ״ע אחזקה)",
-    filterCount===4, String(filterCount));
+  record("סה״כ 3 מקומות מסננים למפקד בלבד (מסדר בוקר, רענון מילואים לאחראי הדרכה, סקירת מ״ע אחזקה)",
+    filterCount===3, String(filterCount));
 }
 
 // 5ו. רישיונות עומדים לפוג ממשיכים להתדווח רק במסגרת סקירת מ״ע אחזקה
@@ -126,7 +138,6 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
 {
   const importsQuietDays = /require\("\.\/lib\/quiet_days"\)/.test(fn);
   const scheduledFns = [
-    ["remindCertExpiryDaily", "תזכורות הסמכות"],
     ["remindReserveRefreshDaily", "תזכורות מילואים"],
     ["remindVoIssuesDaily", "תזכורת מ״ע אחזקה"],
     ["dailyDigest", "תקציר יומי (כולל תורנויות)"],
@@ -137,7 +148,7 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
     const fnBody = fnStart >= 0 ? fn.slice(fnStart, fnStart + 1200) : "";
     if (!/if \(isQuietDay\(Date\.now\(\)\)\)/.test(fnBody)) missing.push(name);
   }
-  record("כל ארבע התזכורות המתוזמנות בודקות isQuietDay בתחילת הריצה ומדלגות בשישי/שבת",
+  record("כל שלוש התזכורות המתוזמנות בודקות isQuietDay בתחילת הריצה ומדלגות בשישי/שבת",
     importsQuietDays && missing.length === 0,
     JSON.stringify({importsQuietDays, missing}));
 
@@ -151,7 +162,7 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
 
   const notifyOnPublishHasNoQuietCheck = (() => {
     const start = fn.indexOf("exports.notifyOnPublish = onDocumentWritten(");
-    const end = fn.indexOf("exports.remindCertExpiryDaily");
+    const end = fn.indexOf("exports.remindReserveRefreshDaily");
     const body = start >= 0 && end > start ? fn.slice(start, end) : "";
     return !/isQuietDay/.test(body);
   })();
@@ -170,12 +181,40 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
 // 8. notifyOnPublish: לוח צוות תורן (roster_publish/roster_current) הוא גלובלי —
 // BROADCAST_SHED גורם ללולאה על כל המסגרות במקום פנייה יחידה ל-shedId בודד
 {
-  const importsBroadcast = /const \{decide, SHED_NAMES, BROADCAST_SHED\} = require\("\.\/lib\/notify"\)/.test(fn);
+  const importsBroadcast = /const \{classify, decide, SHED_NAMES, BROADCAST_SHED, PER_PERSON_SHED\} = require\("\.\/lib\/notify"\)/.test(fn);
   const loopsOverShedIds = /const shedIds = shedId === BROADCAST_SHED \? Object\.keys\(SHED_NAMES\) : \[shedId\]/.test(fn);
   const iteratesLoop = /for \(const sid of shedIds\)/.test(fn);
   record("notifyOnPublish: לוח צוות תורן (BROADCAST_SHED) משודר בלולאה לכל המסגרות ב-SHED_NAMES",
     importsBroadcast && loopsOverShedIds && iteratesLoop,
     JSON.stringify({importsBroadcast, loopsOverShedIds, iteratesLoop}));
+}
+
+// 9. שינוי בשיבוץ בלוח קיים (roster_change) לא משודר: notifyOnPublish מנתב
+// אותו ל-sendRosterChangeNotifications, שמצליב שם→מסגרת מול cfg_personnel
+// ושולח רק לחייל שהושפע ולמפקד שלו (ולא דרך לולאת השידור הרגילה)
+{
+  const routesPerPerson = /if \(shedId === PER_PERSON_SHED\) \{ await sendRosterChangeNotifications\(decision\); return; \}/.test(fn);
+  const start = fn.indexOf("async function sendRosterChangeNotifications");
+  const end = fn.indexOf("exports.notifyOnPublish");
+  const body = start >= 0 && end > start ? fn.slice(start, end) : "";
+  const resolvesShedByPersonnel = /_cfg_personnel/.test(body) && /resolveNameToShed\(name, shedPersonnelMap\)/.test(body);
+  const personalLine = /affected\[meta\.name\]/.test(body);
+  const commanderLine = /m(?:eta)?\.role === "מפקד" && teamNames\.length/.test(body);
+  const importsCommanderBody = /require\("\.\/lib\/roster_changes"\)/.test(fn);
+  record("שינוי שיבוץ בלוח (roster_change) מנותב פר-אדם: החייל שהושפע + המפקד של המסגרת שלו, לפי cfg_personnel",
+    routesPerPerson && resolvesShedByPersonnel && personalLine && commanderLine && importsCommanderBody,
+    JSON.stringify({routesPerPerson, resolvesShedByPersonnel, personalLine, commanderLine, importsCommanderBody}));
+}
+
+// 9ב. תוויות השורות המותאמות-אישית נקראות רק בכתיבה ללוח הצוות — לא בכל
+// כתיבה למסד (אחרת כל הודעה/תקלה הייתה מוסיפה קריאת Firestore מיותרת)
+{
+  const readsLabels = /db\.doc\("sq124\/roster_custom_rows"\)/.test(fn);
+  const gatedOnRosterDoc = /docKind === "roster_current" \|\| docKind === "roster_next"/.test(fn);
+  const passedToDecide = /decide\(\{docId, before, after, customRowLabels\}\)/.test(fn);
+  record("תוויות שורות מותאמות-אישית נקראות רק בכתיבה ללוח הצוות ומועברות ל-decide",
+    readsLabels && gatedOnRosterDoc && passedToDecide,
+    JSON.stringify({readsLabels, gatedOnRosterDoc, passedToDecide}));
 }
 
 console.log("\n=== SUMMARY ===");

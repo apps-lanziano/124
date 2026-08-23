@@ -2,6 +2,8 @@
    לוגיקת ההחלטה של notifyOnPublish — הופרדה ללוגיקה טהורה כדי
    שאפשר לבדוק אותה עם אירועי Firestore מדומים, בלי emulator.
    ============================================================ */
+const {diffRosterWeek, personalChangeBody} = require("./roster_changes");
+
 const SHED_NAMES = {
   shed1: "סככה 1", shed2: "סככה 2", shed3: "סככה 3", shed4: "סככה 4", shed5: "סככה 5",
   dept: "מחלקות", maint: "מ״ע אחזקה", training: "הדרכה",
@@ -57,13 +59,43 @@ function classify(docId) {
 // notifyOnPublish (functions/index.js) מזהה אותו ושולח בלולאה על כל
 // SHED_IDS, במקום לפנות ל-push_tokens_<shedId> בודד כמו כל שאר הסוגים.
 const BROADCAST_SHED = "__broadcast__";
+/* שינוי בשיבוץ בלוח קיים אינו משודר לכל הטייסת אלא נשלח פר-אדם: כל חייל
+   שהשיבוץ שלו השתנה, והמפקד של המסגרת שלו. decide() מחזירה כאן מפה של
+   שם→גוף-ההתראה, ו-notifyOnPublish (functions/index.js) מצליב אותה מול
+   רשימות הצוות (cfg_personnel) ומול הטוקנים הרשומים. */
+const PER_PERSON_SHED = "__perperson__";
 
-function decide({docId, before, after}) {
+/* מחליטה מה לעשות עם *שינוי* בלוח שכבר גלוי למשתמשים (הנוכחי, או "הבא"
+   שכבר פורסם), אחרי ששער ה-pushedAt כבר עבר:
+   • weekStart השתנה = לוח של שבוע אחר נכנס לתוקף (קידום מ"הבא"/שחזור
+     מארכיון) — זה לוח חדש ולא "שינוי שיבוץ", ולכן משודר לכולם. דיף
+     פר-חייל היה חסר משמעות כאן ממילא (כמעט כל השמות משתנים).
+   • אותו שבוע = עריכה נקודתית → רק מי שנוסף/ירד + המפקד שלו.
+   • רק מטא-דאטה השתנתה (טווח נוחים/תורן טייסת/השבתת שורה/תיקון תאריך
+     על לוח בלי weekStart קודם) — אף אחד לא מקבל התראה. */
+function rosterChangeDecision(before, after, customRowLabels) {
+  const beforeWeek = (before && before.weekStart) || "";
+  const afterWeek = (after && after.weekStart) || "";
+  // "שבוע אחר" רק כששני הצדדים מתוארכים בפועל: לוח legacy בלי weekStart
+  // שמקבל תאריך בשמירה רגילה (publishRoster מרענן weekStart בכל שמירה)
+  // אינו לוח חדש, ואסור שייראה ככזה.
+  if (beforeWeek && afterWeek && beforeWeek !== afterWeek) {
+    return {kind: "roster_week", shedId: BROADCAST_SHED, count: 1};
+  }
+  const byName = diffRosterWeek(before, after, {customRowLabels});
+  if (!byName.size) return null;
+  const perName = {};
+  for (const [name, change] of byName) perName[name] = personalChangeBody(change);
+  return {kind: "roster_change", shedId: PER_PERSON_SHED, perName, count: byName.size};
+}
+
+function decide({docId, before, after, customRowLabels}) {
   let kind = classify(docId);
   if (!kind) return null;
 
   let newItems = [];
   let shedId;
+  let perName = null;
   if (kind === "roster_current") {
     // כל כתיבה ללוח הצוות הפעיל (הנוכחי) עלולה לבוא גם מכתיבת-מערכת שקטה
     // (רוטציה שבועית אוטומטית, maybeRotateWeek ב-index.html) — לא רק
@@ -72,7 +104,10 @@ function decide({docId, before, after}) {
     // אוטומטית משמרת בכוונה את pushedAt הישן כדי לא "להיראות" כמו שינוי.
     if (before === undefined) return null;   // יצירה ראשונה — לא "עדכון" בעיני משתמש
     if (!after || !after.pushedAt || after.pushedAt === (before && before.pushedAt)) return null;
-    shedId = BROADCAST_SHED;
+    const change = rosterChangeDecision(before, after, customRowLabels);
+    if (!change) return null;
+    kind = change.kind; shedId = change.shedId; perName = change.perName || null;
+    newItems = new Array(change.count).fill(null);
   } else if (kind === "roster_next") {
     // "next" גלוי לכולם רק אחרי שסומן published (ראו publishFutureRoster
     // ב-index.html) — לפני זה רק מ״ע תורנויות רואה, ואין למי להודיע.
@@ -81,9 +116,18 @@ function decide({docId, before, after}) {
     // נדרש pushedAt חדש בפועל, מאותה סיבה כמו למעלה.
     if (!(after && after.published)) return null;
     const wasPublished = !!(before && before.published);
-    if (wasPublished && (!after.pushedAt || after.pushedAt === (before && before.pushedAt))) return null;
-    kind = wasPublished ? "roster_current" : "roster_publish";
-    shedId = BROADCAST_SHED;
+    if (!wasPublished) {
+      // פרסום ראשון — "לוח צוות חדש", לכל הטייסת (החלטת מוצר, כלל 1)
+      kind = "roster_publish";
+      shedId = BROADCAST_SHED;
+    } else {
+      // כבר פורסם: זו עריכה של לוח שכבר גלוי — אותם כללים כמו הלוח הנוכחי
+      if (!after.pushedAt || after.pushedAt === (before && before.pushedAt)) return null;
+      const change = rosterChangeDecision(before, after, customRowLabels);
+      if (!change) return null;
+      kind = change.kind; shedId = change.shedId; perName = change.perName || null;
+      newItems = new Array(change.count).fill(null);
+    }
   } else if (kind === "rollcall") {
     if (!(after === true && before !== true)) return null;
     shedId = docId.slice(0, docId.indexOf("_rollcall_active"));
@@ -149,7 +193,8 @@ function decide({docId, before, after}) {
     morning_rollcall: "📋 מסדר בוקר · " + shedName,
     duty_naat: "🔄 אישורי מ״ע תורנויות",
     roster_publish: "פורסם לוח צוות חדש",
-    roster_current: "בוצע עדכון ללוח צוות תורן",
+    roster_week: "לוח צוות חדש נכנס לתוקף",
+    roster_change: "🗓️ עדכון בלוח הצוות התורן",
     support: "📩 פנייה חדשה בתמיכה",
   };
   const title = KIND_TITLES[kind];
@@ -160,7 +205,9 @@ function decide({docId, before, after}) {
     : kind === "binui_fault" ? (item.shedName ? item.shedName + ": " : "") + String(item.title || "")
     : kind === "duty_naat" ? `${newItems.length} פריטים ממתינים לאישורך`
     : kind === "roster_publish" ? "לוח הצוות התורן לשבוע הבא זמין לצפייה"
-    : kind === "roster_current" ? "לחצו כדי לצפות בשיבוץ המעודכן"
+    : kind === "roster_week" ? "לחצו כדי לצפות בשיבוץ של השבוע"
+    // roster_change: הגוף אישי לכל נמען (perName) — נבנה ב-notifyOnPublish
+    : kind === "roster_change" ? ""
     : kind === "support" ? (String(item.by || "משתמש") + ": " + String(item.text || "").slice(0, 120))
     : String(item.title || item.fname || "");
 
@@ -170,7 +217,7 @@ function decide({docId, before, after}) {
   // פניות תמיכה נשלחות לכל הטוקנים ב-push_tokens_admin (רק מנהל-העל).
   const commandersOnly = kind === "morning_rollcall" || kind === "fault" || kind === "binui_fault";
 
-  return {kind, shedId, shedName, title, body, count: kind==="morning_rollcall" ? (after.absentCount||0) : (newItems.length || 1), commandersOnly};
+  return {kind, shedId, shedName, title, body, perName, count: kind==="morning_rollcall" ? (after.absentCount||0) : (newItems.length || 1), commandersOnly};
 }
 
-module.exports = {SHED_NAMES, classify, decide, BROADCAST_SHED};
+module.exports = {SHED_NAMES, classify, decide, BROADCAST_SHED, PER_PERSON_SHED};

@@ -63,6 +63,8 @@ jobs:
                    qa/suite/quiet_days_lib_test.mjs \
                    qa/suite/reminders_lib_test.mjs \
                    qa/suite/reserve_refresh_reminders_lib_test.mjs \
+                   qa/suite/roster_change_targeting_test.mjs \
+                   qa/suite/roster_notify_lib_test.mjs \
                    qa/suite/scheduled_functions_wiring_test.mjs \
                    qa/suite/vo_reminders_lib_test.mjs; do
             echo "::group::$f"

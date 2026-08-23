@@ -217,15 +217,38 @@ rosterView = "board" | "day" | "mine"
 ## התראות לוח צוות תורן (`board_roster`/`board_roster_next`)
 
 לוח הצוות (Roster v2) **גלובלי לכל הטייסת** (לא לפי מסגרת — ר' `rosterStorageKey`
-למעלה), ולכן ההתראה עליו משודרת לכל המסגרות בבת אחת, לא רק לאחת. הלוגיקה
-יושבת ב-`functions/lib/notify.js` (`classify`/`decide`), עם דגל שידור מיוחד
-`BROADCAST_SHED` ש-`notifyOnPublish` (`functions/index.js`) מזהה ומריץ
-עליו לולאה על כל `SHED_IDS` (במקום פנייה ל-`push_tokens_<shedId>` בודד).
+למעלה). הלוגיקה יושבת ב-`functions/lib/notify.js` (`classify`/`decide`), עם
+דגל שידור מיוחד `BROADCAST_SHED` ש-`notifyOnPublish` (`functions/index.js`)
+מזהה ומריץ עליו לולאה על כל `SHED_IDS` (במקום פנייה ל-`push_tokens_<shedId>`
+בודד).
 
-| אירוע | title | מתי |
-|---|---|---|
-| `board_roster_next` עובר `published:false→true` | "פורסם לוח צוות חדש" | לחיצה על "פרסם לוח צוות" ב"בניית לוח עתידי" (`publishFutureRoster`) |
-| כתיבה ל-`board_roster` (הנוכחי), או ל-`board_roster_next` שכבר `published` | "בוצע עדכון ללוח צוות תורן" | `publishRoster`/`saveRosterDraftNext`/`restoreWeekToCurrent` |
+**⛔ שידור-לכולם שמור ל"לוח חדש" בלבד. *שינוי* בלוח קיים נשלח פר-אדם.**
+(החלטת מוצר, 2026-08-23 — "התראה על שינוי לוח צוות תורן רק לחייל
+שמתווסף/יורד ולמפקד שלו".)
+
+| אירוע | kind | title | למי |
+|---|---|---|---|
+| `board_roster_next` עובר `published:false→true` (`publishFutureRoster`) | `roster_publish` | "פורסם לוח צוות חדש" | **כל הטייסת** (`BROADCAST_SHED`) |
+| `weekStart` של הלוח השתנה — לוח של שבוע אחר נכנס לתוקף (`restoreWeekToCurrent`/שחזור מארכיון) | `roster_week` | "לוח צוות חדש נכנס לתוקף" | **כל הטייסת** |
+| שינוי שיבוץ בתוך אותו שבוע (`publishRoster`/`saveRosterDraftNext` על לוח שכבר גלוי) | `roster_change` | "🗓️ עדכון בלוח הצוות התורן" | **רק** מי שנוסף/ירד + המפקד של המסגרת שלו (`PER_PERSON_SHED`) |
+| דחיפה שלא שינתה אף שיבוץ (רק `restWindow`/`squadronDuty`/`disabledRows`/תיקון תאריך) | — | — | **אף אחד** |
+
+**הדיף (`functions/lib/roster_changes.js`, לוגיקה טהורה):** `diffRosterWeek`
+משווה יום-יום את כל שדות השמות (`manager`/`lead`/`deputyLead`/`pilot`/
+`driver`/`tools`/`fixedAug`/`pf`/`pfRest`/`pms`/`pmsRest`/`reserve`/`basic`
+ו-`custom_<id>`) ומחזיר `שם → {added, removed}`.
+⚠️ **`duty`/`rest` מוחרגים בכוונה** — הם שדות *נגזרים* ש-`saveDutyRosterV2`
+בונה מהשאר (`duty = rosterDayAssigned`, `rest = pfRest+pmsRest`), וספירתם
+הייתה מכפילה כל שינוי ומציגה בהתראה שיבוץ שלא קיים בלוח. משמרת הסופ״ש
+(חמישי+שישי+שבת, שלושה ימים שמתארים משמרת רצופה אחת) מכווצת ל-"חמישי–שבת".
+תוויות השורות המותאמות-אישית נקראות מ-`sq124/roster_custom_rows` ומועברות
+ל-`decide` — רק בכתיבה למסמכי הלוח, לא בכל כתיבה למסד.
+
+**הצלבת "מי המפקד שלו" (`sendRosterChangeNotifications` ב-`functions/index.js`):**
+שם→מסגרת לפי `<shed>_cfg_personnel` (אותו `resolveNameToShed` של התקציר
+היומי — שם שלא זוהה, או שקיים בשתי מסגרות, לא משויך לאף מפקד ורק נרשם
+ללוג); שם→מכשיר לפי `push_tokens_<shedId>` (השדה `name` שנשמר עם כל טוקן).
+מפקד שגם הוא עצמו שובץ/ירד מקבל הודעה אחת עם שתי השורות.
 
 **רק בדחיפה מפורשת של מ״ע תורנויות — לא בכתיבת-מערכת שקטה.** שדה
 `pushedAt` (טוקן, על גוף מסמך הלוח עצמו — עובר דרך `migrateRosterToV2`/
@@ -243,9 +266,33 @@ rosterView = "board" | "day" | "mine"
 "עדכון" לכל הטייסת. זו הנגיעה היחידה שמותרת בפונקציה הזו (ר' "מה לא
 לשנות" למטה) — לא לגעת בלוגיקת ה-3-retry או ברוטציה עצמה מעבר לשורה הזו.
 
-בדיקות: `qa/suite/roster_notify_lib_test.mjs` (לוגיקת decide/pushedAt),
+בדיקות: `qa/suite/roster_notify_lib_test.mjs` (לוגיקת decide/pushedAt/מי מקבל),
+`qa/suite/roster_change_targeting_test.mjs` (הדיף עצמו — מי נוסף/ירד ומה כתוב
+בהתראה), `qa/suite/scheduled_functions_wiring_test.mjs` (הניתוב פר-אדם בפועל),
 `qa/suite/roster_restore_test.mjs` (restoreWeekToCurrent, שני הכיוונים),
 `qa/suite/naat_constraint_and_rotate_test.mjs` (שהרוטציה לא "מדליפה" pushedAt).
+
+---
+
+## תזכורות מתוזמנות (Cloud Scheduler)
+
+| שעה | פונקציה | למי |
+|---|---|---|
+| 07:30 | `remindReserveRefreshDaily` — מילואים שלא רועננו 180+ יום | **רק אחראי הדרכה** (`push_tokens_training`, תפקיד מפקד) — סיכום טייסתי אחד עם פילוח לפי מסגרת |
+| 07:45 | `remindVoIssuesDaily` — רכבים/רישיונות/חומרים/כלים מוטוריים | מפקדי מ״ע אחזקה (`push_tokens_maint`) |
+| 08:00 | `dailyDigest` — סקירה יומית + שיבוץ התורנות של היום | רשימה סגורה בשם (`DAILY_DIGEST_ALLOWED_NAMES` ב-`lib/daily_digest.js`) |
+| 03:00 ראשון | `weeklyBackup` | — (גיבוי, לא התראה) |
+
+כל התזכורות המתוזמנות מדלגות בשישי/שבת (`isQuietDay`); התראות בזמן אמת
+(`notifyOnPublish`) לא — הן עשויות להיות מבצעיות.
+
+> ⚠️ **`remindCertExpiryDaily` ("🎓 הסמכות דורשות תשומת לב") הוסרה** (בקשת
+> המשתמש, 2026-08-23), בדיוק כמו `remindUnsignedDaily` לפניה. `lib/cert_expiry_reminders.js`
+> **נשאר** — `dailyDigest` עדיין מדווח דרכו "הסמכות פגות השבוע" (עם
+> `cooldownDays:0`, מתעלם מהיומן). לא להחזיר את הפונקציה המתוזמנת.
+> ⚠️ **רענון מילואים כבר לא נשלח למפקד כל מסגרת** — רק לאחראי הדרכה. אם
+> אין לו טוקן רשום, הפונקציה יוצאת **בלי** לכתוב ל-`_reserve_reminder_log`,
+> אחרת ה-cooldown היה "נצרך" בשקט ואף אחד לא היה מקבל את התזכורת גם מחר.
 
 ---
 
@@ -285,7 +332,7 @@ node scripts/sw-cache-name.mjs --write   # כותב את הערך הנכון ל-
 node qa/suite/<test>.mjs    # הרץ בדיקה בודדת
 ```
 
-**127 בדיקות, כולן עוברות** נכון ל-2026-08-23.
+**128 בדיקות, כולן עוברות** נכון ל-2026-08-23.
 
 ⚠️ **שתי בדיקות דורשות JDK 21+** (`firestore_rules_test`, `red_team_firestore_rules_test`) —
 הן מריצות את כללי Firestore האמיתיים על Firebase Emulator, ו-firebase-tools 15
@@ -305,6 +352,7 @@ node qa/suite/<test>.mjs    # הרץ בדיקה בודדת
 - `roster_custom_rows_in_day_view_test.mjs` — שורות מותאמות-אישית מרונדרות גם ב"לוח יומי" וב"רק אני", באותו סדר של הלוח השבועי
 - `roster_custom_rows_global_test.mjs` — 🔴 הגדרות השורות גלובליות (לא פר-סככה) + אימוץ הגדרות ישנות + ניקוי קאש ב-logout
 - `roster_weekend_preserved_on_transfer_test.mjs` — ⛔ המשכיות לוחות: העברה בין סלוטים/רוטציה/כתיבות-רקע לא מוחקות את משמרת הסופ״ש
+- `roster_change_targeting_test.mjs` — ⛔ התראת שינוי בלוח נשלחת רק למי שנוסף/ירד ולמפקד שלו (דיף השיבוצים, החרגת שדות נגזרים, כיווץ סופ״ש, תוויות שורות מותאמות-אישית)
 - `roster_row_toggle_test.mjs` — השבתה/הפעלה ידנית של שורה בעורך הלוח (`rosterDisabledRows`)
 - `roster_week_dates_test.mjs` — ⛔ תאריכי הלוח (`weekStart`): בורר שבוע בלוח עתידי, קידום מוקדם מציג תאריכים אמיתיים, אין תיקון-קסם ל-weekStart ישן (`publishRoster` מרענן בזמן שמירה), תיקון תאריך ידני (`applyRosterWkFix`), ארכיון קפוא, שחזור ל"שבוע שעבר", הרוטציה לא מקדמת שבוע שטרם הגיע, מחיקת שורה מותאמת-אישית מהעורך, איפוס `rosterView` במעבר זהות
 - `roster_editor_fixes_test.mjs` — יום ראשון כברירת מחדל בלוח עתידי, מחיקת כל הלוח, מיקום שורת כלים, הסרת באנר ההתראה, מסך מלא מכבד את boardWeekSlot
@@ -449,4 +497,5 @@ git push origin main
 - `maybeRotateWeek` — יש 3-retry read כנגד transient failures (הלולאה הזו עצמה — אל תיגעו). שני חריגים מותרים שכבר בוצעו, שניהם בכוונה: (1) שימור `pushedAt` הישן של הלוח הנוכחי (ר' סעיף "התראות לוח צוות תורן" למעלה) — כדי ש-`notifyOnPublish` לא יזהה רוטציה שקטה כ"שינוי" וישלח בטעות התראה לכל הטייסת; (2) תנאי הכניסה כבר לא כולל `isRosterManager` (2026-08-20) — הרוטציה רצה מכל סשן שפותח את מסך התורנויות, לא רק מ״ע. זה תיקן באג אמיתי: אם אף מ״ע לא נכנס אחרי גבול השבוע, "הבא" נשאר ישן (כולל `disabledRows` שדלף) עד שמ״ע נכנס — וזה בדיוק ההסבר לדפוס שדווח "כניסה עם יוזר אחר מסדרת את הלוח". אין סיכון אבטחה בהרצה מכל סשן (כל משתמש מאומת כבר קורא/כותב לכל נתוני הטייסת ממילא, ר' SECURITY.md). (3) הרוטציה מקדמת את "הבא" רק אם השבוע שהוא מתאר כבר הגיע (`nextReady`: `!next.weekStart || sundayIsoOf(next.weekStart) <= sun`) — מאז שיש בורר תאריכים בעורך, "הבא" יכול להיות לוח שנבנה לעוד שבועיים, ואסור שיהפוך לפעיל מוקדם; לוח ישן בלי `weekStart` מסתובב כמו קודם. לא לגעת בשום דבר אחר בפונקציה, ואל תחזירו את התנאי על isRosterManager.
 - מינימיזציה (`build/`) — workflow דורמנטי, לא לשנות בלי הוראה מפורשת
 - `roster_custom_rows` — **לעולם לא** להחזיר ל-`sGet`/`sSet` (scoped לסככה). הלוח גלובלי, ולכן גם הגדרות השורות חייבות להיות גלובליות (`sGetRaw`/`sSetRaw`) — אחרת חוזר באג "חצי לוח" למי שלא בסככה של המ״ע (ר' `roster_custom_rows_global_test.mjs`)
+- התראת **שינוי** בלוח הצוות (`roster_change`) — לא להחזיר לשידור לכל הטייסת. שידור שמור ל-`roster_publish` (פרסום לוח שבוע הבא) ול-`roster_week` (לוח של שבוע אחר שנכנס לתוקף) בלבד; שינוי שיבוץ הולך רק למי שנוסף/ירד ולמפקד שלו (ר' סעיף ההתראות למעלה). כמו כן: `duty`/`rest` לא נכנסים לדיף — הם נגזרים, וספירתם מכפילה כל שינוי
 - `roster.disabledRows` — **לעולם לא** להפוך בחזרה להגדרה גלובלית משותפת (`sGet`/`sSet` על מפתח נפרד). זה חייב להישאר שדה על גוף הלוח עצמו (כמו `restWindow`), כדי שהשבתת שורה בלוח אחד לא תדלוף לשבועות/ארכיון אחרים — היה באג חמור שתוקן (ר' `roster_row_toggle_test.mjs`)
