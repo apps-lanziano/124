@@ -16,16 +16,16 @@ const {getFirestore} = require("firebase-admin/firestore");
 const {getMessaging} = require("firebase-admin/messaging");
 const {getStorage} = require("firebase-admin/storage");
 const {getAuth} = require("firebase-admin/auth");
-const {findExpiringCerts} = require("./lib/cert_expiry_reminders");
 const {findOverdueReserves} = require("./lib/reserve_refresh_reminders");
 const {findVoIssues} = require("./lib/vo_reminders");
 const {buildDailyDigests, filterDailyDigestTokens} = require("./lib/daily_digest");
-const {buildDutyRosterDigests} = require("./lib/duty_roster_digest");
+const {buildDutyRosterDigests, resolveNameToShed} = require("./lib/duty_roster_digest");
 const {analyzeBoardImage: analyzeBoardImageCore} = require("./lib/board_ai_analyze");
 const {isQuietDay} = require("./lib/quiet_days");
 const {validateTestNotificationRequest} = require("./lib/test_notification");
 const {dumpCollection} = require("./lib/backup");
-const {decide, SHED_NAMES, BROADCAST_SHED} = require("./lib/notify");
+const {classify, decide, SHED_NAMES, BROADCAST_SHED, PER_PERSON_SHED} = require("./lib/notify");
+const {commanderChangeBody} = require("./lib/roster_changes");
 const {shouldAuthorize} = require("./lib/authorize");
 const crypto = require("crypto");
 
@@ -163,6 +163,80 @@ exports.analyzeBoardImage = onCall(
   },
 );
 
+/* ===== התראת שינוי בלוח הצוות התורן — פר-אדם, לא לכל הטייסת =====
+   החלטת מוצר (2026-08-23): "פורסם לוח צוות חדש" נשלח לכולם, אבל *שינוי*
+   בלוח שכבר גלוי נשלח אך ורק לחייל שהשיבוץ שלו השתנה בפועל ולמפקד של
+   המסגרת שלו. הדיף עצמו מחושב בלוגיקה הטהורה (lib/roster_changes) —
+   כאן רק ההצלבה מול הנתונים החיים: שם→מסגרת לפי רשימות הצוות
+   (cfg_personnel, בדיוק כמו התקציר היומי), ושם→מכשיר לפי הטוקנים
+   הרשומים. שם שלא זוהה באף מסגרת (או שקיים בשתיים) לא משויך לאף מפקד —
+   לא מנחשים — אבל החייל עצמו עדיין מקבל התראה אם יש לו טוקן רשום. */
+async function sendRosterChangeNotifications({title, kind, perName}) {
+  const affected = perName || {};
+  const names = Object.keys(affected);
+  if (!names.length) return;
+
+  const shedIds = Object.keys(SHED_NAMES);
+  const shedPersonnelMap = {};
+  await Promise.all(shedIds.map(async (sid) => {
+    const snap = await db.doc(`sq124/${sid}_cfg_personnel`).get();
+    shedPersonnelMap[sid] = snap.exists ? (snap.data().v || []) : [];
+  }));
+
+  const byShed = {};
+  const unresolved = [];
+  for (const name of names) {
+    const sid = resolveNameToShed(name, shedPersonnelMap);
+    if (!sid) { unresolved.push(name); continue; }
+    (byShed[sid] = byShed[sid] || []).push(name);
+  }
+  if (unresolved.length) {
+    console.warn(`שינוי לוח צוות: ${unresolved.length} שמות לא זוהו באף מסגרת (לא נשלחה התראה למפקד): ${unresolved.join(", ")}`);
+  }
+
+  let sentTotal = 0;
+  for (const sid of shedIds) {
+    const tokRef = db.doc("sq124/push_tokens_" + sid);
+    const tokSnap = await tokRef.get();
+    const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
+    const teamNames = byShed[sid] || [];
+
+    const messages = [];
+    const msgTokens = [];
+    for (const [token, meta] of Object.entries(tokMap)) {
+      const lines = [];
+      const personal = meta && meta.name ? affected[meta.name] : null;
+      if (personal) lines.push("השיבוץ שלך — " + personal);
+      // המפקד מקבל סיכום על אנשי הצוות שלו; אם הוא עצמו שובץ/ירד, שתי השורות
+      if (meta && meta.role === "מפקד" && teamNames.length) lines.push(commanderChangeBody(teamNames));
+      if (!lines.length) continue;
+      msgTokens.push(token);
+      messages.push({token, data: {title, body: lines.join("\n"), kind, n: String(teamNames.length || 1)}});
+    }
+    if (!messages.length) continue;
+
+    const resp = await getMessaging().sendEach(messages);
+    sentTotal += resp.successCount;
+
+    const bad = [];
+    resp.responses.forEach((r, i) => {
+      if (!r.success) {
+        const code = r.error && r.error.code;
+        if (code === "messaging/registration-token-not-registered" ||
+            code === "messaging/invalid-registration-token" ||
+            code === "messaging/invalid-argument") {
+          bad.push(msgTokens[i]);
+        }
+      }
+    });
+    if (bad.length) {
+      bad.forEach((t) => delete tokMap[t]);
+      await tokRef.set({v: tokMap, updated: Date.now()}, {merge: true});
+    }
+  }
+  console.log(`push ${kind}: ${names.length} שמות הושפעו, ${sentTotal} התראות אישיות נשלחו`);
+}
+
 exports.notifyOnPublish = onDocumentWritten(
   {
     document: "sq124/{docId}",
@@ -176,13 +250,28 @@ exports.notifyOnPublish = onDocumentWritten(
   const before = event.data.before.exists ? event.data.before.data().v : undefined;
   const after = event.data.after.exists ? event.data.after.data().v : undefined;
 
-  const decision = decide({docId, before, after});
+  // תוויות השורות המותאמות-אישית (id→תווית) הן מסמך גלובלי אחד; נקרא רק
+  // כשהכתיבה היא ללוח הצוות עצמו, כדי לא להוסיף קריאה לכל כתיבה אחרת.
+  let customRowLabels;
+  const docKind = classify(docId);
+  if (docKind === "roster_current" || docKind === "roster_next") {
+    const crSnap = await db.doc("sq124/roster_custom_rows").get();
+    const rows = crSnap.exists ? (crSnap.data().v || []) : [];
+    customRowLabels = {};
+    for (const r of rows) if (r && r.id) customRowLabels[r.id] = r.label || "";
+  }
+
+  const decision = decide({docId, before, after, customRowLabels});
   if (!decision) return;
   const {kind, shedId, title, body, count, commandersOnly} = decision;
 
-  // לוח צוות תורן (roster_publish/roster_current) הוא גלובלי — לא שייך
-  // למסגרת בודדת — decide() מסמן זאת עם BROADCAST_SHED, ואז שולחים בלולאה
-  // על כל המסגרות במקום פנייה יחידה ל-push_tokens_<shedId>.
+  // שינוי בשיבוץ בלוח קיים — לא שידור: רק החיילים שהושפעו והמפקדים שלהם
+  if (shedId === PER_PERSON_SHED) { await sendRosterChangeNotifications(decision); return; }
+
+  // "לוח חדש" (roster_publish = פרסום שבוע הבא, roster_week = לוח של שבוע
+  // אחר שנכנס לתוקף) הוא גלובלי ולא שייך למסגרת בודדת — decide() מסמן זאת
+  // עם BROADCAST_SHED, ואז שולחים בלולאה על כל המסגרות במקום פנייה יחידה
+  // ל-push_tokens_<shedId>. *שינוי* בלוח קיים כבר לא מגיע לכאן (ר' למעלה).
   const shedIds = shedId === BROADCAST_SHED ? Object.keys(SHED_NAMES) : [shedId];
 
   for (const sid of shedIds) {
@@ -221,56 +310,12 @@ exports.notifyOnPublish = onDocumentWritten(
   }
 });
 
-/* ===== תזכורת אוטומטית — הסמכות שפגו/עומדות לפוג =====
-   רץ כל בוקר, שולח פוש מרוכז למפקד המסגרת (לא לכל חייל בנפרד) — רשימת
-   כל ההסמכות באותה מסגרת שדורשות תשומת לב. אותה הסמכה לא מזכירה שוב
-   תוך תקופת ה-cooldown (ראו lib/cert_expiry_reminders). */
-exports.remindCertExpiryDaily = onSchedule(
-  {
-    schedule: "15 7 * * *",
-    timeZone: "Asia/Jerusalem",
-    region: "me-west1",
-    memory: "256MiB",
-    timeoutSeconds: 120,
-  },
-  async () => {
-    if (isQuietDay(Date.now())) { console.log("תזכורות הסמכות: יום שקט (שישי/שבת) — מדלג"); return; }
-    const {toSend, updatedLog} = await findExpiringCerts(db);
-    if (!toSend.length) return;
-
-    let sentCount = 0;
-    for (const group of toSend) {
-      const tokRef = db.doc("sq124/push_tokens_" + group.shedId);
-      const tokSnap = await tokRef.get();
-      const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
-      const cmdTokens = Object.entries(tokMap)
-        .filter(([, m]) => m && m.role === "מפקד")
-        .map(([t]) => t);
-      if (!cmdTokens.length) continue;
-
-      const shedName = SHED_NAMES[group.shedId] || group.shedId;
-      const expiredCount = group.items.filter((i) => i.daysLeft < 0).length;
-      const body = expiredCount
-        ? `${expiredCount} הסמכות פג תוקפן, ${group.items.length - expiredCount} עומדות לפוג בקרוב`
-        : `${group.items.length} הסמכות עומדות לפוג בקרוב`;
-      await getMessaging().sendEachForMulticast({
-        tokens: cmdTokens,
-        data: {
-          title: "🎓 הסמכות דורשות תשומת לב · " + shedName,
-          body,
-          kind: "cert_reminder",
-          n: String(group.items.length),
-        },
-      });
-      sentCount++;
-    }
-    await db.doc("sq124/_cert_reminder_log").set({v: updatedLog, updated: Date.now()}, {merge: true});
-    console.log(`תזכורות הסמכות: ${toSend.length} מסגרות דורשות תשומת לב, ${sentCount} נשלחו בפועל`);
-  },
-);
-
 /* ===== תזכורת אוטומטית — מילואים שלא רועננו זמן רב =====
-   אותו רעיון בדיוק כמו תזכורת ההסמכות — פוש מרוכז למפקד המסגרת בלבד. */
+   החלטת מוצר (2026-08-23): רענון מילואים הוא תחום האחריות של **אחראי
+   הדרכה** — ולכן ההתראה נשלחת רק אליו (push_tokens_training, תפקיד
+   מפקד), ולא למפקד כל מסגרת בנפרד כמו קודם. מכיוון שהוא אחראי על כל
+   הטייסת, נשלח פוש מרוכז אחד עם הפילוח לפי מסגרת — לא הודעה לכל מסגרת
+   (אותו עיקרון כמו סקירת מ״ע אחזקה למטה: סיכום אחד, בלי הצפה). */
 exports.remindReserveRefreshDaily = onSchedule(
   {
     schedule: "30 7 * * *",
@@ -284,30 +329,29 @@ exports.remindReserveRefreshDaily = onSchedule(
     const {toSend, updatedLog} = await findOverdueReserves(db);
     if (!toSend.length) return;
 
-    let sentCount = 0;
-    for (const group of toSend) {
-      const tokRef = db.doc("sq124/push_tokens_" + group.shedId);
-      const tokSnap = await tokRef.get();
-      const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
-      const cmdTokens = Object.entries(tokMap)
-        .filter(([, m]) => m && m.role === "מפקד")
-        .map(([t]) => t);
-      if (!cmdTokens.length) continue;
+    const tokRef = db.doc("sq124/push_tokens_training");
+    const tokSnap = await tokRef.get();
+    const tokMap = tokSnap.exists ? (tokSnap.data().v || {}) : {};
+    const cmdTokens = Object.entries(tokMap)
+      .filter(([, m]) => m && m.role === "מפקד")
+      .map(([t]) => t);
+    // בלי נמען אין שליחה — וגם אין כתיבה ליומן ה-cooldown, אחרת התזכורת
+    // הייתה "נצרכת" בשקט ואף אחד לא היה מקבל אותה גם מחר.
+    if (!cmdTokens.length) { console.log("תזכורות מילואים: אין טוקן של אחראי הדרכה — מדלג"); return; }
 
-      const shedName = SHED_NAMES[group.shedId] || group.shedId;
-      await getMessaging().sendEachForMulticast({
-        tokens: cmdTokens,
-        data: {
-          title: "🎖️ רענון מילואים · " + shedName,
-          body: `${group.items.length} אנשי מילואים לא רועננו זמן רב`,
-          kind: "reserve_reminder",
-          n: String(group.items.length),
-        },
-      });
-      sentCount++;
-    }
+    const total = toSend.reduce((n, g) => n + g.items.length, 0);
+    const parts = toSend.map((g) => `${SHED_NAMES[g.shedId] || g.shedId}: ${g.items.length}`);
+    await getMessaging().sendEachForMulticast({
+      tokens: cmdTokens,
+      data: {
+        title: "🎖️ רענון מילואים",
+        body: `${total} אנשי מילואים לא רועננו זמן רב — ${parts.join(" · ")}`,
+        kind: "reserve_reminder",
+        n: String(total),
+      },
+    });
     await db.doc("sq124/_reserve_reminder_log").set({v: updatedLog, updated: Date.now()}, {merge: true});
-    console.log(`תזכורות מילואים: ${toSend.length} מסגרות דורשות תשומת לב, ${sentCount} נשלחו בפועל`);
+    console.log(`תזכורות מילואים: ${total} אנשים ב-${toSend.length} מסגרות — נשלח לאחראי הדרכה`);
   },
 );
 
