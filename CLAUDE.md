@@ -137,6 +137,9 @@ rosterView = "board" | "day" | "mine"
 
 🔒 **`rosterView` מתאפס ל-`"board"` בכל מעבר זהות, לא רק בטעינת עמוד ראשונה.** `rosterView` הוא משתנה גלובלי יחיד; בלי מעקב נפרד, "החלף משתמש"/התחזות (`impersonateUser`, ללא טעינת עמוד מחדש) הייתה משמרת את הלשונית שהזהות הקודמת השאירה — למשל מפקד שצפה ב"לוח יומי" ואז נכנס בתור חייל היה גורם לחייל "לרשת" את "לוח יומי" במקום לפתוח תמיד ב"לוח שבועי". `renderRosterView` משווה את `user` הנוכחי מול `_rosterViewSeenAs` (מה שנצפה אחרון) ומאפס את `rosterView` בכל שינוי זהות. ר' `roster_week_dates_test.mjs`.
 
+**באנר חיפוש חייל בלוח (`canRosterSearch()` = `isRosterManager || userRole==="מפקד"`):** תיבת חיפוש מעל הלוח, **רק בתצוגת "לוח שבועי"** — בחירת שם (מהבנק או הקלדה חופשית + Enter) מדהה את כל התאים חוץ מהמיקומים של אותו חייל (`applyRosterHighlight`, `.hl-on`/`.rc-hl`) ומציגה כמה מיקומים נמצאו.
+⚠️ **מוצג לכל מפקד, לא רק למ״ע תורנויות** (שינוי מכוון, 2026-08-23): הלוח גלובלי לכל הטייסת, ומפקד צריך לאתר בו את אנשיו בדיוק כמו מ״ע התורנויות. זו תצוגה בלבד — החיפוש לא כותב כלום ולא פותח עריכה, ולכן אין בו שאלת הרשאה. בנק השמות (`rosterSearchBank`, מ-`fetchAllPersonnelByShed`) נטען מכל הסככות מאותה סיבה. חייל רגיל לא רואה את הבאנר. `rosterSearchName` מתאפס במעבר זהות יחד עם `rosterView`, כדי שהדגשה לא "תדלוף" למשתמש הבא. ר' `cmd_global_search_and_roster_banner_test.mjs`.
+
 ---
 
 ## חוקי דוח חריגות (`computeRosterCompliance`)
@@ -332,7 +335,7 @@ node scripts/sw-cache-name.mjs --write   # כותב את הערך הנכון ל-
 node qa/suite/<test>.mjs    # הרץ בדיקה בודדת
 ```
 
-**128 בדיקות, כולן עוברות** נכון ל-2026-08-23.
+**129 בדיקות, כולן עוברות** נכון ל-2026-08-23.
 
 ⚠️ **שתי בדיקות דורשות JDK 21+** (`firestore_rules_test`, `red_team_firestore_rules_test`) —
 הן מריצות את כללי Firestore האמיתיים על Firebase Emulator, ו-firebase-tools 15
@@ -358,6 +361,7 @@ node qa/suite/<test>.mjs    # הרץ בדיקה בודדת
 - `roster_editor_fixes_test.mjs` — יום ראשון כברירת מחדל בלוח עתידי, מחיקת כל הלוח, מיקום שורת כלים, הסרת באנר ההתראה, מסך מלא מכבד את boardWeekSlot
 - `roster_weekend_split_test.mjs` — פיצול מנהל/מתגבר חמישי vs שישי–שבת
 - `roster_count_and_search_test.mjs` — ספירות + חיפוש חייל
+- `cmd_global_search_and_roster_banner_test.mjs` — באנר חיפוש חייל בלוח לכל מפקד (לא רק מ״ע) + החיפוש הכללי בדשבורד המפקד (כל הקטגוריות, צ'יפי סינון, עמידות למקור שבור)
 - `roster_compliance_test.mjs` — חוקי חריגות
 - `roster_next_week_privacy_test.mjs` — פרטיות שבוע הבא
 - `soldier_dashboard_test.mjs` — דשבורד חייל
@@ -399,6 +403,28 @@ git merge origin/main
 git merge --no-ff claude/github-pages-site-review-b11uiu
 git push origin main
 ```
+
+---
+
+## חיפוש כללי בדשבורד המפקד (`renderCmdGlobalSearch`)
+
+תיבת החיפוש ב-`scr-cmd` היא **חיפוש כללי בכל נתוני המסגרת**, לא חיפוש חיילים בלבד (שינוי מכוון, 2026-08-23 — קודם `renderCmdSoldierSearch` על `#cmd-soldier-search`, היום `#cmd-global-search`).
+
+| קטגוריה | מקור | שדות התאמה | יעד הלחיצה |
+|---|---|---|---|
+| חיילים | `PERSONNEL` | שם, תפקיד, מקצוע, מחלקה | `openTeamMgmt()` + `startEditMember(i)` |
+| כלים | `getTools` | שם, מספר סידורי | `scr-tools` |
+| רכבים | `getVehicles` + `getShedLeasingVehicles` | שם, מס' רכב, מחזיק | `scr-vehicles` |
+| הסמכות | `getCerts` | שם ההסמכה, שם החייל | `scr-certs` |
+| רישיונות | `getVoLicenses` (מסונן ל-`currentShed.id`) | שם החייל, סוג | `scr-vehicles` → לשונית רישיונות |
+| נע״תים | `getNaatim` | תחום, שם החייל | `scr-naatim` |
+| תקלות | `getFaults` | כותרת, תיאור, מדווח | `scr-faults` |
+
+- `cmdSearchHits(q, src)` הוא **חישוב טהור** (לא נוגע ב-DOM) — כל לוגיקת ההתאמה נבדקת ישירות.
+- `cmdSearchSources()` טוען את כל המקורות במקביל, **כל אחד עטוף ב-`try` בנפרד** — מקור חסר או שבור (מסגרת בלי חדר כלים, קריאה שנכשלה) מחזיר רשימה ריקה ולא מרוקן את שאר התוצאות. אותו עיקרון של `renderTrainHub`.
+- **מרוץ הקלדה:** הרינדור אסינכרוני, ולכן לפני הכתיבה ל-DOM הוא מוודא שהערך בתיבה עדיין זהה לשאילתה שהוא טען עבורה. בלי הבדיקה הזו תשובה איטית של שאילתה ישנה הייתה דורסת תוצאות חדשות יותר.
+- סינון החיילים משמר את הכלל הישן: במסגרת "מחלקות" מפקד רואה רק את המחלקה שלו (`personDept`).
+- צ'יפי הקטגוריה (`cs-chip`) נבנים **רק לקטגוריות שיש בהן תוצאות בפועל**, עם ספירה; `cmdSearchCat` חוזר ל-`"all"` כשהקטגוריה שנבחרה כבר לא קיימת בתוצאות או כשהתיבה מתרוקנת.
 
 ---
 
