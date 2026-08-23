@@ -21,6 +21,15 @@ jobs:
         with:
           node-version: '22'
 
+      # שתי בדיקות בחבילה מריצות את כללי האבטחה האמיתיים על Firebase
+      # Emulator, וזה רץ על Java. ה-runner של GitHub מגיע עם Java 17
+      # כברירת מחדל, ו-firebase-tools 15 דורש 21+ — בלי השלב הזה שתי
+      # בדיקות האבטחה נכשלו על הסביבה ולא על הקוד.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: התקנת Playwright
         run: |
           npm install --no-audit --no-fund

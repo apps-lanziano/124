@@ -285,9 +285,17 @@ node scripts/sw-cache-name.mjs --write   # כותב את הערך הנכון ל-
 node qa/suite/<test>.mjs    # הרץ בדיקה בודדת
 ```
 
-**116 בדיקות, כולן עוברות** נכון ל-2026-08-22.
+**127 בדיקות, כולן עוברות** נכון ל-2026-08-23.
+
+⚠️ **שתי בדיקות דורשות JDK 21+** (`firestore_rules_test`, `red_team_firestore_rules_test`) —
+הן מריצות את כללי Firestore האמיתיים על Firebase Emulator, ו-firebase-tools 15
+לא רץ על Java ישנה יותר. בסביבה בלי JDK מתאים הן **מדלגות** (`QA_SKIP`, יציאה 0)
+ולא נכשלות — כשל סביבה אינו תקלה באפליקציה. ב-CI ובדוח היומי מותקן JDK 21
+(`actions/setup-java`), ו-`QA_REQUIRE_EMULATOR=1` ב-CI הופך דילוג לכשל קשה כדי
+שבדיקת אבטחה לא "תעבור" בשקט בלי לרוץ. ר' `qa/lib/java_check.mjs`.
 
 קבצי בדיקות קיימים:
+- `qa_env_skip_test.mjs` — כשל סביבה (חוסר JDK 21) מדווח כדילוג ולא כ"בדיקה נכשלה", ופלט לדוח מנוקה מקודי צבע
 - `roster_cards_view_test.mjs` — לשוניות + כרטיסי יום
 - `roster_ui_test.mjs` — ממשק כללי + זום
 - `roster_new_slots_test.mjs` — משבצות מנהל/מטיס/PMS נחים

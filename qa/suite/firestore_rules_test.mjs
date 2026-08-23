@@ -14,6 +14,7 @@
    ============================================================ */
 import { readFileSync, existsSync } from "fs";
 import { spawnSync } from "child_process";
+import { ensureJava21OrSkip } from "../lib/java_check.mjs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
@@ -28,6 +29,10 @@ if (!process.env.FIRESTORE_EMULATOR_HOST) {
     console.error("❌ firebase-tools לא מותקן (node_modules/.bin/firebase חסר). הרץ: npm install");
     process.exit(1);
   }
+  // ה-emulator רץ על Java; firebase-tools 15 דורש JDK 21+. בלי הבדיקה
+  // הזו כשל *סביבה* היה מדווח בדוח היומי כ"🔴 חמור · בדיקה נכשלה",
+  // כאילו יש רגרסיה בכללי האבטחה. ר' qa/lib/java_check.mjs.
+  ensureJava21OrSkip("firestore_rules_test.mjs");
   const selfPath = fileURLToPath(import.meta.url);
   const res = spawnSync(
     firebaseBin,
