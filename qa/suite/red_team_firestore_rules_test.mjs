@@ -24,6 +24,7 @@
 
 import { readFileSync, existsSync } from "fs";
 import { spawnSync } from "child_process";
+import { ensureJava21OrSkip } from "../lib/java_check.mjs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
@@ -38,6 +39,10 @@ if (!process.env.FIRESTORE_EMULATOR_HOST) {
     console.error("❌ firebase-tools not installed. Run: npm install");
     process.exit(1);
   }
+  // The emulator runs on Java; firebase-tools 15 requires JDK 21+.
+  // Without this guard an *environment* problem was reported in the daily
+  // QA report as a critical test failure. See qa/lib/java_check.mjs.
+  ensureJava21OrSkip("red_team_firestore_rules_test.mjs");
   const selfPath = fileURLToPath(import.meta.url);
   const res = spawnSync(
     firebaseBin,

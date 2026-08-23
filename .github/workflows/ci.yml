@@ -26,6 +26,15 @@ jobs:
         with:
           node-version: '22'
 
+      # שתי בדיקות בחבילה מריצות את כללי האבטחה האמיתיים על Firebase
+      # Emulator, וזה רץ על Java. ה-runner של GitHub מגיע עם Java 17
+      # כברירת מחדל, ו-firebase-tools 15 דורש 21+ — בלי השלב הזה שתי
+      # בדיקות האבטחה נכשלו על הסביבה ולא על הקוד.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: בדיקת סנכרון גרסת Service Worker
         run: node scripts/sw-cache-name.mjs --check
 
@@ -35,6 +44,10 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: הרצת חבילת הבדיקות
+        # דילוג של בדיקה בגלל סביבה חסרה = כשל כאן, כדי שבדיקות
+        # האבטחה לא "יעברו" בשקט בלי לרוץ בפועל.
+        env:
+          QA_REQUIRE_EMULATOR: '1'
         run: |
           fail=0
           pass=0

@@ -14,12 +14,26 @@
 import { writeFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { closeBrowser } from './lib/harness.mjs';
-import { summarizeError } from './lib/report_util.mjs';
+import { summarizeError, stripAnsi } from './lib/report_util.mjs';
 import { IDEAS as UPGRADE_IDEAS } from './improvement_ideas.mjs';
 
 import { ROOT } from './lib/pw.mjs';   // שורש המאגר — נגזר, לא מקובע
 const SEV_ORDER = { high:0, med:1, low:2, info:3 };
 const SEV_HE = { high:"🔴 חמור", med:"🟠 בינוני", low:"🟡 קל", info:"🔵 מידע" };
+
+/* תיאור כשל של בדיקה, בשפה שאפשר לקרוא בדוח.
+   פלט הבדיקה עלול להכיל צבעי טרמינל ורעש של כלים חיצוניים
+   (firebase-tools מדפיס "Shutting down emulators" אחרי השגיאה עצמה),
+   ולכן: מנקים ANSI, מעדיפים שורות ❌, ואחריהן שורת Error אמיתית. */
+function testFailureDetail(e){
+  const out = stripAnsi(((e.stdout||'')+''+(e.stderr||'')).toString());
+  const lines = out.split('\n').map(l=>l.trim()).filter(Boolean);
+  const failed = lines.filter(l=>l.includes('❌')).slice(0,3);
+  if(failed.length) return failed.join(' | ');
+  const errLine = lines.find(l=>/^Error:/.test(l) || /Error:/.test(l));
+  if(errLine) return errLine.slice(0,300);
+  return lines.slice(-3).join(' | ').slice(0,300) || "כשל ללא פלט";
+}
 
 /* ---------- סוכן 2: חבילת הרגרסיה הקיימת ---------- */
 async function runRegression(){
@@ -33,22 +47,30 @@ async function runRegression(){
        detail:"קבצי הבדיקה אינם בנתיב הצפוי. ודא ש-qa/suite קיים במאגר.", where:"qa/suite"}]};
   }
   const files = readdirSync(dir).filter(f=>f.endsWith('.mjs')).sort();
-  let pass=0, fail=0;
+  let pass=0, fail=0, skip=0;
   for(const f of files){
     try{
-      execFileSync('node', [`${dir}/${f}`], { timeout: 180000, stdio:'pipe' });
-      pass++;
+      const out = stripAnsi(execFileSync('node', [`${dir}/${f}`], { timeout: 180000, stdio:'pipe' }).toString());
+      // בדיקה שדילגה על עצמה מרצון (סביבה חסרה — למשל JDK 21 שנדרש
+      // ל-Firebase Emulator). לא כשל של האפליקציה, אבל גם לא "עברה":
+      // מדווח כהערה קלה כדי שלא ייעלם בשקט. ר' qa/lib/java_check.mjs.
+      const skipLine = out.split('\n').find(l=>l.startsWith('QA_SKIP:'));
+      if(skipLine){
+        skip++;
+        findings.push({sev:"low", area:"רגרסיה", title:`בדיקה לא רצה בסביבה הזו: ${f}`,
+          detail: `${skipLine.replace(/^QA_SKIP:\s*/, '')}. אין כאן תקלה באפליקציה — הבדיקה פשוט לא הורצה, ולכן גם לא אישרה שהכל תקין.`,
+          where:`qa/suite/${f}`});
+      } else pass++;
     }catch(e){
       fail++;
-      const out = ((e.stdout||'')+''+(e.stderr||'')).toString();
-      const failedLines = out.split('\n').filter(l=>l.includes('❌')).slice(0,3).join(' | ');
       findings.push({sev:"high", area:"רגרסיה", title:`בדיקה נכשלה: ${f}`,
-        detail: failedLines || out.slice(-300) || "כשל ללא פלט", where:`qa/suite/${f}`});
+        detail: testFailureDetail(e), where:`qa/suite/${f}`});
     }
   }
   if(!fail) findings.push({sev:"info", area:"רגרסיה", title:"כל בדיקות הרגרסיה עברו",
-    detail:`${pass} קבצי בדיקה, כולם ירוקים — כל מנגנוני הכתיבה הקריטיים תקינים.`, where:"qa/suite"});
-  return { name:"בדיקות רגרסיה", summary:{ pass, fail, total:files.length }, findings };
+    detail:`${pass} קבצי בדיקה, כולם ירוקים — כל מנגנוני הכתיבה הקריטיים תקינים.`
+      + (skip ? ` (${skip} בדיקות לא הורצו בסביבה הזו — ר' הערות למטה.)` : ''), where:"qa/suite"});
+  return { name:"בדיקות רגרסיה", summary:{ pass, fail, skip, total:files.length }, findings };
 }
 
 /* מילון: מונחים מקצועיים -> הסבר בשפה יומיומית.
