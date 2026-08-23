@@ -87,7 +87,13 @@ jobs:
             git push origin HEAD:${GITHUB_REF_NAME}
           fi
 
-      - name: פתיחת issue אם נמצא ממצא חמור
+      # ⚠️ ה-issue הזה חייב תמיד לשקף את הדוח *האחרון*, לא את הראשון.
+      # קודם הגוף והכותרת נכתבו פעם אחת ביום שנפתח, וכל דוח המשך נוסף
+      # כתגובה בלבד — כך שמי שנכנס ל-GitHub ראה issue פתוח שהכותרת
+      # והגוף שלו מלפני שבועות (ממצאים שכבר תוקנו מזמן), וחשב שאלה
+      # התקלות הפתוחות. עכשיו: מעדכנים כותרת+גוף בכל ריצה. היסטוריית
+      # הדוחות ממילא נשמרת במאגר תחת qa/reports/ וכ-artifact.
+      - name: עדכון/פתיחת issue אם נמצא ממצא חמור
         if: steps.scan.outputs.exit_code != '0'
         uses: actions/github-script@v7
         with:
@@ -101,22 +107,47 @@ jobs:
               const m = err.match(/\[נתונים חיים:[^\]]+\]/);
               if(m) diag = `> ${m[0]}\n\n`;
             }catch{}
+            const today = new Date().toISOString().slice(0,10);
             const body = diag + fs.readFileSync('qa/reports/latest.md', 'utf8').slice(0, 58000);
-            const title = `🔴 דוח בדיקה יומי — נמצאו ממצאים (${new Date().toISOString().slice(0,10)})`;
-            // אם כבר פתוח issue מהסוכן — מוסיפים תגובה במקום לפתוח חדש
+            const title = `🔴 דוח בדיקה יומי — נמצאו ממצאים (${today})`;
             const open = await github.rest.issues.listForRepo({
               owner: context.repo.owner, repo: context.repo.repo,
               state: 'open', labels: 'qa-daily',
             });
             if (open.data.length) {
-              await github.rest.issues.createComment({
+              await github.rest.issues.update({
                 owner: context.repo.owner, repo: context.repo.repo,
-                issue_number: open.data[0].number, body,
+                issue_number: open.data[0].number, title, body,
               });
             } else {
               await github.rest.issues.create({
                 owner: context.repo.owner, repo: context.repo.repo,
                 title, body, labels: ['qa-daily'],
+              });
+            }
+
+      # יום נקי = סוגרים את ה-issue. בלי זה issue מיום עם ממצאים נשאר
+      # פתוח לנצח גם אחרי שכל הממצאים תוקנו, ו"issue פתוח" מפסיק
+      # להיות סימן אמין למצב האפליקציה.
+      - name: סגירת ה-issue כשהדוח נקי
+        if: steps.scan.outputs.exit_code == '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const today = new Date().toISOString().slice(0,10);
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'qa-daily',
+            });
+            for (const issue of open.data) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `✅ הדוח היומי של ${today} נקי — כל הממצאים שדווחו כאן טופלו. נסגר אוטומטית.\n\nהדוח המלא: \`qa/reports/${today}.md\` במאגר.`,
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: issue.number, state: 'closed', state_reason: 'completed',
               });
             }
 
