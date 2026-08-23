@@ -445,6 +445,15 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
 .med-card{display:flex;align-items:center;gap:11px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin-bottom:9px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .med-name{flex:1;line-height:1.35}.med-name b{font-size:14px;display:block}.med-name span{font-size:11px;color:var(--ink-3)}
 .cmd-section-title{font-size:14px;font-weight:800;color:var(--ink-2);margin:18px 0 10px;display:flex;align-items:center;gap:8px}
+/* חיפוש כללי בדשבורד המפקד — צ'יפי סינון לפי קטגוריה + כותרת קבוצה */
+.cs-chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;-webkit-overflow-scrolling:touch}
+.cs-chip{flex:0 0 auto;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 12px;
+  font-family:'Assistant';font-size:12px;font-weight:800;color:var(--ink-2);cursor:pointer;transition:transform .2s;white-space:nowrap}
+.cs-chip:active{transform:scale(.96)}
+.cs-chip.on{background:var(--red);border-color:var(--red);color:#fff}
+.cs-chip .n{font-weight:700;opacity:.7;margin-inline-start:4px}
+.cs-group{font-size:11px;font-weight:800;color:var(--ink-3);margin:10px 0 5px}
+.cs-group:first-child{margin-top:2px}
 
 
 
@@ -1977,10 +1986,13 @@ nav{
         <div id="mc-report-content"></div>
       </div>
 
-      <!-- חיפוש חיילים — מפקד מחפש איש צוות במסגרת ורואה סטטוס מהיר / קופץ לעריכה -->
-      <div class="cmd-section-title"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg> חיפוש חיילים</div>
-      <input class="m-input" id="cmd-soldier-search" type="text" placeholder="🔎 חיפוש לפי שם, מקצוע או תפקיד…" style="margin-bottom:8px" oninput="renderCmdSoldierSearch()">
-      <div id="cmd-soldier-results" style="margin-bottom:16px"></div>
+      <!-- חיפוש כללי — מפקד מחפש בכל נתוני המסגרת בבת אחת: חיילים, כלים,
+           רכבים, הסמכות, רישיונות, נע"תים ותקלות. לחיצה על תוצאה קופצת
+           ליעד שלה. ר' renderCmdGlobalSearch. -->
+      <div class="cmd-section-title"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg> חיפוש כללי</div>
+      <input class="m-input" id="cmd-global-search" type="text" placeholder="🔎 חייל, כלי, רכב, הסמכה, נע״ת או תקלה…" style="margin-bottom:8px" oninput="renderCmdGlobalSearch()">
+      <div class="cs-chips" id="cmd-global-cats" style="display:none"></div>
+      <div id="cmd-global-results" style="margin-bottom:16px"></div>
 
       <!-- אילוצים — בקשות החיילים של המסגרת (קורס/חופש/אפטר/החלפה) לאישור המפקד -->
       <div class="cmd-section-title"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3.5 20.5 9.5 17 13l-1 5-2-2-5 5-1-1 5-5-2-2 5-1 3.5-3.5Z"/></svg> אילוצים</div>
@@ -7309,7 +7321,7 @@ async function renderRosterView(){
   await loadRosterCustomRows();
   // זהות הצפייה השתנתה (למשל "החלף משתמש"/התחזות) — מאפסים ל"לוח שבועי"
   // כדי שלא "נירש" את הלשונית שהזהות הקודמת השאירה. ר' _rosterViewSeenAs.
-  if(_rosterViewSeenAs !== user){ _rosterViewSeenAs = user; rosterView = "board"; rosterWkFixOpen = false; }
+  if(_rosterViewSeenAs !== user){ _rosterViewSeenAs = user; rosterView = "board"; rosterWkFixOpen = false; rosterSearchName = ""; }
   // ⚠️ ברירת המחדל אחידה לכולם — "לוח שבועי" (rosterView נפתח כ-"board").
   // פעם חיילים נפתחו ב"לוח יומי"; זה שונה בכוונה לבקשת המשתמשים: הלוח
   // השבועי הוא התמונה שכולם עובדים לפיה (כמו צילום הגיליון), והפתיחה
@@ -7398,9 +7410,12 @@ async function renderRosterView(){
   const dailyShareDay = todayHebrewDay();   // שיתוף יומי = לוח היום
   const dailyShare = ((isRosterManager || userRole==="מפקד") && boardWeekSlot==="current")
     ? `<button class="m-btn ghost" style="width:100%;margin-top:10px" onclick="shareDailyDutyWA('${dailyShareDay}')"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 19h2"/></svg> שלח לוח יומי בוואטסאפ</button>` : "";
-  // מ"ע תורנויות: חיפוש חייל מעל הלוח — רישום ידני או בחירה מהבנק,
-  // ולחיצה מבליטה את כל המיקומים שלו בלוח. רק בתצוגת "לוח".
-  const searchBar = (isRosterManager && rosterView==="board")
+  // חיפוש חייל מעל הלוח — רישום ידני או בחירה מהבנק, ולחיצה מבליטה את
+  // כל המיקומים שלו בלוח. רק בתצוגת "לוח שבועי".
+  // ⚠️ מוצג לכל מפקד, לא רק למ"ע תורנויות (canRosterSearch): הלוח גלובלי
+  // לכל הטייסת, ומפקד צריך לאתר בו את אנשיו בדיוק כמו מ"ע התורנויות.
+  // זו תצוגה בלבד — החיפוש לא כותב כלום ולא פותח עריכה.
+  const searchBar = (canRosterSearch() && rosterView==="board")
     ? `<div class="roster-search">
          <div class="roster-search-in">
            <input id="roster-search-inp" placeholder="🔎 חיפוש חייל בלוח — הקלד שם או בחר מהבנק" value="${escapeHTML(rosterSearchName)}"
@@ -7415,14 +7430,18 @@ async function renderRosterView(){
      : rosterView==="day" ? rosterCardsHtml(r, todayForBoard)   // "לוח יומי" = כרטיסי יום
      : rosterMineHtml(r, todayForBoard)) + dailyShare;
   initRosterSwipe();
-  if(isRosterManager){
-    updateRosterMgrBadges(); maybeArchiveRoster();
+  if(isRosterManager){ updateRosterMgrBadges(); maybeArchiveRoster(); }
+  if(canRosterSearch()){
     if(!rosterSearchBank){ try{ rosterSearchBank = rosterFlattenBank(await fetchAllPersonnelByShed()); }catch(e){ rosterSearchBank = []; } }
     if(rosterSearchName && rosterView==="board") applyRosterHighlight(rosterSearchName);
   }
 }
 
-/* ===== חיפוש חייל בלוח (מ"ע תורנויות) ===== */
+/* ===== חיפוש חייל בלוח (מ"ע תורנויות + כל מפקד) =====
+   מי רואה את באנר החיפוש מעל "לוח שבועי": מ"ע תורנויות וכל מפקד.
+   הלוח עצמו גלובלי לכל הטייסת, ולכן גם בנק השמות שמוצע בחיפוש מגיע
+   מכל הסככות — מפקד עשוי לחפש איש צוות שמשובץ לצד אנשיו. */
+function canRosterSearch(){ return isRosterManager || userRole==="מפקד"; }
 let rosterSearchName = "";      // השם המודגש כרגע (ריק = אין הדגשה)
 let rosterSearchBank = null;    // מאגר שמות שטוח מכל הסככות (נטען פעם אחת)
 let rosterSearchRows = [];      // תוצאות החיפוש המוצגות כרגע (לפי אינדקס)
@@ -9846,44 +9865,203 @@ async function renderCommander(){
   renderTrends();
   renderMorningRollcallReport();
   renderCommanderConstraints();
-  renderCmdSoldierSearch();
+  renderCmdGlobalSearch();
   updateAlertBell();
 }
-/* חיפוש חיילים בדשבורד המפקד — מסנן את צוות המסגרת (במחלקות: רק המחלקה
-   של המפקד) לפי שם/מקצוע/תפקיד, ומציג כרטיס מצומצם עם סטטוס PF/שלב 7.
-   לחיצה פותחת את ניהול הצוות ישר על עריכת אותו חייל. ריק כשאין שאילתה. */
-async function renderCmdSoldierSearch(){
-  const box = document.getElementById("cmd-soldier-results");
-  const inp = document.getElementById("cmd-soldier-search");
-  if(!box || !inp) return;
-  const q = (inp.value||"").trim();
-  if(!q){ box.innerHTML = '<div style="text-align:center;color:var(--ink-3);font-size:12px;padding:8px 0">הקלד שם, מקצוע או תפקיד כדי לחפש איש צוות</div>'; return; }
+/* ===== חיפוש כללי בדשבורד המפקד =====
+   פעם הבאנר הזה חיפש חיילים בלבד; היום הוא מחפש בכל נתוני המסגרת בבת
+   אחת — חיילים, כלים, רכבים, הסמכות, רישיונות, נע"תים ותקלות — מקבץ
+   את התוצאות לפי קטגוריה עם צ'יפ סינון וספירה, ולחיצה על תוצאה קופצת
+   ליעד שלה (חייל → ניהול צוות על העריכה שלו, כלי → חדר כלים וכו').
+   כל מקור נטען בנפרד ועטוף ב-try בפני עצמו, כך שמקור חסר או שבור
+   (למשל מסגרת בלי חדר כלים) לא ירוקן את כל תוצאות החיפוש — אותו עיקרון
+   של renderTrainHub. */
+const CMD_SEARCH_CATS = [
+  {id:"people",   label:"חיילים"},
+  {id:"tools",    label:"כלים"},
+  {id:"vehicles", label:"רכבים"},
+  {id:"certs",    label:"הסמכות"},
+  {id:"licenses", label:"רישיונות"},
+  {id:"naatim",   label:'נע"תים'},
+  {id:"faults",   label:"תקלות"},
+];
+let cmdSearchCat = "all";
+function setCmdSearchCat(c){ cmdSearchCat = c; renderCmdGlobalSearch(); }
+
+/* טוען את כל מקורות החיפוש במקביל; מקור שנכשל חוזר כרשימה ריקה */
+async function cmdSearchSources(){
+  const out = {};
+  const safe = async (k, fn) => { try{ out[k] = (await fn()) || []; }catch(e){ out[k] = []; } };
+  await Promise.all([
+    safe("certs",    getCerts),
+    safe("tools",    getTools),
+    safe("vehicles", getVehicles),
+    safe("leasing",  ()=> currentShed ? getShedLeasingVehicles(currentShed.id) : []),
+    safe("licenses", getVoLicenses),
+    safe("naatim",   getNaatim),
+    safe("faults",   getFaults),
+  ]);
+  return out;
+}
+
+/* בונה את רשימת ההתאמות מכל המקורות. פונקציה טהורה (לא נוגעת ב-DOM)
+   כדי שאפשר יהיה לבדוק אותה ישירות. מחזירה [{cat, ic, title, sub, tags, go}] */
+function cmdSearchHits(q, src){
+  const needle = (q||"").trim().toLowerCase();
+  if(!needle) return [];
+  const match = (...vals) => vals.filter(Boolean).join(" ").toLowerCase().includes(needle);
+  const hits = [];
+  const certs = src.certs || [];
+
+  // --- חיילים: אותו סינון מסגרת/מחלקה שהיה בחיפוש החיילים הישן ---
   const isDeptUnit = !!(currentShed && currentShed.isDept);
   const myDept = (isDeptUnit && userRole==="מפקד") ? personDept(PERSONNEL.find(p=>p.name===user)) : null;
-  let list = PERSONNEL.map((p,i)=>({p,i}));
-  if(myDept) list = list.filter(x=>personDept(x.p)===myDept);
-  list = list.filter(x=>{
-    const hay = [x.p.name, x.p.role, x.p.profession, personDept(x.p)].filter(Boolean).join(" ");
-    return hay.includes(q);
+  PERSONNEL.forEach((p,i)=>{
+    if(myDept && personDept(p)!==myDept) return;
+    if(!match(p.name, p.role, p.profession, personDept(p))) return;
+    const tags = [];
+    if(p.reserve) tags.push({txt:"🎖️ מילואים", cls:"gold"});
+    if(personDept(p)) tags.push({txt:personDept(p)});
+    if(p.profession) tags.push({txt:p.profession});
+    if(!isDeptUnit && p.role==="חייל" && !p.reserve){
+      const pf = pfStatus(p, certs);  if(pf)  tags.push({txt:pf.tag,  pill:pf.cls});
+    }
+    if(!isDeptUnit && !p.reserve){
+      const s7 = stage7Status(p, certs); if(s7) tags.push({txt:s7.tag, pill:s7.cls});
+    }
+    hits.push({cat:"people", initials:initials(p.name), title:p.name,
+      sub: p.reserve ? "🎖️ מילואים" : ("🎂 " + (p.bday ? new Date(p.bday+"T00:00:00").toLocaleDateString("he-IL",{day:"numeric",month:"long"}) : "—")),
+      role:p.role, tags, go:`openTeamMgmt();startEditMember(${i})`});
   });
-  if(!list.length){ box.innerHTML = '<div style="text-align:center;color:var(--ink-3);font-size:13px;padding:12px 0">לא נמצאו חיילים</div>'; return; }
-  const certs = isDeptUnit ? [] : await getCerts();
-  box.innerHTML = list.slice(0,30).map(({p,i})=>{
-    const pf = (!isDeptUnit && p.role==="חייל" && !p.reserve) ? pfStatus(p, certs) : null;
-    const pfTag = pf ? `<span class="pill ${pf.cls}" style="font-size:9px;margin-right:4px">${pf.tag}</span>` : "";
-    const st7 = (isDeptUnit || p.reserve) ? null : stage7Status(p, certs);
-    const st7Tag = st7 ? `<span class="pill ${st7.cls}" style="font-size:9px;margin-right:4px">${st7.tag}</span>` : "";
-    const deptTag = personDept(p) ? `<span class="role-mini">${escapeHTML(personDept(p))}</span>` : "";
-    const profTag = p.profession ? `<span class="role-mini">${escapeHTML(p.profession)}</span>` : "";
-    const reserveTag = p.reserve ? `<span class="role-mini" style="background:var(--gold-soft);color:var(--gold);border-color:#f0dfa8">🎖️ מילואים</span>` : "";
-    return `
-    <div class="mgmt-row" style="cursor:pointer" onclick="openTeamMgmt();startEditMember(${i})">
-      <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(p.name)}</div>
-      <div class="mr-body"><b>${escapeHTML(p.name)} <span class="role-mini ${p.role==='חייל'?'sol':''}">${p.role}</span> ${reserveTag} ${deptTag} ${profTag} ${pfTag} ${st7Tag}</b>
-        <span>${p.reserve ? '🎖️ מילואים' : ('🎂 '+(p.bday? new Date(p.bday+'T00:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long'}):'—'))}</span></div>
+
+  // --- כלים ---
+  (src.tools||[]).forEach(t=>{
+    if(!match(t.name, t.serial)) return;
+    const st = toolStatus(t);
+    hits.push({cat:"tools", ic:"🧰", title:t.name||"כלי",
+      sub: (t.serial ? ("מספר סידורי: "+t.serial) : "ללא מספר סידורי") +
+           ((t.expiry && !t.inRepair) ? (" · תוקף עד " + new Date(t.expiry+"T00:00:00").toLocaleDateString("he-IL")) : ""),
+      tags:[{txt:st.tag, pill:st.cls}],
+      go:"go('scr-tools',document.getElementById('nav-tools'))"});
+  });
+
+  // --- רכבים (כולל רכבי ליסינג המשויכים לסככה, כמו במסך הרכבים עצמו) ---
+  const vehRows = [...(src.vehicles||[]).map(v=>({v, leasing:false})),
+                   ...(src.leasing||[]).map(v=>({v, leasing:true}))];
+  vehRows.forEach(({v, leasing})=>{
+    if(!match(v.name, v.number, v.holder)) return;
+    const st = vehicleStatus(v);
+    const tags = [{txt:st.tag, pill:st.cls}];
+    if(leasing) tags.push({txt:"ליסינג"});
+    hits.push({cat:"vehicles", ic:"🚙", title:v.name||"רכב",
+      sub: (v.number ? ("מס' רכב "+v.number) : "ללא מספר רכב") + (v.holder ? (" · מחזיק: "+v.holder) : ""),
+      tags, go:"go('scr-vehicles',document.getElementById('nav-vehicles'))"});
+  });
+
+  // --- הסמכות ---
+  certs.forEach(c=>{
+    if(!match(c.name, c.person)) return;
+    const st = certStatus(c);
+    hits.push({cat:"certs", ic:"🎓", title:c.name||"הסמכה",
+      sub: (c.person||"—") + (c.expiry ? (" · תוקף עד " + new Date(c.expiry+"T00:00:00").toLocaleDateString("he-IL")) : ""),
+      tags:[{txt:st.tag, pill:st.cls}], go:"go('scr-certs',null)"});
+  });
+
+  // --- רישיונות/הסמכות רכב של אנשי הסככה (מנוהלים אצל מ״ע אחזקה, לקריאה) ---
+  (src.licenses||[]).filter(l=> currentShed && l.shedId===currentShed.id).forEach(l=>{
+    if(!match(l.person, l.type)) return;
+    const st = licenseStatus(l);
+    hits.push({cat:"licenses", ic:"🪪", title:l.type||"רישיון",
+      sub: (l.person||"—") + (l.expiry ? (" · תוקף עד " + new Date(l.expiry+"T00:00:00").toLocaleDateString("he-IL")) : ""),
+      tags:[{txt:st.tag, pill:st.cls}],
+      go:"go('scr-vehicles',document.getElementById('nav-vehicles'));vehiclesPageTab('licenses')"});
+  });
+
+  // --- נע"תים ---
+  (src.naatim||[]).forEach(n=>{
+    if(!match(n.area, n.person)) return;
+    hits.push({cat:"naatim", ic:"🗂️", title:n.area||'נע"ת',
+      sub:n.person||"— טרם שובץ —", tags:[], go:"closeMoreAnd('scr-naatim')"});
+  });
+
+  // --- תקלות ---
+  (src.faults||[]).forEach(f=>{
+    if(!match(f.title, f.desc, f.by)) return;
+    const closed = f.status==="closed";
+    hits.push({cat:"faults", ic:"🔧", title:f.title||"תקלה",
+      sub: 'דווח ע"י ' + (f.by||"—") + (f.date ? (" · "+f.date) : ""),
+      tags:[{txt: closed?"סגורה":"פתוחה", pill: closed?"g":"y"}],
+      go:"go('scr-faults',document.getElementById('nav-faults'))"});
+  });
+
+  return hits;
+}
+
+/* מרנדר את באנר החיפוש הכללי. אסינכרוני (טוען מקורות), ולכן בודק לפני
+   הכתיבה ל-DOM שהשאילתה בתיבה לא השתנתה בינתיים — אחרת הקלדה מהירה
+   הייתה גורמת לתשובה ישנה לדרוס תוצאות חדשות יותר. */
+async function renderCmdGlobalSearch(){
+  const box = document.getElementById("cmd-global-results");
+  const catBox = document.getElementById("cmd-global-cats");
+  const inp = document.getElementById("cmd-global-search");
+  if(!box || !inp) return;
+  const q = (inp.value||"").trim();
+  if(!q){
+    cmdSearchCat = "all";
+    if(catBox){ catBox.style.display = "none"; catBox.innerHTML = ""; }
+    box.innerHTML = '<div style="text-align:center;color:var(--ink-3);font-size:12px;padding:8px 0">הקלד כדי לחפש בכל נתוני המסגרת — חייל, כלי, רכב, הסמכה, רישיון, נע״ת או תקלה</div>';
+    return;
+  }
+  const src = await cmdSearchSources();
+  if(((inp.value||"").trim()) !== q) return;   // המשתמש המשיך להקליד — התוצאות כבר לא רלוונטיות
+  const hits = cmdSearchHits(q, src);
+
+  // צ'יפי קטגוריה — רק לקטגוריות שיש בהן תוצאות בפועל
+  if(catBox){
+    const counts = {};
+    hits.forEach(h=>{ counts[h.cat] = (counts[h.cat]||0)+1; });
+    const avail = CMD_SEARCH_CATS.filter(c=>counts[c.id]);
+    if(cmdSearchCat!=="all" && !counts[cmdSearchCat]) cmdSearchCat = "all";
+    catBox.innerHTML = hits.length ? (
+      `<button class="cs-chip ${cmdSearchCat==="all"?"on":""}" onclick="setCmdSearchCat('all')">הכל <span class="n">${hits.length}</span></button>` +
+      avail.map(c=>`<button class="cs-chip ${cmdSearchCat===c.id?"on":""}" onclick="setCmdSearchCat('${c.id}')">${escapeHTML(c.label)} <span class="n">${counts[c.id]}</span></button>`).join("")
+    ) : "";
+    catBox.style.display = hits.length ? "flex" : "none";
+  }
+
+  if(!hits.length){
+    box.innerHTML = '<div style="text-align:center;color:var(--ink-3);font-size:13px;padding:12px 0">לא נמצאו תוצאות</div>';
+    return;
+  }
+  const shown = cmdSearchCat==="all" ? hits : hits.filter(h=>h.cat===cmdSearchCat);
+  const order = CMD_SEARCH_CATS.map(c=>c.id);
+  let html = "";
+  order.forEach(cat=>{
+    const rows = shown.filter(h=>h.cat===cat);
+    if(!rows.length) return;
+    const label = (CMD_SEARCH_CATS.find(c=>c.id===cat)||{}).label || cat;
+    html += `<div class="cs-group">${escapeHTML(label)} · ${rows.length}</div>` +
+      rows.slice(0,30).map(cmdSearchRowHtml).join("") +
+      (rows.length>30 ? `<div style="text-align:center;color:var(--ink-3);font-size:11px;padding:4px 0">מוצגות 30 מתוך ${rows.length} — צמצם את החיפוש</div>` : "");
+  });
+  box.innerHTML = html;
+}
+
+/* שורת תוצאה בודדת — אותו מבנה .mgmt-row לכל הקטגוריות, כך שהרשימה
+   נראית אחידה גם כשהיא מערבבת חיילים, כלים ותקלות */
+function cmdSearchRowHtml(h){
+  const tags = (h.tags||[]).map(t=> t.pill
+    ? `<span class="pill ${t.pill}" style="font-size:9px;margin-right:4px">${escapeHTML(t.txt)}</span>`
+    : `<span class="role-mini"${t.cls==="gold"?' style="background:var(--gold-soft);color:var(--gold);border-color:#f0dfa8"':''}>${escapeHTML(t.txt)}</span>`).join(" ");
+  const roleTag = h.role ? `<span class="role-mini ${h.role==='חייל'?'sol':''}">${escapeHTML(h.role)}</span>` : "";
+  const av = h.initials ? escapeHTML(h.initials) : (h.ic||"•");
+  return `
+    <div class="mgmt-row" style="cursor:pointer" onclick="${h.go}">
+      <div class="avatar" style="width:34px;height:34px;font-size:14px">${av}</div>
+      <div class="mr-body"><b>${escapeHTML(h.title)} ${roleTag} ${tags}</b>
+        <span>${escapeHTML(h.sub||"")}</span></div>
       <span class="s-chev" style="color:var(--ink-3)">‹</span>
     </div>`;
-  }).join("");
 }
 /* באנר אילוצים למפקד — כמה בקשות ממתינות לאישורו במסגרת, וכניסה לתיבה.
    מפקד רואה רק את בקשות המסגרת שלו (duty_requests מוגבל-לסככה). */
