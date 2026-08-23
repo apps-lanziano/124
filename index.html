@@ -5066,6 +5066,11 @@ async function doLogin(){
     }
     go(landingScreen, landingBtn);
     await refreshAll();
+    // אם הכניסה הזו התחילה מהקשה על התראת פוש — לנווט עכשיו למסך הרלוונטי
+    // (גובר על מסך הנחיתה). היעד נשמר ב-pending_nav/pending_digest והומתן עד
+    // עכשיו כי לפני כניסה אין לאן לנווט (ר' checkPendingNav). לא נחוץ ב"כניסה
+    // בתור" — זו צפייה זמנית לתמיכה, לא מענה להתראה של המכשיר.
+    if(!impersonating){ checkPendingNav(); checkPendingDigest(); }
     clearLoginFails();   // כניסה מוצלחת מאפסת את מונה הניסיונות
     // זכירת מכשיר — המשתמש מתווסף לרשימה (מספר משתמשים לכל מכשיר). מדולג
     // ב"כניסה בתור"/חזרה ממנה — lastEnteredCode שם הוא הקוד של מנהל-העל,
@@ -10233,16 +10238,30 @@ async function updateBadges(){
    מטלות וכו' — מוצג בתוך האפליקציה כתגי הניווט, ראו updateBadges.)
    דורש שהאפליקציה מותקנת; באייפון נדרש גם אישור התראות. */
 async function updateAppBadge(){
-  try{
-    if(!("setAppBadge" in navigator)) return;         // לא נתמך בדפדפן זה
-    await navigator.clearAppBadge();   // האפליקציה פתוחה => "נצפה" => 0
-    idbSetBadgeBase(0);                // מאפסים את הבסיס ל-Service Worker
-  }catch(e){ /* לא נתמך / נכשל — מתעלמים בשקט */ }
+  // ⚠️ מאפסים את בסיס-הספירה ל-Service Worker **תמיד ובאופן אמין** (await),
+  // ולפני נגיעה ב-OS. זה היה מקור "המספר הלא-הגיוני": קודם האיפוס נעשה
+  // בלי await (fire-and-forget) ואחרי ניקוי הסמל — כך שאם כתיבת ה-IndexedDB
+  // נכשלה, הסמל התאפס ויזואלית אבל הבסיס נשאר על ערך ישן, וההתראה הבאה
+  // הציגה מספר מנופח (למשל 6 במקום 1) למרות שהגיעה התראה אחת בלבד מאז
+  // הפתיחה. בנוסף, בדפדפן בלי setAppBadge הפונקציה יצאה לפני האיפוס בכלל.
+  // הבסיס = "כמה התראות הגיעו מאז שפתחת" — פתיחת האפליקציה = "ראית" => 0.
+  try{ await idbSetBadgeBase(0); }catch(e){}
+  try{ if("clearAppBadge" in navigator) await navigator.clearAppBadge(); }catch(e){}
 }
-/* מונה ה-badge משותף עם ה-Service Worker דרך IndexedDB: החלון כותב את הספירה
-   המדויקת, וה-SW מגדיל ממנה כשמגיע push בזמן שהאפליקציה סגורה. */
+/* מונה ה-badge משותף עם ה-Service Worker דרך IndexedDB: החלון מאפס ל-0
+   בכל פתיחה, וה-SW מגדיל ב-1 לכל התראה שמגיעה כשהאפליקציה סגורה/ברקע —
+   כך שהמספר על הסמל = כמות ההתראות שהתקבלו מאז הפתיחה האחרונה. */
 function idbBadge(){ return new Promise((res,rej)=>{ const r=indexedDB.open("sq124-badge",1); r.onupgradeneeded=()=>r.result.createObjectStore("kv"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
-async function idbSetBadgeBase(n){ try{ const db=await idbBadge(); const tx=db.transaction("kv","readwrite"); tx.objectStore("kv").put(n,"count"); }catch(e){} }
+/* מחזירה Promise שנפתר רק אחרי שהכתיבה הושלמה בפועל (tx.oncomplete) — בלי
+   זה האיפוס לא היה מובטח, וה-SW היה ממשיך לספור מערך ישן (ר' updateAppBadge). */
+async function idbSetBadgeBase(n){
+  const db = await idbBadge();
+  await new Promise((res)=>{
+    const tx=db.transaction("kv","readwrite");
+    tx.objectStore("kv").put(n,"count");
+    tx.oncomplete=()=>res(); tx.onerror=()=>res();
+  });
+}
 /* ===== פופאפ "סקירה יומית" צף =====
    כשמפקד מקיש על התראת הסקירה בטלפון, ה-Service Worker שומר את תוכן
    הסקירה תחת "pending_digest" ב-IndexedDB, ממקד/פותח את האפליקציה, ושולח
@@ -10267,6 +10286,7 @@ function closeDigestPopup(){ document.getElementById("digest-popup")?.classList.
    הודעת SHOW_DIGEST מה-Service Worker (האפליקציה כבר פתוחה ורק מקבלת פוקוס). */
 async function checkPendingDigest(){
   try{
+    if(!user) return;   // עדיין לפני כניסה — נשמור עד שהמשתמש מחובר (ר' checkPendingNav)
     const p = await idbGetKV("pending_digest");
     if(p && (p.title || p.body)){ await idbDelKV("pending_digest"); showDigestPopup(p.title, p.body); }
   }catch(e){}
@@ -10286,10 +10306,14 @@ const NOTIF_NAV_MAP = {
   binui_fault: "scr-binui-admin",
   rollcall: "scr-rollcall",
   morning_rollcall: "scr-morning-rollcall",
-  cert_reminder: "scr-certs",
   reserve_reminder: "scr-certs",
   vo_reminder: "scr-vo-overview",
+  // לוח צוות תורן — כל סוגי ההתראות מובילים למסך התורנויות (scr-board).
+  // roster_current נשמר לתאימות לאחור (התראות ישנות שכבר יצאו לפני שהסוג
+  // פוצל ל-roster_week/roster_change).
   roster_publish: "scr-board",
+  roster_week: "scr-board",
+  roster_change: "scr-board",
   roster_current: "scr-board",
 };
 function handleNotificationNav(kind){
@@ -10302,14 +10326,25 @@ function handleNotificationNav(kind){
 }
 async function checkPendingNav(){
   try{
+    // ⚠️ קריטי: לא לצרוך את יעד-הניווט לפני שהמשתמש מחובר. הקשה על התראה
+    // פותחת את האפליקציה על מסך הכניסה (נדרש קוד/PIN); אם היינו מנווטים
+    // ומוחקים את pending_nav כאן (בעליית העמוד, לפני הכניסה), היעד היה
+    // אובד — האפליקציה הייתה נוחתת על מסך ברירת-המחדל אחרי ההזדהות. לכן
+    // משאירים את pending_nav שמור עד שיש user, ו-doLogin קורא שוב לפונקציה
+    // הזו מיד אחרי כניסה מוצלחת (אחרי go(landingScreen)), כך שהיעד גובר על
+    // מסך הנחיתה. הניווט שמור ב-IndexedDB, ולכן שורד גם פתיחה קרה מלאה.
+    if(!user) return;
     const p = await idbGetKV("pending_nav");
     if(p && p.kind){ await idbDelKV("pending_nav"); handleNotificationNav(p.kind); }
   }catch(e){}
 }
 if("serviceWorker" in navigator){
   navigator.serviceWorker.addEventListener("message", (e)=>{
+    // ה-SW כבר כתב את היעד/הסקירה ל-IndexedDB לפני ה-postMessage, ולכן
+    // עוברים דרך אותן פונקציות (המוגנות ב-user) במקום לפעול ישירות על
+    // e.data — כך הקשה על התראה כשהאפליקציה נעולה על מסך הכניסה לא "מתבזבזת".
     if(e.data && e.data.type === "SHOW_DIGEST") checkPendingDigest();
-    if(e.data && e.data.type === "NOTIFICATION_NAV" && e.data.kind) handleNotificationNav(e.data.kind);
+    if(e.data && e.data.type === "NOTIFICATION_NAV") checkPendingNav();
   });
 }
 // פתיחה קרה: אם המשתמש הקיש על התראה והאפליקציה נפתחה מחדש

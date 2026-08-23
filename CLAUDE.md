@@ -332,7 +332,7 @@ node scripts/sw-cache-name.mjs --write   # כותב את הערך הנכון ל-
 node qa/suite/<test>.mjs    # הרץ בדיקה בודדת
 ```
 
-**128 בדיקות, כולן עוברות** נכון ל-2026-08-23.
+**129 בדיקות, כולן עוברות** נכון ל-2026-08-23.
 
 ⚠️ **שתי בדיקות דורשות JDK 21+** (`firestore_rules_test`, `red_team_firestore_rules_test`) —
 הן מריצות את כללי Firestore האמיתיים על Firebase Emulator, ו-firebase-tools 15
@@ -353,6 +353,7 @@ node qa/suite/<test>.mjs    # הרץ בדיקה בודדת
 - `roster_custom_rows_global_test.mjs` — 🔴 הגדרות השורות גלובליות (לא פר-סככה) + אימוץ הגדרות ישנות + ניקוי קאש ב-logout
 - `roster_weekend_preserved_on_transfer_test.mjs` — ⛔ המשכיות לוחות: העברה בין סלוטים/רוטציה/כתיבות-רקע לא מוחקות את משמרת הסופ״ש
 - `roster_change_targeting_test.mjs` — ⛔ התראת שינוי בלוח נשלחת רק למי שנוסף/ירד ולמפקד שלו (דיף השיבוצים, החרגת שדות נגזרים, כיווץ סופ״ש, תוויות שורות מותאמות-אישית)
+- `notification_nav_badge_test.mjs` — הקשה על באנר התראה מנווטת למסך הרלוונטי אחרי כניסה (לא מתבזבזת לפני הזדהות), ומונה ה-badge = כמות ההתראות שהתקבלו מאז הפתיחה (איפוס אמין, בלי "מספר לא-הגיוני")
 - `roster_row_toggle_test.mjs` — השבתה/הפעלה ידנית של שורה בעורך הלוח (`rosterDisabledRows`)
 - `roster_week_dates_test.mjs` — ⛔ תאריכי הלוח (`weekStart`): בורר שבוע בלוח עתידי, קידום מוקדם מציג תאריכים אמיתיים, אין תיקון-קסם ל-weekStart ישן (`publishRoster` מרענן בזמן שמירה), תיקון תאריך ידני (`applyRosterWkFix`), ארכיון קפוא, שחזור ל"שבוע שעבר", הרוטציה לא מקדמת שבוע שטרם הגיע, מחיקת שורה מותאמת-אישית מהעורך, איפוס `rosterView` במעבר זהות
 - `roster_editor_fixes_test.mjs` — יום ראשון כברירת מחדל בלוח עתידי, מחיקת כל הלוח, מיקום שורת כלים, הסרת באנר ההתראה, מסך מלא מכבד את boardWeekSlot
