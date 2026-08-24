@@ -27,7 +27,7 @@ const out = await page.evaluate(async ()=>{
   const profSel = document.getElementById("tm-profession");
   r.tmProfVisibleDept = profSel.style.display !== "none";
   r.tmProfHasDriver = [...profSel.options].some(o=>o.value==="נהג");
-  document.getElementById("team-modal").classList.remove("open");
+  document.getElementById("team-page").classList.remove("open");
 
   // (4) נהג מוחרג מדו"ח החריגות (גם profession="נהג" וגם "נהג מקצועי")
   const pf = new Set([]);

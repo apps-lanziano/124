@@ -233,6 +233,16 @@ main{flex:1;overflow-y:auto;padding:18px 16px;padding-bottom:calc(68px + env(saf
 #doc-reader{position:absolute;inset:0;z-index:40;background:var(--bg);display:none;flex-direction:column}
 #doc-reader.open{display:flex;animation:slideIn .35s cubic-bezier(.2,.8,.3,1)}
 @keyframes slideIn{from{transform:translateX(-30px);opacity:0}to{transform:none;opacity:1}}
+/* עמוד מסך-מלא (במקום חלון פופ-אפ) — משמש את "ניהול צוות" ו"כרטיסיית חייל" */
+.fullpage{position:absolute;inset:0;z-index:45;background:var(--bg);display:none;flex-direction:column}
+.fullpage.open{display:flex;animation:slideIn .3s cubic-bezier(.2,.8,.3,1)}
+.fullpage-hdr{display:flex;align-items:center;gap:11px;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--line);flex-shrink:0}
+.fullpage-hdr b{font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px}
+.fullpage-hdr b svg.uic{width:18px;height:18px}
+.fp-back{width:38px;height:38px;border-radius:12px;background:var(--bg);color:var(--red);border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;flex-shrink:0;transition:transform .2s}
+.fp-back:active{transform:scale(.92)}
+.fp-back svg.uic{width:19px;height:19px}
+.fullpage-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;padding-bottom:calc(28px + env(safe-area-inset-bottom, 0px))}
 .reader-head{background:var(--card);border-bottom:1px solid var(--line);padding:14px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0}
 .back-btn{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-size:17px;display:grid;place-items:center;transition:background .2s;color:var(--red);flex-shrink:0}
 .back-btn:active{background:var(--red-soft)}
@@ -1799,7 +1809,7 @@ nav{
         </div>
       </div>
       <div id="roster-view"></div>
-      <div id="board-archive"></div>
+      <div id="board-basic-duties"></div>
       <input type="file" id="board-input" accept="image/*" class="hidden" onchange="onBoardFile(event)">
     </section>
 
@@ -2569,7 +2579,6 @@ nav{
       <div class="sheet-handle"></div>
       <div class="sheet-top"><b>עוד</b><button class="sheet-x" onclick="document.getElementById('more-sheet').classList.remove('open')" aria-label="סגור">✕</button></div>
       <div class="sheet-item" id="sheet-naatim" onclick="closeMoreAnd('scr-naatim')"><div class="s-ic" style="color:#6b7280;background:#f1f2f4"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg></div><div class="s-tx"><b>נע"תים</b><span>תחומי אחריות ובדיקה שבועית</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item" id="sheet-duties" onclick="closeMoreAnd('scr-duties')"><div class="s-ic" style="color:#0891b2;background:#e3f6fa"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h13l-3-3M20 17H7l3 3"/></svg></div><div class="s-tx"><b>תורנויות</b><span>שיבוץ שמי שבועי</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="sheet-certs" onclick="closeMoreAnd('scr-certs')"><div class="s-ic" style="color:#7c3aed;background:#f2ebfe"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg></div><div class="s-tx"><b>הסמכות</b><span>תוקף וחידוש הסמכות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-training" onclick="closeMoreAnd('scr-training')"><div class="s-ic" style="color:#2563eb;background:#e8f0fe"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5V5.5Z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"/></svg></div><div class="s-tx"><b>חומרי הדרכה</b><span>מהמנהל הטייסתי</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-medchecks" onclick="closeMoreAnd('scr-medchecks')"><div class="s-ic" style="color:#0d9488;background:#e3f7f5"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15a8 8 0 0 1 16 0v2H4v-2Z"/><path d="M2 17h20M9 15v-3M15 15v-3"/></svg></div><div class="s-tx"><b>כשירות חיילים</b><span>שמיעה ומטווח — תוקף וחידוש</span></div><span class="s-chev">‹</span></div>
@@ -2650,12 +2659,15 @@ nav{
   </div>
 
   <!-- TEAM MGMT MODAL (feature 8) -->
-  <div class="modal-bg" id="team-modal">
-    <div class="modal">
-      <h3><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="3"/><circle cx="16" cy="9.5" r="2.5"/><path d="M2.5 20c0-3 2.7-5.2 6-5.2s6 2.2 6 5.2M15 14.8c2.6.3 4.5 2.2 4.5 5.2"/></svg> ניהול צוות</h3>
+  <div class="fullpage" id="team-page">
+    <div class="fullpage-hdr">
+      <button class="fp-back" onclick="closeTeamMgmt()" aria-label="חזרה"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      <b><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="3"/><circle cx="16" cy="9.5" r="2.5"/><path d="M2.5 20c0-3 2.7-5.2 6-5.2s6 2.2 6 5.2M15 14.8c2.6.3 4.5 2.2 4.5 5.2"/></svg> ניהול צוות</b>
+    </div>
+    <div class="fullpage-body">
       <div class="m-sub">הוספה, עריכה והסרה של אנשי צוות. ניתן להגדיר תאריך שחרור.</div>
       <input class="m-input hidden" id="tm-search" type="text" placeholder="🔎 חיפוש לפי שם…" style="margin-bottom:8px" oninput="renderTeamMgmt()">
-      <div id="team-mgmt-list" style="max-height:52vh;overflow-y:auto;margin-bottom:12px"></div>
+      <div id="team-mgmt-list" style="margin-bottom:12px"></div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <button class="m-btn primary" id="tm-add-toggle" style="flex:1" onclick="tmOpenAddForm()"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#b30f26" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> הוסף איש צוות</button>
         <button class="m-btn ghost" style="flex:0 0 auto" onclick="openCustomFieldsTplModal()"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3H5a2 2 0 0 0-2 2v6l10 10 8-8L11 3Z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg> שדות מותאמים</button>
@@ -2701,10 +2713,16 @@ nav{
           <button class="m-btn ghost" id="tm-cancel-btn" onclick="tmCancelForm()" style="flex:0 0 auto">ביטול</button>
         </div>
       </div>
-      <div class="modal-actions" style="margin-top:12px">
-        <button class="m-btn ghost" onclick="document.getElementById('team-modal').classList.remove('open')" style="flex:1">סגור</button>
-      </div>
     </div>
+  </div>
+
+  <!-- SOLDIER CARD PAGE — כרטיסיית חייל/מפקד (תצוגת סקירה), נפתחת מחיפוש המפקד -->
+  <div class="fullpage" id="soldier-card-page">
+    <div class="fullpage-hdr">
+      <button class="fp-back" onclick="closeSoldierCard()" aria-label="חזרה"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      <b><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="12" cy="10" r="2.4"/><path d="M8 16.5c0-1.9 1.8-3 4-3s4 1.1 4 3"/></svg> כרטיסיית חייל</b>
+    </div>
+    <div class="fullpage-body" id="soldier-card-body"></div>
   </div>
 
   <!-- ONBOARDING DETAIL SHEET — מפקד פותח מתוך תג "🎓 קליטה" בניהול צוות -->
@@ -5013,7 +5031,6 @@ async function applyLoginUiForRole(person){
      חייבת להחזיר את הנראות, לא רק להשאיר אותה מוסתרת מהסשן הקודם. */
   const isTrainingUnit = !!(currentShed && currentShed.isTraining);
   document.getElementById("nav-board").classList.toggle("hidden", isTrainingUnit);
-  document.getElementById("sheet-duties").classList.toggle("hidden", isTrainingUnit);
   // "כשירות חיילים" בתפריט "עוד" — אצל כולם (גם מפקד), חוץ ממסגרת "הדרכה" שלא רלוונטית לה
   document.getElementById("sheet-medchecks").classList.toggle("hidden", isTrainingUnit);
   // "לוח שנה מאוחד" בתפריט "עוד" — רק למי שלא קיבל אותו כלשונית בסרגל
@@ -6643,7 +6660,7 @@ async function renderBoard(){
   await loadRosterCustomRows();
   await healLegacyLeakedCustomRows(); // ריפוי-עצמי טרי בכל כניסה למסך (ר' שם למה לא דגל קבוע)
   await renderRosterView();
-  await renderBoardArchive();
+  await renderBoardBasicDuties();
 }
 /* ארכיון צילומי הלוח — נשאר כמסלול גיבוי ותיעוד מתחת ללוח המובנה */
 async function renderBoardArchive(){
@@ -6681,6 +6698,53 @@ async function renderBoardArchive(){
     });
   }
   area.innerHTML = html;
+}
+/* ===== תורנויות בסיסיות — מאוחד לתוך מסך "תורנויות" (scr-board) =====
+   הוחלף באנרי "צילומי לוח" שהיו כאן בעבר. מפקד עורך את הצוות שלו (במסגרת
+   "מחלקות" — רק המחלקה שלו); חייל רואה רק את השיבוץ שלו, לצפייה בלבד.
+   כותב לאותו duty_table שכבר מסתנכרן ללוח הצוות (syncDutyToBoard) וללוח
+   השנה המאוחד (getCalendarEvents) — ולכן אין כאן מודל נתונים חדש. */
+async function renderBoardBasicDuties(){
+  const area = document.getElementById("board-basic-duties");
+  if(!area) return;
+  const table = (await sGet("duty_table")) || {};
+  const isCmd = userRole === "מפקד";
+  const isDept = !!(currentShed && currentShed.isDept);
+  const myDept = isDept ? personDept(PERSONNEL.find(p=>p.name===user)) : null;
+  let soldiers = PERSONNEL.filter(p=>p.role==="חייל");
+  if(isCmd){
+    if(isDept && myDept) soldiers = soldiers.filter(p=>personDept(p)===myDept);   // כל מפקד — הצוות שלו
+  } else {
+    soldiers = soldiers.filter(p=>p.name===user);                                // חייל — רק את עצמו
+  }
+  const canEdit = isCmd;
+  const rowsHtml = soldiers.map(p=>{
+    const row = table[p.name] || {duty:"", date:""};
+    const opts = ['<option value="">—</option>']
+      .concat(DUTY_TYPES.map(d=>`<option value="${d}" ${row.duty===d?"selected":""}>${d}</option>`)).join("");
+    return `<div class="duty-trow">
+      <div class="duty-name"><div class="avatar">${initials(p.name)}</div><b>${escapeHTML(p.name)}</b></div>
+      <select class="duty-select ${row.duty?"filled":""}" ${canEdit?"":"disabled"} onchange="saveDuty('${jsStr(p.name)}','duty',this.value);this.classList.toggle('filled',!!this.value)">${opts}</select>
+      <div class="duty-dates">
+        <label>מ<input type="date" class="duty-dateinp" aria-label="מתאריך — ${escapeHTML(p.name)}" value="${row.fromDate||row.date||""}" ${canEdit?"":"disabled"} onchange="saveDuty('${jsStr(p.name)}','fromDate',this.value)"></label>
+        <label>עד<input type="date" class="duty-dateinp" aria-label="עד תאריך — ${escapeHTML(p.name)}" value="${row.toDate||""}" ${canEdit?"":"disabled"} onchange="saveDuty('${jsStr(p.name)}','toDate',this.value)"></label>
+      </div>
+    </div>`;
+  }).join("");
+  const empty = `<div style="padding:16px;text-align:center;color:var(--ink-3);font-size:13px">${isCmd?"אין חיילים במסגרת":"אין לך שיבוץ תורנות בסיסית"}</div>`;
+  const sub = isCmd
+    ? "שיבוץ שמי שבועי לצוות שלך — נשמר אוטומטית ומסתנכרן ללוח הצוות וללוח השנה המאוחד."
+    : "התורנות הבסיסית שלך לשבוע. עדכון מתבצע ע\"י מפקד.";
+  const note = canEdit
+    ? "✏️ בחר תורנות וטווח תאריכים (מ–עד) — נשמר אוטומטית ומסתנכרן ללוח הצוות השבועי בתאריכים המתאימים"
+    : "🔒 צפייה בלבד — עדכון שיבוץ מתבצע ע\"י מפקד";
+  area.innerHTML = `
+    <div class="sec-head" style="margin-top:24px"><div><h2>תורנויות בסיסיות</h2><p>${sub}</p></div></div>
+    <div class="duty-table">
+      <div class="duty-thead"><div>שם החייל</div><div>תורנות</div><div>תאריך</div></div>
+      ${rowsHtml || empty}
+    </div>
+    <div class="duty-lock-note">${note}</div>`;
 }
 
 /* ===== שיבוץ תורנויות שבועי (מתוך "לוח צוות שבועי") =====
@@ -9931,7 +9995,7 @@ function cmdSearchHits(q, src){
     }
     hits.push({cat:"people", initials:initials(p.name), title:p.name,
       sub: p.reserve ? "🎖️ מילואים" : ("🎂 " + (p.bday ? new Date(p.bday+"T00:00:00").toLocaleDateString("he-IL",{day:"numeric",month:"long"}) : "—")),
-      role:p.role, tags, go:`openTeamMgmt();startEditMember(${i})`});
+      role:p.role, tags, go:`openSoldierCard(${i})`});
   });
 
   // --- כלים ---
@@ -11112,9 +11176,134 @@ function openTeamMgmt(){
   profSel.style.display = "";   // מקצוע זמין בכל המסגרות (כולל מחלקות)
   profSel.innerHTML = '<option value="">— ללא מקצוע —</option>' + PROFESSIONS.map(p=>`<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`).join("");
   fillMentorSelect(null);
-  document.getElementById("team-modal").classList.add("open");
+  document.getElementById("team-page").classList.add("open");   // עמוד מסך-מלא (לא פופ-אפ)
   tmShowForm(false);   // ברירת מחדל: מציג את הצוות, הטופס מוסתר עד לחיצה על "הוסף"
   renderTeamMgmt();
+}
+function closeTeamMgmt(){
+  document.getElementById("team-page").classList.remove("open");
+}
+
+/* ===== כרטיסיית חייל/מפקד (תצוגת סקירה) =====
+   מרכזת את כל נתוני האדם, שמפוזרים במאגרים שונים וממופתחים לפי שם:
+   פרטים אישיים, סטטוס PF/שלב/קליטה, הסמכות, רישיונות, כשירות רפואית,
+   אילוצים, נע"תים, רכבים בהחזקה ושיבוצים בלוח הנוכחי. נפתחת מחיפוש
+   המפקד בדשבורד (במקום קפיצה ישירה לעריכה). לקריאה בלבד; כפתור "ערוך"
+   מוביל לעמוד ניהול הצוות. כל מקור נטען עטוף ב-try בנפרד. */
+async function openSoldierCard(i){
+  const p = PERSONNEL[i];
+  if(!p){ toast("החייל לא נמצא"); return; }
+  const body = document.getElementById("soldier-card-body");
+  body.innerHTML = `<div style="text-align:center;color:var(--ink-3);padding:26px;font-size:13px">טוען…</div>`;
+  document.getElementById("soldier-card-page").classList.add("open");
+  const isDeptUnit = !!(currentShed && currentShed.isDept);
+  const safe = async (fn, d) => { try{ return (await fn()) ?? d; }catch(e){ return d; } };
+  const [certs, licenses, med, requests, naatim, vehicles, roster] = await Promise.all([
+    safe(getCerts, []),
+    safe(getVoLicenses, []),
+    safe(getMedChecks, {}),
+    safe(getDutyRequests, []),
+    safe(getNaatim, []),
+    isDeptUnit ? Promise.resolve([]) : safe(getVehicles, []),
+    safe(()=>getDutyRoster("current"), null),
+  ]);
+  body.innerHTML = soldierCardHtml(p, i, {certs, licenses, med, requests, naatim, vehicles, roster, isDeptUnit});
+}
+function closeSoldierCard(){ document.getElementById("soldier-card-page").classList.remove("open"); }
+function editFromSoldierCard(i){ closeSoldierCard(); openTeamMgmt(); startEditMember(i); }
+function soldierCardHtml(p, i, D){
+  const esc = escapeHTML;
+  const dt = iso => iso ? new Date(iso+"T00:00:00").toLocaleDateString("he-IL",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
+  const pill = st => st ? `<span class="pill ${st.cls}">${esc(st.tag)}</span>` : "";
+  const chip = txt => `<span style="display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--bg);color:var(--ink-2);border:1px solid var(--line);margin:2px">${esc(txt)}</span>`;
+  const section = (title, inner) => `<div class="card" style="padding:12px 14px"><div style="font-size:11px;font-weight:800;letter-spacing:.03em;color:var(--ink-3);margin-bottom:8px">${esc(title)}</div>${inner}</div>`;
+  const kv = (k,v) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--bg);font-size:13px"><span style="color:var(--ink-3)">${esc(k)}</span><span style="font-weight:700">${v}</span></div>`;
+  const lrow = (nm,right) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--bg)"><span style="font-size:13px;font-weight:600">${nm}</span>${right}</div>`;
+  const emptyLine = t => `<div style="color:var(--ink-3);font-size:12.5px;padding:4px 0">${esc(t)}</div>`;
+
+  // כותרת
+  const resv = p.reserve ? `<span style="background:var(--gold);color:#3a2c00;font-weight:800;padding:1px 9px;border-radius:99px;font-size:10.5px">🎖️ מילואים</span>` : "";
+  const meta = [p.profession, personDept(p)].filter(Boolean).map(esc).join(" · ");
+  const hero = `<div style="background:linear-gradient(135deg,var(--red-deep),var(--red));border-radius:18px;padding:16px;color:#fff;box-shadow:0 12px 28px -14px rgba(140,20,35,.55);margin-bottom:12px;position:relative">
+    <button onclick="editFromSoldierCard(${i})" style="position:absolute;top:14px;left:14px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);color:#fff;font-family:inherit;font-weight:800;font-size:11.5px;padding:6px 12px;border-radius:99px;cursor:pointer">✏️ ערוך</button>
+    <div style="display:flex;align-items:center;gap:13px">
+      <div class="avatar" style="width:54px;height:54px;font-size:19px;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.4)">${initials(p.name)}</div>
+      <div><div style="font-size:20px;font-weight:900;line-height:1.1">${esc(p.name)}</div>
+        <div style="font-size:12px;opacity:.92;font-weight:600;margin-top:4px;display:flex;gap:7px;align-items:center;flex-wrap:wrap"><span style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);padding:1px 9px;border-radius:99px;font-weight:800">${esc(p.role)}</span>${resv}${meta?`<span>${meta}</span>`:""}</div>
+      </div>
+    </div></div>`;
+
+  // אריחי סטטוס
+  const tiles = [];
+  if(!D.isDeptUnit && p.role==="חייל" && !p.reserve){ const s=pfStatus(p,D.certs); if(s) tiles.push({v:s.tag,l:"PF",cls:s.cls}); }
+  if(!D.isDeptUnit && !p.reserve){ const s=stage7Status(p,D.certs); if(s) tiles.push({v:s.tag,l:"שלב 10",cls:s.cls}); }
+  if(isOnboarding(p)) tiles.push({v:"בקליטה",l:"קליטה",cls:"y"});
+  const statsHtml = tiles.length ? `<div style="display:grid;grid-template-columns:repeat(${Math.min(tiles.length,3)},1fr);gap:7px;margin-bottom:12px">${
+    tiles.map(t=>`<div class="card" style="padding:9px 4px;margin:0;text-align:center"><div style="font-size:12px;font-weight:800" class="${t.cls==='r'?'':''}"><span style="color:var(--${t.cls==='r'?'red':t.cls==='y'?'gold':'green'})">${esc(t.v)}</span></div><div style="font-size:9px;color:var(--ink-3);font-weight:700;margin-top:2px">${esc(t.l)}</div></div>`).join("")
+  }</div>` : "";
+
+  // פרטים אישיים
+  const details = section("פרטים אישיים",
+    kv("מקצוע", esc(p.profession||"—")) +
+    (personDept(p)?kv("מחלקה", esc(personDept(p))):"") +
+    kv("תאריך לידה", (p.bday && p.bday!=="2000-01-01")?dt(p.bday):"—") +
+    kv("תאריך גיוס", p.joined?dt(p.joined):"—") +
+    kv("תאריך שחרור", p.release?dt(p.release):"—") +
+    (p.mentor?kv("חונך", esc(p.mentor)):"") +
+    kv("קוד אישי (PIN)", p.pinHash?"מוגדר 🔒":"לא מוגדר"));
+
+  // הסמכות
+  const myCerts = D.certs.filter(c=>c.person===p.name);
+  const certsHtml = section("הסמכות", myCerts.length
+    ? myCerts.map(c=>lrow(esc(certCleanName(c.name)), pill(certStatus(c)))).join("")
+    : emptyLine("אין הסמכות רשומות"));
+
+  // רישיונות
+  const myLic = D.licenses.filter(l=>l.person===p.name);
+  const licHtml = section("רישיונות", myLic.length
+    ? myLic.map(l=>lrow(esc(l.type||"רישיון")+(l.expiry?` <small style="color:var(--ink-3)">· עד ${dt(l.expiry)}</small>`:""), pill(licenseStatus(l)))).join("")
+    : emptyLine("אין רישיונות רשומים"));
+
+  // כשירות רפואית (חיילים בלבד)
+  let medHtml = "";
+  if(p.role==="חייל" && !p.reserve){
+    const rec = D.med[safeName(p.name)] || {};
+    medHtml = section("כשירות רפואית", Object.keys(MED_TYPES).map(k=>{
+      const r = rec[k]; const st = medStatus(r);
+      return lrow(esc(MED_TYPES[k].label)+(r&&r.expiry?` <small style="color:var(--ink-3)">· עד ${dt(r.expiry)}</small>`:""), pill(st));
+    }).join(""));
+  }
+
+  // אילוצים מאושרים
+  const myReq = (D.requests||[]).filter(r=>r.by===p.name && r.status==="approved" && CONSTRAINT_DATED_TYPES.includes(r.type));
+  const reqHtml = section("אילוצים מאושרים", myReq.length
+    ? myReq.map(r=>{ const m=reqTypeMeta(r.type); const range = r.fromDate?(dt(r.fromDate)+(r.toDate&&r.toDate!==r.fromDate?` – ${dt(r.toDate)}`:"")):""; return lrow(esc(m.label||r.type)+(range?` <small style="color:var(--ink-3)">· ${range}</small>`:""), `<span class="pill n">מאושר</span>`); }).join("")
+    : emptyLine("אין אילוצים מאושרים"));
+
+  // נע"תים
+  const myNaat = (D.naatim||[]).filter(n=>n.person===p.name);
+  const naatHtml = myNaat.length ? section('נע"תים (תחומי אחריות)', myNaat.map(n=>chip(n.area||"תחום")).join("")) : "";
+
+  // רכבים בהחזקה
+  const myVeh = (D.vehicles||[]).filter(v=>v.holder===p.name);
+  const vehHtml = myVeh.length ? section("רכבים בהחזקה", myVeh.map(v=>lrow(esc(v.name||"רכב")+(v.number?` <small style="color:var(--ink-3)">· מס' ${esc(v.number)}</small>`:""), v.testDate?`<span style="font-size:11px;color:var(--ink-3)">טסט ${dt(v.testDate)}</span>`:"")).join("")) : "";
+
+  // שיבוצים בלוח הנוכחי
+  let rosterChips = `<span style="color:var(--ink-3);font-size:12.5px">אין לוח נוכחי</span>`;
+  try{
+    const r = D.roster;
+    if(r && r.days){
+      const LBL = {manager:"מנהל",lead:"ר״צ",deputyLead:"ל/ר״צ",pilot:"מטיס",driver:"נהג",tools:"כלים",fixedAug:"מתגבר",pf:"PF",pfRest:"נח PF",pms:"PMS",pmsRest:"נח PMS",reserve:"מילואים",basic:"תורנות בסיסית",duty:"תורן"};
+      const has = v => Array.isArray(v) ? v.some(x=> typeof x==="string"? x===p.name : (x&&x.name===p.name)) : v===p.name;
+      const byRole = {};
+      ROSTER_EDIT_DAYS.forEach(day=>{ const d=r.days[day]; if(!d) return; Object.keys(LBL).forEach(f=>{ if(d[f]!=null && has(d[f])) (byRole[f]=byRole[f]||[]).push(DAY_LETTER[day]||day); }); });
+      const parts = Object.keys(LBL).filter(f=>byRole[f]).map(f=>chip(`${LBL[f]} · ${byRole[f].join(" ")}`));
+      rosterChips = parts.length ? parts.join("") : `<span style="color:var(--ink-3);font-size:12.5px">אין שיבוץ בלוח הנוכחי</span>`;
+    }
+  }catch(e){}
+  const rosterHtml = section("שיבוצים בלוח הנוכחי", rosterChips);
+
+  return hero + statsHtml + details + certsHtml + licHtml + medHtml + reqHtml + naatHtml + vehHtml + rosterHtml;
 }
 let editMemberIdx = -1;   // -1 = add mode; otherwise editing index
 
@@ -11643,7 +11832,6 @@ async function applyTrainingCommanderPowers(){
   document.getElementById("nav-calendar").classList.remove("hidden");            // 7.2 לוח שנה מאוחד
   document.getElementById("sheet-calendar").classList.add("hidden");             //     בלי כפילות ב"עוד"
   document.getElementById("nav-board").classList.remove("hidden");               // 7.2 תורנויות
-  document.getElementById("sheet-duties").classList.remove("hidden");
   document.getElementById("more-binui-item").classList.remove("hidden");         // 7.3 תקלות בינוי ב"עוד"
   document.getElementById("nav-more").style.order = 99;                          // 7.4 "עוד" לצד שמאל
 

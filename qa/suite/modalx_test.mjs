@@ -22,16 +22,16 @@ const out = await p.evaluate(async ()=>{
     const after = bg.classList.contains('open');
     return { before, after };
   };
-  o.teamModal = test('team-modal');
+  o.reserveModal = test('reserve-modal');
   o.auditModal = test('audit-modal');
   o.addModal = test('add-modal');
   o.naatimModal = test('naatim-modal');
   // וידוא שלא נוסף X כפול בהרצה חוזרת
   ensureModalCloseButtons();
-  o.stillOneX = document.querySelectorAll('#team-modal .modal-x').length;
+  o.stillOneX = document.querySelectorAll('#reserve-modal .modal-x').length;
   // וידוא שכותרת ה-h3 לא נחתכת/מתנגשת עם ה-X (בדיקת חפיפה גיאומטרית)
-  const modal = document.getElementById('team-modal').querySelector('.modal');
-  document.getElementById('team-modal').classList.add('open');
+  const modal = document.getElementById('reserve-modal').querySelector('.modal');
+  document.getElementById('reserve-modal').classList.add('open');
   await new Promise(r=>requestAnimationFrame(r));
   const h3 = modal.querySelector('h3').getBoundingClientRect();
   const x = modal.querySelector('.modal-x').getBoundingClientRect();

@@ -88,7 +88,7 @@ const out = await page.evaluate(async ()=>{
 
   const person = await search(A);
   r.findsPerson = person.includes("חיילים") && person.includes(A);
-  r.personOpensEdit = person.includes("startEditMember(");
+  r.personOpensEdit = person.includes("openSoldierCard(");
 
   // שאילתה שנוגעת בכמה קטגוריות — הצ'יפים מוצגים ומסננים
   const multi = await search("חייל א");
@@ -127,7 +127,7 @@ record("חיפוש מוצא הסמכה", out.findsCert, String(out.findsCert));
 record("חיפוש מוצא נע״ת", out.findsNaat, String(out.findsNaat));
 record("חיפוש מוצא תקלה", out.findsFault, String(out.findsFault));
 record("חיפוש מוצא חייל", out.findsPerson, String(out.findsPerson));
-record("לחיצה על חייל פותחת את עריכתו", out.personOpensEdit, String(out.personOpensEdit));
+record("לחיצה על חייל פותחת את כרטיסיית החייל", out.personOpensEdit, String(out.personOpensEdit));
 record("צ'יפי קטגוריה מוצגים", out.catsShown, String(out.catsShown));
 record("צ'יפ קטגוריה מסנן את התוצאות", out.chipFilters, String(out.chipFilters));
 record("אין תוצאות → הודעה ברורה", out.noResults, String(out.noResults));

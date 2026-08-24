@@ -41,7 +41,7 @@ async function loginAsShedCommander(shedId, shedName, extra={}){
     // *נגישות* — מוסתר = שתי נקודות הכניסה סגורות.
     return {
       boardHidden: hidden("nav-board"),
-      dutiesHidden: hidden("sheet-duties"),
+      dutiesHidden: hidden("nav-board"),   // התורנות הבסיסית אוחדה לתוך מסך התורנויות (nav-board); אין יותר פריט 'תורנויות' נפרד ב'עוד'
       medchecksHidden: hidden("sheet-medchecks") && hidden("nav-medchecks"),
     };
   }, {shedId, shedName, extra});
