@@ -35,7 +35,9 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
   console.log("errs1",errs); await p.close();
 }
 
-// 2. renderBoard: upload button visible to board-publisher, hidden to plain soldier
+// 2. renderBoard: באנרי "צילומי לוח" הוסרו לגמרי ממסך התורנויות (בקשת המשתמש) —
+//    ההעלאה נשארת דרך מסלול האדמין/scope (ר' triggerBoardUpload למטה), אך אין
+//    יותר באנר העלאה/ארכיון על מסך התורנויות עצמו, לאף תפקיד.
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
@@ -51,8 +53,8 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
     const hasBtnAsPlainSoldier = !!document.querySelector('.board-add-btn');
     return {hasBtnAsPublisher, hasBtnAsPlainSoldier};
   });
-  record("renderBoard: upload button shown to board-publisher soldier, hidden otherwise",
-    out.hasBtnAsPublisher===true && out.hasBtnAsPlainSoldier===false, JSON.stringify(out));
+  record("renderBoard: באנר צילומי לוח הוסר ממסך התורנויות (לכל התפקידים)",
+    out.hasBtnAsPublisher===false && out.hasBtnAsPlainSoldier===false, JSON.stringify(out));
   console.log("errs2",errs); await p.close();
 }
 
