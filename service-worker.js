@@ -1,4 +1,4 @@
-const CACHE_NAME = "tayeset124-81a11d040d0a";
+const CACHE_NAME = "tayeset124-1bf70a56dcbd";
 const APP_SHELL = [
   "./index.html",
   "./manifest.json",
@@ -6,16 +6,17 @@ const APP_SHELL = [
   "./icons/icon-512.png",
   "./icons/icon-maskable-512.png",
   "./icons/emblem-124.png",
+  "./icons/apple-touch-icon-180.png",
   "./icons/wing-badge.png"
 ];
 
 self.addEventListener("install", event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
   );
-  // בכוונה בלי self.skipWaiting() כאן — גרסה חדשה נשארת "ממתינה" עד
-  // שהמשתמש עצמו לוחץ על "רענון" (ר' listener להודעה למטה). כך אף עדכון
-  // לא קופץ ומרענן את המסך בכוח באמצע שימוש/מילוי טופס.
+  // skipWaiting אוטומטי — עדכון קורה בשקט ברקע, בלי באנר ובלי לחכות ללחיצת
+  // משתמש. הטאב הפתוח כרגע ממשיך לרוץ עם הקוד שכבר נטען בזיכרון (אין רענון
+  // בכוח באמצע שימוש/מילוי טופס); הגרסה החדשה פשוט משרתת מהפעם הבאה שהאפליקציה נפתחת.
 });
 
 self.addEventListener("activate", event => {
@@ -24,11 +25,6 @@ self.addEventListener("activate", event => {
       Promise.all(names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n)))
     ).then(() => self.clients.claim())
   );
-});
-
-// המסך שולח את זה רק כשהמשתמש לוחץ בעצמו על "גרסה חדשה זמינה"
-self.addEventListener("message", event => {
-  if (event.data === "SKIP_WAITING") self.skipWaiting();
 });
 
 // עוטף בקשת רשת בטיימאאוט — כדי שרשת תקועה (לא בהכרח שגיאה, סתם לא עונה) לא תשאיר
