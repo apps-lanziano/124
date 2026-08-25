@@ -107,6 +107,51 @@ const out = await page.evaluate(async ()=>{
   r.bannerHiddenFromNonManager = !document.querySelector(".roster-banner.plan");
   isRosterManager = true;
 
+  // ===== בורר השם כולל רק חיילים (role==="חייל"), לא מפקדים =====
+  const optHtml = rosterNameOptionsBySquadron();
+  r.nameOptionsExcludeCommanders = !optHtml.includes("מפקד");
+  r.nameOptionsIncludeSoldiers = optHtml.includes("חייל א סככה 1");
+
+  // ===== הקלדה ידנית (toggleManualName/pickedName) =====
+  document.getElementById("bi-name").innerHTML = rosterNameOptionsBySquadron();
+  document.getElementById("bi-name").classList.remove("hidden");
+  document.getElementById("bi-name-manual").classList.add("hidden");
+  r.manualHiddenByDefault = document.getElementById("bi-name-manual").classList.contains("hidden");
+  toggleManualName("bi");
+  r.manualShownAfterToggle = !document.getElementById("bi-name-manual").classList.contains("hidden")
+    && document.getElementById("bi-name").classList.contains("hidden");
+  document.getElementById("bi-name-manual").value = "תגבור מיוחד";
+  r.pickedNameUsesManualWhenShown = pickedName("bi") === "תגבור מיוחד";
+  toggleManualName("bi");   // חזרה לגלילה — מנקה את הטקסט שהוקלד
+  r.manualClearedOnToggleBack = document.getElementById("bi-name-manual").value === "";
+  document.getElementById("bi-name").value = "חייל א סככה 1";
+  r.pickedNameUsesSelectWhenManualHidden = pickedName("bi") === "חייל א סככה 1";
+
+  // ===== board-basic-duties: רק מ״ע תורנויות, רשימה ממוינת של שיבוצים
+  // בפועל בלבד (לא כל חייל), ולא כולל תאריכים שעברו =====
+  await saveBasicDutyPlan({});
+  isRosterManager = false;
+  await renderBoardBasicDuties();
+  r.boardSectionEmptyForNonManager = document.getElementById("board-basic-duties").innerHTML.trim() === "";
+  isRosterManager = true;
+
+  const today = todayKey();
+  const past = isoAddDays(today, -3), soonA = isoAddDays(today, 2), soonB = isoAddDays(today, 1);
+  await saveBasicDutyPlan({
+    [past]:  [{name:"חייל א סככה 3", type:"שמירות"}],
+    [soonA]: [{name:"חייל ב סככה 3", type:"מטבח"}],
+    [soonB]: [{name:"חייל א סככה 1", type:"רס״ר"}],
+  });
+  await renderBoardBasicDuties();
+  const boardHtml = document.getElementById("board-basic-duties").innerHTML;
+  r.boardSectionHidesPastDates = !boardHtml.includes("חייל א סככה 3");
+  r.boardSectionShowsUpcoming = boardHtml.includes("חייל ב סככה 3") && boardHtml.includes("חייל א סככה 1");
+  // ממוין לפי תאריך — soonB (מחר) אמור להופיע לפני soonA (מחרתיים)
+  r.boardSectionSortedByDate = boardHtml.indexOf("חייל א סככה 1") < boardHtml.indexOf("חייל ב סככה 3");
+  r.boardSectionHasAddButton = boardHtml.includes("הוסף שיבוץ");
+  // אין שורה ריקה לכל חייל בטייסת — רק לשיבוצים בפועל (2 שורות בלבד)
+  r.boardSectionOnlyAssignedRows = (boardHtml.match(/class="duty-trow"/g)||[]).length === 2;
+
   return r;
 });
 
@@ -133,6 +178,19 @@ record("ניווט לא זז לפני השבוע הנוכחי", out.navDoesNotGo
 record("ניווט לא חורג מגבול חצי השנה", out.navClampedToHorizon, String(out.navClampedToHorizon));
 record("הבאנר מוצג למ״ע תורנויות", out.bannerVisibleToManager, String(out.bannerVisibleToManager));
 record("הבאנר מוסתר ממי שאינו מ״ע תורנויות", out.bannerHiddenFromNonManager, String(out.bannerHiddenFromNonManager));
+record("🔒 בורר השם מציג רק חיילים, לא מפקדים", out.nameOptionsExcludeCommanders, String(out.nameOptionsExcludeCommanders));
+record("בורר השם עדיין מציג חיילים", out.nameOptionsIncludeSoldiers, String(out.nameOptionsIncludeSoldiers));
+record("הקלדה ידנית מוסתרת כברירת מחדל", out.manualHiddenByDefault, String(out.manualHiddenByDefault));
+record("toggleManualName מציג שדה טקסט וחוסם את הסלקט", out.manualShownAfterToggle, String(out.manualShownAfterToggle));
+record("pickedName מעדיף את השדה הידני כשהוא גלוי", out.pickedNameUsesManualWhenShown, String(out.pickedNameUsesManualWhenShown));
+record("חזרה לגלילה מנקה את הטקסט שהוקלד", out.manualClearedOnToggleBack, String(out.manualClearedOnToggleBack));
+record("pickedName חוזר לסלקט כשההקלדה הידנית מוסתרת", out.pickedNameUsesSelectWhenManualHidden, String(out.pickedNameUsesSelectWhenManualHidden));
+record("🔒 board-basic-duties: מוסתר לגמרי ממי שאינו מ״ע תורנויות", out.boardSectionEmptyForNonManager, String(out.boardSectionEmptyForNonManager));
+record("board-basic-duties: מסתיר תאריכים שכבר עברו", out.boardSectionHidesPastDates, String(out.boardSectionHidesPastDates));
+record("board-basic-duties: מציג שיבוצים קרובים", out.boardSectionShowsUpcoming, String(out.boardSectionShowsUpcoming));
+record("board-basic-duties: ממוין לפי תאריך", out.boardSectionSortedByDate, String(out.boardSectionSortedByDate));
+record("board-basic-duties: כולל כפתור הוספת שיבוץ", out.boardSectionHasAddButton, String(out.boardSectionHasAddButton));
+record("🔒 board-basic-duties: רק שורות של שיבוץ בפועל, לא כל חייל בטייסת", out.boardSectionOnlyAssignedRows, String(out.boardSectionOnlyAssignedRows));
 
 await closeBrowser();
 
