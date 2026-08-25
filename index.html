@@ -960,6 +960,7 @@ nav{
 .roster-weeksel div.on{background:var(--red-soft);color:var(--red-deep);border-color:var(--red-line)}
 .roster-wkrange{text-align:center;font-size:11.5px;font-weight:700;color:var(--ink-3);margin:-4px 0 10px}
 .roster-wkfix-tog{color:#2563eb;cursor:pointer;font-weight:800;margin-inline-start:6px}
+.rname-manual-tog{color:#2563eb;cursor:pointer;font-weight:700;font-size:11.5px;margin:4px 2px 8px;text-align:center}
 .roster-wkfix{display:flex;align-items:center;gap:6px;margin:-2px 0 4px}
 .roster-wkfix .m-input{flex:1;min-width:0;margin-bottom:0}
 .roster-wkfix .m-btn{flex:0 0 auto;padding:8px 12px;font-size:12px}
@@ -3093,6 +3094,8 @@ nav{
       <div class="m-sub">אותה תורנות לאורך כמה ימים ברצף (למשל מטבח מ-ד׳ עד ה׳–ש׳).</div>
       <label class="req-lbl">חייל</label>
       <select class="m-input" id="bi-name"></select>
+      <input type="text" class="m-input hidden" id="bi-name-manual" placeholder="הקלד שם חייל…">
+      <div class="rname-manual-tog" onclick="toggleManualName('bi')">✏️ הקלדה ידנית במקום גלילה</div>
       <label class="req-lbl">סוג תורנות</label>
       <select class="m-input" id="bi-type"></select>
       <div style="display:flex;gap:8px">
@@ -3131,6 +3134,8 @@ nav{
       <div class="m-sub">אפשר לבחור טווח תאריכים רחב יותר משבוע אחד — משבצת אותה תורנות בכל יום בטווח.</div>
       <label class="req-lbl">חייל</label>
       <select class="m-input" id="bdp-add-name"></select>
+      <input type="text" class="m-input hidden" id="bdp-add-name-manual" placeholder="הקלד שם חייל…">
+      <div class="rname-manual-tog" onclick="toggleManualName('bdp-add')">✏️ הקלדה ידנית במקום גלילה</div>
       <label class="req-lbl">סוג תורנות</label>
       <select class="m-input" id="bdp-add-type"></select>
       <div style="display:flex;gap:8px">
@@ -6768,51 +6773,46 @@ async function renderBoardArchive(){
   area.innerHTML = html;
 }
 /* ===== תורנויות בסיסיות — מאוחד לתוך מסך "תורנויות" (scr-board) =====
-   הוחלף באנרי "צילומי לוח" שהיו כאן בעבר. מפקד עורך את הצוות שלו (במסגרת
-   "מחלקות" — רק המחלקה שלו); חייל רואה רק את השיבוץ שלו, לצפייה בלבד.
-   כותב לאותו duty_table שכבר מסתנכרן ללוח הצוות (syncDutyToBoard) וללוח
-   השנה המאוחד (getCalendarEvents) — ולכן אין כאן מודל נתונים חדש. */
+   ⚠️ שונה בכוונה (2026-08-25): הגרסה הקודמת קראה/כתבה ל-duty_table
+   (sGet — scoped לסככה המחוברת) והציגה שורה לכל חייל *בסככה הזו בלבד*,
+   כולל שורות ריקות — בדיוק אותו באג "רשימה ארוכה של סככה אחת לגלול
+   בלי סוף" שתוקן בבורר השם (ר' rosterNameOptionsBySquadron). כעת:
+   רק מ״ע תורנויות (isRosterManager) — לא כל מפקד — רואה כאן משהו,
+   וזו רשימה מרוכזת של כל הטייסת (לא סככה בודדת), רק שיבוצים בפועל
+   (לא כל חייל עם שורה ריקה), ממוינת לפי תאריך. המקור: אותו basic_duty_schedule
+   של "תכנון תורנות בסיסית" (ר' openBasicDutyPlan) — לא duty_table הישן;
+   duty_table עצמו נשאר בשימוש במקומות אחרים (מסך "לוח שנה מאוחד" הסככתי)
+   ולא נגענו בו. */
 async function renderBoardBasicDuties(){
   const area = document.getElementById("board-basic-duties");
   if(!area) return;
-  const table = (await sGet("duty_table")) || {};
-  const isCmd = userRole === "מפקד";
-  const isDept = !!(currentShed && currentShed.isDept);
-  const myDept = isDept ? personDept(PERSONNEL.find(p=>p.name===user)) : null;
-  let soldiers = PERSONNEL.filter(p=>p.role==="חייל");
-  if(isCmd){
-    if(isDept && myDept) soldiers = soldiers.filter(p=>personDept(p)===myDept);   // כל מפקד — הצוות שלו
-  } else {
-    soldiers = soldiers.filter(p=>p.name===user);                                // חייל — רק את עצמו
-  }
-  const canEdit = isCmd;
-  const rowsHtml = soldiers.map(p=>{
-    const row = table[p.name] || {duty:"", date:""};
-    const opts = ['<option value="">—</option>']
-      .concat(DUTY_TYPES.map(d=>`<option value="${d}" ${row.duty===d?"selected":""}>${d}</option>`)).join("");
-    return `<div class="duty-trow">
-      <div class="duty-name"><div class="avatar">${initials(p.name)}</div><b>${escapeHTML(p.name)}</b></div>
-      <select class="duty-select ${row.duty?"filled":""}" ${canEdit?"":"disabled"} onchange="saveDuty('${jsStr(p.name)}','duty',this.value);this.classList.toggle('filled',!!this.value)">${opts}</select>
-      <div class="duty-dates">
-        <label>מ<input type="date" class="duty-dateinp" aria-label="מתאריך — ${escapeHTML(p.name)}" value="${row.fromDate||row.date||""}" ${canEdit?"":"disabled"} onchange="saveDuty('${jsStr(p.name)}','fromDate',this.value)"></label>
-        <label>עד<input type="date" class="duty-dateinp" aria-label="עד תאריך — ${escapeHTML(p.name)}" value="${row.toDate||""}" ${canEdit?"":"disabled"} onchange="saveDuty('${jsStr(p.name)}','toDate',this.value)"></label>
+  if(!isRosterManager){ area.innerHTML = ""; return; }
+  const plan = basicDutyPlan = await getBasicDutyPlan();
+  const today = todayKey();
+  const rows = [];
+  Object.entries(plan).forEach(([iso,list])=>{
+    if(iso < today) return;
+    (list||[]).forEach((b,idx)=>{ if(b && b.name) rows.push({iso, name:b.name, type:b.type||"", idx}); });
+  });
+  rows.sort((a,b)=> a.iso<b.iso ? -1 : (a.iso>b.iso ? 1 : a.name.localeCompare(b.name,"he")));
+  const rowsHtml = rows.map(r=>`
+    <div class="duty-trow">
+      <div class="duty-name"><div class="avatar">${initials(r.name)}</div><b>${escapeHTML(r.name)}</b></div>
+      <div>${escapeHTML(r.type||"—")}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
+        <b>${fmtHeShort(r.iso)}</b>
+        <span class="rc" style="margin:0;cursor:pointer" onclick="removeBasicDutyPlanEntry('${r.iso}',${r.idx})" aria-label="הסר שיבוץ">✕</span>
       </div>
-    </div>`;
-  }).join("");
-  const empty = `<div style="padding:16px;text-align:center;color:var(--ink-3);font-size:13px">${isCmd?"אין חיילים במסגרת":"אין לך שיבוץ תורנות בסיסית"}</div>`;
-  const sub = isCmd
-    ? "שיבוץ שמי שבועי לצוות שלך — נשמר אוטומטית ומסתנכרן ללוח הצוות וללוח השנה המאוחד."
-    : "התורנות הבסיסית שלך לשבוע. עדכון מתבצע ע\"י מפקד.";
-  const note = canEdit
-    ? "✏️ בחר תורנות וטווח תאריכים (מ–עד) — נשמר אוטומטית ומסתנכרן ללוח הצוות השבועי בתאריכים המתאימים"
-    : "🔒 צפייה בלבד — עדכון שיבוץ מתבצע ע\"י מפקד";
+    </div>`).join("");
+  const empty = `<div style="padding:16px;text-align:center;color:var(--ink-3);font-size:13px">אין עדיין שיבוצים מתוכננים</div>`;
   area.innerHTML = `
-    <div class="sec-head" style="margin-top:24px"><div><h2>תורנויות בסיסיות</h2><p>${sub}</p></div></div>
+    <div class="sec-head" style="margin-top:24px"><div><h2>תורנויות בסיסיות</h2><p>מי משובץ בפועל — ריכוז כל חיילי הטייסת (לא לפי סככה), ממוין לפי תאריך.</p></div></div>
+    <button class="m-btn ghost" style="width:100%;margin-bottom:8px" onclick="openBasicDutyPlanAdd()">➕ הוסף שיבוץ</button>
     <div class="duty-table">
       <div class="duty-thead"><div>שם החייל</div><div>תורנות</div><div>תאריך</div></div>
       ${rowsHtml || empty}
     </div>
-    <div class="duty-lock-note">${note}</div>`;
+    <div class="duty-lock-note">🗓️ לתכנון מלא לפי שבועות, עד חצי שנה קדימה — באנר "תכנון תורנות בסיסית" למעלה.</div>`;
 }
 
 /* ===== שיבוץ תורנויות שבועי (מתוך "לוח צוות שבועי") =====
@@ -9484,13 +9484,32 @@ function rosterRemoveBasic(i){ rosterDraft.days[rosterEdDay].basic.splice(i,1); 
 function rosterNameOptionsBySquadron(){
   const seen = new Set();
   return SHEDS.map(s=>{
+    // רק חיילים (לא מפקדים) — תורנות בסיסית היא משבצת חיילים, ומפקד
+    // ברשימה רק מבלבל בגלילה.
     const names = (rosterAllPersonnel[s.id]||[])
-      .filter(p=>p && p.name && !(p.release && p.release<=todayKey()) && !seen.has(p.name))
+      .filter(p=>p && p.name && p.role==="חייל" && !(p.release && p.release<=todayKey()) && !seen.has(p.name))
       .map(p=>p.name)
       .sort((a,b)=>a.localeCompare(b,"he"));
     names.forEach(n=>seen.add(n));
     return names.length ? `<optgroup label="${escapeHTML(s.name)}">${names.map(n=>`<option>${escapeHTML(n)}</option>`).join("")}</optgroup>` : "";
   }).join("");
+}
+/* בורר שם עם אופציית הקלדה ידנית — לצד הגלילה בסלקט, מ"ע יכול להקליד
+   שם שאינו ברשימה (למשל תגבור חד-פעמי שלא רשום כחייל קבוע). prefix
+   מזהה את זוג האלמנטים (<prefix>-name הסלקט, <prefix>-name-manual הטקסט). */
+function toggleManualName(prefix){
+  const sel = document.getElementById(prefix+"-name");
+  const inp = document.getElementById(prefix+"-name-manual");
+  if(!sel || !inp) return;
+  sel.classList.toggle("hidden");
+  inp.classList.toggle("hidden");
+  if(!inp.classList.contains("hidden")) inp.focus(); else inp.value = "";
+}
+function pickedName(prefix){
+  const sel = document.getElementById(prefix+"-name");
+  const inp = document.getElementById(prefix+"-name-manual");
+  if(inp && !inp.classList.contains("hidden") && inp.value.trim()) return inp.value.trim();
+  return sel ? sel.value : "";
 }
 /* תורנות בסיסית לטווח ימים — משבצת אותו חייל+סוג בכל יום בטווח בבת אחת
    (במקום להוסיף יום-יום). "חמישי" מייצג את כל משמרת הסופ"ש. */
@@ -9499,6 +9518,9 @@ function openBasicInterval(){
   const dl = d => d==="חמישי"?"ה׳–ש׳":(DAY_LETTER[d]||d);
   const dateOf = d => fmtHeShort(rosterDayLockDates(d, rosterEditWeekRef())[0]);
   document.getElementById("bi-name").innerHTML = rosterNameOptionsBySquadron();
+  document.getElementById("bi-name").classList.remove("hidden");
+  document.getElementById("bi-name-manual").classList.add("hidden");
+  document.getElementById("bi-name-manual").value = "";
   document.getElementById("bi-type").innerHTML = BASIC_DUTY_TYPES.map(t=>`<option>${escapeHTML(t)}</option>`).join("");
   const dayOpts = ROSTER_EDIT_DAYS.map(d=>`<option value="${d}">${dl(d)} · ${dateOf(d)}</option>`).join("");
   document.getElementById("bi-from").innerHTML = dayOpts;
@@ -9508,7 +9530,7 @@ function openBasicInterval(){
   document.getElementById("basic-interval-modal").classList.add("open");
 }
 function applyBasicInterval(){
-  const name = document.getElementById("bi-name").value;
+  const name = pickedName("bi");
   const type = document.getElementById("bi-type").value;
   const from = document.getElementById("bi-from").value;
   const to   = document.getElementById("bi-to").value;
@@ -9561,6 +9583,7 @@ function shiftBasicDutyPlan(deltaChunks){
   renderBasicDutyPlan();
 }
 function renderBasicDutyPlan(){
+  if(!basicDutyPlanStart) basicDutyPlanStart = rosterWeekSundayIso("current");
   const min = basicDutyPlanMinStart(), max = basicDutyPlanMaxStart();
   document.getElementById("bdp-prev").disabled = basicDutyPlanStart <= min;
   document.getElementById("bdp-next").disabled = isoAddDays(basicDutyPlanStart, 7*BASIC_DUTY_PLAN_WEEKS_VISIBLE) > max;
@@ -9596,10 +9619,17 @@ function bdpSnapToAnchor(iso){
   if(wd>=4) d.setDate(d.getDate()-(wd-4));
   return isoOfDate(d);
 }
-function openBasicDutyPlanAdd(iso){
+async function openBasicDutyPlanAdd(iso){
+  if(!isRosterManager){ toast("רק מ״ע תורנויות יכול לשבץ 🔒"); return; }
+  // נגיש גם ישירות מהלוח (לא רק מתוך מודל "תכנון תורנות בסיסית") — ייתכן
+  // ש-rosterAllPersonnel עדיין לא נטען באותו מסלול.
+  if(!rosterAllPersonnel || !Object.keys(rosterAllPersonnel).length) rosterAllPersonnel = await fetchAllPersonnelByShed();
   bdpAddDate = iso || "";
   const from = bdpSnapToAnchor(iso) || basicDutyPlanMinStart();
   document.getElementById("bdp-add-name").innerHTML = rosterNameOptionsBySquadron();
+  document.getElementById("bdp-add-name").classList.remove("hidden");
+  document.getElementById("bdp-add-name-manual").classList.add("hidden");
+  document.getElementById("bdp-add-name-manual").value = "";
   document.getElementById("bdp-add-type").innerHTML = BASIC_DUTY_TYPES.map(t=>`<option>${escapeHTML(t)}</option>`).join("");
   document.getElementById("bdp-add-from").min = basicDutyPlanMinStart();
   document.getElementById("bdp-add-to").min = basicDutyPlanMinStart();
@@ -9610,7 +9640,7 @@ function openBasicDutyPlanAdd(iso){
   document.getElementById("basic-duty-plan-add-modal").classList.add("open");
 }
 async function applyBasicDutyPlanAdd(){
-  const name = document.getElementById("bdp-add-name").value;
+  const name = pickedName("bdp-add");
   const type = document.getElementById("bdp-add-type").value;
   const from = bdpSnapToAnchor(document.getElementById("bdp-add-from").value);
   const to = bdpSnapToAnchor(document.getElementById("bdp-add-to").value);
@@ -9627,6 +9657,7 @@ async function applyBasicDutyPlanAdd(){
   if(ok===false){ toast("⚠️ השמירה נכשלה"); return; }
   document.getElementById("basic-duty-plan-add-modal").classList.remove("open");
   renderBasicDutyPlan();
+  if(document.getElementById("board-basic-duties")) await renderBoardBasicDuties();
   toast(n ? `נוסף לתכנון (${n}) ✓` : "כבר קיים בטווח שנבחר");
 }
 async function removeBasicDutyPlanEntry(iso, idx){
@@ -9636,6 +9667,8 @@ async function removeBasicDutyPlanEntry(iso, idx){
   const ok = await saveBasicDutyPlan(basicDutyPlan);
   if(ok===false){ toast("⚠️ המחיקה נכשלה"); return; }
   renderBasicDutyPlan();
+  // הרשימה המרוכזת מתחת ללוח (אם קיימת בדף) משתמשת באותו מקור — לרענן גם אותה
+  if(document.getElementById("board-basic-duties")) await renderBoardBasicDuties();
 }
 /* שואב לתוך טיוטת עורך הלוח (current/next בלבד) שיבוצים מתוכננים —
    הוספה בלבד (כמו copyRosterFromLastWeek), לעולם לא דורס שיבוץ קיים.
