@@ -9427,14 +9427,20 @@ function rosterRemoveBasic(i){ rosterDraft.days[rosterEdDay].basic.splice(i,1); 
    (במקום להוסיף יום-יום). "חמישי" מייצג את כל משמרת הסופ"ש. */
 function openBasicInterval(){
   if(!isRosterManager || !rosterDraft){ toast("רק מ״ע תורנויות יכול לשבץ 🔒"); return; }
-  const names = [];
-  SHEDS.forEach(s=>(rosterAllPersonnel[s.id]||[]).forEach(p=>{
-    if(p && p.name && !(p.release && p.release<=todayKey())) names.push(p.name);
-  }));
-  const uniq = [...new Set(names)].sort((a,b)=>a.localeCompare(b,"he"));
+  // מקובץ לפי סככה (optgroup) כדי שמ״ע לא יגלול רשימה שטוחה של כל הטייסת —
+  // כל שם מוצג פעם אחת, תחת הסככה הראשונה שבה נמצא.
+  const seen = new Set();
+  const groupsHtml = SHEDS.map(s=>{
+    const names = (rosterAllPersonnel[s.id]||[])
+      .filter(p=>p && p.name && !(p.release && p.release<=todayKey()) && !seen.has(p.name))
+      .map(p=>p.name)
+      .sort((a,b)=>a.localeCompare(b,"he"));
+    names.forEach(n=>seen.add(n));
+    return names.length ? `<optgroup label="${escapeHTML(s.name)}">${names.map(n=>`<option>${escapeHTML(n)}</option>`).join("")}</optgroup>` : "";
+  }).join("");
   const dl = d => d==="חמישי"?"ה׳–ש׳":(DAY_LETTER[d]||d);
   const dateOf = d => fmtHeShort(rosterDayLockDates(d, rosterEditWeekRef())[0]);
-  document.getElementById("bi-name").innerHTML = uniq.map(n=>`<option>${escapeHTML(n)}</option>`).join("");
+  document.getElementById("bi-name").innerHTML = groupsHtml;
   document.getElementById("bi-type").innerHTML = BASIC_DUTY_TYPES.map(t=>`<option>${escapeHTML(t)}</option>`).join("");
   const dayOpts = ROSTER_EDIT_DAYS.map(d=>`<option value="${d}">${dl(d)} · ${dateOf(d)}</option>`).join("");
   document.getElementById("bi-from").innerHTML = dayOpts;
