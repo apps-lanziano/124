@@ -2463,6 +2463,7 @@ nav{
     <div class="reader-head">
       <button class="back-btn" onclick="closeRosterFull()"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       <h3 id="roster-full-title">לוח צוות</h3>
+      <button class="back-btn" style="color:var(--ink-2)" onclick="exportRosterBoardCsv()" aria-label="ייצוא ל-CSV" title="ייצוא ל-CSV">⬇️</button>
     </div>
     <div class="reader-body">
       <div id="roster-full-wrap" class="img-zoom-wrap">
@@ -8015,13 +8016,40 @@ function rosterBoardHtml(r, today, mode, weekSlot){
     if(shown(cr.id, f)) rowHtml[cr.id] = row(escapeHTML(cr.label), rest?"restz":"", d=>chips(d[f], rest?"rest":""));
   });
 
-  let html = `<table class="roster-grid ${fit?"fit":"wide"}"><thead><tr><th class="rlbl wk">${r.weekNumber?("שבוע "+r.weekNumber):"שבוע"}</th>${th}</tr></thead><tbody>`;
+  let html = `<table class="roster-grid ${fit?"fit":"wide"}" data-week="${escapeHTML(wk)}"><thead><tr><th class="rlbl wk">${r.weekNumber?("שבוע "+r.weekNumber):"שבוע"}</th>${th}</tr></thead><tbody>`;
   html += buildRosterRowOrder(rosterCustomRows).map(k=>rowHtml[k]||"").join("");
   html += `</tbody></table>`;
   if(mode === "wide") return html;
   return `<div class="roster-grid-wrap">${html}</div>
     <button class="m-btn ghost roster-full-btn" onclick="openRosterFull()">⤢ מסך מלא · צביטה להגדלה</button>
     <div class="roster-hint">הקש על יום לפירוט מלא בשמות מלאים</div>`;
+}
+/* ייצוא לוח צוות ל-CSV — מ"מסך מלא" בלבד (לא מ"לוח שבועי" הרגיל): שם
+   שם המצומצם (shortName, "יוסי כ.") טוב לתא צר בנייד אבל לא לרשומה
+   רשמית; "מסך מלא" כבר מרונדר עם שמות מלאים (mode="wide"), אז קריאה
+   ישירות מה-DOM שלו נותנת ייצוא עם שמות מלאים בלי לשכפל את לוגיקת
+   ה-shown/disabledRows/buildRosterRowOrder במקום שני. */
+function rosterCsvCellText(cell){
+  const chips = cell.querySelectorAll(".rc");
+  const cellClone = c => { const cl = c.cloneNode(true); cl.querySelectorAll("small").forEach(s=>s.insertAdjacentText("beforebegin"," ")); return cl.textContent.replace(/\s+/g," ").trim(); };
+  if(chips.length) return [...chips].map(cellClone).join(" | ");
+  return cellClone(cell);
+}
+function buildRosterCsvFromTable(table){
+  const rows = [...table.querySelectorAll("tr")].map(tr=>[...tr.children].map(rosterCsvCellText));
+  return "﻿" + rows.map(r=>r.map(supportCsvEscape).join(",")).join("\n");
+}
+function exportRosterBoardCsv(){
+  const table = document.querySelector("#roster-full-inner .roster-grid");
+  if(!table){ toast("אין לוח להצגה"); return; }
+  const csv = buildRosterCsvFromTable(table);
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const wk = table.getAttribute("data-week") || todayKey();
+  a.href = url; a.download = "roster_"+wk+".csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
 }
 /* מסך מלא — הלוח כולו כמסמך אחד, עם אותה התנהגות זום שכבר מוכרת
    למשתמשים מצפייה בצילום הלוח (imgZoom*). */
