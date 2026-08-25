@@ -924,6 +924,8 @@ nav{
 .roster-banner.arc .rb-tx b{color:#5b3fa0}
 .roster-banner.cns{background:#e9f7f4;border-color:#c3e8e0}
 .roster-banner.cns .rb-tx b{color:#0d7a68}
+.roster-banner.plan{background:#fef6e7;border-color:#f3dfa8}
+.roster-banner.plan .rb-tx b{color:#9a6b0d}
 .cns-person{padding:11px 4px;border-bottom:1px solid var(--line)}
 .cns-person:last-child{border-bottom:0}
 .cns-person-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
@@ -1008,6 +1010,16 @@ nav{
 .rc.course{background:#e3f0fb;color:#1c5f96;box-shadow:inset 0 0 0 1px #b7d8f2}
 .rc.res{background:var(--gold-soft);color:#7a6420;box-shadow:inset 0 0 0 1px #f0e5c4}
 .rc small{font-weight:600;opacity:.75}
+/* תכנון תורנות בסיסית — ריכוז שבועות מרובים, ר' openBasicDutyPlan */
+.bdp-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+.bdp-nav .m-btn{flex:0 0 auto;padding:7px 12px;font-size:12px}
+.bdp-range{font-size:12.5px;font-weight:800;color:var(--ink-2)}
+.m-btn:disabled{opacity:.4;pointer-events:none}
+.bdp-week{margin-bottom:12px}
+.bdp-week-h{font-size:11.5px;font-weight:800;color:var(--ink-3);margin-bottom:4px;padding:0 2px}
+.bdp-grid td{vertical-align:top;text-align:center;padding:5px 3px}
+.bdp-grid .rblk-c.small{display:block;font-size:10px;font-weight:800;color:var(--ink-2);margin-bottom:3px}
+.bdp-grid .rblk-c.small small{display:block;font-size:9px;font-weight:600;color:var(--ink-3)}
 /* תפקיד שמתחלף בסופ"ש (מנהל/מתגבר) — תגית זעירה בתוך הצ'יפ (ה׳ / ו׳–ש׳),
    כך שהתא נשאר בגובה של צ'יפ רגיל ולא חורג משאר המשבצות */
 .rc-wk-t{font-size:8px;font-weight:800;opacity:.7;margin-inline-end:3px}
@@ -3090,6 +3102,44 @@ nav{
       <div class="modal-actions" style="margin-top:12px">
         <button class="m-btn primary" onclick="applyBasicInterval()" style="flex:1">שבץ לטווח</button>
         <button class="m-btn ghost" onclick="document.getElementById('basic-interval-modal').classList.remove('open')" style="flex:0 0 auto">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- תכנון תורנות בסיסית — ריכוז כלל השיבוצים קדימה, עד חצי שנה (מ״ע תורנויות) -->
+  <div class="modal-bg" id="basic-duty-plan-modal">
+    <div class="modal" style="max-width:520px">
+      <h3>🗓️ תכנון תורנות בסיסית</h3>
+      <div class="m-sub">ריכוז כל השיבוצים של חיילי הטייסת, לא מחולק לפי סככה — עד חצי שנה קדימה.</div>
+      <div class="bdp-nav">
+        <button class="m-btn ghost" id="bdp-prev" onclick="shiftBasicDutyPlan(-1)">‹ קודם</button>
+        <span id="bdp-range" class="bdp-range"></span>
+        <button class="m-btn ghost" id="bdp-next" onclick="shiftBasicDutyPlan(1)">הבא ›</button>
+      </div>
+      <button class="m-btn ghost" style="width:100%;margin-top:8px" onclick="openBasicDutyPlanAdd()">➕ הוסף שיבוץ</button>
+      <div id="bdp-body" style="max-height:56vh;overflow-y:auto;margin-top:10px"></div>
+      <div class="modal-actions" style="margin-top:10px">
+        <button class="m-btn ghost" onclick="document.getElementById('basic-duty-plan-modal').classList.remove('open')" style="width:100%">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- הוספת שיבוץ לתכנון תורנות בסיסית (מודל פנימי) -->
+  <div class="modal-bg" id="basic-duty-plan-add-modal">
+    <div class="modal">
+      <h3>הוספת שיבוץ לתכנון</h3>
+      <div class="m-sub">אפשר לבחור טווח תאריכים רחב יותר משבוע אחד — משבצת אותה תורנות בכל יום בטווח.</div>
+      <label class="req-lbl">חייל</label>
+      <select class="m-input" id="bdp-add-name"></select>
+      <label class="req-lbl">סוג תורנות</label>
+      <select class="m-input" id="bdp-add-type"></select>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1"><label class="req-lbl">מתאריך</label><input type="date" class="m-input" id="bdp-add-from"></div>
+        <div style="flex:1"><label class="req-lbl">עד תאריך</label><input type="date" class="m-input" id="bdp-add-to"></div>
+      </div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="m-btn primary" onclick="applyBasicDutyPlanAdd()" style="flex:1">הוסף לתכנון</button>
+        <button class="m-btn ghost" onclick="document.getElementById('basic-duty-plan-add-modal').classList.remove('open')" style="flex:0 0 auto">ביטול</button>
       </div>
     </div>
   </div>
@@ -7435,6 +7485,8 @@ async function renderRosterView(){
       <button class="roster-banner fut" onclick="openRosterEditor(null,'next')">
         <span class="rb-ic" style="color:#7c3aed"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg></span><span class="rb-tx"><b>בניית לוח עתידי</b><small>הכנת השבוע הבא מראש</small></span></button>
     </div>
+    <button class="roster-banner plan" onclick="openBasicDutyPlan()" style="width:100%;margin-bottom:10px">
+        <span class="rb-ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#b8860b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg></span><span class="rb-tx"><b>תכנון תורנות בסיסית</b><small>ריכוז כל השיבוצים של חיילי הטייסת — עד חצי שנה קדימה</small></span></button>
     <button class="roster-banner swp" onclick="openNaatSwaps()" style="width:100%;margin-bottom:10px">
         <span class="rb-ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h13l-3-3M20 17H7l3 3"/></svg></span><span class="rb-tx"><b>אישורי מ״ע<span id="roster-naat-badge" class="rb-badge hidden"></span></b><small>החלפות שהמפקד אישר + אילוצים שהוזנו אחרי ג׳ 10:00 — לאישורך</small></span></button>
     <button class="roster-banner cns" onclick="openConstraintsBoard()" style="width:100%;margin-bottom:10px">
@@ -9177,6 +9229,9 @@ async function openRosterEditor(aiDays, slot){
     rosterPrevSat = new Set(rosterDayAssigned(cur.days["שבת"] || {}));
   }
   if(aiDays) applyAiDaysToDraft(aiDays);
+  // שואב לטיוטה שיבוצים שתוכננו מראש בכלי "תכנון תורנות בסיסית" (ר' שם) —
+  // הוספה בלבד, לא דורס שיבוץ קיים.
+  await seedBasicDutyFromPlan();
   // בניית לוח עתידי תמיד מתחילה מיום ראשון (לא מ"היום") — הרי מדובר
   // בשבוע שטרם החל, אז "היום" לא רלוונטי כברירת מחדל לעריכה.
   rosterEdDay = rosterEditSlot==="next" ? "ראשון" : rosterEditKey(todayHebrewDay());
@@ -9423,14 +9478,12 @@ function rosterCyclePf(i){
 }
 function rosterRemovePf(i){ rosterDraft.days[rosterEdDay].pf.splice(i,1); renderRosterEditor(); }
 function rosterRemoveBasic(i){ rosterDraft.days[rosterEdDay].basic.splice(i,1); renderRosterEditor(); }
-/* תורנות בסיסית לטווח ימים — משבצת אותו חייל+סוג בכל יום בטווח בבת אחת
-   (במקום להוסיף יום-יום). "חמישי" מייצג את כל משמרת הסופ"ש. */
-function openBasicInterval(){
-  if(!isRosterManager || !rosterDraft){ toast("רק מ״ע תורנויות יכול לשבץ 🔒"); return; }
-  // מקובץ לפי סככה (optgroup) כדי שמ״ע לא יגלול רשימה שטוחה של כל הטייסת —
-  // כל שם מוצג פעם אחת, תחת הסככה הראשונה שבה נמצא.
+/* בורר שם מקובץ לפי סככה (optgroup) — משותף לכל מקום שמציג את כלל
+   חיילי הטייסת לבחירה, כדי שמ״ע לא יגלול רשימה שטוחה אחת. כל שם מוצג
+   פעם אחת, תחת הסככה הראשונה שבה נמצא. */
+function rosterNameOptionsBySquadron(){
   const seen = new Set();
-  const groupsHtml = SHEDS.map(s=>{
+  return SHEDS.map(s=>{
     const names = (rosterAllPersonnel[s.id]||[])
       .filter(p=>p && p.name && !(p.release && p.release<=todayKey()) && !seen.has(p.name))
       .map(p=>p.name)
@@ -9438,9 +9491,14 @@ function openBasicInterval(){
     names.forEach(n=>seen.add(n));
     return names.length ? `<optgroup label="${escapeHTML(s.name)}">${names.map(n=>`<option>${escapeHTML(n)}</option>`).join("")}</optgroup>` : "";
   }).join("");
+}
+/* תורנות בסיסית לטווח ימים — משבצת אותו חייל+סוג בכל יום בטווח בבת אחת
+   (במקום להוסיף יום-יום). "חמישי" מייצג את כל משמרת הסופ"ש. */
+function openBasicInterval(){
+  if(!isRosterManager || !rosterDraft){ toast("רק מ״ע תורנויות יכול לשבץ 🔒"); return; }
   const dl = d => d==="חמישי"?"ה׳–ש׳":(DAY_LETTER[d]||d);
   const dateOf = d => fmtHeShort(rosterDayLockDates(d, rosterEditWeekRef())[0]);
-  document.getElementById("bi-name").innerHTML = groupsHtml;
+  document.getElementById("bi-name").innerHTML = rosterNameOptionsBySquadron();
   document.getElementById("bi-type").innerHTML = BASIC_DUTY_TYPES.map(t=>`<option>${escapeHTML(t)}</option>`).join("");
   const dayOpts = ROSTER_EDIT_DAYS.map(d=>`<option value="${d}">${dl(d)} · ${dateOf(d)}</option>`).join("");
   document.getElementById("bi-from").innerHTML = dayOpts;
@@ -9468,6 +9526,134 @@ function applyBasicInterval(){
   renderRosterEditor();
   toast(n ? `שובץ ל-${n} ימים ✓` : "כבר משובץ בטווח שנבחר");
 }
+
+/* ===== תכנון תורנות בסיסית — ריכוז כל השיבוצים, עד חצי שנה קדימה =====
+   מ״ע תורנויות לא צריך לחפש מי משובץ בכל סככה בנפרד — כלי תכנון עצמאי
+   מהלוח השבועי (current/next בלבד), שמראה בבת אחת את כל חיילי הטייסת
+   ואת השיבוצים שלהם על טבלת שבועות. מאוחסן בנפרד מהלוח עצמו — אחרת
+   היינו צריכים לשמור לוחות שבועיים מלאים חצי שנה קדימה, מבנה שהלוח
+   הרגיל (current/next בלבד) לא תומך בו כלל.
+   מפתח = תאריך ISO (עוגן היום/משמרת הסופ"ש — אותם תאריכים שמפיק
+   rosterDayLockDates), ערך = מערך {name, type}. גלובלי (sGetRaw/sSetRaw)
+   כמו כל דבר אחר סביב הלוח (לא scoped לסככה — ר' roster_custom_rows). */
+const BASIC_DUTY_PLAN_KEY = "basic_duty_schedule";
+async function getBasicDutyPlan(){ return (await sGetRaw(BASIC_DUTY_PLAN_KEY)) || {}; }
+async function saveBasicDutyPlan(obj){ return await sSetRaw(BASIC_DUTY_PLAN_KEY, obj); }
+const BASIC_DUTY_PLAN_WEEKS_VISIBLE = 4;    // כמה שבועות מוצגים בבת אחת בגלילה
+const BASIC_DUTY_PLAN_HORIZON_DAYS = 183;   // חצי שנה קדימה — גבול הניווט
+let basicDutyPlan = {};
+let basicDutyPlanStart = "";   // ראשון (ISO) של השבוע הראשון שמוצג כרגע
+let bdpAddDate = "";
+async function openBasicDutyPlan(){
+  if(!isRosterManager){ toast("רק מ״ע תורנויות יכול לתכנן תורנות בסיסית 🔒"); return; }
+  if(!rosterAllPersonnel || !Object.keys(rosterAllPersonnel).length) rosterAllPersonnel = await fetchAllPersonnelByShed();
+  basicDutyPlan = await getBasicDutyPlan();
+  basicDutyPlanStart = rosterWeekSundayIso("current");
+  renderBasicDutyPlan();
+  document.getElementById("basic-duty-plan-modal").classList.add("open");
+}
+function basicDutyPlanMinStart(){ return rosterWeekSundayIso("current"); }
+function basicDutyPlanMaxStart(){ return isoAddDays(basicDutyPlanMinStart(), BASIC_DUTY_PLAN_HORIZON_DAYS); }
+function shiftBasicDutyPlan(deltaChunks){
+  const cand = isoAddDays(basicDutyPlanStart, deltaChunks*7*BASIC_DUTY_PLAN_WEEKS_VISIBLE);
+  const min = basicDutyPlanMinStart(), max = basicDutyPlanMaxStart();
+  basicDutyPlanStart = cand < min ? min : (cand > max ? max : cand);
+  renderBasicDutyPlan();
+}
+function renderBasicDutyPlan(){
+  const min = basicDutyPlanMinStart(), max = basicDutyPlanMaxStart();
+  document.getElementById("bdp-prev").disabled = basicDutyPlanStart <= min;
+  document.getElementById("bdp-next").disabled = isoAddDays(basicDutyPlanStart, 7*BASIC_DUTY_PLAN_WEEKS_VISIBLE) > max;
+  const weeks = [];
+  for(let w=0; w<BASIC_DUTY_PLAN_WEEKS_VISIBLE; w++){
+    const weekStart = isoAddDays(basicDutyPlanStart, w*7);
+    if(weekStart > max) break;
+    weeks.push(weekStart);
+  }
+  document.getElementById("bdp-range").textContent = weeks.length
+    ? `${fmtHeShort(weeks[0])} – ${fmtHeShort(isoAddDays(weeks[weeks.length-1],6))}` : "";
+  document.getElementById("bdp-body").innerHTML = weeks.map(weekStart=>{
+    const cells = ROSTER_EDIT_DAYS.map(day=>{
+      const iso = rosterDayLockDates(day, weekStart)[0];
+      const label = day==="חמישי" ? "ה׳–ש׳" : DAY_LETTER[day];
+      const list = basicDutyPlan[iso] || [];
+      const chips = list.map((b,i)=>
+        `<span class="rc" onclick="removeBasicDutyPlanEntry('${iso}',${i})">${escapeHTML(b.name)}${b.type?` <small>${escapeHTML(b.type)}</small>`:""} <svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#b30f26" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>`
+      ).join("");
+      return `<td><div class="rblk-c small">${label}<small>${fmtHeShort(iso)}</small></div>${chips}<span class="rc add" onclick="openBasicDutyPlanAdd('${iso}')">+</span></td>`;
+    }).join("");
+    return `<div class="bdp-week"><div class="bdp-week-h">שבוע ${weekRangeLabelOf(weekStart)}</div>
+      <table class="roster-grid bdp-grid"><tr>${cells}</tr></table></div>`;
+  }).join("") || `<div class="empty-state" style="padding:22px"><p>אין שבועות להצגה</p></div>`;
+}
+/* עוגן היום: א׳–ד׳ נשארים כמות שהם, ה׳/ו׳/ש׳ מתקפלים לתאריך ה׳ של אותו
+   שבוע — כמו rosterDayLockDates, כי אין משבצת עצמאית לשישי/שבת בלוח. */
+function bdpSnapToAnchor(iso){
+  if(!iso) return "";
+  const d = new Date(iso+"T00:00:00");
+  if(isNaN(d)) return "";
+  const wd = d.getDay();
+  if(wd>=4) d.setDate(d.getDate()-(wd-4));
+  return isoOfDate(d);
+}
+function openBasicDutyPlanAdd(iso){
+  bdpAddDate = iso || "";
+  const from = bdpSnapToAnchor(iso) || basicDutyPlanMinStart();
+  document.getElementById("bdp-add-name").innerHTML = rosterNameOptionsBySquadron();
+  document.getElementById("bdp-add-type").innerHTML = BASIC_DUTY_TYPES.map(t=>`<option>${escapeHTML(t)}</option>`).join("");
+  document.getElementById("bdp-add-from").min = basicDutyPlanMinStart();
+  document.getElementById("bdp-add-to").min = basicDutyPlanMinStart();
+  document.getElementById("bdp-add-from").max = basicDutyPlanMaxStart();
+  document.getElementById("bdp-add-to").max = basicDutyPlanMaxStart();
+  document.getElementById("bdp-add-from").value = from;
+  document.getElementById("bdp-add-to").value = from;
+  document.getElementById("basic-duty-plan-add-modal").classList.add("open");
+}
+async function applyBasicDutyPlanAdd(){
+  const name = document.getElementById("bdp-add-name").value;
+  const type = document.getElementById("bdp-add-type").value;
+  const from = bdpSnapToAnchor(document.getElementById("bdp-add-from").value);
+  const to = bdpSnapToAnchor(document.getElementById("bdp-add-to").value);
+  if(!name || !from || !to){ toast("בחר חייל וטווח תאריכים"); return; }
+  const [a,b] = from<=to ? [from,to] : [to,from];
+  let n = 0;
+  for(let iso=a; iso<=b; iso=isoAddDays(iso,1)){
+    const wd = new Date(iso+"T00:00:00").getDay();
+    if(wd===5 || wd===6) continue;   // ו׳/ש׳ מקופלים לתוך עוגן ה׳ — לא מפתח עצמאי
+    const arr = basicDutyPlan[iso] = basicDutyPlan[iso] || [];
+    if(!arr.some(x=>x.name===name && x.type===type)){ arr.push({name, type}); n++; }
+  }
+  const ok = await saveBasicDutyPlan(basicDutyPlan);
+  if(ok===false){ toast("⚠️ השמירה נכשלה"); return; }
+  document.getElementById("basic-duty-plan-add-modal").classList.remove("open");
+  renderBasicDutyPlan();
+  toast(n ? `נוסף לתכנון (${n}) ✓` : "כבר קיים בטווח שנבחר");
+}
+async function removeBasicDutyPlanEntry(iso, idx){
+  const arr = basicDutyPlan[iso]; if(!arr) return;
+  arr.splice(idx,1);
+  if(!arr.length) delete basicDutyPlan[iso];
+  const ok = await saveBasicDutyPlan(basicDutyPlan);
+  if(ok===false){ toast("⚠️ המחיקה נכשלה"); return; }
+  renderBasicDutyPlan();
+}
+/* שואב לתוך טיוטת עורך הלוח (current/next בלבד) שיבוצים מתוכננים —
+   הוספה בלבד (כמו copyRosterFromLastWeek), לעולם לא דורס שיבוץ קיים.
+   כך תכנון שנעשה מראש "מגיע" ללוח החי בעצמו כשמ״ע פותח את השבוע לעריכה,
+   בלי לגעת ב-saveDutyRosterV2/notify (המסמך שנשמר בפועל הוא rosterDraft
+   הרגיל — לא נוסף כאן ערוץ שמירה/התראה נפרד). */
+async function seedBasicDutyFromPlan(){
+  if(!rosterDraft || (rosterEditSlot!=="current" && rosterEditSlot!=="next")) return;
+  const plan = await getBasicDutyPlan();
+  const weekRef = rosterEditWeekRef();
+  ROSTER_EDIT_DAYS.forEach(day=>{
+    const iso = rosterDayLockDates(day, weekRef)[0];
+    const planned = plan[iso]; if(!planned || !planned.length) return;
+    const arr = rosterDraft.days[day].basic = rosterDraft.days[day].basic || [];
+    planned.forEach(p=>{ if(!arr.some(x=>x.name===p.name && x.type===p.type)) arr.push({name:p.name, type:p.type}); });
+  });
+}
+
 function rosterClearSlot(f){ rosterDraft.days[rosterEdDay][f] = ""; renderRosterEditor(); }
 function rosterRemoveFromList(f,i){ rosterDraft.days[rosterEdDay][f].splice(i,1); renderRosterEditor(); }
 
