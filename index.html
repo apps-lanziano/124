@@ -1155,6 +1155,7 @@ nav{
 .rcmp-row{padding:6px 0;border-bottom:1px solid var(--bg);font-size:12.5px}
 .rcmp-cat{font-size:10px;font-weight:700;color:var(--ink-3);background:var(--bg);padding:1px 6px;border-radius:6px}
 .rcmp-why{font-size:11px;color:var(--red);margin-top:2px}
+.rcmp-skel.warn .rcmp-why{color:var(--gold)}
 .rcmp-pool{display:flex;flex-wrap:wrap;gap:5px}
 .rcmp-ok{font-size:12.5px;font-weight:700;color:var(--green);text-align:center;padding:6px}
 /* התראה שמובילה למסך — חץ + משוב מגע, כדי שיהיה ברור שאפשר להקיש עליה */
@@ -9055,6 +9056,38 @@ function computeRosterCompliance(roster, pfNames, shedPool, constraints, slot){
     badCount: rows.filter(r=>!r.ok).length,
   };
 }
+/* כיסוי משבצות שלד (מנהל/ר״צ/ל-ר״צ/מתגבר/מטיס/נהג/כלים) — שאלה שונה
+   מ-computeRosterCompliance: לא "האם לאדם יש מספר תורנויות נכון", אלא
+   "האם המשבצת עצמה מאוישת בכלל" (עוזר למ"ע תורנויות לאתר יום ששכח
+   לשבץ מנהל/ר"צ בטרם פרסום). פונקציה טהורה נפרדת בכוונה — לא מרחיבה
+   את computeRosterCompliance הקיימת, כדי לא לגעת בלוגיקה העדינה
+   והמתועדת שם (ר' CLAUDE.md, "חוקי דוח חריגות") ובבדיקות שמגנות עליה.
+   כמו computeRosterCompliance — נבדק רק על פני א׳–ד׳ (סופ״ש לא נספר,
+   ר' ROSTER_ROTATING_DAYS). */
+const ROSTER_SKELETON_FIELDS = [
+  {key:"manager", label:"מנהל"},
+  {key:"lead", label:"ר״צ"},
+  {key:"deputyLead", label:"ל/ ר״צ"},
+  {key:"fixedAug", label:"מתגבר", list:true},
+  {key:"pilot", label:"מטיס"},
+  {key:"driver", label:"נהג"},
+  {key:"tools", label:"כלים"},
+];
+function computeRosterSkeletonCoverage(roster){
+  const days = ROSTER_ROTATING_DAYS;
+  return ROSTER_SKELETON_FIELDS.map(f=>{
+    const missing = [];
+    days.forEach(day=>{
+      const d = (roster.days && roster.days[day]) || {};
+      const has = f.list ? (Array.isArray(d[f.key]) && d[f.key].length>0) : !!d[f.key];
+      if(!has) missing.push(day);
+    });
+    const filled = days.length - missing.length;
+    const pct = Math.round((filled/days.length)*100);
+    const level = pct===100 ? "ok" : pct>=75 ? "warn" : "bad";
+    return {key:f.key, label:f.label, filled, total:days.length, pct, level, missing};
+  });
+}
 /* שם בלוח עשוי להיות כתוב כשם מלא, רק שם פרטי, או רק שם משפחה — מצליב
    מול רשימות הצוות המלאות של כל הסככות כדי להשלים לשם המלא הנכון.
    אם יש יותר מהתאמה אפשרית אחת (למשל שני "דני" בסככות שונות) — לא
@@ -9351,13 +9384,22 @@ function renderRosterCompliance(){
   const pool = (currentShed && rosterAllPersonnel && rosterAllPersonnel[currentShed.id]) || [];
   const c = computeRosterCompliance(rosterDraft, rosterPfNames, pool, rosterConstraints, rosterEditWeekRef());
   const bad = c.rows.filter(r=>!r.ok);
+  const skel = computeRosterSkeletonCoverage(rosterDraft);
+  const skelGaps = skel.filter(s=>s.level!=="ok");
   const chip = (n,cls,lbl)=>`<span class="rcmp-chip ${cls}">${cls==="g"?"🟢":cls==="r"?"🔴":"⚪"} ${lbl}: ${n}</span>`;
   let html = `<div class="rcmp-bar" onclick="toggleRosterCompliance()">
     <b>בדיקת חוקים</b>
-    ${chip(c.okCount,"g","לפי החוק")}${chip(c.badCount,"r","חורגים")}${chip(c.gray.length,"x","לא שובצו")}
+    ${chip(c.okCount,"g","לפי החוק")}${chip(c.badCount,"r","חורגים")}${chip(c.gray.length,"x","לא שובצו")}${chip(skelGaps.length, skelGaps.length?"r":"g", "משבצות שלד ריקות")}
     <span class="rcmp-tog">${rosterComplianceOpen?"▲":"▼"}</span></div>`;
   if(rosterComplianceOpen){
     html += `<div class="rcmp-body">`;
+    if(skelGaps.length){
+      const skelIcon = lvl => lvl==="warn" ? "⚠️" : "🔴";
+      html += `<div class="rcmp-h r">🪑 משבצות שלד לא מלאות (א׳–ד׳)</div>` + skelGaps.map(s=>
+        `<div class="rcmp-row rcmp-skel ${s.level}"><span>${skelIcon(s.level)}</span> <b>${escapeHTML(s.label)}</b>
+         <span class="rcmp-cat">${s.filled}/${s.total} · ${s.pct}%</span>
+         <div class="rcmp-why">חסר ב-${s.missing.map(d=>escapeHTML(DAY_LETTER[d]||d)).join(", ")}</div></div>`).join("");
+    }
     if(bad.length){
       html += `<div class="rcmp-h r">🔴 חורגים מהחוק</div>` + bad.map(r=>
         `<div class="rcmp-row"><b>${escapeHTML(r.name)}</b> <span class="rcmp-cat">${escapeHTML(r.cat)}</span>
@@ -9368,7 +9410,7 @@ function renderRosterCompliance(){
         <div class="rcmp-pool">` + c.gray.map(g=>
         `<span class="rc" style="background:var(--bg);color:var(--ink-3)">${escapeHTML(g.name)} <small>${escapeHTML(g.cat)}</small></span>`).join("") + `</div>`;
     }
-    if(!bad.length && !c.gray.length) html += `<div class="rcmp-ok">🟢 הכל לפי החוקים — לא פוספס אף אחד</div>`;
+    if(!bad.length && !c.gray.length && !skelGaps.length) html += `<div class="rcmp-ok">🟢 הכל לפי החוקים — לא פוספס אף אחד</div>`;
     html += `</div>`;
   }
   box.innerHTML = html;
