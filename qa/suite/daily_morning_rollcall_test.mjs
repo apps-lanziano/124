@@ -269,18 +269,19 @@ async function page(){
 }
 
 // 9. דשבורד מ״ע אחזקה: התראות דומות (למשל כמה רישיונות מאותו סוג) מרוכזות
-//    לבאנר יחיד ולא שורה נפרדת לכל פריט, וכולל גם נתוני חומרים/כלים
+//    לבאנר יחיד ולא שורה נפרדת לכל פריט, וכולל גם נתוני תקלות בינוי/כשירויות
+//    חיילים (2026-08: החליפו את הזמנת חומרים/כלים מוטוריים בסקירה)
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
     const store = {};
     window.sGetIn = async (shed,k) => k==="vehicles_list" ? [] : null;
     window.sGetRaw = async k => {
-      if(k==="maint_materials_list") return [{id:"m1",name:"שמן",status:"ממתין להזמנה"}];
-      if(k==="maint_motor_tools_list") return [];
+      if(k==="binui_faults_list") return [{id:"f1",title:"תקלה",status:"פתוח",shedName:"סככה 1",date:"01/01"}];
       if(k && k.startsWith("daily_rollcall_")) return {};
       return null;
     };
+    window.getMedChecks = async () => ({});
     // 5 רישיונות מסוג "פ.ת" שפג תוקפם — אמורים להתמזג לבאנר אחד, לא 5 שורות
     window.getVoLicenses = async () => Array.from({length:5}, (_,i)=>({id:"l"+i, person:"איש-"+i, type:"פ.ת", expiry:"2000-01-01"}));
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -290,7 +291,9 @@ async function page(){
   });
   const occurrences = (out.match(/רישיונות פ\.ת/g) || []).length;
   record("5 רישיונות מאותו סוג מוצגים כבאנר מרוכז אחד (לא 5 שורות נפרדות)", occurrences===1 && out.includes("5 רישיונות פ.ת"), "occurrences="+occurrences);
-  record("הדשבורד כולל גם נתוני הזמנות חומרים (לא רק רכבים/רישיונות)", out.includes("הזמנות חומרים"), out.includes("הזמנות חומרים") ? "found" : "missing");
+  record("הדשבורד כולל גם נתוני תקלות בינוי וכשירויות חיילים (לא רק רכבים/רישיונות)",
+    out.includes("תקלות בינוי") && out.includes("כשירויות חיילים"),
+    out.includes("תקלות בינוי") && out.includes("כשירויות חיילים") ? "found" : "missing");
   console.log("errs9",errs); await p.close();
 }
 

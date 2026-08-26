@@ -1,6 +1,10 @@
 /* "כשירויות חיילים" מוסתר לאחראי הדרכה (מפקד מסגרת "הדרכה") — לא למפקדי
-   סככות ולא למ״ע אחזקה. תורנויות (nav-board) + סעיף התורנויות ב"עוד"
-   הוחזרו למ״ע הדרכה לבקשת המשתמש (7.2) — לכן הם גלויים לו כמו בסככה.
+   סככות. אצל מ״ע אחזקה (2026-08) היא נגישה כרגיל, אך דרך נקודת-כניסה
+   אחרת: מתאחדת לתוך תוכן "אנשים" הנגיש מ"עוד" (more-people-item) —
+   ולא nav-people (לשונית בסרגל), כי הסרגל של מ״ע אחזקה קבוע במפורש בלי
+   מקום ללשונית נוספת (ר' applyLoginUiForRole/applyMaintCommanderPowers).
+   תורנויות (nav-board) + סעיף התורנויות ב"עוד" הוחזרו למ״ע הדרכה לבקשת
+   המשתמש (7.2) — לכן הם גלויים לו כמו בסככה.
    בודק גם שהנראות מתאפסת נכון כשמשתמש אחר נכנס אחר כך (toggle, לא add). */
 import { launchBrowser, APP_URL } from '../lib/pw.mjs';
 const b = await launchBrowser();
@@ -38,13 +42,14 @@ async function loginAsShedCommander(shedId, shedName, extra={}){
     const hidden = id => document.getElementById(id).classList.contains("hidden");
     // "כשירות חיילים" חיה בכמה נקודות כניסה לפי התפקיד: לשונית בסרגל
     // (nav-medchecks, ישן), פריט בתפריט "עוד" (sheet-medchecks) אצל
-    // מי שלא קיבל את המסך המאוחד "אנשים", או דרך "אנשים" (nav-people)
-    // אצל מפקד סככה רגילה — ר' consolidation ל-scr-people. הבדיקה כאן
-    // היא על *נגישות* — מוסתר = כל נקודות הכניסה סגורות.
+    // מי שלא קיבל את המסך המאוחד "אנשים", דרך "אנשים" (nav-people) אצל
+    // מפקד סככה רגילה, או דרך "אנשים" ב"עוד" (more-people-item) אצל
+    // מ״ע אחזקה — ר' consolidation ל-scr-people. הבדיקה כאן היא על
+    // *נגישות* — מוסתר = כל נקודות הכניסה סגורות.
     return {
       boardHidden: hidden("nav-board"),
       dutiesHidden: hidden("nav-board"),   // התורנות הבסיסית אוחדה לתוך מסך התורנויות (nav-board); אין יותר פריט 'תורנויות' נפרד ב'עוד'
-      medchecksHidden: hidden("sheet-medchecks") && hidden("nav-medchecks") && hidden("nav-people"),
+      medchecksHidden: hidden("sheet-medchecks") && hidden("nav-medchecks") && hidden("nav-people") && hidden("more-people-item"),
     };
   }, {shedId, shedName, extra});
 }
