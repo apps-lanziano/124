@@ -69,6 +69,7 @@ async function page(){
     window.sGetRaw = async k => (k && k.startsWith("daily_rollcall_")) ? {} : (k==="maint_materials_list"||k==="maint_motor_tools_list" ? [] : null);
     window.sGet = async (k) => {
       if(k==="daily_rollcall_report") return {dayKey: rollcallDayKey(), sentAt: Date.now(), presentCount:3, absentCount:1, totalCount:4, absentNames:["עידן"]};
+      if(k==="duty_requests") return [];
       return {};
     };
     window.getVoLicenses = async () => [];

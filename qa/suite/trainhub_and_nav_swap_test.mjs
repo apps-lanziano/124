@@ -64,6 +64,7 @@ const hidden = id => page.evaluate(i=>{
     return {
       open: document.getElementById("scr-trainhub").classList.contains("active"),
       chips: box ? box.querySelectorAll(".th-chip").length : 0,
+      kpis: box ? box.querySelectorAll(".cd-kpi").length : 0,
       hasCerts: /scr-certs/.test(html),
       hasOnb:   /scr-onboarding/.test(html),
       hasTrain: /scr-training/.test(html),
@@ -73,7 +74,7 @@ const hidden = id => page.evaluate(i=>{
     };
   });
   record("מסך הדרכה: המסך נפתח", hub.open, String(hub.open));
-  record("מסך הדרכה: ארבעה צ'יפים בראש", hub.chips===4, String(hub.chips));
+  record("מסך הדרכה: שני KPI (קרא וחתום/הסמכות, כמו הדשבורד) + שני צ'יפים (קליטה/חומרים)", hub.kpis===2 && hub.chips===2, JSON.stringify(hub));
   record("מסך הדרכה: מנתב להסמכות", hub.hasCerts, String(hub.hasCerts));
   record("מסך הדרכה: מנתב לקליטת חייל חדש", hub.hasOnb, String(hub.hasOnb));
   record("מסך הדרכה: מנתב לחומרי הדרכה", hub.hasTrain, String(hub.hasTrain));
@@ -91,13 +92,13 @@ const hidden = id => page.evaluate(i=>{
     return {
       flagged: /פג לפני/.test(html),
       urgent:  /th-pill r/.test(html),
-      chipHot: /th-chip hot/.test(html),
+      certKpiHot: /cd-led r/.test(html),
       sectioned: /דורש טיפול/.test(html),
     };
   });
   record("רשימת טיפול: הסמכה שפגה מזוהה", live.flagged, String(live.flagged));
   record("רשימת טיפול: מסומנת כדחופה (אדום)", live.urgent, String(live.urgent));
-  record("רשימת טיפול: הצ'יפ מסומן כבוער", live.chipHot, String(live.chipHot));
+  record("רשימת טיפול: KPI ההסמכות מסומן אדום (cd-led r)", live.certKpiHot, String(live.certKpiHot));
   record("רשימת טיפול: כותרת \"דורש טיפול\" מוצגת", live.sectioned, String(live.sectioned));
 
   // ניווט בפועל מהמסך למסך ההסמכות
