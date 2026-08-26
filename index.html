@@ -6284,6 +6284,7 @@ let calYear, calMonth, calSelectedDate = null;
 function calInit(){
   const now = new Date();
   calYear = now.getFullYear(); calMonth = now.getMonth();
+  calSelectedDate = todayKey();
 }
 function calShift(delta){
   if(calYear===undefined) calInit();
@@ -6929,6 +6930,35 @@ async function renderBoardArchive(){
    של "תכנון תורנות בסיסית" (ר' openBasicDutyPlan) — לא duty_table הישן;
    duty_table עצמו נשאר בשימוש במקומות אחרים (מסך "לוח שנה מאוחד" הסככתי)
    ולא נגענו בו. */
+/* מקבץ ימים רצופים של אותו חייל+סוג תורנות לבאנר אחד ("מתאריך–עד תאריך")
+   במקום שורה נפרדת לכל יום — כדי שרס״ר ששובץ לשבוע שלם לא יופיע כ-5
+   שורות זהות. פער של יום אחד = רציף; פער של 3 ימים אחרי עוגן ה׳ (חמישי)
+   נחשב רציף גם הוא, כי ו׳/ש׳ מקופלים לתוך עוגן ה׳ ואין להם מפתח עצמאי
+   ב-basic_duty_schedule (ר' applyBasicDutyPlanAdd). */
+function bdpGroupConsecutive(rows){
+  const sorted = [...rows].sort((a,b)=>
+    a.name!==b.name ? a.name.localeCompare(b.name,"he")
+    : a.type!==b.type ? a.type.localeCompare(b.type,"he")
+    : (a.iso<b.iso ? -1 : 1));
+  const groups = [];
+  let cur = null;
+  sorted.forEach(r=>{
+    if(cur && cur.name===r.name && cur.type===r.type){
+      const lastWd = new Date(cur.to+"T00:00:00").getDay();
+      const gapDays = Math.round((new Date(r.iso+"T00:00:00") - new Date(cur.to+"T00:00:00"))/86400000);
+      if(gapDays===1 || (lastWd===4 && gapDays===3)){
+        cur.to = r.iso;
+        cur.isos.push(r.iso);
+        return;
+      }
+    }
+    cur = {name:r.name, type:r.type, from:r.iso, to:r.iso, isos:[r.iso]};
+    groups.push(cur);
+  });
+  groups.sort((a,b)=> a.from<b.from ? -1 : (a.from>b.from ? 1 : a.name.localeCompare(b.name,"he")));
+  return groups;
+}
+let bdpBoardGroups = [];
 async function renderBoardBasicDuties(){
   const area = document.getElementById("board-basic-duties");
   if(!area) return;
@@ -6938,27 +6968,44 @@ async function renderBoardBasicDuties(){
   const rows = [];
   Object.entries(plan).forEach(([iso,list])=>{
     if(iso < today) return;
-    (list||[]).forEach((b,idx)=>{ if(b && b.name) rows.push({iso, name:b.name, type:b.type||"", idx}); });
+    (list||[]).forEach(b=>{ if(b && b.name) rows.push({iso, name:b.name, type:b.type||""}); });
   });
-  rows.sort((a,b)=> a.iso<b.iso ? -1 : (a.iso>b.iso ? 1 : a.name.localeCompare(b.name,"he")));
-  const rowsHtml = rows.map(r=>`
+  const groups = bdpBoardGroups = bdpGroupConsecutive(rows);
+  const rowsHtml = groups.map((g,gi)=>`
     <div class="duty-trow">
-      <div class="duty-name"><div class="avatar">${initials(r.name)}</div><b>${escapeHTML(r.name)}</b></div>
-      <div>${escapeHTML(r.type||"—")}</div>
+      <div class="duty-name"><div class="avatar">${initials(g.name)}</div><b>${escapeHTML(g.name)}</b></div>
+      <div>${escapeHTML(g.type||"—")}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
-        <b>${fmtHeShort(r.iso)}</b>
-        <span class="rc" style="margin:0;cursor:pointer" onclick="removeBasicDutyPlanEntry('${r.iso}',${r.idx})" aria-label="הסר שיבוץ">✕</span>
+        <b>${g.from===g.to ? fmtHeShort(g.from) : `${fmtHeShort(g.from)} – ${fmtHeShort(g.to)}`}</b>
+        <span class="rc" style="margin:0;cursor:pointer" onclick="removeBdpBoardGroup(${gi})" aria-label="הסר שיבוץ">✕</span>
       </div>
     </div>`).join("");
   const empty = `<div style="padding:16px;text-align:center;color:var(--ink-3);font-size:13px">אין עדיין שיבוצים מתוכננים</div>`;
   area.innerHTML = `
-    <div class="sec-head" style="margin-top:24px"><div><h2>תורנויות בסיסיות</h2><p>מי משובץ בפועל — ריכוז כל חיילי הטייסת (לא לפי סככה), ממוין לפי תאריך.</p></div></div>
+    <div class="sec-head" style="margin-top:24px"><div><h2>תורנויות בסיסיות</h2><p>מי משובץ בפועל — ריכוז כל חיילי הטייסת (לא לפי סככה), ימים רצופים מאוחדים לטווח אחד.</p></div></div>
     <button class="m-btn ghost" style="width:100%;margin-bottom:8px" onclick="openBasicDutyPlanAdd()">➕ הוסף שיבוץ</button>
     <div class="duty-table">
-      <div class="duty-thead"><div>שם החייל</div><div>תורנות</div><div>תאריך</div></div>
+      <div class="duty-thead"><div>שם החייל</div><div>תורנות</div><div>טווח תאריכים</div></div>
       ${rowsHtml || empty}
     </div>
     <div class="duty-lock-note">🗓️ לתכנון מלא לפי שבועות, עד חצי שנה קדימה — באנר "תכנון תורנות בסיסית" למעלה.</div>`;
+}
+/* מחיקת באנר מאוחד — מסירה את כל הימים שאוחדו (isos) מ-basic_duty_schedule
+   בבת אחת, לפי name+type (לא idx בודד — הוא כבר לא משמעותי אחרי איחוד). */
+async function removeBdpBoardGroup(gi){
+  const g = bdpBoardGroups[gi]; if(!g) return;
+  const plan = await getBasicDutyPlan();
+  g.isos.forEach(iso=>{
+    const arr = plan[iso]; if(!arr) return;
+    const idx = arr.findIndex(x=>x && x.name===g.name && x.type===g.type);
+    if(idx>-1) arr.splice(idx,1);
+    if(!arr.length) delete plan[iso];
+  });
+  basicDutyPlan = plan;
+  const ok = await saveBasicDutyPlan(plan);
+  if(ok===false){ toast("⚠️ המחיקה נכשלה"); return; }
+  renderBasicDutyPlan();
+  await renderBoardBasicDuties();
 }
 
 /* ===== שיבוץ תורנויות שבועי (מתוך "לוח צוות שבועי") =====
