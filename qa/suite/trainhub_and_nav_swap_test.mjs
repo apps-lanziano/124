@@ -47,7 +47,10 @@ const hidden = id => page.evaluate(i=>{
   record("מפקד: \"לוח שנה מאוחד\" עלה לבאנר", (await hidden("nav-calendar"))===false, String(await hidden("nav-calendar")));
   record("מפקד: \"רכבים\" ירדו מהבאנר", (await hidden("nav-vehicles"))===true, String(await hidden("nav-vehicles")));
   record("מפקד: \"רכבים\" זמינים בתפריט \"עוד\"", (await hidden("more-vehicles-item"))===false, String(await hidden("more-vehicles-item")));
-  record("מפקד: \"כשירות חיילים\" זמינה ב\"עוד\"", (await hidden("sheet-medchecks"))===false, String(await hidden("sheet-medchecks")));
+  // "כשירות חיילים" עברה מ"עוד" למסך המאוחד "אנשים" (nav-people) —
+  // ר' roster/dashboard consolidation, qa/suite/people_screen_test.mjs.
+  record("מפקד: \"כשירות חיילים\" ירדה מ\"עוד\" (עברה למסך \"אנשים\")", (await hidden("sheet-medchecks"))===true, String(await hidden("sheet-medchecks")));
+  record("מפקד: לשונית \"אנשים\" גלויה בבאנר", (await hidden("nav-people"))===false, String(await hidden("nav-people")));
   record("מפקד: \"לוח שנה מאוחד\" ירד מ\"עוד\" (לא כפול)", (await hidden("sheet-calendar"))===true, String(await hidden("sheet-calendar")));
   record("מפקד: \"חומרי הדרכה\" ירדו מ\"עוד\" (עברו לשער)", (await hidden("sheet-training"))===true, String(await hidden("sheet-training")));
   record("מפקד: \"קליטת חייל חדש\" ירדה מ\"עוד\" (עברה לשער)", (await hidden("sheet-onboarding"))===true, String(await hidden("sheet-onboarding")));

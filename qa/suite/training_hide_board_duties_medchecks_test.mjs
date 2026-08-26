@@ -36,13 +36,15 @@ async function loginAsShedCommander(shedId, shedName, extra={}){
     document.getElementById("login-pin").value = "1234";
     await doLogin();
     const hidden = id => document.getElementById(id).classList.contains("hidden");
-    // "כשירות חיילים" חיה בשתי נקודות כניסה לפי התפקיד: לשונית בסרגל
-    // אצל מפקד סככה, ופריט בתפריט "עוד" אצל השאר. הבדיקה כאן היא על
-    // *נגישות* — מוסתר = שתי נקודות הכניסה סגורות.
+    // "כשירות חיילים" חיה בכמה נקודות כניסה לפי התפקיד: לשונית בסרגל
+    // (nav-medchecks, ישן), פריט בתפריט "עוד" (sheet-medchecks) אצל
+    // מי שלא קיבל את המסך המאוחד "אנשים", או דרך "אנשים" (nav-people)
+    // אצל מפקד סככה רגילה — ר' consolidation ל-scr-people. הבדיקה כאן
+    // היא על *נגישות* — מוסתר = כל נקודות הכניסה סגורות.
     return {
       boardHidden: hidden("nav-board"),
       dutiesHidden: hidden("nav-board"),   // התורנות הבסיסית אוחדה לתוך מסך התורנויות (nav-board); אין יותר פריט 'תורנויות' נפרד ב'עוד'
-      medchecksHidden: hidden("sheet-medchecks") && hidden("nav-medchecks"),
+      medchecksHidden: hidden("sheet-medchecks") && hidden("nav-medchecks") && hidden("nav-people"),
     };
   }, {shedId, shedName, extra});
 }
