@@ -1800,29 +1800,18 @@ nav{
       <div id="onboarding-card"></div>
     </section>
 
-    <!-- ===== FAULTS (feature 10) ===== -->
+    <!-- ===== FAULTS — מסך מאוחד: תקלות ציוד + תקלות בינוי (לשוניות קטגוריה) ===== -->
     <section class="screen" id="scr-faults">
       <div class="sec-head">
         <div>
-          <h2>דיווח תקלות <svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></h2>
-          <p>דיווח על ליקוי או תקלה שהתגלו. המפקד עוקב וסוגר.</p>
+          <h2>תקלות <svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></h2>
+          <p>דיווח על ליקוי ציוד או בינוי. המפקד עוקב וסוגר.</p>
         </div>
         <button class="add-btn" id="add-fault-btn" onclick="openAddFault()">+ תקלה</button>
       </div>
+      <div class="faults-filter hidden" id="faults-cat-tabs"></div>
       <div class="faults-filter" id="faults-filter"></div>
       <div id="faults-list"></div>
-    </section>
-
-    <!-- ===== BINUI FAULTS (תקלות בינוי — מרוכז אצל מ״ע אחזקה) ===== -->
-    <section class="screen" id="scr-binui-faults">
-      <div class="sec-head">
-        <div>
-          <h2>תקלות בינוי <svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l5 16H7L12 3Z"/><path d="M9 13h6M8 16h8"/></svg></h2>
-          <p>דיווח על ליקוי מבנה/בינוי, עם תמונה. מטופל ע"י מ״ע אחזקה.</p>
-        </div>
-        <button class="add-btn" id="add-binui-fault-btn" onclick="openAddBinuiFault()">+ תקלה</button>
-      </div>
-      <div id="binui-faults-list"></div>
     </section>
 
     <!-- ===== BOARD ===== -->
@@ -1848,6 +1837,35 @@ nav{
         <button class="add-btn hidden" id="vo-team-add-btn" onclick="openVoTeamMgmt()"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="3"/><circle cx="16" cy="9.5" r="2.5"/><path d="M2.5 20c0-3 2.7-5.2 6-5.2s6 2.2 6 5.2M15 14.8c2.6.3 4.5 2.2 4.5 5.2"/></svg> ניהול צוות</button>
       </div>
       <div id="bdays-list"></div>
+    </section>
+
+    <!-- ===== PEOPLE — מסך מאוחד למפקד: כרטיסי חייל+חיפוש, ניהול צוות,
+         מילואים, ימי הולדת וכשירות חיילים. איחוד מסכים שהיו "מתחבאים"
+         בתפריט "עוד" (ר' CLAUDE.md) לכניסה אחת בסרגל התחתון. ===== -->
+    <section class="screen" id="scr-people">
+      <div class="sec-head">
+        <div>
+          <h2>אנשים <svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="3"/><circle cx="16" cy="9.5" r="2.5"/><path d="M2.5 20c0-3 2.7-5.2 6-5.2s6 2.2 6 5.2M15 14.8c2.6.3 4.5 2.2 4.5 5.2"/></svg></h2>
+          <p>כרטיסי חייל, ניהול צוות, מילואים, ימי הולדת וכשירות — במקום אחד.</p>
+        </div>
+      </div>
+
+      <div class="cmd-section-title"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="12" cy="10" r="2.4"/><path d="M8 16.5c0-1.9 1.8-3 4-3s4 1.1 4 3"/></svg> כרטיסי חייל</div>
+      <input class="m-input" id="people-search" type="text" placeholder="🔎 חיפוש חייל בשם, תפקיד או מקצוע…" oninput="renderPeopleSearch()">
+      <div id="people-search-results" style="margin-bottom:18px"></div>
+
+      <div class="cmd-section-title"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.2M12 18.8V21M4.9 4.9l1.5 1.5M17.6 17.6l1.5 1.5M3 12h2.2M18.8 12H21M4.9 19.1l1.5-1.5M17.6 6.4l1.5-1.5"/></svg> ניהול</div>
+      <div class="admin-grid" style="margin-bottom:18px">
+        <button class="admin-card" onclick="openTeamMgmt()"><span class="a-ic" style="color:#0e7490"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="3"/><circle cx="16" cy="9.5" r="2.5"/><path d="M2.5 20c0-3 2.7-5.2 6-5.2s6 2.2 6 5.2M15 14.8c2.6.3 4.5 2.2 4.5 5.2"/></svg></span><b>ניהול צוות</b><span>הוספה, עריכה, פרטים</span></button>
+        <button class="admin-card" onclick="go('scr-medchecks',null)"><span class="a-ic" style="color:#0d9488"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15a8 8 0 0 1 16 0v2H4v-2Z"/><path d="M2 17h20M9 15v-3M15 15v-3"/></svg></span><b>כשירות חיילים</b><span>שמיעה ומטווח — תוקף וחידוש</span></button>
+      </div>
+
+      <div class="cmd-section-title"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#a16207" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.4 4.8L20 8.6l-4 3.9.9 5.5L12 15.6l-4.9 2.4.9-5.5-4-3.9 5.6-.8Z"/></svg> אנשי מילואים</div>
+      <div id="people-reserves-list" style="margin-bottom:18px"></div>
+
+      <div class="cmd-section-title"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#db2777" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7H4Z"/><path d="M4 17.5c1.2.9 2.3.9 3.5 0s2.3-.9 3.5 0 2.3.9 3.5 0 2.3-.9 3.5 0M8 8V5M8 5c-.9 0-1.6-.7-1.6-1.5S7.1 2 8 2s1.6.7 1.6 1.5S8.9 5 8 5Zm8 3V5"/></svg> ימי הולדת</div>
+      <p id="people-bdays-desc" style="color:var(--ink-3);font-size:12px;margin:-4px 0 8px"></p>
+      <div id="people-bdays-list"></div>
     </section>
 
     <!-- ===== ROLLCALL — נכס (סימון תקינות וזמינות) ===== -->
@@ -2038,7 +2056,6 @@ nav{
       <div class="admin-grid">
         <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic" style="color:#475569"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4V3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5V4M9 11h6M9 15h6"/></svg></span><b>תדריך בוקר</b><span>תדריך יומי לצוות</span></button>
         <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h3l6 4V6l-6 4H3Z"/><path d="M14 9.5a3 3 0 0 1 0 5"/></svg></span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
-        <button class="admin-card" onclick="openTrainingLinkAdd()"><span class="a-ic" style="color:#0284c7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15l6-6"/><path d="M10 6.5l1-1a3.5 3.5 0 0 1 5 5l-1 1M14 17.5l-1 1a3.5 3.5 0 0 1-5-5l1-1"/></svg></span><b>קישור הדרכה</b><span>הוספת קישור לצוות שלי</span></button>
       </div>
     </section>
 
@@ -2456,8 +2473,9 @@ nav{
     <button class="nav-btn hidden" id="nav-training" data-scr="scr-training" onclick="go('scr-training',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5V5.5Z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"/></svg></span><span>חומרי הדרכה</span></button>
     <button class="nav-btn hidden" id="nav-tools" data-scr="scr-tools" onclick="go('scr-tools',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="9" width="19" height="11" rx="2"/><path d="M8 9V6.5A2.5 2.5 0 0 1 10.5 4h3A2.5 2.5 0 0 1 16 6.5V9M2.5 14h19"/></svg></span><span>חדר כלים</span></button>
     <button class="nav-btn hidden" id="nav-vehicles" data-scr="scr-vehicles" onclick="go('scr-vehicles',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V12l2-4.5h12L20 12v4"/><path d="M4 16h16M6 16v2M18 16v2"/><circle cx="7.5" cy="16" r="1.6"/><circle cx="16.5" cy="16" r="1.6"/></svg></span><span>רכבים</span></button>
-    <button class="nav-btn" id="nav-faults" data-scr="scr-faults" onclick="go('scr-faults',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></span><span>תקלות</span></button>
+    <button class="nav-btn" id="nav-faults" data-scr="scr-faults" onclick="faultCategory='equip';go('scr-faults',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></span><span>תקלות</span></button>
     <button class="nav-btn" id="nav-bdays" data-scr="scr-bdays" onclick="go('scr-bdays',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7H4Z"/><path d="M4 17.5c1.2.9 2.3.9 3.5 0s2.3-.9 3.5 0 2.3.9 3.5 0 2.3-.9 3.5 0M8 8V5M8 5c-.9 0-1.6-.7-1.6-1.5S7.1 2 8 2s1.6.7 1.6 1.5S8.9 5 8 5Zm8 3V5"/></svg></span><span>ימי הולדת</span></button>
+    <button class="nav-btn hidden" id="nav-people" data-scr="scr-people" onclick="go('scr-people',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="3"/><circle cx="16" cy="9.5" r="2.5"/><path d="M2.5 20c0-3 2.7-5.2 6-5.2s6 2.2 6 5.2M15 14.8c2.6.3 4.5 2.2 4.5 5.2"/></svg></span><span>אנשים</span></button>
     <button class="nav-btn" id="nav-more" onclick="openMoreSheet()"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></span><span>עוד</span></button>
     <button class="nav-btn hidden" id="nav-admin" data-scr="scr-admin" onclick="go('scr-admin',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V6l7-3 7 3v15"/><path d="M9 21v-5h6v5M9 10h.01M15 10h.01M9 14h.01M15 14h.01"/></svg></span><span>אחראי הדרכה</span></button>
     <button class="nav-btn hidden" id="nav-vo-overview" data-scr="scr-vo-overview" onclick="go('scr-vo-overview',this)"><span class="ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M11 20V4M18 20v-7"/><path d="M2.5 20h19"/></svg></span><span>סקירה</span></button>
@@ -2614,10 +2632,10 @@ nav{
       <div class="sheet-item hidden" id="sheet-users" onclick="closeMoreAnd('scr-users')"><div class="s-ic" style="color:#a16207;background:#fdf3d8"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18h16l-1.3-8-4 3-2.7-6-2.7 6-4-3L4 18Z"/><path d="M4 20.5h16"/></svg></div><div class="s-tx"><b>משתמשים</b><span>כל המשתמשים בכל המסגרות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-team-item" onclick="closeMoreAndFn(openTeamMgmt)"><div class="s-ic" style="color:#0e7490;background:#e3f6fa"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="3"/><circle cx="16" cy="9.5" r="2.5"/><path d="M2.5 20c0-3 2.7-5.2 6-5.2s6 2.2 6 5.2M15 14.8c2.6.3 4.5 2.2 4.5 5.2"/></svg></div><div class="s-tx"><b>ניהול צוות</b><span>הוספה, עריכה, ימי הולדת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-tasks-item" onclick="closeMoreAndFn(openTaskMgmt)"><div class="s-ic" style="color:#b45309;background:#fdf1e2"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="9" width="19" height="11" rx="2"/><path d="M8 9V6.5A2.5 2.5 0 0 1 10.5 4h3A2.5 2.5 0 0 1 16 6.5V9M2.5 14h19"/></svg></div><div class="s-tx"><b>עריכת מטלות בוקר</b><span>הוספה ושינוי מטלות</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="more-faults-item" onclick="closeMoreAnd('scr-faults')"><div class="s-ic" style="color:#c2410c;background:#fdeee7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-faults-item" onclick="faultCategory='equip';closeMoreAnd('scr-faults')"><div class="s-ic" style="color:#c2410c;background:#fdeee7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות ציוד ובינוי</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-bdays-item" onclick="closeMoreAnd('scr-bdays')"><div class="s-ic" style="color:#db2777;background:#fdeaf1"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7H4Z"/><path d="M4 17.5c1.2.9 2.3.9 3.5 0s2.3-.9 3.5 0 2.3.9 3.5 0 2.3-.9 3.5 0M8 8V5M8 5c-.9 0-1.6-.7-1.6-1.5S7.1 2 8 2s1.6.7 1.6 1.5S8.9 5 8 5Zm8 3V5"/></svg></div><div class="s-tx"><b>ימי הולדת</b><span>לוח ימי הולדת הצוות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="more-rollcall-item" onclick="closeMoreAnd('scr-rollcall')"><div class="s-ic" style="color:#a16207;background:#fdf3d8"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.2 8.4-7 10-3.8-1.6-7-5-7-10V6l7-3Z"/></svg></div><div class="s-tx"><b>נכס</b><span>סימון תקינות וזמינות</span></div><span class="s-chev">‹</span></div>
-      <div class="sheet-item hidden" id="more-binui-item" onclick="closeMoreAnd('scr-binui-faults')"><div class="s-ic" style="color:#ea580c;background:#fdeee7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l5 16H7L12 3Z"/><path d="M9 13h6M8 16h8"/></svg></div><div class="s-tx"><b>תקלות בינוי</b><span>דיווח ליקויי מבנה, עם תמונה</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-binui-item" onclick="faultCategory='binui';closeMoreAnd('scr-faults')"><div class="s-ic" style="color:#ea580c;background:#fdeee7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l5 16H7L12 3Z"/><path d="M9 13h6M8 16h8"/></svg></div><div class="s-tx"><b>תקלות בינוי</b><span>דיווח ליקויי מבנה, עם תמונה</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-maintdept-item" onclick="closeMoreAnd('scr-maint-dept')"><div class="s-ic" style="color:#c2410c;background:#fdeee7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></div><div class="s-tx"><b>אחזקה</b><span>הזמנת חומרים ומעקב כלים מוטוריים</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-support" onclick="closeMoreAnd('scr-support')"><div class="s-ic" style="color:#0891b2;background:#e3f6fa"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19v-2M12 15a3 3 0 1 0-3-3"/><circle cx="12" cy="12" r="9"/></svg></div><div class="s-tx"><b>תמיכה</b><span>דיווח באג או הצעה לשיפור</span></div><span class="s-chev">‹</span></div>
     </div>
@@ -5104,6 +5122,18 @@ async function applyLoginUiForRole(person){
   // "לוח שנה מאוחד" בתפריט "עוד" — רק למי שלא קיבל אותו כלשונית בסרגל
   document.getElementById("sheet-calendar").classList.toggle("hidden", calInNav);
 
+  /* מסך "אנשים" — מאחד עבור מפקד סככה/מחלקה רגילה (hasTrainHub, בדיוק
+     אותה אוכלוסייה שמקבלת את שער ההדרכה) את כרטיסי החייל+חיפוש, ניהול
+     צוות, מילואים, ימי הולדת וכשירות חיילים לכניסה אחת בסרגל התחתון,
+     במקום ארבעה פריטים נפרדים שהיו "מתחבאים" בתפריט "עוד" (ר' CLAUDE.md).
+     לא נוגע ב-isFuncUnit/isDeptUnit — שם הפריטים נשארים בדיוק איפה שהיו. */
+  document.getElementById("nav-people").classList.toggle("hidden", !hasTrainHub);
+  if(hasTrainHub){
+    document.getElementById("more-team-item").classList.add("hidden");
+    document.getElementById("more-bdays-item").classList.add("hidden");
+    document.getElementById("sheet-medchecks").classList.add("hidden");
+  }
+
   /* אחראי הדרכה ומ״ע אחזקה — דשבורד המפקד ("תמונת מצב — מפקד") מוסר לגמרי.
      הוא הציג מגמות וחתימות של המסגרת התפקידית הזעירה שלהן בלבד — לצד
      דשבורד ייעודי-יותר שכבר יש להן (מרכז שליטה / סקירת מ״ע אחזקה). שני
@@ -5250,7 +5280,6 @@ function go(id, btn){
   if(typeof syncNavHeight==="function") syncNavHeight();   // מוודא ריפוד עדכני גם אם הסרגל השתנה מאז הטעינה
   if(id==="scr-cmd") renderCommander();
   if(id==="scr-faults") renderFaults();
-  if(id==="scr-binui-faults") renderBinuiFaults();
   if(id==="scr-admin") renderAdminDashboard();
   if(id==="scr-trainhub") renderTrainHub();
   if(id==="scr-naatim") renderNaatim();
@@ -5260,6 +5289,7 @@ function go(id, btn){
   if(id==="scr-today") renderToday();
   if(id==="scr-certs") renderCertsPage();
   if(id==="scr-medchecks") renderMedChecks();
+  if(id==="scr-people") renderPeopleScreen();
   if(id==="scr-tools") renderToolsPage();
   if(id==="scr-vehicles") vehiclesPageTab("vehicles");
   if(id==="scr-training") renderTrainingView();
@@ -6613,12 +6643,12 @@ async function renderRollcallPageShed(box){
   box.innerHTML = html;
 }
 
-async function renderBdays(){
-  const desc = document.getElementById("bdays-desc");
+async function renderBdays(listId, descId){
+  const desc = document.getElementById(descId || "bdays-desc");
   const isVo = isVehicleOfficer && !currentShed;   // הרשימה הנפרדת רלוונטית רק למסלול הישן (ללא מסגרת)
   document.getElementById("vo-team-add-btn")?.classList.toggle("hidden", !isVo);
   if(desc){ desc.textContent = isVo ? "הצוות שלך — ממוינים לפי יום ההולדת הקרוב." : (currentShed ? currentShed.name : "צוות המסגרת") + " — ממוינים לפי יום ההולדת הקרוב."; }
-  const list = document.getElementById("bdays-list");
+  const list = document.getElementById(listId || "bdays-list");
   list.innerHTML = "";
   const source = isVo ? ((await sGetRaw("vo_personnel")) || []) : PERSONNEL;
   if(isVo && source.length===0){
@@ -6645,6 +6675,63 @@ async function renderBdays(){
       ${isVo?`<button class="mr-del" style="margin-right:6px" onclick="event.stopPropagation();removeVoTeamMember('${p.id}')"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#b30f26" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`:""}`;
     list.appendChild(el);
   });
+}
+
+/* ===== PEOPLE (scr-people) — מסך מאוחד למפקד =====
+   כרטיסי חייל+חיפוש, ניהול צוות, מילואים, ימי הולדת וכשירות חיילים,
+   שקודם היו "מתחבאים" בתפריט "עוד" בארבע כניסות נפרדות (ר' CLAUDE.md). */
+async function renderPeopleScreen(){
+  renderPeopleSearch();
+  renderPeopleReserves();
+  renderBdays("people-bdays-list", "people-bdays-desc");
+}
+/* חיפוש/עיון בכרטיסי חייל — אותו סינון מסגרת/מחלקה כמו קטגוריית
+   "חיילים" בחיפוש הכללי של הדשבורד (cmdSearchHits), בלי שאילתה = כל
+   הרשימה (זו תצוגת "כרטיסי חייל", לא חיפוש-בלבד). לחיצה פותחת את
+   כרטיסיית החייל הקיימת (openSoldierCard). */
+function renderPeopleSearch(){
+  const inp = document.getElementById("people-search");
+  const box = document.getElementById("people-search-results");
+  if(!inp || !box) return;
+  const needle = (inp.value||"").trim().toLowerCase();
+  const isDeptUnit = !!(currentShed && currentShed.isDept);
+  const myDept = (isDeptUnit && userRole==="מפקד") ? personDept(PERSONNEL.find(p=>p.name===user)) : null;
+  const rows = PERSONNEL.map((p,i)=>({p,i})).filter(({p})=>{
+    if(myDept && personDept(p)!==myDept) return false;
+    if(!needle) return true;
+    return [p.name, p.role, p.profession, personDept(p)].filter(Boolean).join(" ").toLowerCase().includes(needle);
+  });
+  if(!rows.length){
+    box.innerHTML = '<div style="text-align:center;color:var(--ink-3);font-size:12px;padding:8px 0">לא נמצאו תוצאות</div>';
+    return;
+  }
+  box.innerHTML = rows.slice(0,60).map(({p,i})=>{
+    const roleTag = p.role ? `<span class="role-mini ${p.role==='חייל'?'sol':''}">${escapeHTML(p.role)}</span>` : "";
+    const resTag = p.reserve ? `<span class="role-mini" style="background:var(--gold-soft);color:var(--gold);border-color:#f0dfa8">🎖️ מילואים</span>` : (p.profession ? `<span class="role-mini">${escapeHTML(p.profession)}</span>` : "");
+    const sub = p.reserve ? "🎖️ מילואים" : ("🎂 " + (p.bday ? new Date(p.bday+"T00:00:00").toLocaleDateString("he-IL",{day:"numeric",month:"long"}) : "—"));
+    return `<div class="mgmt-row" style="cursor:pointer" onclick="openSoldierCard(${i})">
+      <div class="avatar" style="width:34px;height:34px;font-size:14px">${initials(p.name)}</div>
+      <div class="mr-body"><b>${escapeHTML(p.name)} ${roleTag} ${resTag}</b><span>${sub}</span></div>
+      <span class="s-chev" style="color:var(--ink-3)">‹</span>
+    </div>`;
+  }).join("") + (rows.length>60 ? `<div style="text-align:center;color:var(--ink-3);font-size:11px;padding:4px 0">מוצגים 60 מתוך ${rows.length} — צמצם את החיפוש</div>` : "");
+}
+/* אנשי מילואים של המסגרת — שם + תאריך רענון אחרון (p.refresh), לחיצה
+   פותחת את כרטיסיית החייל שלהם. */
+function renderPeopleReserves(){
+  const box = document.getElementById("people-reserves-list");
+  if(!box) return;
+  const rows = PERSONNEL.map((p,i)=>({p,i})).filter(({p})=>p.reserve);
+  if(!rows.length){
+    box.innerHTML = '<div style="text-align:center;color:var(--ink-3);font-size:13px;padding:12px 0">אין אנשי מילואים במסגרת</div>';
+    return;
+  }
+  box.innerHTML = rows.map(({p,i})=>`
+    <div class="mgmt-row" style="cursor:pointer" onclick="openSoldierCard(${i})">
+      <div class="avatar" style="width:34px;height:34px;font-size:14px">${initials(p.name)}</div>
+      <div class="mr-body"><b>${escapeHTML(p.name)}</b><span>🗓️ רענון אחרון: ${p.refresh ? new Date(p.refresh+"T00:00:00").toLocaleDateString("he-IL") : "—"}</span></div>
+      <span class="s-chev" style="color:var(--ink-3)">‹</span>
+    </div>`).join("");
 }
 
 /* ===== צוות מ״ע אחזקה (לצורך ימי הולדת) ===== */
@@ -7506,6 +7593,13 @@ async function renderRosterView(){
   // מאז ש-rosterWeekStartOf כבר לא "מתקן" תאריך ישן בזמן התצוגה (ר' שם),
   // התיקון היחיד לתאריך שגוי שכבר שמור הוא ידני — אין דרך לנחש אותו
   // אוטומטית מתוך תוכן השיבוץ עצמו.
+  // באנר "אילוצים" למפקד — אותו באנר בדיוק שבדשבורד (cmd-constraints-wrap),
+  // גם כאן במסך התורנויות: מפקד שמבלה יותר זמן במסך הזה בזמן בניית הלוח
+  // לא צריך לקפוץ לדשבורד כדי לראות/לאשר בקשות ולהזין אילוץ בשם חייל.
+  // נפרד לגמרי מ"לוח אילוצים מרוכז" של מ״ע תורנויות (openConstraintsBoard,
+  // ב-mgrBanners) — זה תצוגת-קריאה טייסתית לצורך שיבוץ, וזה כאן פעולת
+  // אישור/הזנה אישית של המפקד, בדיוק כמו בדשבורד.
+  const cmdConstraintsBox = userRole==="מפקד" ? `<div id="board-constraints-wrap" style="margin-bottom:10px"></div>` : "";
   const wkFixToggle = (isRosterManager && boardWeekSlot!=="next")
     ? `<span class="roster-wkfix-tog" onclick="toggleRosterWkFix()">✏️ תקן תאריך</span>` : "";
   const wkFixBox = (isRosterManager && boardWeekSlot!=="next" && rosterWkFixOpen)
@@ -7526,7 +7620,7 @@ async function renderRosterView(){
   const restoreBar = (isRosterManager && boardWeekSlot!=="current" && anyData)
     ? `<button class="m-btn ghost" style="width:100%;margin-bottom:10px;border:1.5px solid var(--red-line);color:var(--red-deep)"
          onclick="restoreWeekToCurrent('${boardWeekSlot}')">↩️ קבע את הלוח הזה כ״לוח נוכחי״</button>` : "";
-  const head = mgrBanners + weekSel + restoreBar + `<div class="roster-segs">
+  const head = mgrBanners + cmdConstraintsBox + weekSel + restoreBar + `<div class="roster-segs">
       <div class="${rosterView==="board"?"on":""}" onclick="setRosterView('board')">לוח שבועי</div>
       <div class="${rosterView==="day"?"on":""}" onclick="setRosterView('day')">לוח יומי</div>
       <div class="${rosterView==="mine"?"on":""}" onclick="setRosterView('mine')">רק אני</div>
@@ -7538,6 +7632,7 @@ async function renderRosterView(){
       <h3>${boardWeekSlot==="prev"?"אין לוח לשבוע שעבר":boardWeekSlot==="next"?"לוח השבוע הבא טרם נבנה":"לוח הצוות טרם שובץ"}</h3>
       <p>${isRosterManager ? (boardWeekSlot==="next"?"השתמש בבאנר \"בניית לוח עתידי\"":"השתמש בבאנר \"עריכת לוח נוכחי\" כדי לשבץ את השבוע") : "מ״ע תורנויות טרם פרסם"}</p></div>`;
     initRosterSwipe();
+    if(userRole==="מפקד") renderCommanderConstraints("board-constraints-wrap");
     return;
   }
   // שיתוף לוח יומי בוואטסאפ — למ"ע/מפקד, בשבוע הנוכחי (היום הרלוונטי)
@@ -7564,6 +7659,7 @@ async function renderRosterView(){
      : rosterView==="day" ? rosterCardsHtml(r, todayForBoard)   // "לוח יומי" = כרטיסי יום
      : rosterMineHtml(r, todayForBoard)) + dailyShare;
   initRosterSwipe();
+  if(userRole==="מפקד") renderCommanderConstraints("board-constraints-wrap");
   if(isRosterManager){ updateRosterMgrBadges(); maybeArchiveRoster(); }
   if(canRosterSearch()){
     if(!rosterSearchBank){ try{ rosterSearchBank = rosterFlattenBank(await fetchAllPersonnelByShed()); }catch(e){ rosterSearchBank = []; } }
@@ -10439,10 +10535,14 @@ function cmdSearchRowHtml(h){
     </div>`;
 }
 /* באנר אילוצים למפקד — כמה בקשות ממתינות לאישורו במסגרת, וכניסה לתיבה.
-   מפקד רואה רק את בקשות המסגרת שלו (duty_requests מוגבל-לסככה). */
-async function renderCommanderConstraints(){
-  const box = document.getElementById("cmd-constraints-wrap");
+   מפקד רואה רק את בקשות המסגרת שלו (duty_requests מוגבל-לסככה). מרונדר
+   לשני יעדים אפשריים: cmd-constraints-wrap בדשבורד, ו-board-constraints-wrap
+   במסך התורנויות (ר' renderRosterView) — אותו תוכן בדיוק, כדי שמפקד
+   שנמצא במסך התורנויות בזמן בניית הלוח לא יצטרך לקפוץ לדשבורד. */
+async function renderCommanderConstraints(boxId){
+  const box = document.getElementById(boxId || "cmd-constraints-wrap");
   if(!box) return;
+  if(userRole!=="מפקד"){ box.innerHTML = ""; return; }
   try{
     const list = await getDutyRequests();
     const pending = list.filter(r=>r.status==="pending").length;
@@ -11140,12 +11240,46 @@ async function deleteMessage(id, fromModal){
   toast("ההודעה הוסרה");
 }
 
-/* ===== FAULTS (feature 10) ===== */
+/* ===== FAULTS (feature 10) =====
+   מסך מאוחד: "ציוד" (faults_list, לפי סככה) ו"בינוי" (binui_faults_list,
+   גלובלי) חולקים אותו מסך (#faults-list/#faults-filter) עם לשוניות קטגוריה
+   מעל, במקום שני מסכים נפרדים (scr-faults/scr-binui-faults) כמו קודם.
+   נראות הלשונית "בינוי" נשארת בדיוק כמו נראות more-binui-item הישנה —
+   מפקד בלבד; מסגרות תפקידיות (מ״ע אחזקה/הדרכה) ממשיכות לא לקבל כלל
+   מעקב תקלות ציוד (בדיוק כמו שהיה מוסתר מהן nav-faults/more-faults-item
+   קודם), ולכן מקבלות תמיד ורק את הקטגוריה "בינוי", בלי לשוניות. */
 let faultImgData = null;
 let faultFilter = "open";
+let faultCategory = "equip";
+function setFaultCategory(c){ faultCategory=c; renderFaults(); }
 async function getFaults(){ return (await sGet("faults_list")) || []; }
 
 async function renderFaults(){
+  const isFuncUnit = !!(currentShed && (currentShed.isMaint || currentShed.isTraining));
+  const showBinuiTab = userRole === "מפקד";
+  if(isFuncUnit) faultCategory = "binui";
+  else if(!showBinuiTab) faultCategory = "equip";
+
+  const catBox = document.getElementById("faults-cat-tabs");
+  if(catBox){
+    if(isFuncUnit || !showBinuiTab){
+      catBox.classList.add("hidden"); catBox.innerHTML = "";
+    } else {
+      catBox.classList.remove("hidden");
+      catBox.innerHTML = `
+        <button class="fault-fbtn ${faultCategory==='equip'?'active':''}" onclick="setFaultCategory('equip')">🔧 ציוד</button>
+        <button class="fault-fbtn ${faultCategory==='binui'?'active':''}" onclick="setFaultCategory('binui')">🚧 בינוי</button>`;
+    }
+  }
+  const addBtn = document.getElementById("add-fault-btn");
+  if(addBtn) addBtn.onclick = faultCategory==="binui" ? openAddBinuiFault : openAddFault;
+
+  if(faultCategory==="binui"){
+    document.getElementById("faults-filter").innerHTML = "";
+    await renderBinuiFaults();
+    return;
+  }
+
   const faults = await getFaults();
   const isCmdr = userRole === "מפקד";
   // filter buttons
@@ -11373,7 +11507,7 @@ async function saveBinuiFault(){
 }
 /* תצוגת מפקד — רק התקלות שהמסגרת/מחלקה שלו דיווחה, קריאה בלבד לסטטוס (הסטטוס נקבע ע"י מ״ע אחזקה בלבד) */
 async function renderBinuiFaults(){
-  const list = document.getElementById("binui-faults-list");
+  const list = document.getElementById("faults-list");
   if(!list) return;
   const origin = myBinuiOrigin();
   const all = await getBinuiFaults();
@@ -14358,8 +14492,14 @@ async function computeTrendsData(isDeptUnit){
   const done = (await sGet("team_morning_"+todayKey())) || {};
   const mDone = MORNING_TASKS.filter(t=>done[t.id]).length;
 
-  // faults open/closed
+  // faults open/closed — ציוד (per-shed) + בינוי (גלובלי, מסונן למסגרת שלי),
+  // בדיוק אותו סינון "שלי" כמו renderBinuiFaults, לבאנר "תקלות" המאוחד בדשבורד
   const openF = faults.filter(f=>f.status!=="closed").length;
+  const binuiOrigin = myBinuiOrigin();
+  const binuiAll = await getBinuiFaults();
+  const binuiMine = binuiAll.filter(f=> binuiOrigin && f.shedId===binuiOrigin.shedId && (binuiOrigin.dept ? f.dept===binuiOrigin.dept : true));
+  const binuiOpen = binuiMine.filter(f=>f.status!=="טופל").length;
+  const faultsOpenTotal = openF + binuiOpen;
 
   // certs (עליון/סף/רף/... + PF)
   const today = new Date(); today.setHours(0,0,0,0);
@@ -14446,6 +14586,7 @@ async function computeTrendsData(isDeptUnit){
     vehicles, vehExpired, vehSoon,
     naatim, naatimOpen,
     medExpired, medSoon,
+    faultsOpenTotal,
     priorityFeed,
   };
 }
@@ -14466,7 +14607,7 @@ function _uicon(color, shape){
 function dashBannerCatalog(){
   const isDeptUnit = !!(currentShed && currentShed.isDept);
   const isTrimmed = !!(currentShed && (currentShed.isMaint || currentShed.isTraining));
-  const list = [{key:"sigs", ic:_uicon("#4338ca",'<path d="M4 20l1-4.5L15.5 5 19 8.5 8.5 19 4 20Z"/><path d="M13 7l3.5 3.5"/>'), l:"חתימות"}];
+  const list = [{key:"faults", ic:_uicon("#c2410c",'<path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/>'), l:"תקלות"}];
   if(!isDeptUnit && !isTrimmed) list.push({key:"morning", ic:_uicon("#b45309",'<rect x="2.5" y="9" width="19" height="11" rx="2"/><path d="M8 9V6.5A2.5 2.5 0 0 1 10.5 4h3A2.5 2.5 0 0 1 16 6.5V9M2.5 14h19"/>'), l:"מטלות בוקר"});
   if(!isTrimmed) list.push({key:"certs", ic:_uicon("#7c3aed",'<path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/>'), l:"הסמכות"});
   if(!isDeptUnit && !isTrimmed) list.push({key:"vehicles", ic:_uicon("#0e7490",'<path d="M4 16V12l2-4.5h12L20 12v4"/><path d="M4 16h16M6 16v2M18 16v2"/><circle cx="7.5" cy="16" r="1.6"/><circle cx="16.5" cy="16" r="1.6"/>'), l:"רכבים"});
@@ -14507,6 +14648,7 @@ async function renderTrends(boxId){
     vehicles, vehExpired, vehSoon,
     naatim, naatimOpen,
     medExpired, medSoon,
+    faultsOpenTotal,
     priorityFeed,
   } = await computeTrendsData(isDeptUnit);
 
@@ -14530,7 +14672,7 @@ async function renderTrends(boxId){
   // בדיוק כמו ההתנהגות המקורית לפני הפיצ'ר — כדי לא לשנות התנהגות
   // לאף מפקד שלא נגע בהגדרה. ---
   const kpiLive = {
-    sigs:     {led:(sigPct>=100?"g":sigPct>=70?"y":"r"), n:(maxSigs?sigPct+"%":"—"), go:"go('scr-safety',document.getElementById('nav-safety'))"},
+    faults:   {led:(faultsOpenTotal?"y":"g"), n:faultsOpenTotal, go:"go('scr-faults',document.getElementById('nav-faults'))"},
     morning:  {led:(mDone>=MORNING_TASKS.length?"g":(hh>=11?"r":"y")), n:mDone+"/"+MORNING_TASKS.length, go:"go('scr-morning',document.getElementById('nav-morning'))"},
     certs:    {led:(certExpired?"r":certSoon?"y":"g"), n:certs.length, go:"goCertsPage()"},
     vehicles: {led:(vehExpired?"r":vehSoon?"y":"g"), n:vehicles.length, go:"go('scr-vehicles',document.getElementById('nav-vehicles'))"},
