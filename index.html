@@ -1376,7 +1376,8 @@ nav{
 .cd .cd-q{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;background:none;border:none;font-family:inherit;color:var(--ink-2)}
 .cd .cd-qi{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-size:18px;background:var(--card);border:1px solid var(--line);color:var(--red);box-shadow:var(--shadow)}
 .cd .cd-q span{font-size:10.5px;font-weight:700}
-/* כפתור חזרה לדשבורד המפקד — יושב בכותרת העליונה (header), לא צף מעל
+/* כפתור חזרה למסך-הבית של התפקיד (דשבורד המפקד, או "סקירה" אצל מ״ע
+   אחזקה — ר' backToHome()) — יושב בכותרת העליונה (header), לא צף מעל
    תוכן המסכים. הכותרת קבועה מחוץ ל-main הגלילי (#app הוא flex column:
    header / main{flex:1;overflow-y:auto} / nav), ולכן הכפתור לעולם לא
    חופף שורות תוכן בתחתית הרשימות — בעבר היה FAB עגול צף מעל ה-main,
@@ -1669,7 +1670,7 @@ nav{
       </div>
 
       <div class="hdr-actions">
-        <button id="back-to-dash" onclick="go('scr-cmd',document.getElementById('nav-cmd'))" aria-label="חזרה לדשבורד" title="חזרה לדשבורד"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <button id="back-to-dash" onclick="backToHome()" aria-label="חזרה" title="חזרה"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         <button class="alert-bell" id="alert-bell" onclick="openAlerts()" style="display:none">
           <svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.3 5.3 1.8 5.8H4.2C4.7 15.3 6 14 6 10Z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></svg><span class="alert-bell-count hidden" id="alert-bell-count">0</span>
         </button>
@@ -2194,19 +2195,18 @@ nav{
 
       <div id="vo-overview-content"></div>
 
-      <div id="vo-trends-content"><div class="skel-card"><div class="skel-line w40"></div><div class="skel-line w90"></div></div><div class="skel-card"><div class="skel-line w60"></div><div class="skel-line w90"></div></div></div>
-
       <!-- דיווח מסדר בוקר יומי — הצוות הפנימי של מ״ע אחזקה עצמו -->
       <div id="vo-mc-report-wrap" class="hidden">
         <div class="cmd-section-title"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4V3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5V4M9 11h6M9 15h6"/></svg> מסדר בוקר — דיווח אחרון</div>
         <div id="vo-mc-report-content"></div>
       </div>
 
-      <!-- ADMIN quick actions -->
+      <!-- ADMIN quick actions — 2026-08: "תדריך בוקר" ו"לוח הודעות" הוסרו
+           מכאן (בקשת המשתמש), יחד עם "מיקוד יומי"/"מדדים במבט אחד" למעלה
+           (שהיו renderTrends("vo-trends-content"), הוסר לגמרי). נשאר רק
+           "קישור הדרכה" — הרלוונטי הבלעדי למ״ע אחזקה עצמו. -->
       <div class="cmd-section-title"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.2M12 18.8V21M4.9 4.9l1.5 1.5M17.6 17.6l1.5 1.5M3 12h2.2M18.8 12H21M4.9 19.1l1.5-1.5M17.6 6.4l1.5-1.5"/></svg> ניהול</div>
       <div class="admin-grid">
-        <button class="admin-card" onclick="openBriefMgmt()"><span class="a-ic" style="color:#475569"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4V3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5V4M9 11h6M9 15h6"/></svg></span><b>תדריך בוקר</b><span>תדריך יומי לצוות</span></button>
-        <button class="admin-card" onclick="openMsgMgmt()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h3l6 4V6l-6 4H3Z"/><path d="M14 9.5a3 3 0 0 1 0 5"/></svg></span><b>לוח הודעות</b><span>פרסום הודעה לצוות</span></button>
         <button class="admin-card" onclick="openTrainingLinkAdd()"><span class="a-ic" style="color:#0284c7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15l6-6"/><path d="M10 6.5l1-1a3.5 3.5 0 0 1 5 5l-1 1M14 17.5l-1 1a3.5 3.5 0 0 1-5-5l1-1"/></svg></span><b>קישור הדרכה</b><span>הוספת קישור לצוות שלי</span></button>
       </div>
     </section>
@@ -2617,6 +2617,8 @@ nav{
       <div class="sheet-top"><b>עוד</b><button class="sheet-x" onclick="document.getElementById('more-sheet').classList.remove('open')" aria-label="סגור">✕</button></div>
       <div class="sheet-item" id="sheet-naatim" onclick="closeMoreAnd('scr-naatim')"><div class="s-ic" style="color:#6b7280;background:#f1f2f4"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg></div><div class="s-tx"><b>נע"תים</b><span>תחומי אחריות ובדיקה שבועית</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="sheet-certs" onclick="closeMoreAnd('scr-certs')"><div class="s-ic" style="color:#7c3aed;background:#f2ebfe"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg></div><div class="s-tx"><b>הסמכות</b><span>תוקף וחידוש הסמכות</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-trainhub-item" onclick="closeMoreAnd('scr-trainhub')"><div class="s-ic" style="color:#7c3aed;background:#f2ebfe"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg></div><div class="s-tx"><b>הדרכה</b><span>קרא וחתום, הסמכות וקליטה</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="more-people-item" onclick="closeMoreAnd('scr-people')"><div class="s-ic" style="color:#0e7490;background:#e3f6fa"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="3"/><circle cx="16" cy="9.5" r="2.5"/><path d="M2.5 20c0-3 2.7-5.2 6-5.2s6 2.2 6 5.2M15 14.8c2.6.3 4.5 2.2 4.5 5.2"/></svg></div><div class="s-tx"><b>אנשים</b><span>ניהול צוות, ימי הולדת וכשירות חיילים</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-training" onclick="closeMoreAnd('scr-training')"><div class="s-ic" style="color:#2563eb;background:#e8f0fe"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5V5.5Z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"/></svg></div><div class="s-tx"><b>חומרי הדרכה</b><span>מהמנהל הטייסתי</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-medchecks" onclick="closeMoreAnd('scr-medchecks')"><div class="s-ic" style="color:#0d9488;background:#e3f7f5"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15a8 8 0 0 1 16 0v2H4v-2Z"/><path d="M2 17h20M9 15v-3M15 15v-3"/></svg></div><div class="s-tx"><b>כשירות חיילים</b><span>שמיעה ומטווח — תוקף וחידוש</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item" id="sheet-calendar" onclick="closeMoreAnd('scr-calendar')"><div class="s-ic" style="color:#2563eb;background:#e8f0fe"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg></div><div class="s-tx"><b>לוח שנה מאוחד</b><span>הסמכות, כיול כלים, טסט רכב ותורנויות</span></div><span class="s-chev">‹</span></div>
@@ -5056,11 +5058,18 @@ async function applyLoginUiForRole(person){
      חדש + חומרי הדרכה + קרא-וחתום. ארבעת הפריטים יורדים ממקומם הקודם
      (הסמכות וקרא-וחתום מהסרגל, השניים האחרים מתפריט "עוד") כי נכנסים
      אליהם דרך השער — קרא-וחתום כצ'יפ נוסף במסך ההדרכה עצמו.
-     במחלקות ובמסגרות התפקידיות (מ״ע אחזקה / הדרכה) אין שער — ושם כל פריט
-     נשאר בדיוק איפה שהיה, כדי לא לנתק גישה קיימת. */
-  const isFuncUnit = !!(currentShed && (currentShed.isMaint || currentShed.isTraining));
-  const hasTrainHub = userRole==="מפקד" && !isDeptUnit && !isFuncUnit;
-  document.getElementById("nav-trainhub").classList.toggle("hidden", !hasTrainHub);
+     במחלקות אין שער — כל פריט נשאר בדיוק איפה שהיה, כדי לא לנתק גישה קיימת.
+     מ״ע אחזקה (isMaintUnit) כן מקבל את התוכן של השער (הדרכה+אנשים,
+     קרא-וחתום/הסמכות/צוות/ימי-הולדת/כשירות מתאחדים לתוכן), אבל לא את
+     כפתורי הסרגל התחתון עצמם (nav-trainhub/nav-people) — הסרגל שלו קבוע
+     במפורש (ר' applyMaintCommanderPowers) ואין בו מקום לשתי לשוניות
+     נוספות. הגישה לתוכן המאוחד ניתנת לו דרך "עוד" בלבד
+     (more-trainhub-item/more-people-item, ר' 2026-08 "מדדים במבט אחד"). */
+  const isMaintUnit = !!(currentShed && currentShed.isMaint);
+  const isTrainingUnit = !!(currentShed && currentShed.isTraining);
+  const hasTrainHub = userRole==="מפקד" && !isDeptUnit && !isTrainingUnit;
+  document.getElementById("nav-trainhub").classList.toggle("hidden", !hasTrainHub || isMaintUnit);
+  document.getElementById("more-trainhub-item").classList.toggle("hidden", !(hasTrainHub && isMaintUnit));
   document.getElementById("nav-safety").classList.toggle("hidden", hasTrainHub);
   // הסמכות: לחייל דרך "עוד" (sheet-certs), למפקד סככה דרך השער — בשני
   // המקרים לא לשונית בסרגל.
@@ -5069,8 +5078,10 @@ async function applyLoginUiForRole(person){
   document.getElementById("sheet-onboarding").classList.toggle("hidden", isDeptUnit || !onbRelevant || hasTrainHub);
 
   /* לוח שנה מאוחד — עולה לסרגל אצל מפקד (מחליפה את "כשירות חיילים",
-     שיורדת לתפריט "עוד" אצל כולם — גם מפקד וגם חייל). */
-  const calInNav = userRole==="מפקד" && !isFuncUnit;
+     שיורדת לתפריט "עוד" אצל כולם — גם מפקד וגם חייל). גם אצל מ״ע אחזקה
+     (2026-08, בקשת המשתמש — תופס את המקום שהתפנה מ"קרא וחתום" בסרגל שלו),
+     אבל לא אצל "הדרכה" (isTrainingUnit) — מסגרת תפקידית שלא רלוונטית לה. */
+  const calInNav = userRole==="מפקד" && !isTrainingUnit;
   document.getElementById("nav-medchecks").classList.add("hidden");
   document.getElementById("nav-calendar").classList.toggle("hidden", !calInNav);
   if(isDeptUnit && userRole==="מפקד") document.getElementById("morning-edit-btn").classList.add("hidden");
@@ -5084,7 +5095,8 @@ async function applyLoginUiForRole(person){
      של סככה. מוסרים מהן מסכים שאין להם משמעות בהקשר הזה, וכאלה שכבר
      קיימים להן ברמה הטייסתית (רכבים ותקלות בינוי במסכי מ״ע אחזקה,
      הסמכות והדרכה בדשבורד אחראי ההדרכה — שם רואים את כל הטייסת).
-     נשארים: קרא וחתום, הודעות, נכס, ימי הולדת וניהול צוות. */
+     נשארים: הודעות, נכס, ימי הולדת וניהול צוות (קרא-וחתום/הסמכות/צוות/
+     ימי-הולדת/כשירות אצל מ״ע אחזקה מתאחדים בתוך תוכן הדרכה+אנשים, ר' למעלה). */
   if(currentShed && (currentShed.isMaint || currentShed.isTraining)){
     [ "nav-tools",        // חדר כלים
       "tools-add-btn",
@@ -5110,20 +5122,23 @@ async function applyLoginUiForRole(person){
      חיילים לא רלוונטיים למסגרת "הדרכה" (מסגרת תפקידית, לא מבצעית),
      ומוסרים רק מהיוזר הזה — לא ממפקדי סככות או ממ״ע אחזקה. toggle()
      ולא add() בכוונה: כניסה הבאה של מפקד סככה רגיל באותו טעינת-דף
-     חייבת להחזיר את הנראות, לא רק להשאיר אותה מוסתרת מהסשן הקודם. */
-  const isTrainingUnit = !!(currentShed && currentShed.isTraining);
+     חייבת להחזיר את הנראות, לא רק להשאיר אותה מוסתרת מהסשן הקודם.
+     (isTrainingUnit כבר הוגדר למעלה, ליד hasTrainHub.) */
   document.getElementById("nav-board").classList.toggle("hidden", isTrainingUnit);
   // "כשירות חיילים" בתפריט "עוד" — אצל כולם (גם מפקד), חוץ ממסגרת "הדרכה" שלא רלוונטית לה
   document.getElementById("sheet-medchecks").classList.toggle("hidden", isTrainingUnit);
   // "לוח שנה מאוחד" בתפריט "עוד" — רק למי שלא קיבל אותו כלשונית בסרגל
   document.getElementById("sheet-calendar").classList.toggle("hidden", calInNav);
 
-  /* מסך "אנשים" — מאחד עבור מפקד סככה/מחלקה רגילה (hasTrainHub, בדיוק
-     אותה אוכלוסייה שמקבלת את שער ההדרכה) את כרטיסי החייל+חיפוש, ניהול
-     צוות, מילואים, ימי הולדת וכשירות חיילים לכניסה אחת בסרגל התחתון,
-     במקום ארבעה פריטים נפרדים שהיו "מתחבאים" בתפריט "עוד" (ר' CLAUDE.md).
-     לא נוגע ב-isFuncUnit/isDeptUnit — שם הפריטים נשארים בדיוק איפה שהיו. */
-  document.getElementById("nav-people").classList.toggle("hidden", !hasTrainHub);
+  /* מסך "אנשים" — מאחד עבור מפקד סככה/מחלקה רגילה וגם עבור מ״ע אחזקה
+     (hasTrainHub, בדיוק אותה אוכלוסייה שמקבלת את תוכן שער ההדרכה) את
+     כרטיסי החייל+חיפוש, ניהול צוות, מילואים, ימי הולדת וכשירות חיילים
+     לכניסה אחת, במקום ארבעה פריטים נפרדים שהיו "מתחבאים" בתפריט "עוד"
+     (ר' CLAUDE.md). אצל מפקד סככה/מחלקה זו לשונית בסרגל התחתון (nav-people);
+     אצל מ״ע אחזקה — פריט ב"עוד" בלבד (more-people-item), כי הסרגל שלו
+     קבוע במפורש בלי מקום ללשונית נוספת. */
+  document.getElementById("nav-people").classList.toggle("hidden", !hasTrainHub || isMaintUnit);
+  document.getElementById("more-people-item").classList.toggle("hidden", !(hasTrainHub && isMaintUnit));
   if(hasTrainHub){
     document.getElementById("more-team-item").classList.add("hidden");
     document.getElementById("more-bdays-item").classList.add("hidden");
@@ -5289,7 +5304,7 @@ function go(id, btn){
   if(id==="scr-tools") renderToolsPage();
   if(id==="scr-vehicles") vehiclesPageTab("vehicles");
   if(id==="scr-training") renderTrainingView();
-  if(id==="scr-vo-overview"){ renderVoOverview(); renderTrends("vo-trends-content"); renderMorningRollcallReport("vo-mc-report-wrap","vo-mc-report-content"); }
+  if(id==="scr-vo-overview"){ renderVoOverview(); renderMorningRollcallReport("vo-mc-report-wrap","vo-mc-report-content"); }
   if(id==="scr-vehicle-officer") renderVoVehicles();
   if(id==="scr-maint-dept") renderMaterials();
   if(id==="scr-morning-rollcall") renderMorningRollcall();
@@ -5299,13 +5314,29 @@ function go(id, btn){
   if(id==="scr-users"){ ensureShed2Seed(); ensureAllShedsSeed(); ensureAllFrameworkTeamsSeed(); renderUsersAdmin(); }
   if(id==="scr-support") renderSupportPage();
   if(id!=="scr-vo-overview" && id!=="scr-vehicle-officer" && id!=="scr-maint-dept" && id!=="scr-morning-rollcall" && id!=="scr-binui-admin" && id!=="scr-budget-officer" && id!=="scr-users"){ renderMessages(); renderBrief(); }   // הודעות/תדריך מופיעים בכל המסכים חוץ ממסכי מ״ע אחזקה/תקלות בינוי/אחראי תקציבים (אין להם סככה)
-  // כפתור "לדשבורד" — מוצג בכל מסך שאינו הדשבורד, רק למי שיש לו דשבורד מפקד (nav-cmd גלוי)
+  // כפתור "חזרה" — מוצג בכל מסך שאינו מסך הבית של התפקיד, רק למי שיש לו
+  // מסך בית עם דשבורד (nav-cmd למפקד סככה/מחלקה רגיל, nav-vo-overview
+  // למ״ע אחזקה — ר' backToHome()). אצל שאר התפקידים (חייל, הדרכה וכו')
+  // אין דשבורד-בית נפרד לחזור אליו, אז הכפתור לא מוצג.
   const backBtn = document.getElementById("back-to-dash");
   if(backBtn){
     const navCmd = document.getElementById("nav-cmd");
+    const navVo = document.getElementById("nav-vo-overview");
     const hasDash = navCmd && !navCmd.classList.contains("hidden");
-    backBtn.classList.toggle("show", !!hasDash && id!=="scr-cmd");
+    const hasVoHome = !hasDash && navVo && !navVo.classList.contains("hidden");
+    const homeScr = hasDash ? "scr-cmd" : (hasVoHome ? "scr-vo-overview" : null);
+    backBtn.classList.toggle("show", !!homeScr && id!==homeScr);
   }
+}
+/* יעד כפתור "חזרה" בכותרת — נגזר דינמית מאיזה מסך-בית זמין לתפקיד הנוכחי
+   (ר' go(), שם גם נקבעת נראות הכפתור). לא onclick קבוע כמו קודם, כי
+   מ״ע אחזקה חוזר ל"סקירה" (scr-vo-overview) ולא לדשבורד המפקד (scr-cmd,
+   שגם ככה מוסתר אצלו — ר' applyLoginUiForRole). */
+function backToHome(){
+  const navCmd = document.getElementById("nav-cmd");
+  if(navCmd && !navCmd.classList.contains("hidden")){ go("scr-cmd", navCmd); return; }
+  const navVo = document.getElementById("nav-vo-overview");
+  if(navVo && !navVo.classList.contains("hidden")){ go("scr-vo-overview", navVo); return; }
 }
 
 /* ===== MORE SHEET ===== */
@@ -12351,11 +12382,14 @@ async function applyMaintCommanderPowers(){
   document.getElementById("nav-maint-dept").classList.add("hidden");
   document.getElementById("more-maintdept-item").classList.remove("hidden");
   // סדר תצוגה מפורש בסרגל התחתון (מימין לשמאל): סקירה, רכבים, תקלות בינוי,
-  // מסדר בוקר, קרא וחתום, לוח צוות שבועי, עוד — שונה מסדר ה-DOM הרגיל
-  // שמשותף לכל שאר התפקידים, ולכן נקבע כאן ב-order בלבד (מאופס בכל כניסה
-  // אחרת, ראו הערה בתחילת doLogin/logout/וכו')
+  // מסדר בוקר, לוח שנה, תורנויות, עוד — שונה מסדר ה-DOM הרגיל שמשותף לכל
+  // שאר התפקידים, ולכן נקבע כאן ב-order בלבד (מאופס בכל כניסה אחרת, ראו
+  // הערה בתחילת doLogin/logout/וכו'). "קרא וחתום" ירד מהסרגל (2026-08) —
+  // מתאחד לתוך תוכן "הדרכה" הנגיש דרך "עוד" (ר' applyLoginUiForRole),
+  // והמקום שהתפנה ניתן ל"לוח שנה" (nav-calendar, גם הוא כבר גלוי מ-
+  // applyLoginUiForRole אצל מ״ע אחזקה).
   [["nav-vo-overview",1], ["nav-vehicle-officer",2], ["nav-binui-admin",3], ["nav-morningcheck",4],
-   ["nav-safety",5], ["nav-board",6], ["nav-more",7]]
+   ["nav-calendar",5], ["nav-board",6], ["nav-more",7]]
     .forEach(([id,ord])=>{ document.getElementById(id).style.order = ord; });
   await ensureShed2Seed();
   await ensureAllShedsSeed();   // רכבים/רישיונות נשלפים מכל המסגרות
@@ -16027,8 +16061,8 @@ async function computeVoOverviewData(){
     shedRows.push({shed, count: vehicles.length, worst: shedWorst});
   }
 
-  const [licenses, mcMarks, materials, motorTools] = await Promise.all([
-    getVoLicenses(), getMorningRollcall(), getMaterials(), getMotorTools(),
+  const [licenses, mcMarks, binuiFaults, medData] = await Promise.all([
+    getVoLicenses(), getMorningRollcall(), getBinuiFaults(), getMedChecks(),
   ]);
   const mcMarkedCount = Object.keys(mcMarks).length;
 
@@ -16042,17 +16076,26 @@ async function computeVoOverviewData(){
     else licValid++;
   }
 
-  let matWaiting = 0, matOrdered = 0;
-  for(const m of materials){
-    const cls = materialStatusClass(m.status);
-    if(cls==="r") matWaiting++; else if(cls==="y") matOrdered++;
+  // תקלות בינוי (ריכוז כלל-טייסתי, כמו במסך "תקלות בינוי") — במקום
+  // "הזמנת חומרים"/"מעקב כלים מוטוריים" שירדו מהסקירה (2026-08, בקשת המשתמש;
+  // המסכים עצמם נשארים נגישים דרך "עוד" → "אחזקה").
+  let binuiOpen = 0, binuiInProgress = 0;
+  for(const f of binuiFaults){
+    if(f.status==="פתוח") binuiOpen++;
+    else if(f.status==="בטיפול") binuiInProgress++;
   }
 
-  let toolExpired = 0, toolSoon = 0;
-  for(const t of motorTools){
-    const cls = motorToolStatus(t).cls;
-    if(cls==="r") toolExpired++; else if(cls==="y") toolSoon++;
-  }
+  // כשירויות חיילים (שמיעה+מטווח) של הצוות הפנימי של מ״ע אחזקה עצמו —
+  // אותו חישוב בדיוק כמו kpiLive.med בדשבורד המפקד הרגיל (computeTrendsData).
+  let medExpired = 0, medSoon = 0;
+  medPeople().forEach(p=>{
+    const r = medData[safeName(p.name)] || {};
+    Object.keys(MED_TYPES).forEach(k=>{
+      const st = medStatus(r[k]);
+      if(!st.set) return;
+      if(st.cls==="r") medExpired++; else if(st.cls==="y") medSoon++;
+    });
+  });
 
   // כל התראה מוצגת כבאנר יחיד מרוכז לפי קטגוריה — לא שורה בנפרד לכל פריט —
   // כדי למנוע עומס ויזואלי (למשל 5 רישיונות מאותו סוג = באנר אחד, לא 5 שורות)
@@ -16064,18 +16107,18 @@ async function computeVoOverviewData(){
     const {r,y} = licTypeGroups[type];
     groups.push({cls: r?"r":"y", ic:"🪪", title:`${r+y} רישיונות ${type} דורשים טיפול`, sub: subParts(r,y,"פג תוקף","עומד לפוג"), go:"licenses"});
   }
-  if(matWaiting+matOrdered>0) groups.push({cls: matWaiting?"r":"y", ic:"📦", title:`${matWaiting+matOrdered} הזמנות חומרים דורשות מעקב`, sub: subParts(matWaiting,matOrdered,"ממתינות להזמנה","הוזמנו — ממתינות לקבלה"), go:"materials"});
-  if(toolExpired+toolSoon>0) groups.push({cls: toolExpired?"r":"y", ic:"🔧", title:`${toolExpired+toolSoon} כלים מוטוריים דורשים טיפול`, sub: subParts(toolExpired,toolSoon,"פג תוקף כיול","כיול קרוב"), go:"tools"});
+  if(binuiOpen+binuiInProgress>0) groups.push({cls: binuiOpen?"r":"y", ic:"🧱", title:`${binuiOpen+binuiInProgress} תקלות בינוי דורשות טיפול`, sub: subParts(binuiOpen,binuiInProgress,"פתוחות","בטיפול"), go:"faults"});
+  if(medExpired+medSoon>0) groups.push({cls: medExpired?"r":"y", ic:"🪖", title:`${medExpired+medSoon} כשירויות חיילים דורשות טיפול`, sub: subParts(medExpired,medSoon,"פג תוקף","עומד לפוג"), go:"med"});
   groups.sort((a,b)=> (a.cls===b.cls?0:(a.cls==="r"?-1:1)));
 
   let score = 100;
-  score -= (vehExpired+testExpired+licExpired+matWaiting+toolExpired)*3 + (vehSoon+testSoon+licSoon+matOrdered+toolSoon)*1;
+  score -= (vehExpired+testExpired+licExpired+binuiOpen+medExpired)*3 + (vehSoon+testSoon+licSoon+binuiInProgress+medSoon)*1;
   score = Math.max(0, Math.min(100, Math.round(score)));
 
   return {
     totalVehicles, vehExpired, vehSoon, testExpired, testSoon, shedRows,
     licenses, mcMarkedCount, licExpired, licSoon, licValid,
-    materials, matWaiting, matOrdered, motorTools, toolExpired, toolSoon,
+    binuiFaults, binuiOpen, binuiInProgress, medExpired, medSoon,
     groups, score,
   };
 }
@@ -16087,13 +16130,13 @@ async function renderVoOverview(){
   const {
     totalVehicles, vehExpired, vehSoon, testExpired, testSoon, shedRows,
     licenses, mcMarkedCount, licExpired, licSoon, licValid,
-    materials, matWaiting, matOrdered, motorTools, toolExpired, toolSoon,
+    binuiFaults, binuiOpen, binuiInProgress, medExpired, medSoon,
     groups, score,
   } = await computeVoOverviewData();
 
   const dateStr = new Date().toLocaleDateString("he-IL",{weekday:"long", day:"numeric", month:"long"});
   const feedHtml = groups.length===0
-    ? `<div class="db-all-clear"><b><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg> הכל תקין</b><span>אין רכבים, טסטים, רישיונות, חומרים או כלים שדורשים תשומת לב כרגע</span></div>`
+    ? `<div class="db-all-clear"><b><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg> הכל תקין</b><span>אין רכבים, טסטים, רישיונות, תקלות בינוי או כשירויות שדורשים תשומת לב כרגע</span></div>`
     : `<div class="db-feed">${groups.map(f=>`
         <div class="db-feed-item ${f.cls}" onclick="voOverviewGo('${f.go}')">
           <div class="db-feed-ic">${f.ic}</div>
@@ -16158,15 +16201,15 @@ async function renderVoOverview(){
         <div class="db-board-num">${mcMarkedCount}</div>
         <div class="db-board-label">מסדר בוקר · ${mcMarkedCount===0? 'טרם בוצע היום' : 'סומנו עד כה'}</div>
       </div>
-      <div class="db-board-card" onclick="voOverviewGo('materials')">
-        <div class="db-board-top"><div class="db-board-ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M4.5 9v9a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/></svg></div><div class="db-board-dot ${matWaiting?'r':matOrdered?'y':'g'}"></div></div>
-        <div class="db-board-num">${materials.length}</div>
-        <div class="db-board-label">הזמנות חומרים · ${matWaiting+matOrdered? (matWaiting+matOrdered)+' דורשות מעקב' : 'הכל התקבל'}</div>
+      <div class="db-board-card" onclick="voOverviewGo('faults')">
+        <div class="db-board-top"><div class="db-board-ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l5 16H7L12 3Z"/><path d="M9 13h6M8 16h8"/></svg></div><div class="db-board-dot ${binuiOpen?'r':binuiInProgress?'y':'g'}"></div></div>
+        <div class="db-board-num">${binuiFaults.length}</div>
+        <div class="db-board-label">תקלות בינוי · ${binuiOpen+binuiInProgress? (binuiOpen+binuiInProgress)+' דורשות טיפול' : 'הכל תקין'}</div>
       </div>
-      <div class="db-board-card" onclick="voOverviewGo('tools')">
-        <div class="db-board-top"><div class="db-board-ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></div><div class="db-board-dot ${toolExpired?'r':toolSoon?'y':'g'}"></div></div>
-        <div class="db-board-num">${motorTools.length}</div>
-        <div class="db-board-label">כלים מוטוריים · ${toolExpired+toolSoon? (toolExpired+toolSoon)+' דורשים טיפול' : 'הכל בתוקף'}</div>
+      <div class="db-board-card" onclick="voOverviewGo('med')">
+        <div class="db-board-top"><div class="db-board-ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15a8 8 0 0 1 16 0v2H4v-2Z"/><path d="M2 17h20M9 15v-3M15 15v-3"/></svg></div><div class="db-board-dot ${medExpired?'r':medSoon?'y':'g'}"></div></div>
+        <div class="db-board-num">${medPeople().length}</div>
+        <div class="db-board-label">כשירויות חיילים · ${medExpired+medSoon? (medExpired+medSoon)+' דורשות טיפול' : 'הכל בתוקף'}</div>
       </div>
     </div>
 
@@ -16177,11 +16220,11 @@ async function renderVoOverview(){
 }
 
 /* ניווט מכרטיסי הדשבורד/הבאנרים המרוכזים — הסקירה היא מסך נפרד משלה, כך
-   שכל יעד (רכבים/רישיונות/אחזקה/מסדר בוקר) דורש מעבר-מסך, לא רק החלפת
-   לשונית בתוך אותו מסך */
+   שכל יעד (רכבים/רישיונות/תקלות בינוי/כשירויות/מסדר בוקר) דורש מעבר-מסך,
+   לא רק החלפת לשונית בתוך אותו מסך */
 function voOverviewGo(target){
-  if(target==="materials"){ go("scr-maint-dept", document.getElementById("nav-maint-dept")); mdTab("materials"); }
-  else if(target==="tools"){ go("scr-maint-dept", document.getElementById("nav-maint-dept")); mdTab("tools"); }
+  if(target==="faults"){ go("scr-binui-admin", document.getElementById("nav-binui-admin")); }
+  else if(target==="med"){ go("scr-medchecks", document.getElementById("nav-medchecks")); }
   else if(target==="morningcheck"){ go("scr-morning-rollcall", document.getElementById("nav-morningcheck")); }
   else { go("scr-vehicle-officer", document.getElementById("nav-vehicle-officer")); voTab(target); }
 }

@@ -1,9 +1,12 @@
 /* מ״ע אחזקה ביקש סדר תפריט תחתון מפורש (מימין לשמאל): סקירה, רכבים,
-   תקלות בינוי, מסדר בוקר, קרא וחתום, לוח צוות שבועי — "אחזקה" (הזמנת
-   חומרים/כלים) עוברת לתפריט "עוד". מכיוון שכל התפקידים חולקים את אותם
-   כפתורי ניווט ב-DOM, הסדר נקבע רק דרך CSS order (לא סדר ה-DOM עצמו,
-   שהיה משפיע על כל שאר התפקידים) — ומאופס בכל כניסה כדי שלא "ידלוף"
-   לתפקיד אחר באותה טעינת-עמוד (למשל כניסה-בתור/impersonation). */
+   תקלות בינוי, מסדר בוקר, לוח שנה, תורנויות — "אחזקה" (הזמנת חומרים/כלים)
+   עוברת לתפריט "עוד". מכיוון שכל התפקידים חולקים את אותם כפתורי ניווט
+   ב-DOM, הסדר נקבע רק דרך CSS order (לא סדר ה-DOM עצמו, שהיה משפיע על
+   כל שאר התפקידים) — ומאופס בכל כניסה כדי שלא "ידלוף" לתפקיד אחר באותה
+   טעינת-עמוד (למשל כניסה-בתור/impersonation).
+   2026-08: "קרא וחתום" (nav-safety) ירד מהסרגל — מתאחד לתוך תוכן "הדרכה"
+   הנגיש דרך "עוד" (ר' applyLoginUiForRole/hasTrainHub) — והמקום שהתפנה
+   ניתן ל"לוח שנה" (nav-calendar). */
 import { launchBrowser, APP_URL } from '../lib/pw.mjs';
 import { newPage, loginAsFramework, closeBrowser } from '../lib/harness.mjs';
 const b = await launchBrowser();
@@ -43,7 +46,7 @@ async function page(){
       orders: {
         overview: order("nav-vo-overview"), vehicles: order("nav-vehicle-officer"),
         binui: order("nav-binui-admin"), morningcheck: order("nav-morningcheck"),
-        safety: order("nav-safety"), board: order("nav-board"), more: order("nav-more"),
+        calendar: order("nav-calendar"), board: order("nav-board"), more: order("nav-more"),
       },
     };
   });
@@ -51,9 +54,9 @@ async function page(){
     out.maintDeptHidden && !out.maintDeptSheetItemHidden, JSON.stringify(out));
   record("חמשת הכפתורים המבוקשים (סקירה/רכבים/תקלות בינוי/מסדר בוקר) גלויים",
     !out.overviewHidden && !out.vehiclesHidden && !out.binuiHidden && !out.morningcheckHidden, JSON.stringify(out));
-  record("סדר התצוגה תואם בדיוק לרשימה שהתבקשה (מימין לשמאל: סקירה,רכבים,תקלות בינוי,מסדר בוקר,קרא וחתום,לוח שבועי,עוד)",
+  record("סדר התצוגה תואם בדיוק לרשימה שהתבקשה (מימין לשמאל: סקירה,רכבים,תקלות בינוי,מסדר בוקר,לוח שנה,תורנויות,עוד)",
     Number(out.orders.overview)===1 && Number(out.orders.vehicles)===2 && Number(out.orders.binui)===3 &&
-    Number(out.orders.morningcheck)===4 && Number(out.orders.safety)===5 && Number(out.orders.board)===6 &&
+    Number(out.orders.morningcheck)===4 && Number(out.orders.calendar)===5 && Number(out.orders.board)===6 &&
     Number(out.orders.more)===7,
     JSON.stringify(out.orders));
   console.log("errs1",errs); await p.close();
@@ -76,13 +79,13 @@ async function page(){
     return {
       beforeReset,
       afterReset: document.getElementById("nav-vo-overview").style.order,
-      safetyAfterReset: document.getElementById("nav-safety").style.order,
+      calendarAfterReset: document.getElementById("nav-calendar").style.order,
       boardAfterReset: document.getElementById("nav-board").style.order,
     };
   });
   record("לפני האיפוס: יש ערך order מפורש (1)", out.beforeReset==="1", JSON.stringify(out));
   record("אחרי האיפוס: כל הכפתורים חוזרים לסדר ברירת המחדל (order ריק)",
-    out.afterReset==="" && out.safetyAfterReset==="" && out.boardAfterReset==="", JSON.stringify(out));
+    out.afterReset==="" && out.calendarAfterReset==="" && out.boardAfterReset==="", JSON.stringify(out));
   console.log("errs2",errs); await p.close();
 }
 
@@ -121,7 +124,7 @@ async function page(){
   record("אין אף כפתור גלוי עם order=0 (ברירת מחדל) — הכל בין 1 ל-7 בדיוק כמבוקש",
     out.every(i=>i.order>=1), JSON.stringify(out));
   record("הרשימה הגלויה מדויקת: בדיוק 7 כפתורים, בסדר הנכון",
-    JSON.stringify(out.map(i=>i.id)) === JSON.stringify(["nav-vo-overview","nav-vehicle-officer","nav-binui-admin","nav-morningcheck","nav-safety","nav-board","nav-more"]),
+    JSON.stringify(out.map(i=>i.id)) === JSON.stringify(["nav-vo-overview","nav-vehicle-officer","nav-binui-admin","nav-morningcheck","nav-calendar","nav-board","nav-more"]),
     JSON.stringify(out));
   await p.close();
 }

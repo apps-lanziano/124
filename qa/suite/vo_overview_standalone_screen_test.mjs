@@ -34,39 +34,47 @@ async function page(){
 }
 
 // 2. voOverviewGo מנווט בין מסכים כשצריך (רכבים/רישיונות עוברים למסך "רכבים",
-//    אחזקה/כלים למסך "אחזקה", מסדר בוקר למסך שלו) — לא רק מחליף לשונית באותו מסך
+//    תקלות בינוי למסך שלו, כשירויות חיילים למסך שלו, מסדר בוקר למסך שלו) —
+//    לא רק מחליף לשונית באותו מסך. "materials"/"tools" (הזמנת חומרים/כלים
+//    מוטוריים) הוסרו מהסקירה — הוחלפו ב"faults"/"med" (2026-08).
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
     window.renderVoVehicles = ()=>{ window._called = (window._called||[]).concat("vehicles"); };
     window.renderVoLicenses = ()=>{ window._called = (window._called||[]).concat("licenses"); };
-    window.renderMaterials = async ()=>{};
+    window.renderBinuiFaultsAdmin = async ()=>{};
+    window.renderMedChecks = async ()=>{};
     window.renderMorningRollcall = async ()=>{};
     window.renderMessages = ()=>{}; window.renderBrief = ()=>{};
     voOverviewGo("vehicles");
     const afterVehicles = document.getElementById("scr-vehicle-officer").classList.contains("active");
-    voOverviewGo("materials");
-    const afterMaterials = document.getElementById("scr-maint-dept").classList.contains("active") &&
-                            document.getElementById("mdpane-materials").classList.contains("active");
+    voOverviewGo("faults");
+    const afterFaults = document.getElementById("scr-binui-admin").classList.contains("active");
+    voOverviewGo("med");
+    const afterMed = document.getElementById("scr-medchecks").classList.contains("active");
     voOverviewGo("morningcheck");
     const afterMorning = document.getElementById("scr-morning-rollcall").classList.contains("active");
-    return { afterVehicles, afterMaterials, afterMorning };
+    return { afterVehicles, afterFaults, afterMed, afterMorning };
   });
   record("voOverviewGo('vehicles') עובר למסך הרכבים", out.afterVehicles, JSON.stringify(out));
-  record("voOverviewGo('materials') עובר למסך האחזקה בלשונית הנכונה", out.afterMaterials, JSON.stringify(out));
+  record("voOverviewGo('faults') עובר למסך תקלות בינוי", out.afterFaults, JSON.stringify(out));
+  record("voOverviewGo('med') עובר למסך כשירות חיילים", out.afterMed, JSON.stringify(out));
   record("voOverviewGo('morningcheck') עובר למסך מסדר הבוקר", out.afterMorning, JSON.stringify(out));
   console.log("errs2",errs); await p.close();
 }
 
-// 3. מסך הסקירה: כניסה אליו מרנדרת גם את הדשבורד הכלל-טייסתי וגם את מה
-//    שהיה על "עמוד מפקד" (מגמות + דיווח מסדר בוקר אחרון) — לא נאבד מידע
+// 3. מסך הסקירה: כניסה אליו מרנדרת את הדשבורד הכלל-טייסתי (כולל "תמונת
+//    מצב" עם תקלות בינוי/כשירויות חיילים במקום הזמנת חומרים/כלים מוטוריים)
+//    וגם את דיווח מסדר הבוקר האחרון. "מיקוד יומי"/"מדדים במבט אחד"
+//    (renderTrends) ו"תדריך בוקר"/"לוח הודעות" הוסרו לגמרי מהמסך (2026-08,
+//    בקשת המשתמש) — נשאר רק "קישור הדרכה".
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
     currentShed = { id:"maint", name:"מ״ע אחזקה", isMaint:true };
     PERSONNEL = [{name:"דני", role:"חייל"}];
     window.sGetIn = async (shed,k) => k==="vehicles_list" ? [] : null;
-    window.sGetRaw = async k => (k && k.startsWith("daily_rollcall_")) ? {} : (k==="maint_materials_list"||k==="maint_motor_tools_list" ? [] : null);
+    window.sGetRaw = async k => (k && k.startsWith("daily_rollcall_")) ? {} : (k==="binui_faults_list" ? [] : null);
     window.sGet = async (k) => {
       if(k==="daily_rollcall_report") return {dayKey: rollcallDayKey(), sentAt: Date.now(), presentCount:3, absentCount:1, totalCount:4, absentNames:["עידן"]};
       if(k==="duty_requests") return [];
@@ -74,28 +82,34 @@ async function page(){
     };
     window.getVoLicenses = async () => [];
     window.getEvents = async () => []; window.getFaults = async () => []; window.getCerts = async () => [];
-    window.getMedChecks = async () => ({}); window.getTools = async () => []; window.getVehicles = async () => [];
+    window.getTools = async () => []; window.getVehicles = async () => [];
     window.getNaatim = async () => [];
 
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     document.getElementById('scr-vo-overview').classList.add('active');
     await renderVoOverview();
-    await renderTrends("vo-trends-content");
     await renderMorningRollcallReport("vo-mc-report-wrap","vo-mc-report-content");
 
     return {
       overviewHasContent: document.getElementById("vo-overview-content").innerHTML.length > 100,
-      trendsHasContent: document.getElementById("vo-trends-content").innerHTML.length > 100,
+      boardShowsFaultsAndMed: document.getElementById("vo-overview-content").innerHTML.includes("תקלות בינוי") &&
+                               document.getElementById("vo-overview-content").innerHTML.includes("כשירויות חיילים"),
+      boardHidesOldBanners: !document.getElementById("vo-overview-content").innerHTML.includes("הזמנות חומרים") &&
+                             !document.getElementById("vo-overview-content").innerHTML.includes("כלים מוטוריים"),
+      noTrendsSection: !document.getElementById("vo-trends-content"),
       mcReportShown: !document.getElementById("vo-mc-report-wrap").classList.contains("hidden") &&
                      document.getElementById("vo-mc-report-content").innerHTML.includes("נעדרים"),
-      hasAdminActions: !!document.querySelector('#scr-vo-overview [onclick="openBriefMgmt()"]') &&
-                        !!document.querySelector('#scr-vo-overview [onclick="openMsgMgmt()"]'),
+      hasTrainingLinkOnly: !!document.querySelector('#scr-vo-overview [onclick="openTrainingLinkAdd()"]') &&
+                            !document.querySelector('#scr-vo-overview [onclick="openBriefMgmt()"]') &&
+                            !document.querySelector('#scr-vo-overview [onclick="openMsgMgmt()"]'),
     };
   });
   record("מסך הסקירה מציג את דשבורד הרכבים/רישיונות הכלל-טייסתי", out.overviewHasContent, JSON.stringify(out));
-  record("מסך הסקירה מציג גם את מגמות הצוות הפנימי (שהיו ב'עמוד מפקד')", out.trendsHasContent, JSON.stringify(out));
+  record("'תמונת מצב' מציגה תקלות בינוי וכשירויות חיילים", out.boardShowsFaultsAndMed, JSON.stringify(out));
+  record("'תמונת מצב' כבר לא מציגה הזמנות חומרים/כלים מוטוריים", out.boardHidesOldBanners, JSON.stringify(out));
+  record("אין יותר סעיף 'מיקוד יומי'/'מדדים במבט אחד' (vo-trends-content הוסר)", out.noTrendsSection, JSON.stringify(out));
   record("מסך הסקירה מציג את דיווח מסדר הבוקר האחרון (שהיה ב'עמוד מפקד')", out.mcReportShown, JSON.stringify(out));
-  record("מסך הסקירה כולל את פעולות הניהול (תדריך בוקר / לוח הודעות)", out.hasAdminActions, JSON.stringify(out));
+  record("ניהול כולל רק 'קישור הדרכה' — תדריך בוקר/לוח הודעות הוסרו", out.hasTrainingLinkOnly, JSON.stringify(out));
   console.log("errs3",errs); await p.close();
 }
 
