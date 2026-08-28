@@ -18,6 +18,7 @@ node qa/run_daily.mjs
 node qa/scan_roles.mjs      # זהויות ומסכים
 node qa/scan_security.mjs   # אבטחה
 node qa/scan_quality.mjs    # שיפור וייעול
+node qa/scan_ux.mjs         # UX ומוצר
 ```
 
 ---
@@ -68,6 +69,16 @@ node qa/scan_quality.mjs    # שיפור וייעול
 - קוד מת, פונקציות ארוכות מדי, גודל הקובץ
 - נגישות, סימוני TODO
 
+### 5. UX ומוצר — `scan_ux.mjs`
+
+חיפוש **אקטיבי** של הזדמנויות שיפור בחוויית המשתמש — לא תקינות קוד ולא
+רעיונות שנכתבים ידנית (זה `qa/improvement_ideas.mjs`), אלא דפוסים
+שאפשר לזהות אוטומטית ומעידים על חוויית משתמש חסרה:
+
+- **מחיקה בלי אישור** — פונקציית `delete*`/`remove*` בלי `confirm()`
+- **שמירה/פרסום בלי משוב** — פונקציית `save*`/`publish*` בלי `toast()`
+- **כפתור אייקון-בלבד בלי `title`/`aria-label`** — לא ברור מה הוא עושה
+
 ---
 
 ## ⚠️ ניטור חי — מה המערכת הזו *לא* עושה
@@ -110,6 +121,7 @@ qa/
   scan_roles.mjs       סוכן זהויות ומסכים
   scan_security.mjs    סוכן אבטחה
   scan_quality.mjs     סוכן שיפור וייעול
+  scan_ux.mjs          סוכן UX ומוצר
   lib/harness.mjs      תשתית: דפדפן, אחסון מדומה, התחברות אמיתית
   lib/xss_probe.mjs    בדיקת XSS בזמן ריצה
   suite/               בדיקות הרגרסיה
