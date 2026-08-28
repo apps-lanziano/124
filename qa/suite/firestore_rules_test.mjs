@@ -132,6 +132,27 @@ await check("אוסף אחר: מפקד get DENY", () => assertFails(getDoc(doc(c
 await check("אוסף אחר: מפקד write DENY", () => assertFails(setDoc(doc(commander.firestore(), "other_collection", "y"), { v: 1 })));
 await check("אוסף אחר: אנונימי get DENY", () => assertFails(getDoc(doc(anon.firestore(), "other_collection", "x"))));
 
+console.log("=== 6. audit_log — יומן ביקורת מאובטח (functions/lib/audit_log.js): קריאה למפקד בלבד, כתיבה חסומה לגמרי מהלקוח ===");
+const AUDIT_DOC = "seed_entry_1";
+await testEnv.withSecurityRulesDisabled(async (ctx) => {
+  await ctx.firestore().doc(`audit_log/${AUDIT_DOC}`).set({ ts: Date.now(), docId: "shed1_cfg_personnel", action: "test", by: "בדיקה" });
+});
+await check("audit_log: אנונימי get DENY", () => assertFails(getDoc(doc(anon.firestore(), "audit_log", AUDIT_DOC))));
+await check("audit_log: אנונימי list DENY", () => assertFails(getDocs(collection(anon.firestore(), "audit_log"))));
+await check("audit_log: לא-authorized get DENY", () => assertFails(getDoc(doc(authedNoClaim.firestore(), "audit_log", AUDIT_DOC))));
+await check("audit_log: חייל (authorized, לא מפקד) get DENY", () => assertFails(getDoc(doc(soldier.firestore(), "audit_log", AUDIT_DOC))));
+await check("audit_log: חייל list DENY", () => assertFails(getDocs(collection(soldier.firestore(), "audit_log"))));
+await check("audit_log: role=מפקד בלי authorized (מזויף) get DENY", () => assertFails(getDoc(doc(tamperedRoleOnly.firestore(), "audit_log", AUDIT_DOC))));
+await check("audit_log: מפקד get ALLOW", () => assertSucceeds(getDoc(doc(commander.firestore(), "audit_log", AUDIT_DOC))));
+await check("audit_log: מפקד list ALLOW", () => assertSucceeds(getDocs(collection(commander.firestore(), "audit_log"))));
+// allow write:false — חוסם create/update/delete לחלוטין, גם למפקד. זו הערובה
+// ל"לא ניתן לזיוף/מחיקה מהלקוח" (ר' functions/index.js/auditSensitiveWrites —
+// רק Admin SDK, שעוקף rules לגמרי, כותב לאוסף הזה).
+await check("audit_log: מפקד create DENY (allow write:false)", () => assertFails(setDoc(doc(commander.firestore(), "audit_log", "forged_entry"), { ts: Date.now(), action: "forged", by: "תוקף" })));
+await check("audit_log: מפקד update DENY (allow write:false)", () => assertFails(setDoc(doc(commander.firestore(), "audit_log", AUDIT_DOC), { action: "tampered" }, { merge: true })));
+await check("audit_log: מפקד delete DENY (allow write:false)", () => assertFails(deleteDoc(doc(commander.firestore(), "audit_log", AUDIT_DOC))));
+await check("audit_log: חייל create DENY", () => assertFails(setDoc(doc(soldier.firestore(), "audit_log", "forged_entry_2"), { ts: Date.now() })));
+
 await testEnv.cleanup();
 
 console.log("---------------------------------------------");
