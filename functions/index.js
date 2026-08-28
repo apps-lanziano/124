@@ -27,6 +27,7 @@ const {dumpCollection} = require("./lib/backup");
 const {classify, decide, SHED_NAMES, BROADCAST_SHED, PER_PERSON_SHED} = require("./lib/notify");
 const {commanderChangeBody} = require("./lib/roster_changes");
 const {shouldAuthorize} = require("./lib/authorize");
+const {isSensitiveDocId, buildAuditEntries} = require("./lib/audit_log");
 const crypto = require("crypto");
 
 initializeApp();
@@ -309,6 +310,62 @@ exports.notifyOnPublish = onDocumentWritten(
     console.log(`push ${kind}→${sid}: ${resp.successCount}/${tokens.length} נשלחו, ${bad.length} טוקנים נוקו`);
   }
 });
+
+/* ===== auditSensitiveWrites — יומן ביקורת שרת-צד, לא ניתן לזיוף/מחיקה =====
+   טריגר נפרד מ-notifyOnPublish (אותו מסמך sq124/{docId}, שני triggers
+   עצמאיים — לגיטימי ב-Firestore). מסנן כמעט מיד (isSensitiveDocId) כל
+   כתיבה שלא נוגעת בכוח-אדם/הרשאות/יומן מנהל-העל, כדי לא להוסיף עומס
+   לכל כתיבה רגילה בלוח/משימות/וכו'. הלוגיקה הטהורה של הדיף עצמו יושבת
+   ב-lib/audit_log.js (נבדקת בלי emulator, ר' audit_log_lib_test.mjs).
+
+   כותב לאוסף `audit_log` הנפרד (לא sq124!) — לפי firestore.rules הלקוח
+   יכול רק לקרוא ממנו (ומנהל-על בלבד), לא לכתוב אליו בשום צורה. זו הערובה
+   ל"לא ניתן לזיוף/מחיקה מהלקוח" — בשונה מ-owner_log/admin_audit_log
+   הקיימים (מסמכי sq124 רגילים שהלקוח כותב אליהם ישירות).
+
+   שדה `_by` (שם+תפקיד המבצע) מוטמע ע"י הלקוח בגוף המסמך עצמו (sSetRaw,
+   רק למסמכים רגישים) — כמו כל שאר זהות המשתמש באפליקציה הזו (אין
+   התחברות אישית, ר' CLAUDE.md), זו זהות מדווחת-עצמית ולא מאומתת
+   server-side; מה שהופך ליומן בלתי-ניתן-למחיקה/עריכה הוא *מנגנון הכתיבה*
+   (רק Admin SDK), לא זהות הכותב. */
+exports.auditSensitiveWrites = onDocumentWritten(
+  {
+    document: "sq124/{docId}",
+    region: "me-west1",
+    maxInstances: 10,
+    memory: "256MiB",
+    timeoutSeconds: 30,
+  },
+  async (event) => {
+    const docId = event.params.docId;
+    if (!isSensitiveDocId(docId)) return;
+    const beforeDoc = event.data.before.exists ? event.data.before.data() : null;
+    const afterDoc = event.data.after.exists ? event.data.after.data() : null;
+    const before = beforeDoc ? beforeDoc.v : undefined;
+    const after = afterDoc ? afterDoc.v : undefined;
+    const by = afterDoc && afterDoc._by ? afterDoc._by : null;
+
+    const entries = buildAuditEntries(docId, before, after);
+    if (!entries.length) return;
+
+    const ts = Date.now();
+    const batch = db.batch();
+    for (const entry of entries) {
+      const ref = db.collection("audit_log").doc();
+      batch.set(ref, {
+        ts,
+        docId,
+        action: entry.action,
+        target: entry.target,
+        detail: entry.detail || "",
+        by: entry.by || (by && by.name) || null,
+        byRole: (by && by.role) || null,
+      });
+    }
+    await batch.commit();
+    console.log(`audit: ${docId} → ${entries.length} רשומות`);
+  },
+);
 
 /* ===== תזכורת אוטומטית — מילואים שלא רועננו זמן רב =====
    החלטת מוצר (2026-08-23): רענון מילואים הוא תחום האחריות של **אחראי

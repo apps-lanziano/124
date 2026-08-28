@@ -62,6 +62,15 @@ service cloud.firestore {
       allow list:           if false;           // בלי שאיבה המונית של כל המסד
     }
 
+    // יומן ביקורת שרת-צד (functions/lib/audit_log.js) — נכתב אך ורק ע"י
+    // Cloud Function עם Admin SDK (עוקף rules לגמרי), ולכן allow write:false
+    // כאן אינו חוסם את הכתיבה עצמה — הוא רק מבטיח שאף לקוח (כולל מפקד)
+    // לא יכול לכתוב/לערוך/למחוק רשומה ישירות. קריאה — מנהל-על בלבד.
+    match /audit_log/{entryId} {
+      allow get, list: if isPrivileged();
+      allow write:     if false;
+    }
+
     // כל שאר האוספים — סגורים.
     match /{document=**} {
       allow read, write: if false;

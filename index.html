@@ -2414,6 +2414,16 @@ nav{
         </p>
         <button class="m-btn ghost" style="width:100%" onclick="closeAuthCode()"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#b30f26" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M6 6l12 12"/></svg> סגור קוד כניסה</button>
       </details>
+      <details style="margin-bottom:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px" ontoggle="if(this.open) loadSecureAuditLog()">
+        <summary style="cursor:pointer;font-weight:800;font-size:13px">🔒 יומן ביקורת מאובטח (מי עשה מה, מתי)</summary>
+        <p style="font-size:12px;color:var(--ink-3);line-height:1.6;margin:8px 0">
+          נכתב אך ורק ע"י Cloud Function בצד השרת — לא ניתן לזייף או למחוק
+          רשומה מכאן, אפילו לא כמנהל-על. מכסה הוספה/הסרה/עדכון איש צוות
+          (כולל תפקיד ו-PIN), הקצאה/ביטול קוד כניסה, ופעולות מסך "ניהול
+          משתמשים" (כניסה בתור, איפוס PIN וכו').
+        </p>
+        <div id="secure-audit-log">טוען…</div>
+      </details>
       <input class="m-input" id="users-search" type="text" placeholder="🔎 חיפוש משתמש לפי שם, מסגרת או תפקיד…" style="margin-bottom:12px" oninput="renderUsersAdmin()">
       <div id="users-list"></div>
     </section>
@@ -4359,6 +4369,9 @@ async function personnelBlankOutGuard(key, next){
   if(curPins < 3 && curCmd < 2) return null;                 // אין הרבה מה לאבד — לא חוסמים
   return `נחסמה כתיבה שהייתה מוחקת ${curPins} PIN ו-${curCmd} מפקדים (${key}; חדש=${next.length})`;
 }
+/* מסמכים שבהם השרת (functions/lib/audit_log.js) מנהל יומן ביקורת —
+   ר' ההערה בתוך sSetRaw. חייב להישאר תואם לדפוסים ב-isSensitiveDocId שם. */
+const SENSITIVE_AUDIT_KEY = /(_cfg_personnel$|^authprofile_)/;
 async function sSetRaw(key, val, shared=true){
   if(/cfg_personnel$/.test(key)){
     try{
@@ -4370,7 +4383,14 @@ async function sSetRaw(key, val, shared=true){
   if(fbReady){
     try{
       const {doc,setDoc} = fbDB._fs;
-      await withTimeout(setDoc(doc(fbDB, COLLECTION, fsKey(key)), {v:val, updated:Date.now()}));
+      const payload = {v:val, updated:Date.now()};
+      /* מסמכי כוח-אדם/הרשאות בלבד: מוסיפים "מי כתב" כשדה-אחות ל-v (לא בתוך
+         הנתון עצמו — האפליקציה תמיד קוראת רק snap.data().v). הטריגר השרתי
+         auditSensitiveWrites (functions/index.js) קורא את זה כדי לתעד "מי"
+         לצד ה"מה"/"מתי" שהוא מחשב בעצמו מההפרש. זהות מדווחת-עצמית בלבד —
+         אין באפליקציה חשבון אישי לאימות server-side, ר' CLAUDE.md. */
+      if(SENSITIVE_AUDIT_KEY.test(key)) payload._by = {name:user||null, role:userRole||null};
+      await withTimeout(setDoc(doc(fbDB, COLLECTION, fsKey(key)), payload));
       markStale(false);
       return true;
     }catch(e){ console.error("fbSet",key,e); markStale(true); }
@@ -6882,43 +6902,6 @@ async function renderBoard(){
   await renderRosterView();
   await renderBoardBasicDuties();
 }
-/* ארכיון צילומי הלוח — נשאר כמסלול גיבוי ותיעוד מתחת ללוח המובנה */
-async function renderBoardArchive(){
-  const boards = await getBoards();
-  const area = document.getElementById("board-archive");
-  if(!area) return;
-  // מפקד המסגרת, או מי ששובץ נע"ת "לוח צוות שבועי" (isBoardPublisher) —
-  // כדי שאחראי תורנויות יוכל לנהל את הלוח בלי להיות מפקד המסגרת
-  const canManage = userRole === "מפקד" || isBoardPublisher;
-  let html = `<div class="board-arch-head"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12.5V7a4 4 0 0 1 8 0v9a2.5 2.5 0 0 1-5 0V8.5"/></svg> צילומי לוח (ארכיון)</div>`;
-  if(canManage){
-    html += `<div class="board-add-btn" onclick="triggerBoardUpload()">
-      <div class="up-ic"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg></div>
-      <h3>העלאת לוח צוות חדש</h3>
-      <p>לחץ להעלאת צילום מסך של לוח שבועי</p>
-    </div>`;
-  }
-  if(boards.length === 0){
-    html += `<div class="empty-state">
-      <div class="ic" style="color:#2563eb"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg></div>
-      <h3>אין צילומי לוח עדיין</h3>
-      <p>${canManage ? "העלה לוח ראשון באמצעות הכפתור למעלה" : "מ\"ע תורנויות טרם העלה לוח"}</p>
-    </div>`;
-  } else {
-    boards.forEach((b,i)=>{
-      html += `<div class="card board-arch-item">
-        <img class="board-arch-thumb" src="${b.thumb||b.img}" alt="" onclick="openBoardViewer('${b.id}')">
-        <div class="board-arch-body" onclick="openBoardViewer('${b.id}')">
-          ${i===0?'<span class="board-arch-latest">🟢 עדכני</span><br>':''}
-          <h3>${escapeHTML(b.label)}</h3>
-          <div class="meta">הועלה ע"י ${escapeHTML(b.by)} · ${b.date}</div>
-        </div>
-        ${canManage?`<button class="board-del" onclick="event.stopPropagation();deleteBoard('${b.id}')"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#b30f26" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7M6 7l1 13a2 2 0 0 0 2 1.8h6a2 2 0 0 0 2-1.8l1-13"/><path d="M10 11v6M14 11v6"/></svg></button>`:''}
-      </div>`;
-    });
-  }
-  area.innerHTML = html;
-}
 /* ===== תורנויות בסיסיות — מאוחד לתוך מסך "תורנויות" (scr-board) =====
    ⚠️ שונה בכוונה (2026-08-25): הגרסה הקודמת קראה/כתבה ל-duty_table
    (sGet — scoped לסככה המחוברת) והציגה שורה לכל חייל *בסככה הזו בלבד*,
@@ -8366,7 +8349,6 @@ function rosterMyRoles(d, name){
   });
   return roles;
 }
-function hebDayOffset(n){ return WEEK_DAYS_HE[(new Date().getDay()+n+7)%7]; }
 
 /* ===== מסך "היום שלי" (חיילים) =====
    עונה על השאלה הראשונה בבוקר: אני תורן? מה אני חייב? מה קורה היום.
@@ -12888,9 +12870,40 @@ async function exitImpersonation(){
 async function ownerLog(text){
   try{
     const log = (await sGetRaw("owner_log")) || [];
-    log.unshift({text, date:new Date().toLocaleString("he-IL")});
+    log.unshift({text, date:new Date().toLocaleString("he-IL"), by:user||userRole||"לא ידוע"});
     await sSetRaw("owner_log", log.slice(0,300));
   }catch(e){ console.error("ownerLog", e); }
+}
+
+/* יומן ביקורת מאובטח — קורא מהאוסף הנפרד `audit_log` (לא sq124!), שאליו
+   רק Cloud Function עם Admin SDK כותבת (ר' functions/index.js/auditSensitiveWrites
+   + firestore.rules). ללקוח יש רק הרשאת קריאה, ורק למנהל-על. */
+async function loadSecureAuditLog(){
+  const box = document.getElementById("secure-audit-log");
+  if(!box) return;
+  if(!fbReady || !fbDB || !fbDB._fs){ box.textContent = "לא זמין — Firebase לא מחובר"; return; }
+  box.textContent = "טוען…";
+  try{
+    const {collection, query, orderBy, limit, getDocs} = fbDB._fs;
+    const q = query(collection(fbDB, "audit_log"), orderBy("ts", "desc"), limit(150));
+    const snap = await getDocs(q);
+    if(snap.empty){ box.innerHTML = '<p style="font-size:12.5px;color:var(--ink-3)">אין רשומות עדיין.</p>'; return; }
+    const rows = [];
+    snap.forEach(d=>rows.push(d.data()));
+    box.innerHTML = rows.map(r=>{
+      const when = r.ts ? new Date(r.ts).toLocaleString("he-IL") : "—";
+      const who = escapeHTML(r.by || "לא ידוע") + (r.byRole ? " · "+escapeHTML(r.byRole) : "");
+      const target = r.target ? " — "+escapeHTML(r.target) : "";
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px">
+        <div style="font-weight:700">${escapeHTML(r.action||"פעולה")}${target}</div>
+        <div style="color:var(--ink-3)">${escapeHTML(r.detail||"")}</div>
+        <div style="color:var(--ink-3);margin-top:2px">${who} · ${when}</div>
+      </div>`;
+    }).join("");
+  }catch(e){
+    console.error("loadSecureAuditLog", e);
+    box.innerHTML = '<p style="font-size:12.5px;color:var(--red)">שגיאה בטעינת היומן.</p>';
+  }
 }
 
 /* הקמת חשבון אימות — ידנית לקוד בודד. מאז שהקודים הוסרו מהמקור, אין יותר טבלה
