@@ -1,7 +1,10 @@
 /* "מדדים במבט אחד" — הפיצ'ר של התאמה אישית (⚙️ ניהול באנרים,
    dash_banners_pref) הוסר לגמרי לבקשת המשתמש: כל מפקד רואה תמיד את כל
    הבאנרים הישימים למסגרת שלו, בסדר קבוע אחיד — בקשות ממתינות, מטלות
-   בוקר, תקלות, כשירות חיילים, כלים בחדר, רכבים. */
+   בוקר, תקלות, כשירות חיילים, כלים בחדר, רכבים.
+   2026-08-29 (בקשת המשתמש): האייקון (cd-kic) על כל אריח והבאדג'
+   "לחיצה = מסך מלא" ליד הכותרת הוסרו — האריח עצמו (led/מספר/תווית)
+   וההתנהגות בלחיצה לא נגעו. */
 import { newPage, closeBrowser, loginAsFramework } from '../lib/harness.mjs';
 
 const results = [];
@@ -21,6 +24,7 @@ const out = await page.evaluate(async ()=>{
     labels,
     hasBannersBtn: html.includes("openDashBannersModal") || />\s*באנרים\s*</.test(html),
     hasFullScreenHint: html.includes("לחיצה = מסך מלא"),
+    hasKpiIcon: html.includes("cd-kic"),
     modalGone: !document.getElementById("dash-banners-modal"),
     fnsGone: typeof window.openDashBannersModal === "undefined" && typeof window.toggleDashBannerPref === "undefined",
   };
@@ -28,7 +32,8 @@ const out = await page.evaluate(async ()=>{
 record("שישה הבאנרים מוצגים תמיד, בסדר הקבוע המבוקש", JSON.stringify(out.labels)===JSON.stringify(["בקשות ממתינות","מטלות בוקר","תקלות","כשירות חיילים","כלים בחדר","רכבים"]), JSON.stringify(out));
 record("פילטר שמור מהפיצ'ר הישן (dash_banners_pref) לא משפיע יותר", out.labels.length===6, JSON.stringify(out));
 record("כפתור \"⚙️ ניהול באנרים\" הוסר", !out.hasBannersBtn, JSON.stringify(out));
-record("הבאדג' \"לחיצה = מסך מלא\" מוצג במקומו לכולם", out.hasFullScreenHint, JSON.stringify(out));
+record("הבאדג' \"לחיצה = מסך מלא\" הוסר מהכותרת", !out.hasFullScreenHint, JSON.stringify(out));
+record("האייקון על כל אריח הוסר", !out.hasKpiIcon, JSON.stringify(out));
 record("מודל ניהול הבאנרים הוסר מה-DOM", out.modalGone, JSON.stringify(out));
 record("פונקציות ניהול הבאנרים הוסרו מהקוד", out.fnsGone, JSON.stringify(out));
 record("אין שגיאות JS", pageErrors.length===0, JSON.stringify(pageErrors));

@@ -2,9 +2,13 @@
 
 **יום שבת, 29 באוגוסט 2026**
 
-## ✅ הכל תקין
+## ⚠️ נמצאו 2 תקלות
 
-בדקתי את האפליקציה מקצה לקצה ולא מצאתי שום תקלה. אין צורך לעשות כלום.
+**1. בדיקה נכשלה: firestore_rules_test.mjs**
+❌ firebase-tools לא מותקן (node_modules/.bin/firebase חסר). הרץ: npm install
+
+**2. בדיקה נכשלה: red_team_firestore_rules_test.mjs**
+❌ firebase-tools not installed. Run: npm install
 
 ### מה נבדק היום
 
@@ -23,10 +27,13 @@ _אין מה לדווח._
 
 ## בדיקה שתקלות ישנות לא חזרו
 
-> ✅ הכל תקין
+> 2 נקודות לתשומת לב
 
-**🔵 מידע · כל בדיקות הרגרסיה עברו**
-144 קבצי בדיקה, כולם ירוקים — כל מנגנוני הכתיבה הקריטיים תקינים.
+**🔴 חמור · בדיקה נכשלה: firestore_rules_test.mjs**
+❌ firebase-tools לא מותקן (node_modules/.bin/firebase חסר). הרץ: npm install
+
+**🔴 חמור · בדיקה נכשלה: red_team_firestore_rules_test.mjs**
+❌ firebase-tools not installed. Run: npm install
 
 ---
 
@@ -53,7 +60,7 @@ _אין מה לדווח._
 > 3 נקודות לתשומת לב
 
 **🟠 בינוני · גודל האפליקציה**
-1249 KB, 17,926 שורות בקובץ יחיד. מעל 900KB — כל טעינה ראשונה מורידה את הכל. שווה לשקול פיצול ה-CSS/JS לקבצים נפרדים שנשמרים במטמון בנפרד.
+1248 KB, 17,923 שורות בקובץ יחיד. מעל 900KB — כל טעינה ראשונה מורידה את הכל. שווה לשקול פיצול ה-CSS/JS לקבצים נפרדים שנשמרים במטמון בנפרד.
 
 **🟡 קל · פונקציות שלא נקראות מאף מקום**
 3 פונקציות: triggerBoardUpload, openBoardViewer, deleteBoard. מועמדות למחיקה — פחות קוד, פחות מקום לטעות.
@@ -77,7 +84,7 @@ _אין מה לדווח._
 > 3 נקודות לתשומת לב
 
 **🟠 בינוני · פעולת מחיקה בלי בקשת אישור מהמשתמש**
-8 פונקציות ששמן מרמז על מחיקה, בלי confirm() בגוף שלהן: removeDeviceUser (שורה 4592), removeBdpBoardGroup (שורה 6977), removeBasicDutyPlanEntry (שורה 9846), removePersonCerts (שורה 12124), removeDeptReassignedPeople (שורה 13266), removeAdminCert (שורה 13936), removeCertBank (שורה 14008), removeCertById (שורה 15836). לחיצה אחת מוחקת נתונים בלי אפשרות להתחרט — כדאי לבדוק אם יש אישור בשכבה אחרת (למשל מודל ייעודי), ואם לא — להוסיף confirm() כמו בשאר פעולות המחיקה באפליקציה.
+8 פונקציות ששמן מרמז על מחיקה, בלי confirm() בגוף שלהן: removeDeviceUser (שורה 4592), removeBdpBoardGroup (שורה 6977), removeBasicDutyPlanEntry (שורה 9846), removePersonCerts (שורה 12124), removeDeptReassignedPeople (שורה 13266), removeAdminCert (שורה 13936), removeCertBank (שורה 14008), removeCertById (שורה 15833). לחיצה אחת מוחקת נתונים בלי אפשרות להתחרט — כדאי לבדוק אם יש אישור בשכבה אחרת (למשל מודל ייעודי), ואם לא — להוסיף confirm() כמו בשאר פעולות המחיקה באפליקציה.
 
 **🟡 קל · פעולת שמירה/פרסום בלי הודעת משוב (toast) למשתמש**
 11 פונקציות: saveDeviceUsers (שורה 4579), saveManualEvents (שורה 6301), saveRosterCustomRows (שורה 7083), saveRosterArchive (שורה 7933), saveDutyRequests (שורה 8474), saveBasicDutyPlan (שורה 9746), savePushToken (שורה 11137), publishEventToAllSheds (שורה 13615), publishBoardToAllSheds (שורה 13720), publishTrainingToAllSheds (שורה 14067)…. ייתכן שהמשוב ניתן בדרך אחרת (רענון מסך, סגירת מודל) — כדאי לוודא שהמשתמש בכל זאת יודע אם השמירה הצליחה או נכשלה.
@@ -89,8 +96,10 @@ _אין מה לדווח._
 
 ## מה מומלץ לעשות
 
-1. **גודל האפליקציה** — 1249 KB, 17,926 שורות בקובץ יחיד.
-2. **פעולת מחיקה בלי בקשת אישור מהמשתמש** — 8 פונקציות ששמן מרמז על מחיקה, בלי confirm() בגוף שלהן: removeDeviceUser (שורה 4592), removeBdpBoardGroup (שורה 6977), removeBasicDutyPlanEntry (שורה 9846), removePersonCerts (שורה 12124), removeDeptReassignedPeople (שורה 13266), removeAdminCert (שורה 13936), removeCertBank (שורה 14008), removeCertById (שורה 15836).
+1. **בדיקה נכשלה: firestore_rules_test.mjs** — ❌ firebase-tools לא מותקן (node_modules/.
+2. **בדיקה נכשלה: red_team_firestore_rules_test.mjs** — ❌ firebase-tools not installed.
+3. **גודל האפליקציה** — 1248 KB, 17,923 שורות בקובץ יחיד.
+4. **פעולת מחיקה בלי בקשת אישור מהמשתמש** — 8 פונקציות ששמן מרמז על מחיקה, בלי confirm() בגוף שלהן: removeDeviceUser (שורה 4592), removeBdpBoardGroup (שורה 6977), removeBasicDutyPlanEntry (שורה 9846), removePersonCerts (שורה 12124), removeDeptReassignedPeople (שורה 13266), removeAdminCert (שורה 13936), removeCertBank (שורה 14008), removeCertById (שורה 15833).
 
 _יש עוד 4 הערות קטנות שלא דחופות._
 

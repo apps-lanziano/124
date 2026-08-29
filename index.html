@@ -14724,19 +14724,16 @@ function toggleDashSec(id){
    סדר קבוע (2026-08-27, לפי בקשת המשתמש) — בקשות ממתינות, מטלות בוקר,
    תקלות, כשירות חיילים, כלים בחדר, רכבים — **תמיד** כל הבאנרים הישימים,
    בלי אפשרות התאמה אישית (הוסרה, ר' "מה לא לשנות"). */
-function _uicon(color, shape){
-  return `<svg class="uic" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${shape}</svg>`;
-}
 function dashBannerCatalog(){
   const isDeptUnit = !!(currentShed && currentShed.isDept);
   const isTrimmed = !!(currentShed && (currentShed.isMaint || currentShed.isTraining));
   const list = [];
-  if(!isTrimmed) list.push({key:"requests", ic:_uicon("#b45309",'<path d="M14.5 3.5 20.5 9.5 17 13l-1 5-2-2-5 5-1-1 5-5-2-2 5-1 3.5-3.5Z"/>'), l:"בקשות ממתינות"});
-  if(!isDeptUnit && !isTrimmed) list.push({key:"morning", ic:_uicon("#b45309",'<rect x="2.5" y="9" width="19" height="11" rx="2"/><path d="M8 9V6.5A2.5 2.5 0 0 1 10.5 4h3A2.5 2.5 0 0 1 16 6.5V9M2.5 14h19"/>'), l:"מטלות בוקר"});
-  list.push({key:"faults", ic:_uicon("#c2410c",'<path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/>'), l:"תקלות"});
-  if(medPeople().length) list.push({key:"med", ic:_uicon("#0d9488",'<path d="M4 15a8 8 0 0 1 16 0v2H4v-2Z"/><path d="M2 17h20M9 15v-3M15 15v-3"/>'), l:"כשירות חיילים"});
-  if(!isDeptUnit && !isTrimmed) list.push({key:"tools", ic:_uicon("#c2410c",'<path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/>'), l:"כלים בחדר"});
-  if(!isDeptUnit && !isTrimmed) list.push({key:"vehicles", ic:_uicon("#0e7490",'<path d="M4 16V12l2-4.5h12L20 12v4"/><path d="M4 16h16M6 16v2M18 16v2"/><circle cx="7.5" cy="16" r="1.6"/><circle cx="16.5" cy="16" r="1.6"/>'), l:"רכבים"});
+  if(!isTrimmed) list.push({key:"requests", l:"בקשות ממתינות"});
+  if(!isDeptUnit && !isTrimmed) list.push({key:"morning", l:"מטלות בוקר"});
+  list.push({key:"faults", l:"תקלות"});
+  if(medPeople().length) list.push({key:"med", l:"כשירות חיילים"});
+  if(!isDeptUnit && !isTrimmed) list.push({key:"tools", l:"כלים בחדר"});
+  if(!isDeptUnit && !isTrimmed) list.push({key:"vehicles", l:"רכבים"});
   return list;
 }
 async function renderTrends(boxId){
@@ -14784,7 +14781,7 @@ async function renderTrends(boxId){
   // ר' "מה לא לשנות") — לכל המפקדים באותו סדר קבוע.
   const bannerCatalog = dashBannerCatalog();
   const kpis = bannerCatalog.map(c=>({...c, ...kpiLive[c.key]}));
-  const kpiHtml = kpis.map(k=>`<button class="cd-kpi" onclick="${k.go}"><span class="cd-led ${k.led}"></span><div class="cd-kic">${k.ic}</div><div class="cd-kn">${k.n}</div><div class="cd-kl">${escapeHTML(k.l)}</div></button>`).join("");
+  const kpiHtml = kpis.map(k=>`<button class="cd-kpi" onclick="${k.go}"><span class="cd-led ${k.led}"></span><div class="cd-kn">${k.n}</div><div class="cd-kl">${escapeHTML(k.l)}</div></button>`).join("");
 
   // --- מיקוד יומי — רשימה מאוחדת של כל מה שדורש טיפול היום (המספר = מספר הפריטים) ---
   const focus = [];
@@ -14830,7 +14827,7 @@ async function renderTrends(boxId){
       </div>
 
       <div class="cd-sec">
-        <div class="cd-shead"><h3>מדדים במבט אחד</h3><span class="cd-badge">לחיצה = מסך מלא</span></div>
+        <div class="cd-shead"><h3>מדדים במבט אחד</h3></div>
         <div class="cd-kgrid">${kpiHtml}</div>
       </div>
     </div>
