@@ -1,10 +1,11 @@
-/* דשבורד מפקד — עדכוני 2026-08-27 + 2026-08-29:
-   1. הבאנר הרחב "בקשות לאישור" וכפתור "הזן אילוץ בשם חייל" הוסרו
+/* דשבורד מפקד — עדכוני 2026-08-27:
+   1-2. באנרי "נע\"תים" ו"הסמכות" הוסרו לגמרי מ"מדדים במבט אחד".
+   3. באנר "בקשות ממתינות" תופס את מקום "הסמכות" (סופר duty_requests
+      ממתינות, בדיוק כמו renderCommanderConstraints).
+   4-5. הבאנר הרחב "בקשות לאישור" וכפתור "הזן אילוץ בשם חייל" הוסרו
       מהדשבורד (cmd-constraints-wrap) — עדיין קיימים במסך התורנויות
       (board-constraints-wrap, לא נגע).
-   2. באנר "יצירת פעולה" חדש פותח גיליון עם כל פעולות היצירה.
-   3. "מדדים במבט אחד" (רשת ה-KPI, כולל "בקשות ממתינות") הוסרה לגמרי
-      מהדשבורד לבקשת המשתמש — ר' dash_fixed_kpi_layout_test.mjs. */
+   6. באנר "יצירת פעולה" חדש פותח גיליון עם כל פעולות היצירה. */
 import { newPage, closeBrowser, loginAsFramework } from '../lib/harness.mjs';
 
 const results = [];
@@ -17,8 +18,18 @@ const out = await page.evaluate(async ()=>{
   go("scr-cmd", document.getElementById("nav-cmd"));
   await renderTrends();
   await new Promise(r=>setTimeout(r,80));
+  const catalog = dashBannerCatalog();
+  const gridHtml = document.getElementById("trends-content").innerHTML;
   const cmdHtml = document.getElementById("scr-cmd").innerHTML;
   const r = {};
+  r.catalogNoNaatim = !catalog.some(c=>c.key==="naatim");
+  r.catalogNoCerts = !catalog.some(c=>c.key==="certs");
+  r.catalogHasRequests = catalog.some(c=>c.key==="requests" && c.l==="בקשות ממתינות");
+  r.gridNoNaatimLabel = !gridHtml.includes('>נע"תים<');
+  r.gridNoCertsLabel = !gridHtml.includes(">הסמכות<");
+  r.gridHasRequestsLabel = gridHtml.includes(">בקשות ממתינות<");
+  const m = gridHtml.match(/onclick="openRequestsInbox\(\)"[\s\S]*?<div class="cd-kn">([^<]+)<\/div>/);
+  r.requestsCount = m ? m[1] : null;
   r.noConstraintsWrap = !document.getElementById("cmd-constraints-wrap");
   r.noWideApprovalBanner = !cmdHtml.includes("openRequestsInbox()") || !/בקשות לאישור/.test(cmdHtml);
   r.noManualConstraintBtn = !cmdHtml.includes("+ הזן אילוץ בשם חייל");
@@ -34,6 +45,12 @@ const out = await page.evaluate(async ()=>{
 
   return {...r, sheetOpen, toolVisible, vehicleVisible, faultVisible, binuiVisible};
 });
+record("קטלוג הבאנרים: נע\"תים הוסר לגמרי", out.catalogNoNaatim, JSON.stringify(out));
+record("קטלוג הבאנרים: הסמכות הוסר", out.catalogNoCerts, JSON.stringify(out));
+record("קטלוג הבאנרים: בקשות ממתינות נוסף במקום הסמכות", out.catalogHasRequests, JSON.stringify(out));
+record("רשת ה-KPI לא מציגה נע\"תים", out.gridNoNaatimLabel, JSON.stringify(out));
+record("רשת ה-KPI לא מציגה הסמכות", out.gridNoCertsLabel, JSON.stringify(out));
+record("רשת ה-KPI מציגה בקשות ממתינות עם הספירה הנכונה (1)", out.gridHasRequestsLabel && out.requestsCount==="1", JSON.stringify(out));
 record("cmd-constraints-wrap הוסר מהדשבורד לגמרי", out.noConstraintsWrap, JSON.stringify(out));
 record("הבאנר הרחב \"בקשות לאישור\" הוסר מהדשבורד", out.noWideApprovalBanner, JSON.stringify(out));
 record("כפתור \"הזן אילוץ בשם חייל\" הוסר מהדשבורד", out.noManualConstraintBtn, JSON.stringify(out));

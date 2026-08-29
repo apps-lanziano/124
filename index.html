@@ -14719,21 +14719,69 @@ function toggleDashSec(id){
   const el = document.getElementById(id);
   if(el) el.classList.toggle("open");
 }
+/* קטלוג הבאנרים ה"ישימים" לסוג המסגרת הנוכחית (מ״ע אחזקה/הדרכה — מסגרות
+   מצומצמות בלי מטלות/הסמכות/כלים/רכבים/נע"תים; מחלקות — בלי מעקב מבצעי).
+   סדר קבוע (2026-08-27, לפי בקשת המשתמש) — בקשות ממתינות, מטלות בוקר,
+   תקלות, כשירות חיילים, כלים בחדר, רכבים — **תמיד** כל הבאנרים הישימים,
+   בלי אפשרות התאמה אישית (הוסרה, ר' "מה לא לשנות"). */
+function dashBannerCatalog(){
+  const isDeptUnit = !!(currentShed && currentShed.isDept);
+  const isTrimmed = !!(currentShed && (currentShed.isMaint || currentShed.isTraining));
+  const list = [];
+  if(!isTrimmed) list.push({key:"requests", l:"בקשות ממתינות"});
+  if(!isDeptUnit && !isTrimmed) list.push({key:"morning", l:"מטלות בוקר"});
+  list.push({key:"faults", l:"תקלות"});
+  if(medPeople().length) list.push({key:"med", l:"כשירות חיילים"});
+  if(!isDeptUnit && !isTrimmed) list.push({key:"tools", l:"כלים בחדר"});
+  if(!isDeptUnit && !isTrimmed) list.push({key:"vehicles", l:"רכבים"});
+  return list;
+}
 async function renderTrends(boxId){
   const box = document.getElementById(boxId || "trends-content");
   const isDeptUnit = !!(currentShed && currentShed.isDept);
   const {
     sigPct, maxSigs, totalSigs, mDone,
+    certs, certExpired, certSoon,
+    tools, toolExpired, toolSoon,
+    vehicles, vehExpired, vehSoon,
+    pendingRequests,
+    medExpired, medSoon,
+    faultsOpenTotal,
     priorityFeed,
   } = await computeTrendsData(isDeptUnit);
 
   const hh = new Date().getHours();
+  const dateStr = new Date().toLocaleDateString("he-IL",{weekday:"long", day:"numeric", month:"long"});
 
   // ===== קונסולת מפקד v2 =====
   const isTrimmed = !!(currentShed && (currentShed.isMaint || currentShed.isTraining));
   const showMorning = !isDeptUnit && !isTrimmed;
+  const showTools   = !isDeptUnit && !isTrimmed;
+  const showVeh     = !isDeptUnit && !isTrimmed;
+  const showNaatim  = !isDeptUnit && !isTrimmed;
+  const showFaults  = !isDeptUnit && !isTrimmed;
+  const showCerts   = !isTrimmed;   // סככות + מחלקות (לא במסגרות המצומצמות)
 
+  const nowT = new Date().toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"});
   const dShort = new Date().toLocaleDateString("he-IL",{weekday:"short",day:"numeric",month:"numeric"});
+
+  // --- מדדים — קטלוג הבאנרים הישימים לסוג המסגרת, מסונן לפי בחירת המפקד
+  // (dash_banners_pref). אין העדפה שמורה = כל הבאנרים הישימים מוצגים,
+  // בדיוק כמו ההתנהגות המקורית לפני הפיצ'ר — כדי לא לשנות התנהגות
+  // לאף מפקד שלא נגע בהגדרה. ---
+  const kpiLive = {
+    faults:   {led:(faultsOpenTotal?"y":"g"), n:faultsOpenTotal, go:"go('scr-faults',document.getElementById('nav-faults'))"},
+    morning:  {led:(mDone>=MORNING_TASKS.length?"g":(hh>=11?"r":"y")), n:mDone+"/"+MORNING_TASKS.length, go:"go('scr-morning',document.getElementById('nav-morning'))"},
+    requests: {led:(pendingRequests?"y":"g"), n:pendingRequests, go:"openRequestsInbox()"},
+    vehicles: {led:(vehExpired?"r":vehSoon?"y":"g"), n:vehicles.length, go:"go('scr-vehicles',document.getElementById('nav-vehicles'))"},
+    tools:    {led:(toolExpired?"r":toolSoon?"y":"g"), n:tools.length, go:"go('scr-tools',document.getElementById('nav-tools'))"},
+    med:      {led:(medExpired?"r":medSoon?"y":"g"), n:medPeople().length, go:"closeMoreAnd('scr-medchecks')"},
+  };
+  // כל הבאנרים הישימים מוצגים תמיד, בלי אפשרות התאמה אישית (הוסרה,
+  // ר' "מה לא לשנות") — לכל המפקדים באותו סדר קבוע.
+  const bannerCatalog = dashBannerCatalog();
+  const kpis = bannerCatalog.map(c=>({...c, ...kpiLive[c.key]}));
+  const kpiHtml = kpis.map(k=>`<button class="cd-kpi" onclick="${k.go}"><span class="cd-led ${k.led}"></span><div class="cd-kn">${k.n}</div><div class="cd-kl">${escapeHTML(k.l)}</div></button>`).join("");
 
   // --- מיקוד יומי — רשימה מאוחדת של כל מה שדורש טיפול היום (המספר = מספר הפריטים) ---
   const focus = [];
@@ -14776,6 +14824,11 @@ async function renderTrends(boxId){
           ? `<div class="cd-focus-sum has clickable" onclick="toggleDashSec('cd-focus-sec')"><span>${escapeHTML(focusSum)}</span><span class="cd-focus-chev">▾</span></div>
              <div class="cd-focus-body">${focusHtml}</div>`
           : `<div class="cd-focus-sum">${escapeHTML(focusSum)}</div>${focusHtml}`}
+      </div>
+
+      <div class="cd-sec">
+        <div class="cd-shead"><h3>מדדים במבט אחד</h3></div>
+        <div class="cd-kgrid">${kpiHtml}</div>
       </div>
     </div>
   `;

@@ -1,7 +1,10 @@
-/* "מדדים במבט אחד" (רשת ה-KPI בדשבורד המפקד) הוסרה לגמרי לבקשת המשתמש
-   (2026-08-29) — יחד עם "יצירת פעולה"/"מיקוד יומי" נשאר, אבל שש
-   האריחים (בקשות ממתינות/מטלות בוקר/תקלות/כשירות חיילים/כלים בחדר/
-   רכבים) וכפתור "לחיצה = מסך מלא" לא מוצגים יותר בשום צורה. */
+/* "מדדים במבט אחד" — הפיצ'ר של התאמה אישית (⚙️ ניהול באנרים,
+   dash_banners_pref) הוסר לגמרי לבקשת המשתמש: כל מפקד רואה תמיד את כל
+   הבאנרים הישימים למסגרת שלו, בסדר קבוע אחיד — בקשות ממתינות, מטלות
+   בוקר, תקלות, כשירות חיילים, כלים בחדר, רכבים.
+   2026-08-29 (בקשת המשתמש): האייקון (cd-kic) על כל אריח והבאדג'
+   "לחיצה = מסך מלא" ליד הכותרת הוסרו — האריח עצמו (led/מספר/תווית)
+   וההתנהגות בלחיצה לא נגעו. */
 import { newPage, closeBrowser, loginAsFramework } from '../lib/harness.mjs';
 
 const results = [];
@@ -10,23 +13,29 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
 const { page, pageErrors } = await newPage();
 await loginAsFramework(page, "shed1", "מפקד");
 const out = await page.evaluate(async ()=>{
+  // מדמה מפקד שהיה לו פילטר שמור מהפיצ'ר הישן — לא אמור להשפיע יותר
+  await sSet("dash_banners_pref", ["faults"]);
   go("scr-cmd", document.getElementById("nav-cmd"));
   await renderTrends();
   await new Promise(r=>setTimeout(r,80));
   const html = document.getElementById("trends-content").innerHTML;
+  const labels = [...html.matchAll(/<div class="cd-kl">([^<]+)<\/div>/g)].map(m=>m[1]);
   return {
-    hasKpiGrid: html.includes("cd-kgrid"),
-    hasHeading: html.includes("מדדים במבט אחד"),
+    labels,
+    hasBannersBtn: html.includes("openDashBannersModal") || />\s*באנרים\s*</.test(html),
     hasFullScreenHint: html.includes("לחיצה = מסך מלא"),
-    hasFocusSection: html.includes("מיקוד יומי"),
-    catalogFnGone: typeof window.dashBannerCatalog === "undefined",
+    hasKpiIcon: html.includes("cd-kic"),
+    modalGone: !document.getElementById("dash-banners-modal"),
+    fnsGone: typeof window.openDashBannersModal === "undefined" && typeof window.toggleDashBannerPref === "undefined",
   };
 });
-record("רשת ה-KPI (\"מדדים במבט אחד\") לא מרונדרת יותר", !out.hasKpiGrid, JSON.stringify(out));
-record("כותרת \"מדדים במבט אחד\" לא מופיעה", !out.hasHeading, JSON.stringify(out));
-record("הבאדג' \"לחיצה = מסך מלא\" לא מופיע", !out.hasFullScreenHint, JSON.stringify(out));
-record("\"מיקוד יומי\" ממשיך להיות מוצג כרגיל", out.hasFocusSection, JSON.stringify(out));
-record("dashBannerCatalog הוסרה מהקוד", out.catalogFnGone, JSON.stringify(out));
+record("שישה הבאנרים מוצגים תמיד, בסדר הקבוע המבוקש", JSON.stringify(out.labels)===JSON.stringify(["בקשות ממתינות","מטלות בוקר","תקלות","כשירות חיילים","כלים בחדר","רכבים"]), JSON.stringify(out));
+record("פילטר שמור מהפיצ'ר הישן (dash_banners_pref) לא משפיע יותר", out.labels.length===6, JSON.stringify(out));
+record("כפתור \"⚙️ ניהול באנרים\" הוסר", !out.hasBannersBtn, JSON.stringify(out));
+record("הבאדג' \"לחיצה = מסך מלא\" הוסר מהכותרת", !out.hasFullScreenHint, JSON.stringify(out));
+record("האייקון על כל אריח הוסר", !out.hasKpiIcon, JSON.stringify(out));
+record("מודל ניהול הבאנרים הוסר מה-DOM", out.modalGone, JSON.stringify(out));
+record("פונקציות ניהול הבאנרים הוסרו מהקוד", out.fnsGone, JSON.stringify(out));
 record("אין שגיאות JS", pageErrors.length===0, JSON.stringify(pageErrors));
 
 await closeBrowser();
