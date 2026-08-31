@@ -6339,13 +6339,14 @@ function calShift(delta){
 }
 async function getCalendarEvents(){
   const isDeptUnit = !!(currentShed && currentShed.isDept);
-  const [certs, tools, vehicles, dutyTable, requests, manual] = await Promise.all([
+  const [certs, tools, vehicles, dutyTable, requests, manual, bdPlan] = await Promise.all([
     getCerts(),
     isDeptUnit ? Promise.resolve([]) : getTools(),
     isDeptUnit ? Promise.resolve([]) : getVehicles(),
     sGet("duty_table"),
     getDutyRequests(),
     getManualEvents(),
+    sGetRaw("basic_duty_schedule"),
   ]);
   const events = [];
   certs.forEach(c=>{ if(c.expiry) events.push({date:c.expiry, type:"cert", label:`${c.person} — ${certCleanName(c.name)}`}); });
@@ -6357,6 +6358,21 @@ async function getCalendarEvents(){
     if(!f) return;
     let cur = f, guard = 0;
     while(cur <= t && guard++ < 400){ events.push({date:cur, type:"duty", label:`${name} — ${row.duty}`}); cur = isoAddDays(cur, 1); }
+  });
+  const bdpPeople = (!isRosterManager && PERSONNEL.length) ? new Set(PERSONNEL.map(p=>p.name)) : null;
+  Object.entries(bdPlan || {}).forEach(([iso, list])=>{
+    if(!iso || !list) return;
+    (list||[]).forEach(b=>{
+      if(!b || !b.name) return;
+      if(bdpPeople && !bdpPeople.has(b.name)) return;
+      const label = `${b.name} — ${b.type||"תורנות"}`;
+      events.push({date:iso, type:"duty", label});
+      const wd = new Date(iso+"T00:00:00").getDay();
+      if(wd===4){
+        events.push({date:isoAddDays(iso,1), type:"duty", label});
+        events.push({date:isoAddDays(iso,2), type:"duty", label});
+      }
+    });
   });
   // אילוצים מאושרים (חופש/קורס/אפטר/יציאה) — כל יום בטווח מקבל אירוע
   (requests || []).forEach(req=>{
@@ -7698,6 +7714,8 @@ async function renderRosterView(){
   const r = boardWeekSlot==="current"
     ? (rosterCache || (rosterCache = await getDutyRoster()))
     : await getDutyRoster(boardWeekSlot);
+  if(boardWeekSlot==="current" || boardWeekSlot==="next")
+    await overlayBasicDutyPlan(r, boardWeekSlot);
   let nextVisible = isRosterManager;
   if(!nextVisible){
     nextVisible = boardWeekSlot==="next" ? !!r.published : !!(await getDutyRoster("next")).published;
@@ -10003,6 +10021,23 @@ async function seedBasicDutyFromPlan(){
     const planned = plan[iso]; if(!planned || !planned.length) return;
     const arr = rosterDraft.days[day].basic = rosterDraft.days[day].basic || [];
     planned.forEach(p=>{ if(!arr.some(x=>x.name===p.name && x.type===p.type)) arr.push({name:p.name, type:p.type}); });
+  });
+}
+async function overlayBasicDutyPlan(r, weekSlot){
+  if(!r || !r.days) return;
+  const plan = await getBasicDutyPlan();
+  if(!plan || !Object.keys(plan).length) return;
+  const wk = rosterWeekStartOf(r, weekSlot);
+  if(!wk) return;
+  ROSTER_EDIT_DAYS.forEach(day=>{
+    const iso = rosterDayLockDates(day, wk)[0];
+    const planned = plan[iso]; if(!planned || !planned.length) return;
+    const d = r.days[day]; if(!d) return;
+    const arr = d.basic = d.basic || [];
+    planned.forEach(p=>{
+      if(!arr.some(x=>x.name===p.name && x.type===p.type))
+        arr.push({name:p.name, type:p.type});
+    });
   });
 }
 
