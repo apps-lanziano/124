@@ -979,6 +979,8 @@ nav{
 .roster-grid thead th.wknd{background:#eef1f6;color:#42506b}
 .roster-grid thead th.now{background:var(--red);color:#fff}
 .roster-grid thead th.rlbl.wk{background:var(--bg);color:var(--ink-2);cursor:default}
+.roster-grid td.rq-edit{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.roster-grid td.rq-edit:active{background:var(--gold-soft)}
 /* "fit" — כל השבוע נכנס לרוחב המסך כמסמך אחד, בלי גלילה לצדדים.
    זו התצוגה שמחליפה את צילום הגיליון שכולם מסתמכים עליו היום. השמות
    נערמים אנכית בכל תא — כמו בגיליון — כדי שיהיו קריאים ולא ייחתכו. */
@@ -1854,6 +1856,7 @@ nav{
       <div class="admin-grid" style="margin-bottom:16px">
         <button class="admin-card" onclick="openTeamMgmt()"><span class="a-ic" style="color:#0e7490"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="3"/><circle cx="16" cy="9.5" r="2.5"/><path d="M2.5 20c0-3 2.7-5.2 6-5.2s6 2.2 6 5.2M15 14.8c2.6.3 4.5 2.2 4.5 5.2"/></svg></span><b>ניהול צוות</b><span>הוספה, עריכה, פרטים</span></button>
         <button class="admin-card" onclick="go('scr-medchecks',null)"><span class="a-ic" style="color:#0d9488"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15a8 8 0 0 1 16 0v2H4v-2Z"/><path d="M2 17h20M9 15v-3M15 15v-3"/></svg></span><b>כשירות חיילים</b><span>שמיעה ומטווח — תוקף וחידוש</span></button>
+        <button class="admin-card" onclick="inviteFriend()"><span class="a-ic" style="color:#be123c"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></span><b>הזמן חבר</b><span>שתף קישור לאפליקציה</span></button>
       </div>
 
       <div id="people-search-results"></div>
@@ -2676,6 +2679,11 @@ nav{
         <button class="m-btn primary" id="fault-save" onclick="saveFault()" disabled>שליחת דיווח</button>
       </div>
     </div>
+  </div>
+
+  <!-- ROSTER QUICK EDIT MODAL (לחיצה ארוכה על תא בלוח השבועי) -->
+  <div class="modal-bg" id="roster-quick-modal" onclick="if(event.target===this)closeRosterQuickEdit()">
+    <div class="modal" id="roster-quick-modal-body"></div>
   </div>
 
   <!-- FAULT DETAIL MODAL -->
@@ -6814,6 +6822,32 @@ async function renderPeopleScreen(){
   renderPeopleSearch();
 }
 
+/* "הזמן חבר" — שיתוף קישור לאפליקציה בלבד, בלי קוד כניסה מוטמע.
+   ⚠️ בכוונה לא בונים כאן קישור/QR שמכיל את קוד המסגרת: הקוד הוא הסוד
+   היחיד שמגן על נתוני הטייסת (ר' "מודל האימות" ב-CLAUDE.md/SECURITY.md —
+   "קוד תקין אחד = גישת קריאה/כתיבה לכל הטייסת"), ואין לו מיפוי בצד
+   הלקוח בכלל ("הקודים הוסרו מהמקור"). קישור עם קוד בתוכו נשלח בקלות
+   הרחק מעבר לנמען המיועד (העברה בווטסאפ, sharing היסטוריית דפדפן
+   במכשיר משותף), ואפליקציות מסרים רבות מבצעות fetch לתצוגה מקדימה של
+   הקישור בצד שרת — כלומר הקוד היה "נשלח" לצד שלישי בלי שאף אחד התכוון
+   לזה. במקום זה: שיתוף כתובת האפליקציה בלבד + הנחיה מפורשת לבקש את קוד
+   הכניסה בנפרד (בעל-פה/הודעה פרטית) מהמפקד — בדיוק כמו היום, רק עם
+   קישור מוכן במקום להכתיב כתובת. */
+function inviteFriend(){
+  const url = location.origin + location.pathname;
+  const text = `הצטרף/י לאפליקציית הניהול של טייסת 124:\n${url}\n\nאת קוד הכניסה יש לבקש בנפרד מהמפקד/ת שלך.`;
+  if(navigator.share){
+    navigator.share({title:"טייסת 124", text}).catch(()=>{});
+    return;
+  }
+  const done = ()=>toast("הקישור הועתק ✓ שלח את הקוד בנפרד");
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, ()=>toast("שתף/י ידנית: " + url));
+    } else { toast("שתף/י ידנית: " + url); }
+  }catch(e){ toast("שתף/י ידנית: " + url); }
+}
+
 /* ===== צוות מ״ע אחזקה (לצורך ימי הולדת) ===== */
 let voTeamEditId = null;
 function openVoTeamMgmt(){
@@ -8168,6 +8202,11 @@ function rosterBoardHtml(r, today, mode, weekSlot){
   const fit = mode !== "wide";
   const nm = n => fit ? shortName(n) : n;
   const cols = [...ROSTER_ROTATING_DAYS, "חמישי"];
+  // עריכה מהירה נקודתית (לחיצה ארוכה על תא) — רק ל-isRosterManager, רק
+  // בלוח הנוכחי (לא הבא/שעבר/ארכיון — שם אין "עכשיו" חד-משמעי לדחוף
+  // אליו), ורק בעמודת יום בודד (לא עמודת הסופ"ש הממוזגת "חמישי", ששני
+  // ערכים ארוזים לתוכה — ר' wkndSplit). ר' openRosterQuickEdit.
+  const quickEditOn = isRosterManager && fit && (weekSlot||"current")==="current";
   // תאריך יומי לכל עמודה — לפי התאריכים ששמורים על הלוח עצמו
   // (r.weekStart), ורק בהיעדרם לפי הסלוט המוצג. ר' rosterWeekStartOf:
   // כך לוח מהארכיון מציג את התאריכים של השבוע שלו, ולוח עתידי שקודם
@@ -8183,10 +8222,12 @@ function rosterBoardHtml(r, today, mode, weekSlot){
     const click = fit ? ` onclick="setRosterView('day','${d}')"` : "";
     return `<th class="${wknd?"wknd":""} ${isToday?"now":""}"${click}>${wknd?"ה׳–ש׳":DAY_LETTER[d]}<small>${dateLbl(d)}</small></th>`;
   }).join("");
-  const row = (label, cls, fn) => `<tr><td class="rlbl ${cls||""}">${label}</td>` +
+  const row = (label, cls, fn, qfield) => `<tr><td class="rlbl ${cls||""}">${label}</td>` +
     cols.map(d=>{
       const isToday = rosterEditKey(today)===d;
-      return `<td class="${cls||""} ${isToday?"now":""}">${fn(r.days[d], d) || ""}</td>`;
+      const editable = quickEditOn && qfield && d!=="חמישי";
+      const attrs = editable ? ` data-qf="${qfield}" data-qd="${escapeHTML(d)}"` : "";
+      return `<td class="${cls||""} ${isToday?"now":""} ${editable?"rq-edit":""}"${attrs}>${fn(r.days[d], d) || ""}</td>`;
     }).join("") + `</tr>`;
   const chips = (arr, cls) => (arr||[]).map(n=>`<span class="rc ${n===user?"me":(cls||"")}" data-rn="${escapeHTML(n)}">${escapeHTML(nm(n))}</span>`).join("");
   const one = (n, cls) => n ? `<span class="rc ${n===user?"me":(cls||"duty")}" data-rn="${escapeHTML(n)}">${escapeHTML(nm(n))}</span>` : "";
@@ -8236,15 +8277,15 @@ function rosterBoardHtml(r, today, mode, weekSlot){
   };
 
   const rowHtml = {};
-  rowHtml.manager = row("מנהל", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.manager, friDay.manager, false) : one(d.manager));
-  rowHtml.lead = row("ר״צ", "", d=>one(d.lead));
-  rowHtml.deputyLead = row("ל/ ר״צ", "", d=>one(d.deputyLead));
+  rowHtml.manager = row("מנהל", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.manager, friDay.manager, false) : one(d.manager), "manager");
+  rowHtml.lead = row("ר״צ", "", d=>one(d.lead), "lead");
+  rowHtml.deputyLead = row("ל/ ר״צ", "", d=>one(d.deputyLead), "deputyLead");
   // מתגבר: גם משמרת שישי–שבת (friDay.fixedAug) נחשבת "שיבוץ בפועל" לעניין כלל-הברזל
   const fixedAugHasNames = rowHasNames("fixedAug") || (Array.isArray(friDay.fixedAug) && friDay.fixedAug.length > 0);
   if(!disabled.has("fixedAug") || fixedAugHasNames) rowHtml.fixedAug = row("מתגבר", "", (d,dk)=> dk==="חמישי" ? wkndSplit(d.fixedAug, friDay.fixedAug, true) : chips(d.fixedAug));
-  rowHtml.pilot = row("מטיס", "", d=>one(d.pilot));
-  rowHtml.driver = row("נהג", "", d=>one(d.driver));
-  rowHtml.tools = row("כלים", "", d=>one(d.tools));
+  rowHtml.pilot = row("מטיס", "", d=>one(d.pilot), "pilot");
+  rowHtml.driver = row("נהג", "", d=>one(d.driver), "driver");
+  rowHtml.tools = row("כלים", "", d=>one(d.tools), "tools");
   if(shown("pf")) rowHtml.pf = row("PF", "pfz", d=>(d.pf||[]).map(p=>
     `<span class="rc ${p.name===user?"me":pfClass(p)}" data-rn="${escapeHTML(p.name)}">${escapeHTML(nm(p.name))}</span>`).join(""));
   if(shown("pfRest")) rowHtml.pfRest = row(`נחים PF<br><small>${escapeHTML(r.restWindow||ROSTER_DEFAULT_REST_WINDOW)}</small>`, "restz",
@@ -8271,7 +8312,71 @@ function rosterBoardHtml(r, today, mode, weekSlot){
   if(mode === "wide") return html;
   return `<div class="roster-grid-wrap">${html}</div>
     <button class="m-btn ghost roster-full-btn" onclick="openRosterFull()">⤢ מסך מלא · צביטה להגדלה</button>
-    <div class="roster-hint">הקש על יום לפירוט מלא בשמות מלאים</div>`;
+    <div class="roster-hint">הקש על יום לפירוט מלא בשמות מלאים${quickEditOn ? " · לחיצה ארוכה על שיבוץ שלד לעריכה מהירה" : ""}</div>`;
+}
+/* ===== עריכה מהירה נקודתית מהלוח השבועי (לחיצה ארוכה) =====
+   מ״ע תורנויות שרוצה לתקן שם אחד במשבצת שלד לא צריך לפתוח את כל עורך
+   הלוח — לחיצה ארוכה (כ-480ms) על תא מסומן (ר' rosterBoardHtml, td.rq-edit)
+   פותחת בורר-שם לתא הבודד הזה בלבד ושומרת ישירות. מוגבל בכוונה למשבצות
+   שלד חד-ערכיות (מנהל/ר״צ/ל-ר״צ/מטיס/נהג/כלים) ולעמודת יום בודד (לא
+   "חמישי" הממוזגת) — משבצות רשימה (PF/PMS/מילואים/מתגבר...) ותאריכים
+   שאינם "נוכחי" ממשיכים לעבור דרך עורך הלוח המלא, ששם יש להם טיפול
+   ייעודי (בורר-תאריכים, טיוטה, פיצול סופ״ש). שומר עם manualPush=true —
+   בדיוק כמו עריכת לוח נוכחי רגילה — כדי שהתראת roster_change תצא כרגיל
+   רק למי שנוסף/ירד ולמפקד שלו (ר' saveDutyRosterV2/decide ב-notify.js). */
+const ROSTER_QUICK_FIELDS = {manager:"מנהל", lead:"ר״צ", deputyLead:"ל/ ר״צ", pilot:"מטיס", driver:"נהג", tools:"כלים"};
+let _rqPressTimer = null, _rqEditing = null;
+function _rqCellFromEvent(e){ return e.target && e.target.closest && e.target.closest("td[data-qf]"); }
+function _rqPressStart(e){
+  const td = _rqCellFromEvent(e);
+  if(!td) return;
+  _rqPressTimer = setTimeout(()=>{ _rqPressTimer = null; if(navigator.vibrate) navigator.vibrate(15); openRosterQuickEdit(td); }, 480);
+}
+function _rqPressCancel(){ if(_rqPressTimer){ clearTimeout(_rqPressTimer); _rqPressTimer = null; } }
+document.addEventListener("touchstart", _rqPressStart, {passive:true});
+document.addEventListener("touchend", _rqPressCancel);
+document.addEventListener("touchmove", _rqPressCancel);
+document.addEventListener("mousedown", _rqPressStart);
+document.addEventListener("mouseup", _rqPressCancel);
+document.addEventListener("mouseleave", _rqPressCancel);
+async function openRosterQuickEdit(td){
+  const field = td.getAttribute("data-qf"), day = td.getAttribute("data-qd");
+  if(!field || !day || !ROSTER_QUICK_FIELDS[field]) return;
+  if(!rosterSearchBank){ try{ rosterSearchBank = rosterFlattenBank(await fetchAllPersonnelByShed()); }catch(e){ rosterSearchBank = []; } }
+  const r = await getDutyRoster("current");
+  const cur = (r.days[day] && r.days[day][field]) || "";
+  _rqEditing = {field, day};
+  const dl = (rosterSearchBank||[]).map(x=>`<option value="${escapeHTML(x.name)}">`).join("");
+  document.getElementById("roster-quick-modal-body").innerHTML = `
+    <h3>✏️ עריכה מהירה — ${escapeHTML(ROSTER_QUICK_FIELDS[field])} · ${escapeHTML(DAY_LETTER[day]||day)}</h3>
+    <div class="m-sub">שינוי נקודתי לתא הזה בלוח הנוכחי בלבד. לשינויים נוספים יש לפתוח את עורך הלוח.</div>
+    <input class="m-input" id="rq-name-inp" list="rq-name-list" value="${escapeHTML(cur)}" placeholder="הקלד שם...">
+    <datalist id="rq-name-list">${dl}</datalist>
+    <div class="modal-actions">
+      <button class="m-btn ghost" onclick="closeRosterQuickEdit()" style="flex:1">ביטול</button>
+      <button class="m-btn ghost" onclick="document.getElementById('rq-name-inp').value=''" style="flex:1">נקה</button>
+      <button class="m-btn primary" onclick="saveRosterQuickEdit()" style="flex:1">שמור</button>
+    </div>`;
+  document.getElementById("roster-quick-modal").classList.add("open");
+  document.getElementById("rq-name-inp").focus();
+}
+function closeRosterQuickEdit(){
+  document.getElementById("roster-quick-modal").classList.remove("open");
+  _rqEditing = null;
+}
+async function saveRosterQuickEdit(){
+  if(!_rqEditing) return;
+  const {field, day} = _rqEditing;
+  const name = (document.getElementById("rq-name-inp").value || "").trim();
+  const r = await getDutyRoster("current");
+  if(!r.days[day]) r.days[day] = emptyRosterDay(isWeekendDay(day));
+  r.days[day][field] = name;
+  const ok = await saveDutyRosterV2(r, "current", true);
+  if(!ok){ toast("⚠️ השמירה לא הצליחה — בדוק חיבור ונסה שוב"); return; }
+  closeRosterQuickEdit();
+  toast("נשמר ✓");
+  rosterCache = null;
+  if(boardWeekSlot==="current") renderRosterView();
 }
 /* ייצוא לוח צוות ל-CSV — מ"מסך מלא" בלבד (לא מ"לוח שבועי" הרגיל): שם
    שם המצומצם (shortName, "יוסי כ.") טוב לתא צר בנייד אבל לא לרשומה
