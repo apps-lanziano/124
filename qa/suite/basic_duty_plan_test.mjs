@@ -165,6 +165,66 @@ const out = await page.evaluate(async ()=>{
   // אין שורה ריקה לכל חייל בטייסת — רק לשיבוצים בפועל (2 שורות בלבד)
   r.boardSectionOnlyAssignedRows = (boardHtml.match(/class="duty-trow"/g)||[]).length === 2;
 
+  // ===== overlayBasicDutyPlan: שיבוץ מתוכנן מופיע בלוח השבועי =====
+  await saveBasicDutyPlan({});
+  const curSun = rosterWeekStartOf(await getDutyRoster(), "current");
+  const curWed = isoAddDays(curSun, 3);
+  await saveBasicDutyPlan({[curWed]: [{name:"מוסא", type:"שמירות"}]});
+  rosterCache = null;
+  boardWeekSlot = "current";
+  await renderRosterView();
+  const boardOverlay = document.getElementById("roster-view").innerHTML;
+  r.overlayShowsInBoard = boardOverlay.includes("מוסא");
+  // "שבוע שעבר" לא מקבל overlay (רק current/next)
+  boardWeekSlot = "prev";
+  rosterCache = null;
+  await renderRosterView();
+  const prevBoard = document.getElementById("roster-view").innerHTML;
+  r.overlaySkipsPrev = !prevBoard.includes("מוסא");
+  boardWeekSlot = "current";
+
+  // ===== overlayBasicDutyPlan: לא דורס שיבוץ ידני קיים בלוח =====
+  const rCur = await getDutyRoster();
+  rCur.days["רביעי"].basic = [{name:"ידני", type:"מטבח"}];
+  await saveDutyRosterV2(rCur, "current");
+  rosterCache = null;
+  boardWeekSlot = "current";
+  await renderRosterView();
+  const overlayBoard2 = document.getElementById("roster-view").innerHTML;
+  r.overlayKeepsManual = overlayBoard2.includes("ידני") && overlayBoard2.includes("מוסא");
+  // ניקוי
+  rCur.days["רביעי"].basic = [];
+  await saveDutyRosterV2(rCur, "current");
+
+  // ===== getCalendarEvents: שיבוצים מתוכננים מופיעים בלוח שנה =====
+  await saveBasicDutyPlan({});
+  const calDate = isoAddDays(curSun, 1);
+  await saveBasicDutyPlan({[calDate]: [{name:"חייל א סככה 1", type:"שמירות"}]});
+  isRosterManager = true;
+  const calEvts = await getCalendarEvents();
+  r.calendarIncludesPlanDuty = calEvts.some(e=>e.type==="duty" && e.label.includes("חייל א סככה 1") && e.label.includes("שמירות") && e.date===calDate);
+
+  // ===== getCalendarEvents: שיבוץ על עוגן ה׳ מתפרש לשישי+שבת =====
+  const thuDate = isoAddDays(curSun, 4);
+  const friDate = isoAddDays(curSun, 5);
+  const satDate = isoAddDays(curSun, 6);
+  await saveBasicDutyPlan({[thuDate]: [{name:"תורן סופש", type:"שמירות"}]});
+  const calEvts2 = await getCalendarEvents();
+  r.calendarExpandsThuToWeekend = calEvts2.some(e=>e.date===thuDate && e.label.includes("תורן סופש"))
+    && calEvts2.some(e=>e.date===friDate && e.label.includes("תורן סופש"))
+    && calEvts2.some(e=>e.date===satDate && e.label.includes("תורן סופש"));
+
+  // ===== getCalendarEvents: מפקד רואה רק חיילי הסככה שלו =====
+  isRosterManager = false;
+  PERSONNEL = [{name:"חייל א סככה 1", role:"חייל"}];
+  await saveBasicDutyPlan({[calDate]: [{name:"חייל א סככה 1", type:"שמירות"}, {name:"חייל סככה אחרת", type:"מטבח"}]});
+  const calEvts3 = await getCalendarEvents();
+  r.calendarFiltersByShed = calEvts3.some(e=>e.type==="duty" && e.label.includes("חייל א סככה 1"))
+    && !calEvts3.some(e=>e.type==="duty" && e.label.includes("חייל סככה אחרת"));
+  PERSONNEL = savedPersonnel;
+  isRosterManager = true;
+  await saveBasicDutyPlan({});
+
   return r;
 });
 
@@ -207,6 +267,12 @@ record("board-basic-duties: מציג שיבוצים קרובים", out.boardSect
 record("board-basic-duties: ממוין לפי תאריך", out.boardSectionSortedByDate, String(out.boardSectionSortedByDate));
 record("board-basic-duties: כולל כפתור הוספת שיבוץ", out.boardSectionHasAddButton, String(out.boardSectionHasAddButton));
 record("🔒 board-basic-duties: רק שורות של שיבוץ בפועל, לא כל חייל בטייסת", out.boardSectionOnlyAssignedRows, String(out.boardSectionOnlyAssignedRows));
+record("🔒 overlayBasicDutyPlan: שיבוץ מתוכנן מופיע בלוח השבועי (current)", out.overlayShowsInBoard, String(out.overlayShowsInBoard));
+record("🔒 overlayBasicDutyPlan: לא מופיע ב'שבוע שעבר'", out.overlaySkipsPrev, String(out.overlaySkipsPrev));
+record("🔒 overlayBasicDutyPlan: לא דורס שיבוץ ידני קיים בלוח", out.overlayKeepsManual, String(out.overlayKeepsManual));
+record("🔒 לוח שנה: שיבוצים מתוכננים מופיעים כאירועי duty", out.calendarIncludesPlanDuty, String(out.calendarIncludesPlanDuty));
+record("🔒 לוח שנה: עוגן ה׳ מתפרש לשישי+שבת", out.calendarExpandsThuToWeekend, String(out.calendarExpandsThuToWeekend));
+record("🔒 לוח שנה: מפקד רואה רק חיילי הסככה שלו", out.calendarFiltersByShed, String(out.calendarFiltersByShed));
 
 await closeBrowser();
 
