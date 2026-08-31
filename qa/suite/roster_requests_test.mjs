@@ -165,6 +165,36 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
   await closeBrowser();
 }
 
+// ---------- ⛔ אילוץ מאושר ועתידי לא נדחק מ"בקשות לאישור" אחרי 10 החלטות חדשות ----------
+{
+  const { page } = await newPage();
+  const login = await loginAsFramework(page, "shed1", "מפקד");
+
+  const out = await page.evaluate(async ()=>{
+    const r = {};
+    // אילוץ ותיק שכבר אושר, לתאריך עתידי — כמו חופשת מילואים שנשלחה
+    // מראש. אחריו 10 בקשות חדשות יותר (גם מאושרות) — ה-ts שלהן גבוה יותר.
+    const old = {id:"rq-old", type:"vacation", by:"חייל מילואים", shed:"shed1",
+      fromDate:"2099-01-03", toDate:"2099-01-05", reason:"מילואים", status:"approved", ts:1};
+    const filler = Array.from({length:10}, (_,i)=>({
+      id:"rq-f"+i, type:"leave", by:"חייל א סככה 1", shed:"shed1",
+      fromDate:"2020-01-0"+((i%9)+1), toDate:"2020-01-0"+((i%9)+1), reason:"ישן",
+      status: i%2 ? "approved" : "rejected", ts: 100+i}));
+    await saveDutyRequests([old, ...filler]);
+
+    await openRequestsInbox();
+    r.oldConstraintVisible = document.getElementById("requests-inbox-list").innerHTML.includes("חייל מילואים");
+    r.canDelete = /deleteRequest\('rq-old'\)/.test(document.getElementById("requests-inbox-list").innerHTML);
+    return r;
+  });
+
+  record("התחברות מפקד", login.ok, JSON.stringify(login));
+  record("⛔ אילוץ מאושר עתידי מוצג ב\"בקשות לאישור\" גם מעבר ל-10 האחרונות", out.oldConstraintVisible, String(out.oldConstraintVisible));
+  record("אפשר למחוק אותו מהתיבה", out.canDelete, String(out.canDelete));
+
+  await closeBrowser();
+}
+
 console.log("\n=== SUMMARY ===");
 let allPass = true;
 for(const r of results){
