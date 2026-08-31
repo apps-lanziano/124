@@ -133,15 +133,19 @@ const out = await page.evaluate(async ()=>{
   userRole = "חייל";
   await renderBoardBasicDuties();
   r.boardSectionEmptyForSoldier = document.getElementById("board-basic-duties").innerHTML.trim() === "";
-  // מפקד רואה את הסעיף בקריאה בלבד (בלי כפתור הוספה/מחיקה)
+  // מפקד רואה רק חיילים מהסככה שלו, בקריאה בלבד
   userRole = "מפקד";
+  const savedPersonnel = PERSONNEL.slice();
+  PERSONNEL = [{name:"חייל בדיקה", role:"חייל"}, {name:"חייל מקומי", role:"חייל"}];
   const today = todayKey();
   const soonC = isoAddDays(today, 1);
-  await saveBasicDutyPlan({[soonC]: [{name:"חייל בדיקה", type:"שמירות"}]});
+  await saveBasicDutyPlan({[soonC]: [{name:"חייל בדיקה", type:"שמירות"}, {name:"חייל סככה אחרת", type:"מטבח"}]});
   await renderBoardBasicDuties();
   const cmdHtml = document.getElementById("board-basic-duties").innerHTML;
   r.boardSectionVisibleToCommander = cmdHtml.includes("חייל בדיקה");
   r.boardSectionReadOnlyForCommander = !cmdHtml.includes("הוסף שיבוץ") && !cmdHtml.includes("removeBdpBoardGroup");
+  r.boardSectionFilteredByShed = !cmdHtml.includes("חייל סככה אחרת");
+  PERSONNEL = savedPersonnel;
   await saveBasicDutyPlan({});
   isRosterManager = true;
 
@@ -197,6 +201,7 @@ record("pickedName חוזר לסלקט כשההקלדה הידנית מוסתר�
 record("🔒 board-basic-duties: מוסתר לחייל", out.boardSectionEmptyForSoldier, String(out.boardSectionEmptyForSoldier));
 record("board-basic-duties: מפקד רואה את הסעיף", out.boardSectionVisibleToCommander, String(out.boardSectionVisibleToCommander));
 record("board-basic-duties: מפקד רואה בקריאה בלבד (בלי הוספה/מחיקה)", out.boardSectionReadOnlyForCommander, String(out.boardSectionReadOnlyForCommander));
+record("🔒 board-basic-duties: מפקד רואה רק חיילי הסככה שלו", out.boardSectionFilteredByShed, String(out.boardSectionFilteredByShed));
 record("board-basic-duties: מסתיר תאריכים שכבר עברו", out.boardSectionHidesPastDates, String(out.boardSectionHidesPastDates));
 record("board-basic-duties: מציג שיבוצים קרובים", out.boardSectionShowsUpcoming, String(out.boardSectionShowsUpcoming));
 record("board-basic-duties: ממוין לפי תאריך", out.boardSectionSortedByDate, String(out.boardSectionSortedByDate));
