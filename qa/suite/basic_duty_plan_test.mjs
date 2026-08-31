@@ -127,15 +127,24 @@ const out = await page.evaluate(async ()=>{
   document.getElementById("bi-name").value = "חייל א סככה 1";
   r.pickedNameUsesSelectWhenManualHidden = pickedName("bi") === "חייל א סככה 1";
 
-  // ===== board-basic-duties: רק מ״ע תורנויות, רשימה ממוינת של שיבוצים
-  // בפועל בלבד (לא כל חייל), ולא כולל תאריכים שעברו =====
+  // ===== board-basic-duties: מ״ע תורנויות ומפקד רואים, חייל לא רואה =====
   await saveBasicDutyPlan({});
   isRosterManager = false;
+  userRole = "חייל";
   await renderBoardBasicDuties();
-  r.boardSectionEmptyForNonManager = document.getElementById("board-basic-duties").innerHTML.trim() === "";
+  r.boardSectionEmptyForSoldier = document.getElementById("board-basic-duties").innerHTML.trim() === "";
+  // מפקד רואה את הסעיף בקריאה בלבד (בלי כפתור הוספה/מחיקה)
+  userRole = "מפקד";
+  const today = todayKey();
+  const soonC = isoAddDays(today, 1);
+  await saveBasicDutyPlan({[soonC]: [{name:"חייל בדיקה", type:"שמירות"}]});
+  await renderBoardBasicDuties();
+  const cmdHtml = document.getElementById("board-basic-duties").innerHTML;
+  r.boardSectionVisibleToCommander = cmdHtml.includes("חייל בדיקה");
+  r.boardSectionReadOnlyForCommander = !cmdHtml.includes("הוסף שיבוץ") && !cmdHtml.includes("removeBdpBoardGroup");
+  await saveBasicDutyPlan({});
   isRosterManager = true;
 
-  const today = todayKey();
   const past = isoAddDays(today, -3), soonA = isoAddDays(today, 2), soonB = isoAddDays(today, 1);
   await saveBasicDutyPlan({
     [past]:  [{name:"חייל א סככה 3", type:"שמירות"}],
@@ -185,7 +194,9 @@ record("toggleManualName מציג שדה טקסט וחוסם את הסלקט", o
 record("pickedName מעדיף את השדה הידני כשהוא גלוי", out.pickedNameUsesManualWhenShown, String(out.pickedNameUsesManualWhenShown));
 record("חזרה לגלילה מנקה את הטקסט שהוקלד", out.manualClearedOnToggleBack, String(out.manualClearedOnToggleBack));
 record("pickedName חוזר לסלקט כשההקלדה הידנית מוסתרת", out.pickedNameUsesSelectWhenManualHidden, String(out.pickedNameUsesSelectWhenManualHidden));
-record("🔒 board-basic-duties: מוסתר לגמרי ממי שאינו מ״ע תורנויות", out.boardSectionEmptyForNonManager, String(out.boardSectionEmptyForNonManager));
+record("🔒 board-basic-duties: מוסתר לחייל", out.boardSectionEmptyForSoldier, String(out.boardSectionEmptyForSoldier));
+record("board-basic-duties: מפקד רואה את הסעיף", out.boardSectionVisibleToCommander, String(out.boardSectionVisibleToCommander));
+record("board-basic-duties: מפקד רואה בקריאה בלבד (בלי הוספה/מחיקה)", out.boardSectionReadOnlyForCommander, String(out.boardSectionReadOnlyForCommander));
 record("board-basic-duties: מסתיר תאריכים שכבר עברו", out.boardSectionHidesPastDates, String(out.boardSectionHidesPastDates));
 record("board-basic-duties: מציג שיבוצים קרובים", out.boardSectionShowsUpcoming, String(out.boardSectionShowsUpcoming));
 record("board-basic-duties: ממוין לפי תאריך", out.boardSectionSortedByDate, String(out.boardSectionSortedByDate));
