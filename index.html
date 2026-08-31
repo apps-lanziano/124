@@ -8859,7 +8859,16 @@ async function renderRequestsInbox(){
   const box = document.getElementById("requests-inbox-list");
   let html = "";
   if(crossB.length) html += `<div class="req-sec">↔️ החלפות בין-מסגרתיות לאישורך</div>` + crossB.map(swapShedBCardHtml).join("");
-  const show = pending.concat(list.filter(r=>r.status!=="pending").slice(0,10));
+  // בקשות שאושרו/נדחו: תמיד מוצגות בקשות מאושרות שהתאריך שלהן עדיין
+  // רלוונטי (היום או קדימה) — אחרת אילוץ מאושר וותיק (כמו חופשת מילואים
+  // שנשלחה מראש) נדחק אל מחוץ ל-10 האחרונות ואין דרך למפקד למצוא ולבטל
+  // אותו. שאר ההיסטוריה (נדחו / מאושר וחלף התאריך) עדיין מוגבלת ל-10
+  // האחרונות — זה תיעוד היסטורי, לא פעולה תלויה.
+  const today = todayKey();
+  const stillActive = r => r.status==="approved" && (()=>{ const t=r.toDate||r.fromDate||r.date; return !t || t>=today; })();
+  const nonPending = list.filter(r=>r.status!=="pending");
+  const show = pending.concat(nonPending.filter(stillActive))
+    .concat(nonPending.filter(r=>!stillActive(r)).slice(0,10));
   if(show.length) html += (crossB.length?`<div class="req-sec">בקשות המסגרת</div>`:"") + show.map(r=>reqCardHtml(r, true)).join("");
   box.innerHTML = html || `<div class="empty-state" style="padding:24px"><div class="ic" style="color:#16a34a"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l5 5L20 7"/></svg></div><h3>אין בקשות</h3></div>`;
 }
