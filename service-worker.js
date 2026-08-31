@@ -1,4 +1,4 @@
-const CACHE_NAME = "tayeset124-6f9118d65cd1";
+const CACHE_NAME = "tayeset124-fdda45d9c7da";
 const APP_SHELL = [
   "./index.html",
   "./manifest.json",

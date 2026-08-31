@@ -1454,6 +1454,12 @@ nav{
 .naatim-check:not(:disabled):active{transform:scale(.9)}
 /* ===== CERT PAGE ===== */
 .cert-person-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
+/* בחירה מרובה של חיילים בהוספת הסמכה */
+.cert-pick-list{max-height:180px;overflow-y:auto;border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
+.cert-pick-row{display:flex;align-items:center;gap:9px;padding:9px 11px;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer;transition:background .15s}
+.cert-pick-row:last-child{border-bottom:none}
+.cert-pick-row.sel{background:var(--red-soft)}
+.cert-pick-row input[type=checkbox]{width:auto;margin:0;pointer-events:none}
 /* ===== CERT SUMMARY-BY-LEVEL VIEW ===== */
 .cert-legend{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
 .lvl-tag{font-size:11px;font-weight:700;padding:5px 11px;border-radius:99px}
@@ -3238,8 +3244,12 @@ nav{
       <h3><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg> הוספת הסמכה</h3>
       <div class="m-sub">בחר חייל והזן הסמכה. ניתן להוסיף כמה שרוצים לכל חייל.</div>
       <div class="team-add-form">
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></svg> חייל</label>
-        <select class="m-input" id="cert-person" style="margin-bottom:8px"></select>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <label style="font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:5px;margin-bottom:0"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></svg> חיילים (ניתן לבחור כמה שרוצים)</label>
+          <button type="button" class="m-btn ghost" style="width:auto;padding:4px 10px;font-size:10.5px" onclick="toggleAllCertPersons()">בחר הכל / נקה</button>
+        </div>
+        <div class="cert-pick-list" id="cert-person-list"></div>
+        <div style="font-size:11px;color:var(--ink-3);margin:-4px 0 8px" id="cert-person-count"></div>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M4.5 9v9a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/></svg> בחר מהמאגר (לפי רמה) — או הקלד ידני למטה</label>
         <select class="m-input" id="cert-bank-pick" style="margin-bottom:8px" onchange="pickCmdCertFromBank()"></select>
         <input class="m-input" id="cert-name" type="text" placeholder="שם ההסמכה" style="margin-bottom:8px">
@@ -15920,30 +15930,73 @@ function refreshCertPersonOptions(selectId, certName, list){
   sel.innerHTML = filtered.length ? filtered.map(p=>`<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)}</option>`).join("") : `<option value="">— אין ${restrictCmdr?'מפקדים':'חיילים'} מתאימים —</option>`;
   if(filtered.some(p=>p.name===current)) sel.value = current;
 }
+/* בחירה מרובה של חיילים בהוספת הסמכה — אינדקס ברשימה (לא השם עצמו) הוא
+   מה שמוטמע ב-onclick, כדי ששם עם גרש/גרשיים (נפוץ בעברית) לא ישבור
+   את המחרוזת וישתיק את הלחיצה (אותה בעיה שכבר תוקנה ב-rosterPickRows). */
+let certAddPersonRows = [];
+let certAddSelected = new Set();
+function renderCertPersonList(){
+  const box = document.getElementById("cert-person-list");
+  if(!box) return;
+  box.innerHTML = certAddPersonRows.length
+    ? certAddPersonRows.map((p,i)=>{
+        const sel = certAddSelected.has(p.name);
+        return `<div class="cert-pick-row${sel?' sel':''}" onclick="toggleCertPersonAt(${i})">
+          <input type="checkbox" ${sel?"checked":""}><span>${escapeHTML(p.name)}</span>
+        </div>`;
+      }).join("")
+    : `<div style="padding:12px;text-align:center;color:var(--ink-3);font-size:12px">— אין חיילים מתאימים —</div>`;
+  const cnt = document.getElementById("cert-person-count");
+  if(cnt) cnt.textContent = certAddSelected.size ? `${certAddSelected.size} נבחרו` : "לא נבחר אף חייל";
+}
+function toggleCertPersonAt(i){
+  const p = certAddPersonRows[i];
+  if(!p) return;
+  if(certAddSelected.has(p.name)) certAddSelected.delete(p.name); else certAddSelected.add(p.name);
+  renderCertPersonList();
+}
+function toggleAllCertPersons(){
+  certAddSelected = certAddSelected.size===certAddPersonRows.length ? new Set() : new Set(certAddPersonRows.map(p=>p.name));
+  renderCertPersonList();
+}
+/* מרענן את רשימת הבחירה: הסמכות-מפקדים-בלבד מציגות רק מפקדים, הסמכות-חיילים-בלבד מציגות רק חיילים —
+   בדיוק כמו refreshCertPersonOptions, רק שבמקום <select> בונה רשימת checkbox */
+function setCertPersonRows(certName, list){
+  const clean = certCleanName(certName);
+  const restrictCmdr = COMMANDER_ONLY_CERTS.includes(clean);
+  const restrictSoldier = SOLDIER_ONLY_CERTS.includes(clean);
+  list = (list||[]).filter(p=>!p.reserve);   // אנשי מילואים לא מקבלים הסמכות
+  const filtered = restrictCmdr ? list.filter(p=>p.role==="מפקד") : restrictSoldier ? list.filter(p=>p.role==="חייל") : list;
+  certAddPersonRows = filtered.map(p=>({name:p.name}));
+  certAddSelected = new Set([...certAddSelected].filter(n=>certAddPersonRows.some(p=>p.name===n)));
+  renderCertPersonList();
+}
 function pickCmdCertFromBank(){
   const v = document.getElementById("cert-bank-pick").value;
   if(v) document.getElementById("cert-name").value = v;
-  refreshCertPersonOptions("cert-person", v, PERSONNEL);
+  setCertPersonRows(v, PERSONNEL);
 }
 function openCertAdd(){
-  const sel = document.getElementById("cert-person");
-  sel.innerHTML = PERSONNEL.map(p=>`<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)}</option>`).join("");
+  certAddSelected = new Set();
+  setCertPersonRows("", PERSONNEL);
   document.getElementById("cert-bank-pick").innerHTML = certBankGroupedOptions();
   document.getElementById("cert-name").value="";
   document.getElementById("cert-expiry").value="";
   document.getElementById("cert-modal").classList.add("open");
 }
 async function addCert(){
-  const person = document.getElementById("cert-person").value;
+  const persons = [...certAddSelected];
   const name = document.getElementById("cert-name").value.trim();
   const expiry = document.getElementById("cert-expiry").value;
-  if(!person || name.length<2){ toast("נא למלא שם הסמכה ואיש צוות"); return; }
+  if(!persons.length || name.length<2){ toast("נא לבחור לפחות חייל אחד ולמלא שם הסמכה"); return; }
   const certs = await getCerts();
-  certs.push({id:"cert"+Date.now(), person, name, expiry});
+  persons.forEach(person=>{
+    certs.push({id:"cert"+Date.now()+Math.random().toString(36).slice(2,6), person, name, expiry});
+  });
   await sSet("certs_list", certs);
   document.getElementById("cert-name").value=""; document.getElementById("cert-expiry").value="";
   renderCertsPage(); updateAlertBell();
-  toast("ההסמכה נוספה ✓ — ניתן להוסיף עוד");
+  toast(persons.length>1 ? `ההסמכה נוספה ל-${persons.length} חיילים ✓` : "ההסמכה נוספה ✓ — ניתן להוסיף עוד");
 }
 async function removeCertById(id, fallbackIdx){
   let certs = await getCerts();
