@@ -3242,7 +3242,7 @@ nav{
   <div class="modal-bg" id="cert-modal">
     <div class="modal">
       <h3><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg> הוספת הסמכה</h3>
-      <div class="m-sub">בחר חייל והזן הסמכה. ניתן להוסיף כמה שרוצים לכל חייל.</div>
+      <div class="m-sub">בחר חיילים והסמכות — כל הצירופים ייווצרו בלחיצה אחת.</div>
       <div class="team-add-form">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
           <label style="font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:5px;margin-bottom:0"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></svg> חיילים (ניתן לבחור כמה שרוצים)</label>
@@ -3250,9 +3250,14 @@ nav{
         </div>
         <div class="cert-pick-list" id="cert-person-list"></div>
         <div style="font-size:11px;color:var(--ink-3);margin:-4px 0 8px" id="cert-person-count"></div>
-        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M4.5 9v9a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/></svg> בחר מהמאגר (לפי רמה) — או הקלד ידני למטה</label>
-        <select class="m-input" id="cert-bank-pick" style="margin-bottom:8px" onchange="pickCmdCertFromBank()"></select>
-        <input class="m-input" id="cert-name" type="text" placeholder="שם ההסמכה" style="margin-bottom:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <label style="font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:5px;margin-bottom:0"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M4.5 9v9a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/></svg> הסמכות (ניתן לבחור כמה שרוצים)</label>
+          <button type="button" class="m-btn ghost" style="width:auto;padding:4px 10px;font-size:10.5px" onclick="toggleAllCertBankItems()">בחר הכל / נקה</button>
+        </div>
+        <div class="cert-pick-list" id="cert-bank-list" style="max-height:200px"></div>
+        <div style="font-size:11px;color:var(--ink-3);margin:-4px 0 4px" id="cert-bank-count"></div>
+        <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px">או הקלד ידנית:</label>
+        <input class="m-input" id="cert-name" type="text" placeholder="שם הסמכה ידנית (אם לא נבחרה מהמאגר)" style="margin-bottom:8px">
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg> תאריך תפוגה (אופציונלי)</label>
         <input class="m-input" id="cert-expiry" type="date" style="margin-bottom:10px">
         <button class="m-btn primary" onclick="addCert()" style="width:100%"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#b30f26" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> הוסף הסמכה</button>
@@ -15971,32 +15976,94 @@ function setCertPersonRows(certName, list){
   certAddSelected = new Set([...certAddSelected].filter(n=>certAddPersonRows.some(p=>p.name===n)));
   renderCertPersonList();
 }
-function pickCmdCertFromBank(){
-  const v = document.getElementById("cert-bank-pick").value;
-  if(v) document.getElementById("cert-name").value = v;
-  setCertPersonRows(v, PERSONNEL);
+let certAddBankRows = [];
+let certAddBankSelected = new Set();
+function renderCertBankList(){
+  const box = document.getElementById("cert-bank-list");
+  if(!box) return;
+  const groups = [["🟢 סף","🟢"],["🔵 רף","🔵"],["🟠 חימוש","🟠"],["🔴 עליון","🔴"],["🟣 שלבים","🟣"],["🟤 פ\"א לאור ספרות","🟤"],["⚫ מערכות בטיחותיות","⚫"]];
+  let html = "";
+  let idx = 0;
+  groups.forEach(([label, pfx])=>{
+    const items = certAddBankRows.filter(c=>c.startsWith(pfx));
+    if(!items.length) return;
+    html += `<div style="padding:5px 11px;font-size:11px;font-weight:600;color:var(--ink-2);background:var(--bg);position:sticky;top:0">${escapeHTML(label)}</div>`;
+    items.forEach(c=>{
+      const ci = certAddBankRows.indexOf(c);
+      const sel = certAddBankSelected.has(c);
+      html += `<div class="cert-pick-row${sel?' sel':''}" onclick="toggleCertBankAt(${ci})">
+        <input type="checkbox" ${sel?"checked":""}><span>${escapeHTML(c.replace(/^[🟢🔵🟠🔴🟣🟤⚫]\s*/u,""))}</span>
+      </div>`;
+    });
+  });
+  const custom = certAddBankRows.filter(c=>!/^[🟢🔵🟠🔴🟣🟤⚫]/u.test(c));
+  if(custom.length){
+    html += `<div style="padding:5px 11px;font-size:11px;font-weight:600;color:var(--ink-2);background:var(--bg);position:sticky;top:0">נוספות</div>`;
+    custom.forEach(c=>{
+      const ci = certAddBankRows.indexOf(c);
+      const sel = certAddBankSelected.has(c);
+      html += `<div class="cert-pick-row${sel?' sel':''}" onclick="toggleCertBankAt(${ci})">
+        <input type="checkbox" ${sel?"checked":""}><span>${escapeHTML(c)}</span>
+      </div>`;
+    });
+  }
+  box.innerHTML = html || `<div style="padding:12px;text-align:center;color:var(--ink-3);font-size:12px">— אין הסמכות במאגר —</div>`;
+  const cnt = document.getElementById("cert-bank-count");
+  if(cnt) cnt.textContent = certAddBankSelected.size ? `${certAddBankSelected.size} הסמכות נבחרו` : "";
+  refreshCertPersonListForMultiCerts();
+}
+function toggleCertBankAt(i){
+  const c = certAddBankRows[i];
+  if(!c) return;
+  if(certAddBankSelected.has(c)) certAddBankSelected.delete(c); else certAddBankSelected.add(c);
+  renderCertBankList();
+}
+function toggleAllCertBankItems(){
+  certAddBankSelected = certAddBankSelected.size===certAddBankRows.length ? new Set() : new Set(certAddBankRows);
+  renderCertBankList();
+}
+function refreshCertPersonListForMultiCerts(){
+  if(!certAddBankSelected.size){
+    setCertPersonRows("", PERSONNEL);
+    return;
+  }
+  const names = [...certAddBankSelected];
+  const cmdOnly = names.every(n=>COMMANDER_ONLY_CERTS.includes(certCleanName(n)));
+  const soldierOnly = names.every(n=>SOLDIER_ONLY_CERTS.includes(certCleanName(n)));
+  const filterName = cmdOnly ? "הסמכת נדחף" : soldierOnly ? "🟢 סף" : "";
+  setCertPersonRows(filterName, PERSONNEL);
 }
 function openCertAdd(){
   certAddSelected = new Set();
+  certAddBankSelected = new Set();
+  certAddBankRows = CERT_BANK_DEFAULT.slice();
   setCertPersonRows("", PERSONNEL);
-  document.getElementById("cert-bank-pick").innerHTML = certBankGroupedOptions();
+  renderCertBankList();
   document.getElementById("cert-name").value="";
   document.getElementById("cert-expiry").value="";
   document.getElementById("cert-modal").classList.add("open");
 }
 async function addCert(){
   const persons = [...certAddSelected];
-  const name = document.getElementById("cert-name").value.trim();
+  const manualName = document.getElementById("cert-name").value.trim();
+  const bankNames = [...certAddBankSelected];
+  const certNames = bankNames.length ? bankNames : (manualName.length >= 2 ? [manualName] : []);
   const expiry = document.getElementById("cert-expiry").value;
-  if(!persons.length || name.length<2){ toast("נא לבחור לפחות חייל אחד ולמלא שם הסמכה"); return; }
+  if(!persons.length || !certNames.length){ toast("נא לבחור לפחות חייל אחד והסמכה אחת"); return; }
   const certs = await getCerts();
+  let count = 0;
   persons.forEach(person=>{
-    certs.push({id:"cert"+Date.now()+Math.random().toString(36).slice(2,6), person, name, expiry});
+    certNames.forEach(name=>{
+      certs.push({id:"cert"+Date.now()+Math.random().toString(36).slice(2,6), person, name, expiry});
+      count++;
+    });
   });
   await sSet("certs_list", certs);
   document.getElementById("cert-name").value=""; document.getElementById("cert-expiry").value="";
+  certAddBankSelected = new Set();
+  renderCertBankList();
   renderCertsPage(); updateAlertBell();
-  toast(persons.length>1 ? `ההסמכה נוספה ל-${persons.length} חיילים ✓` : "ההסמכה נוספה ✓ — ניתן להוסיף עוד");
+  toast(count>1 ? `נוספו ${count} הסמכות ✓` : "ההסמכה נוספה ✓ — ניתן להוסיף עוד");
 }
 async function removeCertById(id, fallbackIdx){
   let certs = await getCerts();
