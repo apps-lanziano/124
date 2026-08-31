@@ -6994,7 +6994,8 @@ let bdpBoardGroups = [];
 async function renderBoardBasicDuties(){
   const area = document.getElementById("board-basic-duties");
   if(!area) return;
-  if(!isRosterManager){ area.innerHTML = ""; return; }
+  const canSeeBoardDuties = isRosterManager || userRole === "מפקד";
+  if(!canSeeBoardDuties){ area.innerHTML = ""; return; }
   const plan = basicDutyPlan = await getBasicDutyPlan();
   const today = todayKey();
   const rows = [];
@@ -7009,18 +7010,18 @@ async function renderBoardBasicDuties(){
       <div>${escapeHTML(g.type||"—")}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
         <b>${g.from===g.to ? fmtHeShort(g.from) : `${fmtHeShort(g.from)} – ${fmtHeShort(g.to)}`}</b>
-        <span class="rc" style="margin:0;cursor:pointer" onclick="removeBdpBoardGroup(${gi})" aria-label="הסר שיבוץ">✕</span>
+        ${isRosterManager ? `<span class="rc" style="margin:0;cursor:pointer" onclick="removeBdpBoardGroup(${gi})" aria-label="הסר שיבוץ">✕</span>` : ""}
       </div>
     </div>`).join("");
   const empty = `<div style="padding:16px;text-align:center;color:var(--ink-3);font-size:13px">אין עדיין שיבוצים מתוכננים</div>`;
   area.innerHTML = `
     <div class="sec-head" style="margin-top:24px"><div><h2>תורנויות בסיסיות</h2><p>מי משובץ בפועל — ריכוז כל חיילי הטייסת (לא לפי סככה), ימים רצופים מאוחדים לטווח אחד.</p></div></div>
-    <button class="m-btn ghost" style="width:100%;margin-bottom:8px" onclick="openBasicDutyPlanAdd()">➕ הוסף שיבוץ</button>
+    ${isRosterManager ? `<button class="m-btn ghost" style="width:100%;margin-bottom:8px" onclick="openBasicDutyPlanAdd()">➕ הוסף שיבוץ</button>` : ""}
     <div class="duty-table">
       <div class="duty-thead"><div>שם החייל</div><div>תורנות</div><div>טווח תאריכים</div></div>
       ${rowsHtml || empty}
     </div>
-    <div class="duty-lock-note">🗓️ לתכנון מלא לפי שבועות, עד חצי שנה קדימה — באנר "תכנון תורנות בסיסית" למעלה.</div>`;
+    ${isRosterManager ? `<div class="duty-lock-note">🗓️ לתכנון מלא לפי שבועות, עד חצי שנה קדימה — באנר "תכנון תורנות בסיסית" למעלה.</div>` : ""}`;
 }
 /* מחיקת באנר מאוחד — מסירה את כל הימים שאוחדו (isos) מ-basic_duty_schedule
    בבת אחת, לפי name+type (לא idx בודד — הוא כבר לא משמעותי אחרי איחוד). */
