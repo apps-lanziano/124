@@ -48,14 +48,17 @@ self.addEventListener("fetch", event => {
   if (isAppDoc) {
     event.respondWith(
       caches.match("./index.html").then(cached => {
+        const validCached = cached && cached.ok ? cached : undefined;
         const fromNet = fetchWithTimeout(req)
           .then(res => {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put("./index.html", copy));
+            if (res.ok) {
+              const copy = res.clone();
+              caches.open(CACHE_NAME).then(cache => cache.put("./index.html", copy));
+            }
             return res;
           })
-          .catch(() => cached);
-        return cached || fromNet;
+          .catch(() => validCached);
+        return validCached || fromNet;
       })
     );
     return;
