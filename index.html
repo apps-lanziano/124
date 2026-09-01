@@ -1593,6 +1593,18 @@ nav{
   z-index:60;transition:all .35s cubic-bezier(.2,.8,.3,1);pointer-events:none;white-space:nowrap;box-shadow:0 10px 30px rgba(0,0,0,.25);
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.sup-cats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.sup-cat-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 6px 12px;border-radius:var(--radius);border:1.5px solid var(--line);background:var(--card);cursor:pointer;transition:transform .15s;box-shadow:var(--shadow);font-family:inherit;color:var(--ink)}
+.sup-cat-btn:active{transform:scale(.96)}
+.sup-cat-btn .sc-ic{font-size:28px;line-height:1}
+.sup-cat-btn .sc-lb{font-size:13px;font-weight:800}
+.sup-cat-btn .sc-n{font-size:11px;font-weight:600;color:var(--ink-3)}
+.sup-cat-btn.on-nikui{border-color:#0d9488;background:#f0fdfa}
+.sup-cat-btn.on-nikui .sc-lb{color:#0d9488}
+.sup-cat-btn.on-ktiva{border-color:#6366f1;background:#eef2ff}
+.sup-cat-btn.on-ktiva .sc-lb{color:#6366f1}
+.sup-cat-btn.on-hadp{border-color:#e11d48;background:var(--red-soft)}
+.sup-cat-btn.on-hadp .sc-lb{color:#e11d48}
 .sup-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:13.5px}
 .sup-item-name{flex:1;font-weight:600}
 .sup-item-price{color:var(--ink-3);font-size:12px;min-width:50px;text-align:left}
@@ -2479,7 +2491,7 @@ nav{
       </div>
       <div id="sup-status-bar"></div>
       <div id="sup-budget-bar"></div>
-      <div id="sup-cat-tabs" class="roster-segs" style="margin-bottom:12px"></div>
+      <div id="sup-cat-tabs"></div>
       <div id="sup-catalog"></div>
       <div id="sup-summary" style="margin-top:12px"></div>
       <button id="sup-submit-btn" class="m-btn primary" style="width:100%;margin-top:12px;display:none" onclick="submitSuppliesOrder()">שלח הזמנה</button>
@@ -16517,7 +16529,11 @@ function renderSuppliesBudget(){
 
 function renderSuppliesCatTabs(){
   const tabs=document.getElementById("sup-cat-tabs");
-  tabs.innerHTML=["ניקוי","כתיבה","חד פעמי"].map(c=>'<button class="roster-seg'+(c===supCat?" active":"")+'" onclick="setSupplyCat(\''+c+'\')">'+c+'</button>').join("");
+  const cats=[{k:"ניקוי",ic:"🧹",cls:"nikui"},{k:"כתיבה",ic:"✏️",cls:"ktiva"},{k:"חד פעמי",ic:"🍽️",cls:"hadp"}];
+  tabs.innerHTML='<div class="sup-cats">'+cats.map(c=>{
+    const n=SUPPLIES_CATALOG.filter(x=>x.cat===c.k).length;
+    return '<button class="sup-cat-btn'+(c.k===supCat?" on-"+c.cls:"")+'" onclick="setSupplyCat(\''+c.k+'\')"><span class="sc-ic">'+c.ic+'</span><span class="sc-lb">'+c.k+'</span><span class="sc-n">'+n+' פריטים</span></button>';
+  }).join("")+'</div>';
 }
 
 function setSupplyCat(c){ supCat=c; renderSuppliesCatTabs(); renderSuppliesCatalog(); }
