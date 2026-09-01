@@ -1,0 +1,110 @@
+name: בדיקת זמינות האתר
+
+# בודק כל שעה שהאתר החי מגיש תוכן תקין (לא 404/5xx).
+# אם האתר נפל — נפתח Issue אוטומטי כדי שהצוות ידע לפני שמשתמשים מדווחים.
+on:
+  schedule:
+    - cron: '15 * * * *'   # כל שעה בדקה 15
+  workflow_dispatch:         # הרצה ידנית
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: בדיקת זמינות
+        id: check
+        run: |
+          URL="https://eladlanzianog-sys.github.io/124/"
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$URL" || echo "000")
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ האתר זמין"
+          else
+            echo "🔴 האתר לא זמין! (HTTP $STATUS)"
+          fi
+
+      - name: בדיקת תוכן (לא דף שגיאה)
+        id: content
+        if: steps.check.outputs.status == '200'
+        run: |
+          BODY=$(curl -s --max-time 15 "https://eladlanzianog-sys.github.io/124/")
+          if echo "$BODY" | grep -q "sq124"; then
+            echo "✅ תוכן תקין — האפליקציה מוגשת"
+            echo "valid=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "🔴 האתר מחזיר 200 אבל התוכן לא מזוהה כאפליקציה"
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: פתיחת Issue אם האתר נפל
+        if: steps.check.outputs.status != '200' || steps.content.outputs.valid == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ steps.check.outputs.status }}';
+            const valid = '${{ steps.content.outputs.valid }}';
+            const title = `🔴 האתר לא זמין (HTTP ${status})`;
+
+            // don't open a duplicate if one is already open
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'site-down',
+              per_page: 1
+            });
+            if (existing.data.length > 0) {
+              console.log('Issue already open: ' + existing.data[0].html_url);
+              return;
+            }
+
+            let body = `## האתר לא זמין\n\n`;
+            body += `- **סטטוס HTTP:** ${status}\n`;
+            body += `- **תוכן תקין:** ${valid || 'לא נבדק'}\n`;
+            body += `- **זמן:** ${new Date().toISOString()}\n\n`;
+            body += `### מה לבדוק\n\n`;
+            body += `1. **Settings → Pages** — לוודא ש-GitHub Pages מופעל (Source: Deploy from a branch, Branch: main / root)\n`;
+            body += `2. אם הריפו הפך לפרטי וחזר לציבורי — Pages נכבה אוטומטית וצריך הפעלה ידנית מחדש\n`;
+            body += `3. בדקו ב-Actions → "pages build and deployment" שהפריסה האחרונה הצליחה\n`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['site-down']
+            });
+
+      - name: סגירת Issue אם האתר חזר
+        if: steps.check.outputs.status == '200' && steps.content.outputs.valid == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'site-down',
+              per_page: 5
+            });
+            for (const issue of existing.data) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+                state_reason: 'completed'
+              });
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: '✅ האתר חזר לפעול — נסגר אוטומטית.'
+              });
+            }
+
+      - name: כשל אם האתר לא זמין
+        if: steps.check.outputs.status != '200' || steps.content.outputs.valid == 'false'
+        run: exit 1
