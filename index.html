@@ -7014,21 +7014,26 @@ let bdpBoardGroups = [];
 async function renderBoardBasicDuties(){
   const area = document.getElementById("board-basic-duties");
   if(!area) return;
-  const canSeeBoardDuties = isRosterManager || userRole === "מפקד";
+  const isSoldier = userRole === "חייל";
+  const canSeeBoardDuties = isRosterManager || userRole === "מפקד" || isSoldier;
   if(!canSeeBoardDuties){ area.innerHTML = ""; return; }
   const plan = basicDutyPlan = await getBasicDutyPlan();
   const today = todayKey();
-  const myShedNames = (!isRosterManager && PERSONNEL.length) ? new Set(PERSONNEL.map(p=>p.name)) : null;
+  // חייל — רק השיבוצים שלו עצמו; מפקד — רק חיילי הסככה שלו; מ״ע — כולם
+  const myShedNames = (!isRosterManager && !isSoldier && PERSONNEL.length) ? new Set(PERSONNEL.map(p=>p.name)) : null;
   const rows = [];
   Object.entries(plan).forEach(([iso,list])=>{
     if(iso < today) return;
     (list||[]).forEach(b=>{
       if(!b || !b.name) return;
+      if(isSoldier && b.name !== user) return;          // חייל — רק עצמו
       if(myShedNames && !myShedNames.has(b.name)) return;
       rows.push({iso, name:b.name, type:b.type||""});
     });
   });
   const groups = bdpBoardGroups = bdpGroupConsecutive(rows);
+  // חייל: אם אין לו שיבוצים עתידיים — לא מציגים את הסעיף כלל
+  if(isSoldier && !groups.length){ area.innerHTML = ""; return; }
   const rowsHtml = groups.map((g,gi)=>`
     <div class="duty-trow">
       <div class="duty-name"><div class="avatar">${initials(g.name)}</div><b>${escapeHTML(g.name)}</b></div>
@@ -7038,13 +7043,18 @@ async function renderBoardBasicDuties(){
         ${isRosterManager ? `<span class="rc" style="margin:0;cursor:pointer" onclick="removeBdpBoardGroup(${gi})" aria-label="הסר שיבוץ">✕</span>` : ""}
       </div>
     </div>`).join("");
-  const empty = `<div style="padding:16px;text-align:center;color:var(--ink-3);font-size:13px">אין עדיין שיבוצים מתוכננים</div>`;
+  const emptyMsg = isSoldier ? "" : `<div style="padding:16px;text-align:center;color:var(--ink-3);font-size:13px">אין עדיין שיבוצים מתוכננים</div>`;
+  const subtitle = isSoldier
+    ? "התורנויות הבסיסיות שלך הנוכחיות והעתידיות."
+    : isRosterManager
+      ? "מי משובץ בפועל — ריכוז כל חיילי הטייסת (לא לפי סככה), ימים רצופים מאוחדים לטווח אחד."
+      : "חיילי המסגרת שלך המשובצים לתורנות בסיסית.";
   area.innerHTML = `
-    <div class="sec-head" style="margin-top:24px"><div><h2>תורנויות בסיסיות</h2><p>${isRosterManager ? "מי משובץ בפועל — ריכוז כל חיילי הטייסת (לא לפי סככה), ימים רצופים מאוחדים לטווח אחד." : "חיילי המסגרת שלך המשובצים לתורנות בסיסית."}</p></div></div>
+    <div class="sec-head" style="margin-top:24px"><div><h2>תורנויות בסיסיות</h2><p>${subtitle}</p></div></div>
     ${isRosterManager ? `<button class="m-btn ghost" style="width:100%;margin-bottom:8px" onclick="openBasicDutyPlanAdd()">➕ הוסף שיבוץ</button>` : ""}
     <div class="duty-table">
       <div class="duty-thead"><div>שם החייל</div><div>תורנות</div><div>טווח תאריכים</div></div>
-      ${rowsHtml || empty}
+      ${rowsHtml || emptyMsg}
     </div>
     ${isRosterManager ? `<div class="duty-lock-note">🗓️ לתכנון מלא לפי שבועות, עד חצי שנה קדימה — באנר "תכנון תורנות בסיסית" למעלה.</div>` : ""}`;
 }
