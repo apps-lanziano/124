@@ -1593,6 +1593,25 @@ nav{
   z-index:60;transition:all .35s cubic-bezier(.2,.8,.3,1);pointer-events:none;white-space:nowrap;box-shadow:0 10px 30px rgba(0,0,0,.25);
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.sup-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:13.5px}
+.sup-item-name{flex:1;font-weight:600}
+.sup-item-price{color:var(--ink-3);font-size:12px;min-width:50px;text-align:left}
+.sup-stepper{display:flex;align-items:center;gap:0;border:1.5px solid var(--line);border-radius:10px;overflow:hidden}
+.sup-stepper button{width:32px;height:32px;border:none;background:var(--bg);font-size:16px;font-weight:700;cursor:pointer;color:var(--ink)}
+.sup-stepper button:active{background:var(--line)}
+.sup-stepper span{min-width:28px;text-align:center;font-weight:700;font-size:14px}
+.sup-budget{height:8px;border-radius:99px;background:var(--line);margin:8px 0;overflow:hidden}
+.sup-budget-fill{height:100%;border-radius:99px;transition:width .3s}
+.sup-budget-text{font-size:12.5px;color:var(--ink-2);text-align:center;font-weight:600;margin-bottom:4px}
+.sup-status{padding:8px 12px;border-radius:10px;font-size:13px;font-weight:600;text-align:center;margin-bottom:8px}
+.sup-status.draft{background:var(--gold-soft);color:#92400e}
+.sup-status.submitted{background:#dbeafe;color:#1e40af}
+.sup-status.delivered{background:var(--green-soft);color:#166534}
+.sup-status.partial{background:#fef3c7;color:#92400e}
+.sup-shed-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin-bottom:12px}
+.sup-shed-card h3{margin:0 0 6px;font-size:14.5px}
+.sup-shed-items{font-size:12.5px;color:var(--ink-2);margin:6px 0}
+.sup-shed-actions{display:flex;gap:8px;margin-top:8px}
 .hidden{display:none!important}
 </style>
 </head>
@@ -2331,6 +2350,7 @@ nav{
       <div class="cmd-tabs" style="margin-bottom:16px">
         <button class="cmd-tab active" id="mdtab-materials" onclick="mdTab('materials')"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M4.5 9v9a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/></svg> הזמנת חומרים</button>
         <button class="cmd-tab" id="mdtab-tools" onclick="mdTab('tools')"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg> מעקב כלים מוטוריים</button>
+        <button class="cmd-tab" id="mdtab-supplies" onclick="mdTab('supplies')"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg> הזמנות ציוד</button>
       </div>
 
       <!-- PANE: MATERIALS ORDERS -->
@@ -2347,6 +2367,16 @@ nav{
           <button class="admin-card" style="grid-column:1/-1" onclick="openMotorToolAdd()"><span class="a-ic" style="color:#b30f26"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span><b>הוספת כלי מוטורי</b><span>מספר סידורי + כיול/טיפול הבא</span></button>
         </div>
         <div id="md-tools-list"></div>
+      </div>
+
+      <!-- PANE: SUPPLIES ORDERS (הזמנות ציוד מכל הסככות) -->
+      <div class="admin-pane" id="mdpane-supplies">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <button class="m-btn ghost" onclick="shiftMaintSuppliesMonth(-1)">→</button>
+          <span id="maint-sup-month" style="font-weight:700;font-size:15px;flex:1;text-align:center"></span>
+          <button class="m-btn ghost" onclick="shiftMaintSuppliesMonth(1)">←</button>
+        </div>
+        <div id="maint-sup-list"></div>
       </div>
     </section>
 
@@ -2437,6 +2467,22 @@ nav{
       </details>
       <input class="m-input" id="users-search" type="text" placeholder="🔎 חיפוש משתמש לפי שם, מסגרת או תפקיד…" style="margin-bottom:12px" oninput="renderUsersAdmin()">
       <div id="users-list"></div>
+    </section>
+
+    <!-- ===== SUPPLIES ORDER — הזמנת ציוד חודשית (סככה) ===== -->
+    <section class="screen" id="scr-supplies">
+      <div class="sec-head">
+        <div>
+          <h2>הזמנת ציוד <svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg></h2>
+          <p id="sup-month-label"></p>
+        </div>
+      </div>
+      <div id="sup-status-bar"></div>
+      <div id="sup-budget-bar"></div>
+      <div id="sup-cat-tabs" class="roster-segs" style="margin-bottom:12px"></div>
+      <div id="sup-catalog"></div>
+      <div id="sup-summary" style="margin-top:12px"></div>
+      <button id="sup-submit-btn" class="m-btn primary" style="width:100%;margin-top:12px;display:none" onclick="submitSuppliesOrder()">שלח הזמנה</button>
     </section>
 
     <!-- ===== SUPPORT — תמיכה: דיווח באג/הערה, וריכוזם למנהל-על (SUPER_ADMIN_NAME) ===== -->
@@ -2646,6 +2692,7 @@ nav{
       <div class="sheet-item hidden" id="sheet-onboarding" onclick="closeMoreAnd('scr-onboarding')"><div class="s-ic" style="color:#7c3aed;background:#f2ebfe"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11.5V17c0 1.2 2.7 3 6 3s6-1.8 6-3v-5.5"/></svg></div><div class="s-tx"><b>קליטת חייל חדש</b><span>חונך, מטלות והסמכות, קאונטר PF</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-vehicles-item" onclick="closeMoreAnd('scr-vehicles')"><div class="s-ic" style="color:#0e7490;background:#e3f6fa"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V12l2-4.5h12L20 12v4"/><path d="M4 16h16M6 16v2M18 16v2"/><circle cx="7.5" cy="16" r="1.6"/><circle cx="16.5" cy="16" r="1.6"/></svg></div><div class="s-tx"><b>רכבים</b><span>מעקב טסטים וטיפולים</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-tools-item" onclick="closeMoreAnd('scr-tools')"><div class="s-ic" style="color:#c2410c;background:#fdeee7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="9" width="19" height="11" rx="2"/><path d="M8 9V6.5A2.5 2.5 0 0 1 10.5 4h3A2.5 2.5 0 0 1 16 6.5V9M2.5 14h19"/></svg></div><div class="s-tx"><b>חדר כלים</b><span>מעקב כלים ותוקף כיול</span></div><span class="s-chev">‹</span></div>
+      <div class="sheet-item hidden" id="sheet-supplies" onclick="closeMoreAnd('scr-supplies')"><div class="s-ic" style="color:#0d9488;background:#e3f7f5"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg></div><div class="s-tx"><b>הזמנת ציוד</b><span>הזמנה חודשית של חומרי ניקוי וכלי כתיבה</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="sheet-users" onclick="closeMoreAnd('scr-users')"><div class="s-ic" style="color:#a16207;background:#fdf3d8"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18h16l-1.3-8-4 3-2.7-6-2.7 6-4-3L4 18Z"/><path d="M4 20.5h16"/></svg></div><div class="s-tx"><b>משתמשים</b><span>כל המשתמשים בכל המסגרות</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-team-item" onclick="closeMoreAndFn(openTeamMgmt)"><div class="s-ic" style="color:#0e7490;background:#e3f6fa"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="3"/><circle cx="16" cy="9.5" r="2.5"/><path d="M2.5 20c0-3 2.7-5.2 6-5.2s6 2.2 6 5.2M15 14.8c2.6.3 4.5 2.2 4.5 5.2"/></svg></div><div class="s-tx"><b>ניהול צוות</b><span>הוספה, עריכה, ימי הולדת</span></div><span class="s-chev">‹</span></div>
       <div class="sheet-item hidden" id="more-faults-item" onclick="faultCategory='equip';closeMoreAnd('scr-faults')"><div class="s-ic" style="color:#c2410c;background:#fdeee7"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.1-5.1a4 4 0 0 0 4.6-5.4l-3 3-2-2 3-3Z"/></svg></div><div class="s-tx"><b>תקלות</b><span>דיווח ומעקב תקלות ציוד ובינוי</span></div><span class="s-chev">‹</span></div>
@@ -3721,9 +3768,10 @@ nav{
           <option value="חדר כלים">מעניק הרשאה: חדר כלים</option>
           <option value="רכבים">מעניק הרשאה: רכבים</option>
           <option value="לוח צוות שבועי">מעניק הרשאה: פרסום לוח צוות לכל המסגרות</option>
+          <option value="הזמנת ציוד">מעניק הרשאה: ביצוע הזמנת ציוד חודשית</option>
         </datalist>
         <div style="background:var(--gold-soft);border:1px solid #f0dfa8;border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:var(--ink-2);line-height:1.6">
-          <svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#a16207" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="3.2"/><path d="M10.3 12.7 19 4M15.5 8.5l2.5 2.5M18 6l2 2"/></svg> <b>תחומים שמעניקים הרשאת עריכה:</b> "כשירות חיילים" (שמיעה + מטווח), "בדיקות שמיעה", "מטווחים", "חדר כלים", "רכבים", "לוח צוות שבועי" (פרסום לכל המסגרות).
+          <svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#a16207" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="3.2"/><path d="M10.3 12.7 19 4M15.5 8.5l2.5 2.5M18 6l2 2"/></svg> <b>תחומים שמעניקים הרשאת עריכה:</b> "כשירות חיילים" (שמיעה + מטווח), "בדיקות שמיעה", "מטווחים", "חדר כלים", "רכבים", "לוח צוות שבועי" (פרסום לכל המסגרות), "הזמנת ציוד" (הזמנה חודשית).
           יש לבחור מהרשימה — שם שונה במקצת לא ייתן הרשאה.
         </div>
         <label style="font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:3px"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></svg> חייל אחראי</label>
@@ -4051,6 +4099,7 @@ let isHearingResp = false; // נע"ת בדיקות שמיעה — הרשאת ה�
 let isRangeResp = false;   // נע"ת מטווחים — הרשאת הזנת תאריכים בכשירות חיילים
 let isBoardPublisher = false; // נע"ת לוח צוות שבועי — הרשאת פרסום הלוח לכל המסגרות (בלי צורך במעמד אחראי הדרכה/אחזקה מלא)
 let isRosterManager = false;  // מ"ע תורנויות — אחריות ועריכה על לוח הצוות המובנה
+let isSuppliesResp = false;   // נע"ת הזמנת ציוד — הרשאת ביצוע הזמנה חודשית
 let evImgData = null;      // data URL of selected file
 let evFileMeta = null;     // {type:'image'|'pdf'|'word'|'ppt', name, mime}
 
@@ -5179,6 +5228,7 @@ async function applyLoginUiForRole(person){
   document.getElementById("sheet-medchecks").classList.toggle("hidden", isTrainingUnit);
   // "לוח שנה מאוחד" בתפריט "עוד" — רק למי שלא קיבל אותו כלשונית בסרגל
   document.getElementById("sheet-calendar").classList.toggle("hidden", calInNav);
+  document.getElementById("sheet-supplies").classList.toggle("hidden", !isSuppliesResp || isMaintUnit || isTrainingUnit);
 
   /* מסך "אנשים" — מאחד עבור מפקד סככה/מחלקה רגילה וגם עבור מ״ע אחזקה
      (hasTrainHub, בדיוק אותה אוכלוסייה שמקבלת את תוכן שער ההדרכה) את
@@ -5282,7 +5332,7 @@ async function doLogin(){
 function logout(){
   try{ if("clearAppBadge" in navigator) navigator.clearAppBadge(); }catch(e){}
   user=null; userRole=null; isCmd=false; isAdmin=false; isVehicleOfficer=false; isBudgetOfficer=false; isTechOfficer=false; isToolsResp=false; isVehiclesResp=false;
-  isHearingResp=false; isRangeResp=false; isBoardPublisher=false; isRosterManager=false;
+  isHearingResp=false; isRangeResp=false; isBoardPublisher=false; isRosterManager=false; isSuppliesResp=false;
   isOwner=false; impersonating=null; isSuperAdmin=false; superAdminSelf=null;
   // איפוס קאש לוח הצוות בזיכרון — בלי זה, נתונים שנטענו עבור משתמש אחד
   // "נדבקים" למשתמש הבא באותה טעינת-עמוד. זה מה שגרם לכך שהחלפת משתמש
@@ -5357,6 +5407,7 @@ function go(id, btn){
   if(id==="scr-training") renderTrainingView();
   if(id==="scr-vo-overview"){ renderVoOverview(); renderMorningRollcallReport("vo-mc-report-wrap","vo-mc-report-content"); }
   if(id==="scr-vehicle-officer") renderVoVehicles();
+  if(id==="scr-supplies") renderSuppliesPage();
   if(id==="scr-maint-dept") renderMaterials();
   if(id==="scr-morning-rollcall") renderMorningRollcall();
   if(id==="scr-binui-admin") renderBinuiFaultsAdmin();
@@ -6125,6 +6176,7 @@ async function refreshAreaPermissions(){
      (roster_managers) או נע"ת ייעודי, כדי שהחלפת תפקיד לא תדרוש קוד. */
   isRosterManager = isBoardPublisher || has("מ״ע תורנויות") ||
     (await getRosterManagers()).includes(user);
+  isSuppliesResp = userRole==="מפקד" || has("הזמנת ציוד");
   if(currentShed && currentShed.isDept){ isToolsResp = false; isVehiclesResp = (userRole==="מפקד"); return; }
   isToolsResp = userRole==="מפקד" || has("חדר כלים");
   isVehiclesResp = userRole==="מפקד" || has("רכבים");
@@ -16216,6 +16268,326 @@ async function removeCertById(id, fallbackIdx){
   toast("ההסמכה הוסרה");
 }
 
+/* ===== SUPPLIES ORDER (הזמנת ציוד חודשית) =====
+   כל סככה מזמינה פעם בחודש חומרי ניקוי + כלי כתיבה + חד-פעמי.
+   תקציב 300₪. ההזמנות מרוכזות אצל מ״ע אחזקה. */
+const SUPPLIES_BUDGET_LIMIT = 300;
+const SUPPLIES_CATALOG = [
+  {id:"n1",name:"אקונומיקה 1 ליטר",price:4.50,cat:"ניקוי"},
+  {id:"n2",name:"בלנקו 750 מ\"ל",price:5.30,cat:"ניקוי"},
+  {id:"n3",name:"דלי שטיפה עם סחיטה גדול",price:16.20,cat:"ניקוי"},
+  {id:"n4",name:"שקיות היגייניות גדולות (חבילה)",price:3.50,cat:"ניקוי"},
+  {id:"n5",name:"שקיות היגייניות קטנות (חבילה)",price:28.50,cat:"ניקוי"},
+  {id:"n6",name:"כפפות חד פעמיות (חבילה)",price:6.50,cat:"ניקוי"},
+  {id:"n7",name:"שקיות אשפה (גליל)",price:1.50,cat:"ניקוי"},
+  {id:"n8",name:"מגב רצפה 40 ס\"מ",price:12.80,cat:"ניקוי"},
+  {id:"n9",name:"מגב רצפה 60 ס\"מ",price:15.40,cat:"ניקוי"},
+  {id:"n10",name:"מקל למגב",price:5.90,cat:"ניקוי"},
+  {id:"n11",name:"מטאטא רחב",price:14.50,cat:"ניקוי"},
+  {id:"n12",name:"מטאטא ביתי",price:9.80,cat:"ניקוי"},
+  {id:"n13",name:"יעה (פאה)",price:7.50,cat:"ניקוי"},
+  {id:"n14",name:"סבון כלים 1 ליטר",price:5.80,cat:"ניקוי"},
+  {id:"n15",name:"סבון ידיים 1 ליטר",price:6.20,cat:"ניקוי"},
+  {id:"n16",name:"סבון רצפות 2 ליטר",price:8.90,cat:"ניקוי"},
+  {id:"n17",name:"מגבונים לחים (חבילה)",price:4.80,cat:"ניקוי"},
+  {id:"n18",name:"נייר טואלט (חבילת 4)",price:7.90,cat:"ניקוי"},
+  {id:"n19",name:"מגבות נייר (גליל)",price:5.50,cat:"ניקוי"},
+  {id:"n20",name:"ספוג כלים (חבילת 5)",price:3.90,cat:"ניקוי"},
+  {id:"n21",name:"מברשת שירותים",price:8.50,cat:"ניקוי"},
+  {id:"n22",name:"מסיר שומנים 750 מ\"ל",price:7.80,cat:"ניקוי"},
+  {id:"n23",name:"מסיר אבנית 750 מ\"ל",price:8.20,cat:"ניקוי"},
+  {id:"n24",name:"חומר חיטוי 1 ליטר",price:6.90,cat:"ניקוי"},
+  {id:"n25",name:"מטלית רצפה",price:3.20,cat:"ניקוי"},
+  {id:"n26",name:"מטלית ספיגה (חבילה)",price:4.50,cat:"ניקוי"},
+  {id:"n27",name:"ממרח זכוכית 750 מ\"ל",price:6.50,cat:"ניקוי"},
+  {id:"n28",name:"אבקת כביסה 3 ק\"ג",price:22.50,cat:"ניקוי"},
+  {id:"n29",name:"מרכך כביסה 2 ליטר",price:12.80,cat:"ניקוי"},
+  {id:"n30",name:"שקית זבל 110 ליטר (גליל)",price:4.20,cat:"ניקוי"},
+  {id:"n31",name:"שקית זבל 80 ליטר (גליל)",price:3.50,cat:"ניקוי"},
+  {id:"n32",name:"מברשת ניקוי כללית",price:6.80,cat:"ניקוי"},
+  {id:"n33",name:"סל כביסה",price:18.50,cat:"ניקוי"},
+  {id:"n34",name:"דלי 10 ליטר",price:8.50,cat:"ניקוי"},
+  {id:"n35",name:"מגב חלונות",price:11.50,cat:"ניקוי"},
+  {id:"n36",name:"ערכת ניקוי כללית",price:35.00,cat:"ניקוי"},
+  {id:"n37",name:"ריחנית לשירותים",price:9.80,cat:"ניקוי"},
+  {id:"n38",name:"כלורין 1 ליטר",price:3.80,cat:"ניקוי"},
+  {id:"n39",name:"נוזל ניקוי אמבטיה 750 מ\"ל",price:7.50,cat:"ניקוי"},
+  {id:"n40",name:"ניילון נצמד (גליל)",price:4.50,cat:"ניקוי"},
+  {id:"n41",name:"נייר אלומיניום (גליל)",price:5.20,cat:"ניקוי"},
+  {id:"n42",name:"שקיות סנדוויץ (חבילה)",price:2.80,cat:"ניקוי"},
+  {id:"k1",name:"טוש צבעוני - שחור",price:5.31,cat:"כתיבה"},
+  {id:"k2",name:"טוש צבעוני - אדום",price:5.31,cat:"כתיבה"},
+  {id:"k3",name:"טוש צבעוני - כחול",price:5.31,cat:"כתיבה"},
+  {id:"k4",name:"טוש צבעוני - ירוק",price:5.31,cat:"כתיבה"},
+  {id:"k5",name:"טוש צבעוני - כתום",price:5.31,cat:"כתיבה"},
+  {id:"k6",name:"טוש צבעוני - סגול",price:5.31,cat:"כתיבה"},
+  {id:"k7",name:"מחברת A5 (חבילת 10)",price:1.18,cat:"כתיבה"},
+  {id:"k8",name:"תיקייה 170 70/100",price:0.60,cat:"כתיבה"},
+  {id:"k9",name:"תיקייה A4",price:1.50,cat:"כתיבה"},
+  {id:"k10",name:"נייר A4 (חבילת 500)",price:17.50,cat:"כתיבה"},
+  {id:"k11",name:"לוח 80×120",price:39.00,cat:"כתיבה"},
+  {id:"k12",name:"עט כדורי כחול",price:0.80,cat:"כתיבה"},
+  {id:"k13",name:"עט כדורי שחור",price:0.80,cat:"כתיבה"},
+  {id:"k14",name:"עט כדורי אדום",price:0.80,cat:"כתיבה"},
+  {id:"k15",name:"עיפרון HB",price:0.50,cat:"כתיבה"},
+  {id:"k16",name:"מחק לבן",price:0.70,cat:"כתיבה"},
+  {id:"k17",name:"מחדד",price:1.20,cat:"כתיבה"},
+  {id:"k18",name:"סרגל 30 ס\"מ",price:1.80,cat:"כתיבה"},
+  {id:"k19",name:"דבק סטיק 21 גרם",price:2.50,cat:"כתיבה"},
+  {id:"k20",name:"דבק נוזלי 40 מ\"ל",price:3.20,cat:"כתיבה"},
+  {id:"k21",name:"טיפקס עט",price:4.50,cat:"כתיבה"},
+  {id:"k22",name:"סרט הדבקה שקוף",price:2.80,cat:"כתיבה"},
+  {id:"k23",name:"סרט הדבקה צבעוני",price:3.50,cat:"כתיבה"},
+  {id:"k24",name:"נייר דבק צהוב (חבילה)",price:3.90,cat:"כתיבה"},
+  {id:"k25",name:"מספריים",price:4.80,cat:"כתיבה"},
+  {id:"k26",name:"סיכות שדכן (קופסה)",price:1.50,cat:"כתיבה"},
+  {id:"k27",name:"שדכן",price:8.50,cat:"כתיבה"},
+  {id:"k28",name:"מהדקים (קופסה)",price:2.50,cat:"כתיבה"},
+  {id:"k29",name:"מדגשן צהוב",price:2.80,cat:"כתיבה"},
+  {id:"k30",name:"מדגשן ורוד",price:2.80,cat:"כתיבה"},
+  {id:"k31",name:"מדגשן ירוק",price:2.80,cat:"כתיבה"},
+  {id:"k32",name:"מדגשן כתום",price:2.80,cat:"כתיבה"},
+  {id:"k33",name:"בלוק A4 שורות",price:4.50,cat:"כתיבה"},
+  {id:"k34",name:"בלוק A4 חלק",price:4.50,cat:"כתיבה"},
+  {id:"k35",name:"מעטפות A4 (חבילת 10)",price:5.80,cat:"כתיבה"},
+  {id:"k36",name:"מעטפות קטנות (חבילת 10)",price:3.20,cat:"כתיבה"},
+  {id:"k37",name:"לוח שעם 60×90",price:28.00,cat:"כתיבה"},
+  {id:"k38",name:"נעצים צבעוניים (קופסה)",price:3.50,cat:"כתיבה"},
+  {id:"k39",name:"טוש מחיק ללוח לבן - שחור",price:6.80,cat:"כתיבה"},
+  {id:"k40",name:"טוש מחיק ללוח לבן - אדום",price:6.80,cat:"כתיבה"},
+  {id:"k41",name:"טוש מחיק ללוח לבן - כחול",price:6.80,cat:"כתיבה"},
+  {id:"k42",name:"מוחק ללוח לבן",price:4.50,cat:"כתיבה"},
+  {id:"k43",name:"קלסר A4",price:8.50,cat:"כתיבה"},
+  {id:"k44",name:"שמרטף",price:3.20,cat:"כתיבה"},
+  {id:"k45",name:"סימניות דגלון (חבילה)",price:4.80,cat:"כתיבה"},
+  {id:"k46",name:"מדבקות עגולות צבעוניות",price:3.50,cat:"כתיבה"},
+  {id:"k47",name:"חותמת תאריך",price:15.00,cat:"כתיבה"},
+  {id:"k48",name:"כריכות שקופות A4 (חבילת 100)",price:18.00,cat:"כתיבה"},
+  {id:"k49",name:"ספירלות כריכה (חבילת 100)",price:22.00,cat:"כתיבה"},
+  {id:"k50",name:"מכונת חורים",price:12.00,cat:"כתיבה"},
+  {id:"d1",name:"מפת אלבד הגליל 100 מ - בז'",price:83.20,cat:"חד פעמי"},
+  {id:"d2",name:"מפת אלבד הגליל 100 מ - ירוק",price:83.20,cat:"חד פעמי"},
+  {id:"d3",name:"מפת אלבד הגליל 100 מ - כחול",price:83.20,cat:"חד פעמי"},
+  {id:"d4",name:"מפת אלבד הגליל 100 מ - אדום",price:83.20,cat:"חד פעמי"},
+  {id:"d5",name:"מפת אלבד הגליל 100 מ - לבן",price:83.20,cat:"חד פעמי"},
+  {id:"d6",name:"מפת אלבד הגליל 100 מ - ורוד",price:83.20,cat:"חד פעמי"},
+  {id:"d7",name:"מפת אלבד הגליל 100 מ - צהוב",price:83.20,cat:"חד פעמי"},
+  {id:"d8",name:"כוסות חד פעמיות 180 מ\"ל (שרוול)",price:4.80,cat:"חד פעמי"},
+  {id:"d9",name:"כוסות חד פעמיות 250 מ\"ל (שרוול)",price:5.50,cat:"חד פעמי"},
+  {id:"d10",name:"צלחות חד פעמיות קטנות (חבילה)",price:6.80,cat:"חד פעמי"},
+  {id:"d11",name:"צלחות חד פעמיות גדולות (חבילה)",price:8.50,cat:"חד פעמי"},
+  {id:"d12",name:"סכו\"ם חד פעמי - כפיות (חבילה)",price:4.80,cat:"חד פעמי"},
+  {id:"d13",name:"סכו\"ם חד פעמי - מזלגות (חבילה)",price:4.80,cat:"חד פעמי"},
+  {id:"d14",name:"סכו\"ם חד פעמי - סכינים (חבילה)",price:4.80,cat:"חד פעמי"},
+  {id:"d15",name:"קשיות שתייה (חבילה)",price:3.20,cat:"חד פעמי"},
+  {id:"d16",name:"מפיות נייר (חבילה)",price:3.50,cat:"חד פעמי"},
+  {id:"d17",name:"קערות חד פעמיות (חבילה)",price:7.50,cat:"חד פעמי"},
+  {id:"d18",name:"כוסות חמות עם מכסה (שרוול)",price:14.80,cat:"חד פעמי"},
+  {id:"d19",name:"מגשי אלומיניום בינוני (חבילה)",price:12.50,cat:"חד פעמי"},
+  {id:"d20",name:"מגשי אלומיניום גדול (חבילה)",price:16.80,cat:"חד פעמי"},
+  {id:"d21",name:"נייר אפייה (גליל)",price:5.80,cat:"חד פעמי"},
+  {id:"d22",name:"מכסי אלומיניום (חבילה)",price:8.50,cat:"חד פעמי"},
+  {id:"d23",name:"שקיות נייר (חבילה)",price:4.50,cat:"חד פעמי"},
+  {id:"d24",name:"בקבוקי מים 0.5 ליטר (שישייה)",price:7.80,cat:"חד פעמי"}
+];
+
+let supCat = "ניקוי";
+let supDraft = null;
+let supMonthKey = "";
+
+function supMonthLabel(key){ const [y,m]=key.split("-"); return ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"][+m-1]+" "+y; }
+function supplyTotal(items){ return (items||[]).reduce((s,it)=>{ const c=SUPPLIES_CATALOG.find(x=>x.id===it.id); return s+(c?c.price*it.qty:0); },0); }
+
+async function renderSuppliesPage(){
+  const now=new Date(); supMonthKey=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
+  document.getElementById("sup-month-label").textContent="הזמנה חודשית — "+supMonthLabel(supMonthKey)+" · "+currentShed.name;
+  const saved=await sGet("supplies_order_"+supMonthKey);
+  supDraft=saved?JSON.parse(JSON.stringify(saved)):{items:[],status:"draft",submittedAt:null,submittedBy:null,shortages:[],deliveredAt:null};
+  supCat="ניקוי";
+  renderSuppliesStatus();
+  renderSuppliesBudget();
+  renderSuppliesCatTabs();
+  renderSuppliesCatalog();
+  renderSuppliesSummary();
+  document.getElementById("sup-submit-btn").style.display=supDraft.status==="draft"?"block":"none";
+}
+
+function renderSuppliesStatus(){
+  const bar=document.getElementById("sup-status-bar");
+  if(supDraft.status==="draft"){bar.innerHTML='<div class="sup-status draft">טיוטה — ההזמנה טרם נשלחה</div>';return;}
+  if(supDraft.status==="submitted"){bar.innerHTML='<div class="sup-status submitted">ההזמנה נשלחה ב-'+new Date(supDraft.submittedAt).toLocaleDateString("he-IL")+'</div>';return;}
+  if(supDraft.status==="delivered"){bar.innerHTML='<div class="sup-status delivered">סופק במלואו</div>';return;}
+  if(supDraft.status==="partial"){
+    const short=supDraft.shortages||[];
+    bar.innerHTML='<div class="sup-status partial">סופק חלקית — '+short.length+' חוסרים</div>';
+    return;
+  }
+  bar.innerHTML="";
+}
+
+function renderSuppliesBudget(){
+  const wrap=document.getElementById("sup-budget-bar");
+  const total=supplyTotal(supDraft.items);
+  const pct=Math.min(100,total/SUPPLIES_BUDGET_LIMIT*100);
+  const color=pct>=100?"var(--red)":pct>=80?"var(--gold)":"var(--green)";
+  wrap.innerHTML='<div class="sup-budget-text">'+total.toFixed(2)+' / '+SUPPLIES_BUDGET_LIMIT+' ₪</div><div class="sup-budget"><div class="sup-budget-fill" style="width:'+pct+'%;background:'+color+'"></div></div>';
+}
+
+function renderSuppliesCatTabs(){
+  const tabs=document.getElementById("sup-cat-tabs");
+  tabs.innerHTML=["ניקוי","כתיבה","חד פעמי"].map(c=>'<button class="roster-seg'+(c===supCat?" active":"")+'" onclick="setSupplyCat(\''+c+'\')">'+c+'</button>').join("");
+}
+
+function setSupplyCat(c){ supCat=c; renderSuppliesCatTabs(); renderSuppliesCatalog(); }
+
+function renderSuppliesCatalog(){
+  const wrap=document.getElementById("sup-catalog");
+  const items=SUPPLIES_CATALOG.filter(c=>c.cat===supCat);
+  const ro=supDraft.status!=="draft";
+  wrap.innerHTML=items.map(it=>{
+    const cur=supDraft.items.find(x=>x.id===it.id);
+    const qty=cur?cur.qty:0;
+    return '<div class="sup-item"><span class="sup-item-name">'+it.name+'</span><span class="sup-item-price">'+it.price.toFixed(2)+' ₪</span>'+
+      (ro?'<span style="font-weight:700;min-width:28px;text-align:center">'+(qty||"")+'</span>':
+      '<div class="sup-stepper"><button onclick="updateSupplyQty(\''+it.id+'\',-1)">−</button><span>'+qty+'</span><button onclick="updateSupplyQty(\''+it.id+'\',1)">+</button></div>')+
+      '</div>';
+  }).join("");
+}
+
+function updateSupplyQty(itemId,delta){
+  if(supDraft.status!=="draft") return;
+  let cur=supDraft.items.find(x=>x.id===itemId);
+  if(!cur){ cur={id:itemId,qty:0}; supDraft.items.push(cur); }
+  const newQty=Math.max(0,cur.qty+delta);
+  const oldQty=cur.qty;
+  cur.qty=newQty;
+  const total=supplyTotal(supDraft.items);
+  if(total>SUPPLIES_BUDGET_LIMIT){cur.qty=oldQty;toast("חריגה מתקציב 300 ₪");return;}
+  if(newQty===0) supDraft.items=supDraft.items.filter(x=>x.id!==itemId);
+  sSet("supplies_order_"+supMonthKey,supDraft);
+  renderSuppliesBudget();
+  renderSuppliesCatalog();
+  renderSuppliesSummary();
+}
+
+function renderSuppliesSummary(){
+  const wrap=document.getElementById("sup-summary");
+  const ordered=supDraft.items.filter(x=>x.qty>0);
+  if(!ordered.length){wrap.innerHTML='<div style="text-align:center;color:var(--ink-3);padding:16px;font-size:13px">לא נבחרו פריטים</div>';return;}
+  let html='<div style="background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px"><h3 style="margin:0 0 8px;font-size:14px">סיכום הזמנה ('+ordered.length+' פריטים)</h3>';
+  ordered.forEach(it=>{
+    const c=SUPPLIES_CATALOG.find(x=>x.id===it.id);
+    if(!c) return;
+    const short=supDraft.shortages&&supDraft.shortages.find(s=>s.id===it.id);
+    html+='<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--line)"><span>'+c.name+' × '+it.qty+'</span><span>'+(c.price*it.qty).toFixed(2)+' ₪'+(short?' <span style="color:var(--red);font-weight:700">חוסר</span>':'')+'</span></div>';
+  });
+  html+='<div style="display:flex;justify-content:space-between;font-weight:700;padding:6px 0;font-size:13.5px"><span>סה"כ</span><span>'+supplyTotal(supDraft.items).toFixed(2)+' ₪</span></div></div>';
+  wrap.innerHTML=html;
+}
+
+async function submitSuppliesOrder(){
+  if(supDraft.status!=="draft") return;
+  if(!supDraft.items.length){toast("לא נבחרו פריטים");return;}
+  if(!confirm("לשלוח את ההזמנה? לאחר שליחה לא ניתן לשנות.")) return;
+  supDraft.status="submitted";
+  supDraft.submittedAt=new Date().toISOString();
+  supDraft.submittedBy=user;
+  await sSet("supplies_order_"+supMonthKey,supDraft);
+  toast("ההזמנה נשלחה בהצלחה");
+  renderSuppliesStatus();
+  renderSuppliesCatalog();
+  document.getElementById("sup-submit-btn").style.display="none";
+}
+
+/* --- אדמין מ״ע אחזקה: הזמנות ציוד מכל הסככות --- */
+let maintSupMonth=null;
+function maintSupMonthKey(){ if(!maintSupMonth){ const n=new Date(); maintSupMonth=n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0"); } return maintSupMonth; }
+function shiftMaintSuppliesMonth(d){ const [y,m]=maintSupMonthKey().split("-").map(Number); const dt=new Date(y,m-1+d,1); maintSupMonth=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0"); renderMaintSupplies(); }
+
+async function renderMaintSupplies(){
+  const mk=maintSupMonthKey();
+  document.getElementById("maint-sup-month").textContent=supMonthLabel(mk);
+  const wrap=document.getElementById("maint-sup-list");
+  const shedIds=SHEDS.filter(s=>!s.isMaint&&!s.isTraining&&!s.isDept).map(s=>s.id);
+  let html="";
+  for(const sid of shedIds){
+    const shed=SHEDS.find(s=>s.id===sid);
+    const order=await sGetIn(sid,"supplies_order_"+mk);
+    const statusMap={draft:"טיוטה",submitted:"נשלח",delivered:"סופק",partial:"סופק חלקית"};
+    const st=order?order.status:"draft";
+    const stLabel=statusMap[st]||"טיוטה";
+    const total=order?supplyTotal(order.items):0;
+    const itemCount=order?(order.items||[]).filter(x=>x.qty>0).length:0;
+    html+='<div class="sup-shed-card"><h3>'+shed.name+'</h3>';
+    html+='<div style="display:flex;gap:12px;font-size:12.5px;color:var(--ink-2)"><span class="sup-status '+st+'" style="padding:3px 8px;font-size:11.5px;display:inline-block">'+stLabel+'</span><span>'+itemCount+' פריטים</span><span>'+total.toFixed(2)+' ₪</span></div>';
+    if(order&&order.items&&order.items.length){
+      html+='<div class="sup-shed-items">';
+      order.items.filter(x=>x.qty>0).forEach(it=>{
+        const c=SUPPLIES_CATALOG.find(x=>x.id===it.id);
+        if(!c) return;
+        const short=order.shortages&&order.shortages.find(s=>s.id===it.id);
+        html+='<div style="display:flex;justify-content:space-between;padding:2px 0">'+c.name+' × '+it.qty+(short?' <span style="color:var(--red);font-weight:600">חוסר: '+short.note+'</span>':'')+'</div>';
+      });
+      html+='</div>';
+    }
+    if(order&&st==="submitted"){
+      html+='<div class="sup-shed-actions"><button class="m-btn ghost" style="font-size:12px" onclick="openSupplyShortageModal(\''+sid+'\',\''+mk+'\')">סמן חוסרים</button><button class="m-btn primary" style="font-size:12px" onclick="markSupplyDelivered(\''+sid+'\',\''+mk+'\',false)">סמן כסופק</button></div>';
+    }
+    html+='</div>';
+  }
+  if(!html) html='<div style="text-align:center;color:var(--ink-3);padding:24px">אין הזמנות לחודש זה</div>';
+  wrap.innerHTML=html;
+}
+
+async function openSupplyShortageModal(shedId,mk){
+  const order=await sGetIn(shedId,"supplies_order_"+mk);
+  if(!order||!order.items) return;
+  const items=order.items.filter(x=>x.qty>0);
+  const existing=order.shortages||[];
+  let html='<div class="modal-bg open" id="supply-shortage-modal" onclick="if(event.target===this)this.classList.remove(\'open\')"><div class="modal" style="max-height:80vh;overflow-y:auto"><h3 style="margin:0 0 12px">סימון חוסרים — '+SHEDS.find(s=>s.id===shedId).name+'</h3>';
+  items.forEach(it=>{
+    const c=SUPPLIES_CATALOG.find(x=>x.id===it.id);
+    if(!c) return;
+    const ex=existing.find(s=>s.id===it.id);
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)"><label style="flex:1;font-size:13px"><input type="checkbox" data-sid="'+it.id+'" '+(ex?"checked":"")+' style="margin-left:6px">'+c.name+' (×'+it.qty+')</label><input class="m-input" data-note-sid="'+it.id+'" placeholder="הערה" value="'+(ex?ex.note:"")+'" style="width:100px;font-size:11.5px;padding:4px 6px"></div>';
+  });
+  html+='<div style="margin-top:12px;display:flex;gap:8px"><button class="m-btn primary" onclick="saveSupplyShortages(\''+shedId+'\',\''+mk+'\')">שמור</button><button class="m-btn ghost" onclick="document.getElementById(\'supply-shortage-modal\').remove()">ביטול</button></div></div></div>';
+  document.body.insertAdjacentHTML("beforeend",html);
+}
+
+async function saveSupplyShortages(shedId,mk){
+  const modal=document.getElementById("supply-shortage-modal");
+  const checks=modal.querySelectorAll("input[type=checkbox]");
+  const shortages=[];
+  checks.forEach(cb=>{
+    if(cb.checked){
+      const sid=cb.dataset.sid;
+      const noteEl=modal.querySelector('[data-note-sid="'+sid+'"]');
+      shortages.push({id:sid,note:noteEl?noteEl.value.trim():""});
+    }
+  });
+  const order=await sGetIn(shedId,"supplies_order_"+mk);
+  if(!order) return;
+  order.shortages=shortages;
+  if(shortages.length) order.status="partial"; else order.status="delivered";
+  order.deliveredAt=new Date().toISOString();
+  await sSetIn(shedId,"supplies_order_"+mk,order);
+  modal.remove();
+  toast("חוסרים עודכנו");
+  renderMaintSupplies();
+}
+
+async function markSupplyDelivered(shedId,mk,partial){
+  if(!confirm("לסמן הזמנה כסופקה?")) return;
+  const order=await sGetIn(shedId,"supplies_order_"+mk);
+  if(!order) return;
+  order.status="delivered";
+  order.deliveredAt=new Date().toISOString();
+  await sSetIn(shedId,"supplies_order_"+mk,order);
+  toast("ההזמנה סומנה כסופקה");
+  renderMaintSupplies();
+}
+
 /* ===== TOOL ROOM (חדר כלים) — v25 =====
    כלים בעלי תוקף כיול, לכל סככה בנפרד. אין מסך מנהל לפיצ'ר זה. */
 const TOOLS_BANK_DEFAULT = ["טורקים","מד לחץ גלגלים","רב זרועות","מד מתח כבלים","ערכת פלטנר","בודקי תחנה"];
@@ -17656,12 +18028,13 @@ async function renderVoLicenses(){
    מ״ע אחזקה — הזמנת חומרים + מעקב כלים מוטוריים (לשונית "אחזקה" בבאר התחתון)
    ============================================================ */
 function mdTab(which){
-  ["materials","tools"].forEach(w=>{
+  ["materials","tools","supplies"].forEach(w=>{
     document.getElementById("mdtab-"+w).classList.toggle("active", which===w);
     document.getElementById("mdpane-"+w).classList.toggle("active", which===w);
   });
   if(which==="materials") renderMaterials();
   if(which==="tools") renderMotorTools();
+  if(which==="supplies") renderMaintSupplies();
 }
 
 /* --- הזמנת חומרים --- */
