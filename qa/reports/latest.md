@@ -35,7 +35,7 @@ _אין מה לדווח._
 > ✅ הכל תקין
 
 **🔵 מידע · מפתח Firebase/Google API נמצא בקוד**
-1 מופעים (שורה 4092). מפתח Web של Firebase הוא ציבורי מעצם טיבו — ההגנה בפועל היא כללי מסד הנתונים + App Check. לא נדרשת פעולה, בתנאי ששני אלה מופעלים.
+1 מופעים (שורה 4094). מפתח Web של Firebase הוא ציבורי מעצם טיבו — ההגנה בפועל היא כללי מסד הנתונים + App Check. לא נדרשת פעולה, בתנאי ששני אלה מופעלים.
 
 **🔵 מידע · הפרדה בין מסגרות אינה אכופה בשרת — החלטה מתועדת, לא פרצה**
 תגית authorized חוסמת אימות אנונימי (ראה SECURITY.md שלב 7), אבל כל כניסה אמיתית עם קוד עדיין יכולה לקרוא נתונים של מסגרות אחרות — זו החלטת מוצר מכוונת שתועדה ב-SECURITY.md שלב 4 ("הוחלט לא לבצע הפרדת מסגרות בשרת — החשש אינו מפני אנשי הטייסת עצמם"). אם יידרש בעתיד להדק, הפתרון כבר כתוב כתיעוד היסטורי בקובץ הכללים (גרסה 2).
@@ -53,7 +53,7 @@ _אין מה לדווח._
 > 4 נקודות לתשומת לב
 
 **🟠 בינוני · גודל האפליקציה**
-1266 KB, 18,198 שורות בקובץ יחיד. מעל 900KB — כל טעינה ראשונה מורידה את הכל. שווה לשקול פיצול ה-CSS/JS לקבצים נפרדים שנשמרים במטמון בנפרד.
+1270 KB, 18,263 שורות בקובץ יחיד. מעל 900KB — כל טעינה ראשונה מורידה את הכל. שווה לשקול פיצול ה-CSS/JS לקבצים נפרדים שנשמרים במטמון בנפרד.
 
 **🟡 קל · פונקציות שלא נקראות מאף מקום**
 3 פונקציות: triggerBoardUpload, openBoardViewer, deleteBoard. מועמדות למחיקה — פחות קוד, פחות מקום לטעות.
@@ -62,7 +62,7 @@ _אין מה לדווח._
 3 שדות בלי aria-label/placeholder/id.
 
 **🟡 קל · פונקציות ארוכות מאוד**
-5 פונקציות מעל 120 שורות. הארוכות: applyLoginUiForRole (174 שורות, שורה 5033), renderRosterEditor (148 שורות, שורה 9624), renderRosterView (141 שורות, שורה 7695). פיצול יקל על תחזוקה ויקטין סיכון לבאגים.
+5 פונקציות מעל 120 שורות. הארוכות: applyLoginUiForRole (174 שורות, שורה 5035), renderRosterEditor (148 שורות, שורה 9663), renderRosterView (144 שורות, שורה 7709). פיצול יקל על תחזוקה ויקטין סיכון לבאגים.
 
 **🔵 מידע · ההגנה על רשימת הצוות במקומה**
 אין כתיבות עיוורות של PERSONNEL — כל השמירות עוברות דרך mutatePersonnel().
@@ -80,10 +80,10 @@ _אין מה לדווח._
 > 3 נקודות לתשומת לב
 
 **🟠 בינוני · פעולת מחיקה בלי בקשת אישור מהמשתמש**
-8 פונקציות ששמן מרמז על מחיקה, בלי confirm() בגוף שלהן: removeDeviceUser (שורה 4615), removeBdpBoardGroup (שורה 7048), removeBasicDutyPlanEntry (שורה 9999), removePersonCerts (שורה 12294), removeDeptReassignedPeople (שורה 13436), removeAdminCert (שורה 14106), removeCertBank (שורה 14178), removeCertById (שורה 16108). לחיצה אחת מוחקת נתונים בלי אפשרות להתחרט — כדאי לבדוק אם יש אישור בשכבה אחרת (למשל מודל ייעודי), ואם לא — להוסיף confirm() כמו בשאר פעולות המחיקה באפליקציה.
+8 פונקציות ששמן מרמז על מחיקה, בלי confirm() בגוף שלהן: removeDeviceUser (שורה 4617), removeBdpBoardGroup (שורה 7062), removeBasicDutyPlanEntry (שורה 10038), removePersonCerts (שורה 12359), removeDeptReassignedPeople (שורה 13501), removeAdminCert (שורה 14171), removeCertBank (שורה 14243), removeCertById (שורה 16173). לחיצה אחת מוחקת נתונים בלי אפשרות להתחרט — כדאי לבדוק אם יש אישור בשכבה אחרת (למשל מודל ייעודי), ואם לא — להוסיף confirm() כמו בשאר פעולות המחיקה באפליקציה.
 
 **🟡 קל · פעולת שמירה/פרסום בלי הודעת משוב (toast) למשתמש**
-11 פונקציות: saveDeviceUsers (שורה 4602), saveManualEvents (שורה 6324), saveRosterCustomRows (שורה 7154), saveRosterArchive (שורה 8006), saveDutyRequests (שורה 8618), saveBasicDutyPlan (שורה 9899), savePushToken (שורה 11307), publishEventToAllSheds (שורה 13785), publishBoardToAllSheds (שורה 13890), publishTrainingToAllSheds (שורה 14237)…. ייתכן שהמשוב ניתן בדרך אחרת (רענון מסך, סגירת מודל) — כדאי לוודא שהמשתמש בכל זאת יודע אם השמירה הצליחה או נכשלה.
+11 פונקציות: saveDeviceUsers (שורה 4604), saveManualEvents (שורה 6326), saveRosterCustomRows (שורה 7168), saveRosterArchive (שורה 8039), saveDutyRequests (שורה 8657), saveBasicDutyPlan (שורה 9938), savePushToken (שורה 11372), publishEventToAllSheds (שורה 13850), publishBoardToAllSheds (שורה 13955), publishTrainingToAllSheds (שורה 14302)…. ייתכן שהמשוב ניתן בדרך אחרת (רענון מסך, סגירת מודל) — כדאי לוודא שהמשתמש בכל זאת יודע אם השמירה הצליחה או נכשלה.
 
 **🟡 קל · כפתורי אייקון בלי תיאור נגיש (title/aria-label)**
 5 כפתורים (4 סוגי סמל) בלי title/aria-label, למשל "›", "‹", "🗑️", "✏️". הוספת title="..." קצר עוזרת גם למשתמש חדש שמנחש מה הכפתור עושה, וגם לנגישות.
@@ -92,8 +92,8 @@ _אין מה לדווח._
 
 ## מה מומלץ לעשות
 
-1. **גודל האפליקציה** — 1266 KB, 18,198 שורות בקובץ יחיד.
-2. **פעולת מחיקה בלי בקשת אישור מהמשתמש** — 8 פונקציות ששמן מרמז על מחיקה, בלי confirm() בגוף שלהן: removeDeviceUser (שורה 4615), removeBdpBoardGroup (שורה 7048), removeBasicDutyPlanEntry (שורה 9999), removePersonCerts (שורה 12294), removeDeptReassignedPeople (שורה 13436), removeAdminCert (שורה 14106), removeCertBank (שורה 14178), removeCertById (שורה 16108).
+1. **גודל האפליקציה** — 1270 KB, 18,263 שורות בקובץ יחיד.
+2. **פעולת מחיקה בלי בקשת אישור מהמשתמש** — 8 פונקציות ששמן מרמז על מחיקה, בלי confirm() בגוף שלהן: removeDeviceUser (שורה 4617), removeBdpBoardGroup (שורה 7062), removeBasicDutyPlanEntry (שורה 10038), removePersonCerts (שורה 12359), removeDeptReassignedPeople (שורה 13501), removeAdminCert (שורה 14171), removeCertBank (שורה 14243), removeCertById (שורה 16173).
 
 _יש עוד 5 הערות קטנות שלא דחופות._
 
