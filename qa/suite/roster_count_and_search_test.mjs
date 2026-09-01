@@ -33,7 +33,7 @@ const out = await page.evaluate(async ()=>{
 
   // הספירה בבנק: א׳(1)+ג׳(1) = 2 בלבד (ה׳ ושני לא נספרים)
   rosterEdDay = "רביעי";
-  openRosterPick("pf");
+  await openRosterPick("pf");
   const row = rosterPickRows.find(x=>x.name===A);
   r.count2 = !!row && row.cnt===2;
   document.getElementById("roster-pick-modal").classList.remove("open");

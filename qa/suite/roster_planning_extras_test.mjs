@@ -22,15 +22,15 @@ const out = await page.evaluate(async ()=>{
   // בונים לוח עתידי — בבנק האנשים מי שעשה שבת מסומן צהוב
   await openRosterEditor(null, "next");
   rosterEdDay = "ראשון";
-  openRosterPick("pf");
+  await openRosterPick("pf");
   const satRow = rosterPickRows.find(x=>x.name==="חייל א סככה 1");
   r.satFlag = !!(satRow && satRow.sat);
   r.legendHasSat = document.getElementById("roster-pick-legend").innerHTML.includes("עשה שבת");
 
   // מונה שיבוץ: חייל ששובץ פעם אחת בטיוטה => cnt=1
-  rosterDraft.days["שני"].pf = [{name:"חייל ב סככה 1"}];
+  rosterDraft.days["שני"].pf = [{name:"חייל א סככה 2"}];
   renderRosterPickList();
-  const cntRow = rosterPickRows.find(x=>x.name==="חייל ב סככה 1");
+  const cntRow = rosterPickRows.find(x=>x.name==="חייל א סככה 2");
   r.cntShown = !!(cntRow && cntRow.cnt===1 && cntRow.quota>=2);
   r.legendHasCounts = /שובץ חלקית|השלים מכסה/.test(document.getElementById("roster-pick-legend").innerHTML);
   document.getElementById("roster-pick-modal").classList.remove("open");

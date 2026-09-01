@@ -20,25 +20,25 @@ const out = await page.evaluate(async ()=>{
   rosterDraft.days["שני"].pf   = [{name:"חייל א סככה 1"}];
   rosterDraft.days["חמישי"].pf = [{name:"חייל א סככה 1"}];
   rosterEdDay = "שלישי";
-  openRosterPick("pf");
+  await openRosterPick("pf");
   const row = rosterPickRows.find(x=>x.name==="חייל א סככה 1");
   r.countSunWed = !!row && row.cnt===2;         // חמישי לא נספר
 
   // בחירה מרובה
   r.multiMode = rosterPickMulti===true;
   const pick = (nm)=>{ const i=rosterPickRows.findIndex(x=>x.name===nm); rosterPickChoose(i); };
-  pick("חייל ב סככה 1"); pick("חייל א סככה 2");
+  pick("חייל א סככה 2"); pick("חייל א סככה 3");
   r.selTwo = rosterPickSel.size===2;
   confirmRosterPick();
-  r.bothAdded = rosterDraft.days["שלישי"].pf.filter(p=>["חייל ב סככה 1","חייל א סככה 2"].includes(p.name)).length===2;
+  r.bothAdded = rosterDraft.days["שלישי"].pf.filter(p=>["חייל א סככה 2","חייל א סככה 3"].includes(p.name)).length===2;
   r.modalClosed = !document.getElementById("roster-pick-modal").classList.contains("open");
 
   // משבצת יחידנית (ר״צ) נשארת בחירה בודדת
-  openRosterPick("lead");
+  await openRosterPick("lead");
   r.singleMode = rosterPickMulti===false;
-  const li = rosterPickRows.findIndex(x=>x.name==="חייל ב סככה 2");
+  const li = rosterPickRows.findIndex(x=>x.name==="חייל א סככה 4");
   rosterPickChoose(li);
-  r.singleAdded = rosterDraft.days["שלישי"].lead==="חייל ב סככה 2"
+  r.singleAdded = rosterDraft.days["שלישי"].lead==="חייל א סככה 4"
     && !document.getElementById("roster-pick-modal").classList.contains("open");
 
   // תצוגה מקדימה — כמו הלוח השבועי (טבלה) במסך מלא

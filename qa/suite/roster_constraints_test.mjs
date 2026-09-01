@@ -49,7 +49,7 @@ const out = await page.evaluate(async ()=>{
   isRosterManager = true;
   await openRosterEditor(null, "current");
   rosterEdDay = "שני";
-  openRosterPick("pf");
+  await openRosterPick("pf");
   const locked = rosterPickRows.find(x=>x.name===soldier);
   r.pickShowsLock = !!(locked && locked.lock);
   document.getElementById("roster-pick-modal").classList.remove("open");
