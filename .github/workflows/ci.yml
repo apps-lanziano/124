@@ -65,3 +65,27 @@ jobs:
           echo "---------------------------------------------"
           echo "עברו: $pass · נכשלו: $fail"
           exit $fail
+
+  site-smoke:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: המתנה לפריסת Pages
+        run: sleep 90
+
+      - name: בדיקת זמינות האתר
+        run: |
+          URL="https://eladlanzianog-sys.github.io/124/"
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$URL" || echo "000")
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::warning::🔴 האתר לא זמין אחרי פריסה (HTTP $STATUS) — בדקו Settings → Pages"
+          fi
+          BODY=$(curl -s --max-time 15 "$URL")
+          if echo "$BODY" | grep -q "sq124"; then
+            echo "✅ האתר זמין ומגיש את האפליקציה"
+          else
+            echo "::warning::🔴 האתר מגיש תוכן לא צפוי — ייתכן ש-Pages כבוי"
+          fi
