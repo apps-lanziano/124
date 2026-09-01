@@ -33,9 +33,8 @@ const out = await page.evaluate(async ()=>{
   r.days["ראשון"].pf.push({name:"דור"});
   r.days["שני"].pf = [{name:"דור"}];
   r.days["שלישי"].pf = [{name:"דור"}];
-  // תום — PMS תקין: 2 תורן + נח (סה"כ 3, אחת נח)
+  // תום — PMS תקין: 1 תורן + נח (סה"כ 2, אחת נח)
   r.days["ראשון"].pf.push({name:"תום"});
-  r.days["שני"].pf.push({name:"תום"});
   r.days["שלישי"].pfRest = ["תום"];
   // ניר — ר"צ תקין: יומיים ר"צ
   r.days["ראשון"].lead = "ניר";
@@ -66,12 +65,11 @@ const out = await page.evaluate(async ()=>{
     _basicNotCounted: (()=>{
       const r3 = empty();
       r3.days["ראשון"].pf = [{name:"תום"}];
-      r3.days["שני"].pf = [{name:"תום"}];
-      r3.days["שלישי"].pfRest = ["תום"];       // 3 סה"כ, אחת נח → PMS תקין
+      r3.days["שלישי"].pfRest = ["תום"];       // 2 סה"כ, אחת נח → PMS תקין
       r3.days["רביעי"].basic = [{name:"תום", type:"מטבח"}];   // בסיסית — לא נספרת
       const c3 = computeRosterCompliance(r3, pf, pool);
       const row = c3.rows.find(x=>x.name==="תום");
-      return row && row.ok && row.total===3;
+      return row && row.ok && row.total===2;
     })(),
     // חייל שמשובץ רק לתורנות בסיסית — לא חריג (תפוס)
     _basicOnlyOk: (()=>{
@@ -144,7 +142,7 @@ const out = await page.evaluate(async ()=>{
 record("התחברות", login.ok, JSON.stringify(login));
 record("PF תקין (2, אחת נח) → ירוק", out.pfOk, String(out.pfOk));
 record("PF חורג (3 בלי נח) → אדום עם סיבה", out.pfBad, String(out.pfBad));
-record("PMS תקין (3, אחת נח) → ירוק", out.pmsOk, String(out.pmsOk));
+record("PMS תקין (2, אחת נח) → ירוק", out.pmsOk, String(out.pmsOk));
 record("ר\"צ תקין (1–2) → ירוק, סיווג ר\"צ", out.leadOk, String(out.leadOk));
 record("אפור: חייל קרבי שלא שובץ מופיע", out.grayHasGuy, String(out.grayHasGuy));
 record("אפור: פקיד כלים לא נספר", out.grayExcludesClerk, String(out.grayExcludesClerk));
