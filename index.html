@@ -7108,6 +7108,25 @@ const ROSTER_WEEKEND_DAYS = ["חמישי","שישי","שבת"];   // משמרת 
 const ROSTER_ROTATING_DAYS = ["ראשון","שני","שלישי","רביעי"];
 const ROSTER_EDIT_DAYS = [...ROSTER_ROTATING_DAYS, "חמישי"];   // "חמישי" מייצג את כל הסופ"ש
 const BASIC_DUTY_TYPES = ["אבט״ש","רס״ר","מטבח","שמירות"];
+const WEEKEND_DUTY_SCHEDULE = {
+  "2026-08-30":{lead:"ינון אוחנה",pf:["מיכל קוגן","עומר בן חיים","ירין כהן","עמית קטן","אפק אביבי","ליאב תם"],tools:null},
+  "2026-09-06":{lead:"ליעוז",pf:["ליאור כבודי","עומר שאול","אופיר מישאלי","איתי רז"],tools:null},
+  "2026-09-13":{lead:"יהונתן פרץ",pf:["אורי גנור","יואב יצחק","יואב אולשינקה","עומר בן חיים","מעין בן ורון","עילאי אדרי"],tools:"שלום קיסרא"},
+  "2026-09-20":{lead:"רוני מורחי",pf:["מיכל קוגן","ירין כהן","עמית קטן","אפק אביבי","ליאב תם","ירדן אדרעי"],tools:null},
+  "2026-09-27":{lead:"ינון אוחנה",pf:["ליאור כבודי","עומר שאול","מוסא","אופיר","איתי בינדר"],tools:null},
+  "2026-10-04":{lead:"נועם קדם",pf:["יואב אולשינקה","עומר בן חיים","מעין בן ורון","רואי הרוש"],tools:"שלום"},
+  "2026-10-11":{lead:"יהונתן פרץ",pf:["מיכל קוגן","רוני טרייסטר","רון ברק","ירין כהן","עמית קטן","אפק אביבי","ירדן אדרעי"],tools:null},
+  "2026-10-18":{lead:"ליעוז",pf:["ליאור כבודי","עדי אלמוג","עומר שאול","מוסא","אופיר מישאלי","איתי בינדר","איתי רז"],tools:null},
+  "2026-10-25":{lead:"אורי גנור",pf:["יואב אולשינקה","עומר בן חיים","עילאי אדרי","רואי הרוש"],tools:"שלום סיקרא"},
+  "2026-11-01":{lead:"רומי מורחי",pf:["מיכל קוגן","רון ברק","עמית קטן","ליאב מישאלי","ירדן אדרעי"],tools:null},
+  "2026-11-08":{lead:"נועם קדם",pf:["ליאור כבודי","עדי אלמוג","רוני טרייסטר","עומר שאול","מוסא","איתי בינדר","איתי רז"],tools:null},
+  "2026-11-15":{lead:"ינון אוחנה",pf:["יואב אולשינקה","עומר בן חיים","מעין בן ורון","עילאי אדרי","רואי הרוש"],tools:"שלום סיקרא"},
+  "2026-11-22":{lead:"יהונתן פרץ",pf:["מיכל קוגן","רון ברק","ירין כהן","ליאב מישאלי","ירדן אדרעי"],tools:null},
+  "2026-11-29":{lead:null,pf:["ליאור כבודי","עדי אלמוג","עומר שאול","מוסא","אופיר מישאלי","איתי בינדר","איתי רז"],tools:null},
+  "2026-12-06":{lead:null,pf:["יואב אולשינקה","רוני טרייסטר","עומר בן חיים","מעין בן ורון","עמית קטן","עילאי אדרי","רואי הרוש"],tools:"שלום סיקרא"},
+  "2026-12-13":{lead:null,pf:["מיכל קוגן","רון ברק","ירין כהן","ירדן אדרעי"],tools:null},
+  "2026-12-20":{lead:null,pf:["ליאור כבודי","עדי אלמוג","עומר שאול","מוסא","אופיר מישאלי","איתי בינדר","איתי רז"],tools:null},
+};
 const ROSTER_DEFAULT_REST_WINDOW = "14:00-16:00";
 /* שורה מותאמת-אישית שהתווית שלה מזהה אותה כשורת "נחים" (למשל "PF יום
    ולילה"/"מילואים יום ולילה") מקבלת עיצוב ירוק אחיד — בדיוק כמו שורות
@@ -9608,6 +9627,7 @@ async function openRosterEditor(aiDays, slot){
   // שואב לטיוטה שיבוצים שתוכננו מראש בכלי "תכנון תורנות בסיסית" (ר' שם) —
   // הוספה בלבד, לא דורס שיבוץ קיים.
   await seedBasicDutyFromPlan();
+  seedWeekendDutyFromSchedule();
   // בניית לוח עתידי תמיד מתחילה מיום ראשון (לא מ"היום") — הרי מדובר
   // בשבוע שטרם החל, אז "היום" לא רלוונטי כברירת מחדל לעריכה.
   rosterEdDay = rosterEditSlot==="next" ? "ראשון" : rosterEditKey(todayHebrewDay());
@@ -10061,6 +10081,22 @@ async function seedBasicDutyFromPlan(){
     const arr = rosterDraft.days[day].basic = rosterDraft.days[day].basic || [];
     planned.forEach(p=>{ if(!arr.some(x=>x.name===p.name && x.type===p.type)) arr.push({name:p.name, type:p.type}); });
   });
+}
+function seedWeekendDutyFromSchedule(){
+  if(!rosterDraft || rosterEditSlot!=="next") return;
+  const ws = sundayIsoOf(rosterDraft.weekStart);
+  const entry = WEEKEND_DUTY_SCHEDULE[ws];
+  if(!entry) return;
+  const thu = rosterDraft.days["חמישי"];
+  if(!thu) return;
+  if(entry.lead && !thu.lead) thu.lead = entry.lead;
+  if(entry.tools && !thu.tools) thu.tools = entry.tools;
+  if(entry.pf && entry.pf.length){
+    const arr = thu.pf = thu.pf || [];
+    entry.pf.forEach(name=>{
+      if(!arr.some(x=>x.name===name)) arr.push({name, course:"", reserve:false});
+    });
+  }
 }
 async function overlayBasicDutyPlan(r, weekSlot){
   if(!r || !r.days) return;
