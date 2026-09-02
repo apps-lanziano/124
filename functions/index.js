@@ -18,6 +18,7 @@ const {getStorage} = require("firebase-admin/storage");
 const {getAuth} = require("firebase-admin/auth");
 const {findOverdueReserves} = require("./lib/reserve_refresh_reminders");
 const {findVoIssues} = require("./lib/vo_reminders");
+const {detectAnomalies, buildAlertMessage, WINDOW_MINUTES} = require("./lib/login_anomaly");
 const {buildDailyDigests, filterDailyDigestTokens} = require("./lib/daily_digest");
 const {buildDutyRosterDigests, resolveNameToShed} = require("./lib/duty_roster_digest");
 const {analyzeBoardImage: analyzeBoardImageCore} = require("./lib/board_ai_analyze");
@@ -81,7 +82,7 @@ exports.markAuthorized = onCall(
     // קיום המסמך הזה (לא רק תוכנו) הוא ההוכחה שהקוד הוקצה בפועל ע"י מ״ע —
     // חשבון-Auth לבדו לא מספיק, כי כל דפדפן יכול ליצור אחד לעצמו (ר' למעלה).
     const email = request.auth.token.email || "";
-    const codeMatch = email.match(/^u(\d+)@/);
+    const codeMatch = email.match(/^u([A-Za-z0-9]+)@/);
     if (!codeMatch) {
       console.warn(`markAuthorized: נדחה (פורמט אימייל לא תקין) uid=${request.auth.uid}`);
       throw new HttpsError("permission-denied", "חשבון לא מוכר");
@@ -343,7 +344,23 @@ exports.auditSensitiveWrites = onDocumentWritten(
     const afterDoc = event.data.after.exists ? event.data.after.data() : null;
     const before = beforeDoc ? beforeDoc.v : undefined;
     const after = afterDoc ? afterDoc.v : undefined;
-    const by = afterDoc && afterDoc._by ? afterDoc._by : null;
+    const clientBy = afterDoc && afterDoc._by ? afterDoc._by : null;
+
+    let verifiedName = (clientBy && clientBy.name) || null;
+    let verifiedRole = (clientBy && clientBy.role) || null;
+    let verifiedUid = (clientBy && clientBy.uid) || null;
+    let identitySource = "client";
+
+    if (verifiedUid) {
+      try {
+        const userRecord = await getAuth().getUser(verifiedUid);
+        const claims = userRecord.customClaims || {};
+        if (claims.authorized && claims.role) {
+          verifiedRole = claims.role;
+          identitySource = "verified";
+        }
+      } catch (_) { /* uid invalid or deleted — keep client-reported values */ }
+    }
 
     const entries = buildAuditEntries(docId, before, after);
     if (!entries.length) return;
@@ -358,12 +375,14 @@ exports.auditSensitiveWrites = onDocumentWritten(
         action: entry.action,
         target: entry.target,
         detail: entry.detail || "",
-        by: entry.by || (by && by.name) || null,
-        byRole: (by && by.role) || null,
+        by: entry.by || verifiedName,
+        byRole: verifiedRole,
+        byUid: verifiedUid,
+        identitySource,
       });
     }
     await batch.commit();
-    console.log(`audit: ${docId} → ${entries.length} רשומות`);
+    console.log(`audit: ${docId} → ${entries.length} רשומות (${identitySource})`);
   },
 );
 
@@ -556,13 +575,13 @@ exports.sendTestNotificationToSelf = onCall(
   },
 );
 
-/* ===== גיבוי שבועי =====
+/* ===== גיבוי יומי =====
    מייצא את כל אוסף sq124 לקובץ JSON ב-Cloud Storage (הדלי הדיפולטי של
-   הפרויקט), כל יום ראשון בלילה. לא נוגע באפליקציה שהמשתמשים רואים —
+   הפרויקט), כל לילה בשעה 03:00. לא נוגע באפליקציה שהמשתמשים רואים —
    הגנה מפני מחיקה בטעות/תקלה שתאבד נתונים בלי שום עותק. */
-exports.weeklyBackup = onSchedule(
+exports.dailyBackup = onSchedule(
   {
-    schedule: "0 3 * * 0",
+    schedule: "0 3 * * *",
     timeZone: "Asia/Jerusalem",
     region: "me-west1",
     memory: "512MiB",
@@ -574,6 +593,48 @@ exports.weeklyBackup = onSchedule(
     const path = `backups/sq124-${stamp}.json`;
     const bucket = getStorage().bucket();
     await bucket.file(path).save(JSON.stringify(docs), {contentType: "application/json"});
-    console.log(`גיבוי שבועי: ${count} מסמכים -> ${path}`);
+    console.log(`גיבוי יומי: ${count} מסמכים -> ${path}`);
+  },
+);
+
+/* ===== ניטור חריגות כניסה =====
+   רץ כל 15 דקות, סורק כשלונות אימות שנצברו ב-auth_events
+   ושולח התראה למנהל-העל אם נמצא דפוס ניסיון פריצה. */
+exports.monitorLoginAnomalies = onSchedule(
+  {
+    schedule: `every ${WINDOW_MINUTES} minutes`,
+    timeZone: "Asia/Jerusalem",
+    region: "me-west1",
+    memory: "256MiB",
+    timeoutSeconds: 60,
+  },
+  async () => {
+    const cutoff = Date.now() - WINDOW_MINUTES * 60 * 1000;
+    const snap = await db.collection("auth_events")
+      .where("ts", ">=", cutoff)
+      .where("ok", "==", false)
+      .get();
+    if (snap.empty) return;
+
+    const events = [];
+    snap.forEach((d) => events.push(d.data()));
+    const alerts = detectAnomalies(events);
+    if (!alerts.length) return;
+
+    const message = buildAlertMessage(alerts);
+    console.warn("LOGIN_ANOMALY:", message);
+
+    const adminSnap = await db.collection("sq124").doc("push_tokens_admin").get();
+    if (!adminSnap.exists) return;
+    const adminData = adminSnap.data();
+    const tokens = adminData && adminData.v ? Object.keys(adminData.v) : [];
+    if (!tokens.length) return;
+
+    const payload = {
+      notification: {title: "⚠️ התראת אבטחה", body: `${alerts.length} דפוסים חשודים זוהו`},
+      data: {kind: "security_alert", detail: message},
+    };
+    await getMessaging().sendEachForMulticast({tokens, ...payload});
+    console.log(`login anomaly alert → ${tokens.length} מכשירים`);
   },
 );

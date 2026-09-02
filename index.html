@@ -1658,7 +1658,8 @@ nav{
     </div>
 
     <div id="login-step-code" style="width:100%;max-width:320px">
-      <input id="login-code" type="tel" inputmode="numeric" placeholder="הזן קוד כניסה…" autocomplete="off"
+      <input id="login-code" type="text" autocomplete="off"
+        placeholder="הזן קוד כניסה…"
         style="width:100%;padding:15px 18px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font-family:'Assistant';font-size:16px;text-align:center;letter-spacing:4px;outline:none;transition:all .25s;box-shadow:var(--shadow)">
       <button class="login-go" id="login-code-btn" onclick="checkCode()" style="margin-top:14px">המשך ←</button>
       <div class="login-note">הזן את קוד הכניסה של הצוות. קוד נפרד לחיילים ולמפקדים.</div>
@@ -4475,7 +4476,7 @@ async function sSetRaw(key, val, shared=true){
          auditSensitiveWrites (functions/index.js) קורא את זה כדי לתעד "מי"
          לצד ה"מה"/"מתי" שהוא מחשב בעצמו מההפרש. זהות מדווחת-עצמית בלבד —
          אין באפליקציה חשבון אישי לאימות server-side, ר' CLAUDE.md. */
-      if(SENSITIVE_AUDIT_KEY.test(key)) payload._by = {name:user||null, role:userRole||null};
+      if(SENSITIVE_AUDIT_KEY.test(key)) payload._by = {name:user||null, role:userRole||null, uid:(fbAuth && fbAuth.currentUser && fbAuth.currentUser.uid)||null};
       await withTimeout(setDoc(doc(fbDB, COLLECTION, fsKey(key)), payload));
       markStale(false);
       return true;
@@ -4634,7 +4635,7 @@ function loginLockRemaining(){
   const left = Math.ceil((until - Date.now())/1000);
   return left>0 ? left : 0;
 }
-function registerLoginFail(){
+function registerLoginFail(codeUsed){
   let n = Number(localStorage.getItem("sq124_failCount")||0) + 1;
   localStorage.setItem("sq124_failCount", String(n));
   if(n % LOGIN_MAX_TRIES === 0){
@@ -4642,6 +4643,15 @@ function registerLoginFail(){
     const secs = Math.min(30 * Math.pow(2, rounds-1), 600);  // 30,60,120,240,480,600
     localStorage.setItem("sq124_lockUntil", String(Date.now()+secs*1000));
   }
+  logAuthEvent(false, codeUsed);
+}
+function logAuthEvent(ok, codeUsed){
+  try{
+    if(!fbReady || !fbDB || !fbDB._fs) return;
+    const {collection, addDoc} = fbDB._fs;
+    const codeHash = codeUsed ? codeUsed.replace(/./g,"*") : null;
+    addDoc(collection(fbDB, "auth_events"), {ts:Date.now(), ok, code:codeHash});
+  }catch(_){}
 }
 function clearLoginFails(){ localStorage.removeItem("sq124_failCount"); localStorage.removeItem("sq124_lockUntil"); }
 function loginLockedGuard(){
@@ -4851,7 +4861,7 @@ async function quickLogin(){
     // סיסמת-על עוקפת גם כאן — לא רק בכניסה המלאה (verifyLoginPin), אחרת מסך
     // "כניסה מהירה" למכשיר זכור דוחה אותה כ"PIN שגוי" כי הוא בודק ישירות
     // מול ה-PIN האישי בלי לדעת על הסיסמה הגלובלית
-    if(!(await verifyMasterPin(entered)) && !(await verifyPin(person, entered))){ registerLoginFail(); toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
+    if(!(await verifyMasterPin(entered)) && !(await verifyPin(person, entered))){ registerLoginFail("pin"); toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
     finishQuickLoginUI(dev, entered);
     await doLogin();
   } finally { setBtnLoading(btn, false); }
@@ -4949,12 +4959,12 @@ async function checkCode(){
        חייל/מנהל/קצין/תקציבים, כולל הקודים הישנים של מ״ע/הדרכה) ב-routeByAuthProfile. */
     if(!(fbAuth && fbAuth._am)){ toast("החיבור עדיין נטען — נסה שוב 🔄"); document.getElementById("login-code").value=""; return; }
     if(!(await signInAs(authEmailFromCode(code), deriveAuthPassword(code)))){
-      registerLoginFail(); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return;
+      registerLoginFail(code); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return;
     }
     await markSessionAuthorized();
     const prof = await sGetRaw(await codeProfileKey(code));
     if(!(prof && prof.kind)){
-      registerLoginFail(); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return;
+      registerLoginFail(code); toast("קוד שגוי ⛔"); document.getElementById("login-code").value=""; return;
     }
     await routeByAuthProfile(prof, code);
   } finally {
@@ -5067,7 +5077,7 @@ async function verifyLoginPin(person){
   } else if(person.pinHash){
     // יש PIN — חובה להזין נכון
     if(!entered){ toast("הזן PIN אישי 🔒"); pinEl.focus(); return false; }
-    if(!(await verifyPin(person, entered))){ registerLoginFail(); toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return false; }
+    if(!(await verifyPin(person, entered))){ registerLoginFail("pin"); toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return false; }
     // אימות עבר — אם הגיבוב עדיין בפורמט הישן, משדרגים אותו כאן בשקט
     await upgradePinIfLegacy(person, entered);
   } else {
@@ -13250,9 +13260,9 @@ async function loadSecureAuditLog(){
    נוצר חשבון u<code>@ + נכתב פרופיל הניתוב בשרת. בטוח להרצה חוזרת. */
 async function provisionAuthAccounts(){
   if(!fbAuth || !fbAuth._am){ toast("Firebase לא מחובר ⛔"); return; }
-  const code = (prompt("הקמת חשבון אימות (ידנית).\n\nהזן את קוד הכניסה בן 4 הספרות שברצונך להקים או לעדכן:")||"").trim();
+  const code = (prompt("הקמת חשבון אימות (ידנית).\n\nהזן קוד כניסה (4–8 תווים, אותיות ומספרים):")||"").trim();
   if(!code) return;
-  if(!/^\d{4}$/.test(code)){ alert("קוד לא תקין — נדרשות בדיוק 4 ספרות."); return; }
+  if(!/^[A-Za-z0-9]{4,8}$/.test(code)){ alert("קוד לא תקין — נדרשים 4–8 תווים (אותיות ומספרים בלבד)."); return; }
 
   // בניית רשימת יעדים אפשריים (מסגרת+תפקיד / בעלי תפקיד)
   const opts = [];
