@@ -1658,8 +1658,7 @@ nav{
     </div>
 
     <div id="login-step-code" style="width:100%;max-width:320px">
-      <input id="login-code" type="text" autocomplete="off"
-        placeholder="הזן קוד כניסה…"
+      <input id="login-code" type="tel" inputmode="numeric" placeholder="הזן קוד כניסה…" autocomplete="off"
         style="width:100%;padding:15px 18px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font-family:'Assistant';font-size:16px;text-align:center;letter-spacing:4px;outline:none;transition:all .25s;box-shadow:var(--shadow)">
       <button class="login-go" id="login-code-btn" onclick="checkCode()" style="margin-top:14px">המשך ←</button>
       <div class="login-note">הזן את קוד הכניסה של הצוות. קוד נפרד לחיילים ולמפקדים.</div>
@@ -13260,9 +13259,9 @@ async function loadSecureAuditLog(){
    נוצר חשבון u<code>@ + נכתב פרופיל הניתוב בשרת. בטוח להרצה חוזרת. */
 async function provisionAuthAccounts(){
   if(!fbAuth || !fbAuth._am){ toast("Firebase לא מחובר ⛔"); return; }
-  const code = (prompt("הקמת חשבון אימות (ידנית).\n\nהזן קוד כניסה (4–8 תווים, אותיות ומספרים):")||"").trim();
+  const code = (prompt("הקמת חשבון אימות (ידנית).\n\nהזן את קוד הכניסה בן 4 הספרות שברצונך להקים או לעדכן:")||"").trim();
   if(!code) return;
-  if(!/^[A-Za-z0-9]{4,8}$/.test(code)){ alert("קוד לא תקין — נדרשים 4–8 תווים (אותיות ומספרים בלבד)."); return; }
+  if(!/^\d{4}$/.test(code)){ alert("קוד לא תקין — נדרשות בדיוק 4 ספרות."); return; }
 
   // בניית רשימת יעדים אפשריים (מסגרת+תפקיד / בעלי תפקיד)
   const opts = [];

@@ -82,7 +82,7 @@ exports.markAuthorized = onCall(
     // קיום המסמך הזה (לא רק תוכנו) הוא ההוכחה שהקוד הוקצה בפועל ע"י מ״ע —
     // חשבון-Auth לבדו לא מספיק, כי כל דפדפן יכול ליצור אחד לעצמו (ר' למעלה).
     const email = request.auth.token.email || "";
-    const codeMatch = email.match(/^u([A-Za-z0-9]+)@/);
+    const codeMatch = email.match(/^u(\d+)@/);
     if (!codeMatch) {
       console.warn(`markAuthorized: נדחה (פורמט אימייל לא תקין) uid=${request.auth.uid}`);
       throw new HttpsError("permission-denied", "חשבון לא מוכר");
