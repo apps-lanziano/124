@@ -71,6 +71,16 @@ service cloud.firestore {
       allow write:     if false;
     }
 
+    // אירועי אימות (כשלונות כניסה) — לקוח יוצר רשומה בלבד; Cloud Function
+    // (monitorLoginAnomalies) קוראת דרך Admin SDK. אין קריאה/עריכה/מחיקה מהלקוח.
+    match /auth_events/{eventId} {
+      allow create: if isAuthed()
+        && request.resource.data.keys().hasOnly(['ts','ok','code'])
+        && request.resource.data.ts is int
+        && request.resource.data.ok is bool;
+      allow read, update, delete: if false;
+    }
+
     // כל שאר האוספים — סגורים.
     match /{document=**} {
       allow read, write: if false;
