@@ -114,6 +114,26 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
   record("אין שגיאות JS (חייל)", pageErrors.length===0, JSON.stringify(pageErrors));
 }
 
+// --- בדיקה 4b: חייל עם נע"ת הזמנת ציוד רואה sheet-supplies ---
+{
+  const { page, pageErrors } = await newPage();
+  await loginAsFramework(page, "shed1", "חייל");
+  const out = await page.evaluate(async ()=>{
+    const items = (await sGet("naatim_list")) || [];
+    items.push({id:"nTEST_SUP", area:"הזמנת ציוד", person:user});
+    await sSet("naatim_list", items);
+    await refreshAreaPermissions();
+    const r = {};
+    r.isSuppliesResp = isSuppliesResp;
+    r.sheetVisible = !document.getElementById("sheet-supplies").classList.contains("hidden");
+    const clean = (await sGet("naatim_list")).filter(n=>n.id!=="nTEST_SUP");
+    await sSet("naatim_list", clean);
+    return r;
+  });
+  record("חייל עם נע\"ת הזמנת ציוד רואה sheet-supplies", out.isSuppliesResp && out.sheetVisible, JSON.stringify(out));
+  record("אין שגיאות JS (חייל+נעת)", pageErrors.length===0, JSON.stringify(pageErrors));
+}
+
 // --- בדיקה 5: מפקד רואה ---
 {
   const { page, pageErrors } = await newPage();

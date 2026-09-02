@@ -5492,7 +5492,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
   ensureModalCloseButtons();
 });
 
-function openMoreSheet(){ document.getElementById("more-sheet").classList.add("open"); }
+function openMoreSheet(){ refreshAreaPermissions(); document.getElementById("more-sheet").classList.add("open"); }
 function closeMoreAnd(scr){
   document.getElementById("more-sheet").classList.remove("open");
   go(scr, null);
@@ -6189,6 +6189,8 @@ async function refreshAreaPermissions(){
   isRosterManager = isBoardPublisher || has("מ״ע תורנויות") ||
     (await getRosterManagers()).includes(user);
   isSuppliesResp = userRole==="מפקד" || has("הזמנת ציוד");
+  const supEl = document.getElementById("sheet-supplies");
+  if(supEl) supEl.classList.toggle("hidden", !isSuppliesResp || !!(currentShed && currentShed.isMaint) || !!(currentShed && currentShed.isTraining));
   if(currentShed && currentShed.isDept){ isToolsResp = false; isVehiclesResp = (userRole==="מפקד"); return; }
   isToolsResp = userRole==="מפקד" || has("חדר כלים");
   isVehiclesResp = userRole==="מפקד" || has("רכבים");
