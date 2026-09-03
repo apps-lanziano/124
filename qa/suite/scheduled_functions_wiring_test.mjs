@@ -121,20 +121,20 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
     JSON.stringify({hasSchedule, usesLib, importsLib, targetsMaintOnly}));
 }
 
-// 6. גיבוי שבועי — מתוזמן, כותב ל-Storage בנתיב backups/, ומחובר ל-dumpCollection
+// 6. גיבוי יומי — מתוזמן, כותב ל-Storage בנתיב backups/, ומחובר ל-dumpCollection
 {
-  const hasSchedule = /weeklyBackup\s*=\s*onSchedule/.test(fn);
+  const hasSchedule = /dailyBackup\s*=\s*onSchedule/.test(fn);
   const hasTZ = (fn.match(/timeZone:\s*"Asia\/Jerusalem"/g) || []).length >= 2;
   const usesLib = /dumpCollection\(db\)/.test(fn);
   const writesToBackupsPath = /`backups\/sq124-\$\{stamp\}\.json`/.test(fn);
   const usesStorage = /getStorage\(\)\.bucket\(\)/.test(fn);
-  record("גיבוי שבועי: מתוזמן, כותב ל-backups/sq124-<תאריך>.json ב-Storage, ומשתמש ב-dumpCollection",
+  record("גיבוי יומי: מתוזמן, כותב ל-backups/sq124-<תאריך>.json ב-Storage, ומשתמש ב-dumpCollection",
     hasSchedule && hasTZ && usesLib && writesToBackupsPath && usesStorage,
     JSON.stringify({hasSchedule, hasTZ, usesLib, writesToBackupsPath, usesStorage}));
 }
 
 // 6ב. "ימים שקטים" (שישי/שבת) — מדיניות טייסתית: כל תזכורת מתוזמנת מדלגת
-// בימים האלה. לא חל על notifyOnPublish (זמן אמת) ולא על weeklyBackup (לא התראה).
+// בימים האלה. לא חל על notifyOnPublish (זמן אמת) ולא על dailyBackup (לא התראה).
 {
   const importsQuietDays = /require\("\.\/lib\/quiet_days"\)/.test(fn);
   const scheduledFns = [
@@ -153,11 +153,11 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
     JSON.stringify({importsQuietDays, missing}));
 
   const backupHasNoQuietCheck = (() => {
-    const start = fn.indexOf("exports.weeklyBackup = onSchedule(");
+    const start = fn.indexOf("exports.dailyBackup = onSchedule(");
     const body = start >= 0 ? fn.slice(start, start + 1200) : "";
     return !/isQuietDay/.test(body);
   })();
-  record("גיבוי שבועי (לא התראה למשתמש) לא מושפע מ-isQuietDay",
+  record("גיבוי יומי (לא התראה למשתמש) לא מושפע מ-isQuietDay",
     backupHasNoQuietCheck, String(backupHasNoQuietCheck));
 
   const notifyOnPublishHasNoQuietCheck = (() => {
