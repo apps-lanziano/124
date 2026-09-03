@@ -48,7 +48,7 @@ service cloud.firestore {
     // כתיבה/מחיקה מוגבלת למפקד בלבד (role claim נקבע server-side ע"י markAuthorized).
     // push_tokens: מערך קודי התקעים של כל משתמש — רק מנהל יכול לערוך לכל הטייסת
     function isSensitiveDoc(docId) {
-      return docId.matches('^(admin_|authprofile_|ai_quota_|push_tokens_).*');
+      return docId.matches('^(admin_|authprofile_|ai_quota_|push_tokens_|login_lock_).*');
     }
     // תפקיד בעל הרשאה גבוהה — role claim מוטמע ע"י markAuthorized, לא נקבע ע"י הלקוח
     function isPrivileged() {

@@ -4271,30 +4271,74 @@ function isReservedCode(pin){ return false; }
    לא תיתן גישת אדמין. לכל שאר המשתמשים נשאר 4 ספרות כרגיל. */
 function requiredPinLength(name){ return name === SUPER_ADMIN_NAME ? 6 : 4; }
 function validPinFormat(pin, name){ return new RegExp("^\\d{"+requiredPinLength(name)+"}$").test(pin); }
-/* מאמת PIN מול רשומת אדם. אם אין ל-אדם PIN — עובר (אין נעילה). */
-async function verifyPin(person, pin){
+/* ===== אימות PIN בצד השרת (Cloud Function) =====
+   verifyPin ו-verifyMasterPin מוחלפות בקריאה יחידה ל-verifyPersonalPin
+   שמאמתת הן PIN אישי והן סיסמת-על, ומנהלת נעילה מדורגת ב-Firestore
+   (במקום localStorage). תוצאת ה-CF: {ok, master?, noPin?, locked?, waitSec?, legacy?} */
+let _verifyPinFn = null;
+async function getVerifyPinFn(){
+  if(_verifyPinFn) return _verifyPinFn;
+  const fnMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js");
+  const functions = fnMod.getFunctions(fbAuth.app, "me-west1");
+  _verifyPinFn = fnMod.httpsCallable(functions, "verifyPersonalPin");
+  return _verifyPinFn;
+}
+
+async function callVerifyPin(shedId, name, pin){
+  if(AUTH_MODE !== "scoped" || !fbAuth || !fbAuth.app) return {ok:false, fallback:true};
+  try{
+    const fn = await getVerifyPinFn();
+    const res = await fn({shedId, name, pin});
+    return res.data;
+  }catch(e){
+    if(e && e.code === "functions/resource-exhausted"){
+      const msg = (e.message || "").match(/המתן (\d+) שניות/);
+      return {ok:false, locked:true, waitSec: msg ? Number(msg[1]) : 60};
+    }
+    console.error("callVerifyPin", e);
+    return {ok:false, fallback:true};
+  }
+}
+
+/* fallback מקומי — כשה-CF לא זמינה (רשת נפלה, לא פרוסה) חוזרים לאימות
+   מקומי כדי שהמשתמש לא יינעל מחוץ לאפליקציה. אימות מקומי הוא הרמה
+   הקודמת — עדיין טוב מ"לא לאמת בכלל". */
+async function localVerifyPin(person, pin){
   if(!person || !person.pinHash) return true;
   try{
-    // מזהה את שני הפורמטים — אחרת כל מי שהגדיר PIN לפני השדרוג ננעל בחוץ
     if(person.pinAlgo === PIN_ALGO)
       return (await hashPin(pin, person.pinSalt, person.pinIter)) === person.pinHash;
     return (await hashPinLegacy(pin, person.pinSalt)) === person.pinHash;
-  }
-  catch(e){ console.error("verifyPin", e); return false; }
+  }catch(e){ console.error("localVerifyPin", e); return false; }
 }
-
-/* סיסמת-על — קוד גלובלי אחד (לא קשור לרשומת אדם ספציפית) שמאפשר למנהל-על
-   להיכנס בתור כל משתמש, בלי לדעת את ה-PIN האמיתי שלו. נשמר גלובלית (raw,
-   לא לפי מסגרת) תחת admin_master_pin, מגובב באותה תשתית בדיוק כמו PIN
-   אישי — כך שהוא לא נשמר בטקסט גלוי, ולא נגזר/מוצפן בקוד המקור עצמו. */
-async function getMasterPinRecord(){ return await sGetRaw("admin_master_pin"); }
-async function verifyMasterPin(pin){
+async function localVerifyMasterPin(pin){
   if(!validPinFormat(pin)) return false;
   const rec = await getMasterPinRecord();
   if(!rec || !rec.pinHash) return false;
   try{ return (await hashPin(pin, rec.pinSalt, rec.pinIter)) === rec.pinHash; }
-  catch(e){ console.error("verifyMasterPin", e); return false; }
+  catch(e){ return false; }
 }
+
+async function verifyPin(person, pin){
+  if(!person || !person.pinHash) return true;
+  if(!currentShed || !currentShed.id || !person.name) return localVerifyPin(person, pin);
+  const res = await callVerifyPin(currentShed.id, person.name, pin);
+  if(res.fallback) return localVerifyPin(person, pin);
+  if(res.locked){ toast("יותר מדי ניסיונות — המתן "+(res.waitSec||60)+" שניות ⏳"); return false; }
+  if(res.ok && res.legacy) upgradePinIfLegacy(person, pin);
+  return !!res.ok;
+}
+
+async function verifyMasterPin(pin){
+  if(!validPinFormat(pin)) return false;
+  if(!currentShed || !currentShed.id) return localVerifyMasterPin(pin);
+  const res = await callVerifyPin(currentShed.id, "__master__", pin);
+  if(res.fallback) return localVerifyMasterPin(pin);
+  if(res.locked) return false;
+  return !!(res.ok && res.master);
+}
+
+async function getMasterPinRecord(){ return await sGetRaw("admin_master_pin"); }
 
 /* התחברות ל-Firebase בזהות מסוימת (מחליפה את הזהות האנונימית של האתחול).
    מחזירה true בהצלחה. במצב scoped כישלון אמיתי חוסם כניסה — כי בלי הזהות
@@ -4857,10 +4901,18 @@ async function quickLogin(){
   try{
     const person = await quickLoginCore(dev, shed);
     if(!person) return;
-    // סיסמת-על עוקפת גם כאן — לא רק בכניסה המלאה (verifyLoginPin), אחרת מסך
-    // "כניסה מהירה" למכשיר זכור דוחה אותה כ"PIN שגוי" כי הוא בודק ישירות
-    // מול ה-PIN האישי בלי לדעת על הסיסמה הגלובלית
-    if(!(await verifyMasterPin(entered)) && !(await verifyPin(person, entered))){ registerLoginFail("pin"); toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
+    // PIN נבדק server-side (Cloud Function verifyPersonalPin) — כולל master PIN ונעילה מדורגת.
+    // fallback מקומי אם ה-CF לא זמין (סביבת בדיקות / אופליין).
+    const pinRes = await callVerifyPin(shed.id, person.name, entered);
+    if(pinRes.fallback){
+      const masterOk = await localVerifyMasterPin(entered);
+      const personalOk = !masterOk && await localVerifyPin(person, entered);
+      if(!masterOk && !personalOk && person.pinHash){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
+    } else {
+      if(pinRes.locked){ toast("יותר מדי ניסיונות — המתן "+(pinRes.waitSec||60)+" שניות ⏳"); pinEl.value=""; return; }
+      if(!pinRes.ok && !pinRes.noPin){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
+      if(pinRes.ok && pinRes.legacy) upgradePinIfLegacy(person, entered);
+    }
     finishQuickLoginUI(dev, entered);
     await doLogin();
   } finally { setBtnLoading(btn, false); }
@@ -5068,17 +5120,21 @@ async function verifyLoginPin(person){
   if(biometricUnlockOK){
     // Face ID/טביעת אצבע כבר אימתו נוכחות ברגע זה — לא דורשים גם PIN
     biometricUnlockOK = false;
-  } else if(entered && await verifyMasterPin(entered)){
-    // סיסמת-על של מנהל-על — נכנסת בתור כל משתמש בלי לדעת את ה-PIN האמיתי שלו.
-    // לא פותחת חור אבטחה חדש: כל משתמש מאומת (עם קוד מסגרת אמיתי) כבר יכול
-    // לקרוא/לכתוב את כל המסד דרך ה-devtools לפי כללי ה-Firestore הנוכחיים
-    // (ראו SECURITY.md) — זו רק נוחות שימוש על אותה גישה שכבר קיימת.
-  } else if(person.pinHash){
-    // יש PIN — חובה להזין נכון
+  } else if(person.pinHash || entered){
+    // PIN נבדק server-side (Cloud Function verifyPersonalPin) — כולל master PIN ונעילה מדורגת
     if(!entered){ toast("הזן PIN אישי 🔒"); pinEl.focus(); return false; }
-    if(!(await verifyPin(person, entered))){ registerLoginFail("pin"); toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return false; }
-    // אימות עבר — אם הגיבוב עדיין בפורמט הישן, משדרגים אותו כאן בשקט
-    await upgradePinIfLegacy(person, entered);
+    if(person.pinHash){
+      const pinRes = await callVerifyPin(currentShed.id, person.name, entered);
+      if(pinRes.fallback){
+        const masterOk = await localVerifyMasterPin(entered);
+        const personalOk = !masterOk && await localVerifyPin(person, entered);
+        if(!masterOk && !personalOk){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return false; }
+      } else {
+        if(pinRes.locked){ toast("יותר מדי ניסיונות — המתן "+(pinRes.waitSec||60)+" שניות ⏳"); pinEl.value=""; return false; }
+        if(!pinRes.ok){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return false; }
+        if(pinRes.legacy) upgradePinIfLegacy(person, entered);
+      }
+    }
   } else {
     // אין PIN — הגדרה חובה בכניסה ראשונה (אי אפשר לדלג)
     if(!entered){ toast("כניסה ראשונה — יש להגדיר PIN אישי 🔒"); pinEl.focus(); return false; }

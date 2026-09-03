@@ -135,9 +135,9 @@ Custom Claims (תגית שנצמדת לחשבון ע"י פונקציית ענן)
   סימון "הסר PIN" = ביטול הנעילה. קודים שכיחים (0000/1234...) נחסמים.
 - הפצה הדרגתית: כל עוד לא הוגדר PIN, הכניסה זהה להיום. אפשר להתחיל מהמפקדים ולהרחיב.
 
-מגבלה מודעת: ה-PIN נאכף בצד הלקוח (מעל הפרדת המסגרות שכן נאכפת בשרת). הוא מגן מפני
-גישה מזדמנת בין אנשי אותה מסגרת, לא מפני תוקף טכני שכבר בתוך המסגרת. שדרוג ל-PIN
-שנאכף בשרת אפשרי בעתיד עם Blaze.
+~~מגבלה מודעת: ה-PIN נאכף בצד הלקוח בלבד.~~ **עודכן בשלב 10 (2026-09-03):**
+ה-PIN נאכף עכשיו **בצד השרת** דרך Cloud Function `verifyPersonalPin` — כולל נעילה
+מדורגת ב-Firestore. ראו שלב 10 לפרטים.
 
 ---
 
@@ -412,3 +412,79 @@ return docId.matches('^(admin_|authprofile_|ai_quota_|push_tokens_).*');
 | Regression tests | ✅ 121/121 passing |
 
 **סטטוס סופי: ✅ PRODUCTION READY - VERIFIED**
+
+---
+
+## שלב 10 — אימות PIN בצד השרת + נעילת כניסה מבוססת Firestore (2026-09-03)
+
+### הבעיה שנסגרה
+
+שתי חולשות ידועות שתועדו בשלבים 5 ו-6:
+
+1. **PIN נאכף בצד הלקוח בלבד:** `verifyPin()` השוותה את ה-hash בדפדפן. תוקף שפתח
+   DevTools יכול היה לדלג על הבדיקה לחלוטין, להגיע ישירות ל-`doLogin()` ולפעול
+   בשם כל משתמש באותה מסגרת — ללא ידיעת ה-PIN.
+
+2. **נעילת-כניסה ב-localStorage בלבד:** `sq124_failCount`/`lockUntil` נשמרו
+   ב-`localStorage` של הדפדפן. ניקוי אחסון / חלון פרטי / דפדפן אחר עוקפים אותם
+   לגמרי — אין בלם אמיתי בצד השרת.
+
+### הפתרון — Cloud Function `verifyPersonalPin`
+
+Cloud Function חדשה (`functions/index.js`) שמבצעת את **שני** האימותים בצד השרת:
+
+**1. אימות PIN שרת-צד:**
+- מקבלת `{shedId, name, pin}` מהלקוח.
+- קוראת את רשימת כוח-האדם מ-Firestore (`sq124/<shedId>_cfg_personnel`) דרך Admin SDK.
+- מחשבת hash ב-Node.js (`crypto.pbkdf2` / `crypto.createHash` ל-legacy) — **אותו
+  אלגוריתם בדיוק** כמו הלקוח (PBKDF2 עם 210,000 איטרציות + מלח, או SHA-256 legacy).
+- משווה hash מול hash — ה-PIN עצמו לא נשמר בשום מקום, לא בלקוח ולא בשרת.
+- תומך גם ב-**Master PIN** (`name="__master__"`, קורא מ-`sq124/admin_master_pin`).
+
+**2. נעילה מדורגת בצד השרת (Firestore-based):**
+- מונה כשלונות ב-Firestore (`sq124/login_lock_<sha256(shedId|name)>`).
+- **5 ניסיונות מותרים** → נעילה בגב אקספוננציאלי: 30 שניות × 2^(rounds-1),
+  מקסימום 600 שניות (10 דקות).
+- הנעילה לפי שם+מסגרת (לא לפי מכשיר) — לא ניתנת לעקיפה ע"י ניקוי localStorage,
+  חלון פרטי, או מכשיר אחר.
+- **מסמכי `login_lock_*` מוגנים ב-Firestore Rules** (`isSensitiveDoc`) — לקוח לא
+  יכול לאפס את המונה ישירות.
+
+**3. Fallback מקומי:**
+- אם ה-Cloud Function לא זמינה (סביבת בדיקות, אופליין, שגיאת רשת) — הלקוח נופל
+  חזרה לאימות מקומי (`localVerifyPin`/`localVerifyMasterPin`).
+- זה מבטיח שהאפליקציה לא "תינעל" אם CF מושבת זמנית — הירידה היא לרמת האבטחה
+  הקודמת (שלב 5), לא לחסימה מוחלטת.
+
+**4. הגנות נוספות:**
+- App Check אכוף על הפונקציה (`enforceAppCheck: true`).
+- Rate limiting בזיכרון (20 קריאות/דקה/uid) — מעל לנעילה המדורגת.
+- אימות `authorized:true` claim — רק משתמש שעבר `markAuthorized` יכול לקרוא.
+- `name="__lockcheck__"` — בדיקת סטטוס נעילה בלבד, בלי ניסיון PIN.
+
+### שינויים בקבצים
+
+| קובץ | שינוי |
+|------|-------|
+| `functions/index.js` | הוספת `verifyPersonalPin` (onCall), `serverHashPin`, `serverHashPinLegacy` |
+| `firestore.rules` | `isSensitiveDoc` כולל `login_lock_` — מונע מלקוח לאפס נעילה |
+| `index.html` | `callVerifyPin` (wrapper), `localVerifyPin`/`localVerifyMasterPin` (fallback), עדכון `quickLogin` ו-`verifyLoginPin` |
+
+### שינוי חוויית המשתמש
+
+**אפס** — חוויית הכניסה זהה לחלוטין. ההבדל היחיד שמשתמש עלול לראות:
+- הודעת "יותר מדי ניסיונות — המתן X שניות" עם ספירה לאחור אמיתית (נעילה שרת-צד).
+- ב-fallback (CF לא זמין): התנהגות זהה לשלב 5 הקודם.
+
+### מה נדרש לפרסם
+
+```bash
+firebase deploy --only functions,firestore:rules
+```
+
+או ידנית:
+1. פרוס את Cloud Functions (כולל `verifyPersonalPin`).
+2. עדכן Firestore Rules (כולל `login_lock_` ב-`isSensitiveDoc`).
+
+> **הערה:** הפונקציה תעבוד מיד לאחר פריסה. משתמשים קיימים לא ירגישו שום שינוי.
+> Fallback מבטיח שאם הפריסה נכשלת — הכל ממשיך לעבוד כרגיל.
