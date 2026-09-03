@@ -9243,17 +9243,19 @@ async function confirmRejectRequest(){
 }
 /* החלת החלפה על לוח הצוות: המחליף (שנח) נכנס בדיוק לתפקיד של התורן,
    והתורן עובר לנוח — כך שאין כפל תורנות. */
-async function applySwapToBoard(day, by, repl){
-  const roster = await getDutyRoster("current");
+async function applySwapToBoard(day, by, repl, slot){
+  slot = slot || "current";
+  const roster = await getDutyRoster(slot);
   const key = rosterEditKey(day);
   const d = roster.days[key]; if(!d) return false;
-  if(!rosterDayAssigned(d).includes(by)) return false;   // התורן כבר לא בלוח — אולי כבר הוחלף
+  if(!rosterDayAssigned(d).includes(by)) return false;
   ["manager","lead","deputyLead","pilot","driver","tools"].forEach(f=>{ if(d[f]===by) d[f]=repl; });
   d.fixedAug = (d.fixedAug||[]).map(n=> n===by?repl:n);
   d.pf = (d.pf||[]).map(p=> p.name===by ? {...p, name:repl} : p);
   d.basic = (d.basic||[]).map(b=> b.name===by ? {...b, name:repl} : b);
   d.pfRest = (d.pfRest||[]).map(n=> n===repl ? by : n);
-  const ok = await saveDutyRosterV2(roster, "current");
+  d.pmsRest = (d.pmsRest||[]).map(n=> n===repl ? by : n);
+  const ok = await saveDutyRosterV2(roster, slot);
   return ok !== false;
 }
 /* החלפת שם בכל המשבצות של יום נתון (בלי נגיעה בלוגיקת הנחים). */
@@ -9264,20 +9266,22 @@ function substituteInDay(d, from, to){
   d.fixedAug = (d.fixedAug||[]).map(n=>{ if(n===from){ hit=true; return to; } return n; });
   d.pf = (d.pf||[]).map(p=>{ if(p.name===from){ hit=true; return {...p, name:to}; } return p; });
   d.basic = (d.basic||[]).map(b=>{ if(b.name===from){ hit=true; return {...b, name:to}; } return b; });
-  if(Array.isArray(d.pfRest)) d.pfRest = d.pfRest.map(n=>{ if(n===from){ hit=true; return to; } return n; });
-  if(Array.isArray(d.pms))    d.pms    = d.pms.map(n=>{ if(n===from){ hit=true; return to; } return n; });
+  if(Array.isArray(d.pfRest))  d.pfRest  = d.pfRest.map(n=>{ if(n===from){ hit=true; return to; } return n; });
+  if(Array.isArray(d.pms))     d.pms     = d.pms.map(n=>{ if(n===from){ hit=true; return to; } return n; });
+  if(Array.isArray(d.pmsRest)) d.pmsRest = d.pmsRest.map(n=>{ if(n===from){ hit=true; return to; } return n; });
   return hit;
 }
 /* החלפה ראש-בראש: אני נכנס ליום של המחליף, והוא נכנס ליום שלי. */
-async function applySwapHeadToHead(myDay, requester, replDay, replacement){
-  const roster = await getDutyRoster("current");
+async function applySwapHeadToHead(myDay, requester, replDay, replacement, slot){
+  slot = slot || "current";
+  const roster = await getDutyRoster(slot);
   const dA = roster.days[rosterEditKey(myDay)];
   const dB = roster.days[rosterEditKey(replDay)];
   if(!dA || !dB) return false;
   const okA = substituteInDay(dA, requester, replacement);
   const okB = substituteInDay(dB, replacement, requester);
-  if(!okA && !okB) return false;               // אף אחד מהם כבר לא בלוח
-  const ok = await saveDutyRosterV2(roster, "current");
+  if(!okA && !okB) return false;
+  const ok = await saveDutyRosterV2(roster, slot);
   return ok !== false;
 }
 
@@ -9369,9 +9373,10 @@ async function naatRejectConstraint(idx){
 }
 async function naatApproveSwap(idx){
   const r = naatSwapRows[idx]; if(!r) return;
+  const slot = r.swapWeek || "current";
   const applied = r.replDay
-    ? await applySwapHeadToHead(r.day, r.by, r.replDay, r.replacement)   // ראש-בראש
-    : await applySwapToBoard(r.day, r.by, r.replacement);                // תאימות לאחור
+    ? await applySwapHeadToHead(r.day, r.by, r.replDay, r.replacement, slot)
+    : await applySwapToBoard(r.day, r.by, r.replacement, slot);
   if(!applied){ toast("⚠️ ההחלפה לא הוחלה — בדוק שהשמות עדיין בלוח"); return; }
   const list = (await sGetIn(r._shed,"duty_requests")) || [];
   const rr = list.find(x=>x.id===r.id); if(rr){ rr.status="approved"; rr.naatBy=user; rr.naatTs=Date.now(); }
