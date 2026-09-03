@@ -109,6 +109,123 @@ exports.markAuthorized = onCall(
   },
 );
 
+/* ===== verifyPersonalPin — אימות PIN אישי בצד השרת =====
+   מחליף את verifyPin/verifyMasterPin הלקוחיות. הלקוח שולח shedId+שם+PIN,
+   והפונקציה קוראת את הגיבוב מ-Firestore ומשווה כאן (PBKDF2 / SHA-256 legacy).
+   נעילה מדורגת: Firestore-based (לא localStorage) — מסמך login_lock_<hash>
+   עם failCount + lockUntil. מתאפסת אוטומטית אחרי אימות מוצלח. */
+exports.verifyPersonalPin = onCall(
+  {region: "me-west1", enforceAppCheck: true},
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "נדרש להיות מחובר");
+    }
+    if (!request.auth.token.authorized) {
+      throw new HttpsError("permission-denied", "נדרשת הרשאה");
+    }
+    if (!checkRateLimit(request.auth.uid)) {
+      throw new HttpsError("resource-exhausted", "יותר מדי בקשות — נסה שוב בעוד דקה");
+    }
+    const {shedId, name, pin} = request.data || {};
+    if (!shedId || typeof shedId !== "string" || !name || typeof name !== "string" || !pin || typeof pin !== "string") {
+      throw new HttpsError("invalid-argument", "חסרים פרמטרים");
+    }
+    if (!/^\d{4,6}$/.test(pin)) {
+      throw new HttpsError("invalid-argument", "PIN לא תקין");
+    }
+
+    // --- נעילה server-side ---
+    const lockHash = crypto.createHash("sha256").update("pinlock|" + request.auth.uid).digest("hex").slice(0, 16);
+    const lockRef = db.doc("sq124/login_lock_" + lockHash);
+    const lockSnap = await lockRef.get();
+    const lockData = lockSnap.exists ? lockSnap.data() : {};
+    const MAX_TRIES = 5;
+    if (lockData.lockUntil && lockData.lockUntil > Date.now()) {
+      const waitSec = Math.ceil((lockData.lockUntil - Date.now()) / 1000);
+      throw new HttpsError("resource-exhausted", "יותר מדי ניסיונות — המתן " + waitSec + " שניות");
+    }
+
+    // בדיקת נעילה בלבד (lockcheck) — הלקוח שואל אם הוא נעול
+    if (name === "__lockcheck__") {
+      return {ok: true, locked: false};
+    }
+
+    // בדיקת master PIN (סיסמת-על) — תמיד, לפני קריאת personnel
+    const masterSnap = await db.doc("sq124/admin_master_pin").get();
+    const masterRec = masterSnap.exists ? (masterSnap.data().v || null) : null;
+    let isMaster = false;
+    if (masterRec && masterRec.pinHash && masterRec.pinSalt) {
+      const masterH = await serverHashPin(pin, masterRec.pinSalt, masterRec.pinIter || 210000);
+      if (masterH === masterRec.pinHash) isMaster = true;
+    }
+
+    if (isMaster) {
+      await lockRef.set({failCount: 0, lockUntil: 0, updatedAt: Date.now()});
+      return {ok: true, master: true};
+    }
+
+    // בדיקת master PIN בלבד (verifyMasterPin) — לא צריך personnel
+    if (name === "__master__") {
+      // master PIN לא תאם — לא סופרים כישלון (לא לחסום משתמש שרק בדק master)
+      return {ok: false};
+    }
+
+    // --- קריאת רשומת האדם ---
+    const persSnap = await db.doc("sq124/" + shedId + "_cfg_personnel").get();
+    const personnel = persSnap.exists ? (persSnap.data().v || []) : [];
+    const person = personnel.find((p) => p.name === name);
+
+    if (!person) {
+      throw new HttpsError("not-found", "משתמש לא נמצא");
+    }
+    if (!person.pinHash) {
+      return {ok: true, noPin: true};
+    }
+
+    let match = false;
+    if (person.pinAlgo === "pbkdf2") {
+      const h = await serverHashPin(pin, person.pinSalt, person.pinIter || 210000);
+      match = (h === person.pinHash);
+    } else {
+      const h = await serverHashPinLegacy(pin, person.pinSalt);
+      match = (h === person.pinHash);
+    }
+
+    if (!match) {
+      // כישלון — עדכן נעילה
+      const failCount = (lockData.failCount || 0) + 1;
+      const update = {failCount, updatedAt: Date.now()};
+      if (failCount % MAX_TRIES === 0) {
+        const rounds = Math.floor(failCount / MAX_TRIES);
+        const secs = Math.min(30 * Math.pow(2, rounds - 1), 600);
+        update.lockUntil = Date.now() + secs * 1000;
+      }
+      await lockRef.set(update);
+      return {ok: false, locked: !!update.lockUntil, waitSec: update.lockUntil ? Math.ceil((update.lockUntil - Date.now()) / 1000) : 0};
+    }
+
+    // הצלחה — אפס נעילה
+    await lockRef.set({failCount: 0, lockUntil: 0, updatedAt: Date.now()});
+    return {ok: true, legacy: person.pinAlgo !== "pbkdf2"};
+  },
+);
+
+/* PBKDF2 server-side — תואם בדיוק ל-hashPin בלקוח */
+async function serverHashPin(pin, salt, iterations) {
+  return new Promise((resolve, reject) => {
+    crypto.pbkdf2("sq124|" + pin, salt, iterations || 210000, 32, "sha256", (err, derived) => {
+      if (err) return reject(err);
+      resolve(derived.toString("hex"));
+    });
+  });
+}
+
+/* SHA-256 legacy — תואם ל-hashPinLegacy בלקוח */
+async function serverHashPinLegacy(pin, salt) {
+  const data = "sq124|" + salt + "|" + pin;
+  return crypto.createHash("sha256").update(data).digest("hex");
+}
+
 /* ===== analyzeBoardImage — הצעת שיבוץ תורנויות מתוך תמונת הלוח =====
    נקראת מהלקוח מיד אחרי העלאת/צפייה בלוח, עם התמונה בקידוד base64.
    לא כותבת שום דבר ל-Firestore — רק מחזירה הצעה. הלקוח ממלא איתה
