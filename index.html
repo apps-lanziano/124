@@ -1154,6 +1154,7 @@ nav{
 .rpick-legend b.lg.sat{background:#fde047}
 .rpick-n{font-size:13px;font-weight:700}
 .rpick-s{font-size:11px;color:var(--ink-3)}
+.rpick-shed-hdr{font-size:12px;font-weight:700;color:var(--ink-2);padding:8px 8px 4px;background:var(--bg);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:1}
 .rpick-go{margin-inline-start:auto;font-size:17px;font-weight:800;color:var(--red);flex:0 0 auto}
 /* פאנל בדיקת חוקי-האצבע */
 #roster-ed-compliance{margin-bottom:10px}
@@ -8809,7 +8810,8 @@ function reqBodyText(r){
   const m = reqTypeMeta(r.type);
   if(r.type==="swap"){
     const dl = d => d==="חמישי"?"ה׳–ש׳":(DAY_LETTER[d]||d||"");
-    return `${m.ic} החלפה · ${escapeHTML(dl(r.day))} ⇄ ${escapeHTML(r.replacement||"—")}${r.replDay?` (${escapeHTML(dl(r.replDay))})`:""}`;
+    const wk = r.swapWeek==="next" ? " · שבוע הבא" : "";
+    return `${m.ic} החלפה · ${escapeHTML(dl(r.day))} ⇄ ${escapeHTML(r.replacement||"—")}${r.replDay?` (${escapeHTML(dl(r.replDay))})`:""}`+wk;
   }
   if(r.type==="leave") return `${m.ic} יציאה מוקדמת · ${escapeHTML(reqDateText(r))}${r.from?` מ-${escapeHTML(r.from)}`:""}`;
   if(r.type==="vacation") return `${m.ic} חופשה · ${escapeHTML(reqDateText(r))}`;
@@ -8877,6 +8879,7 @@ function constraintDeadlineNote(){
 function openNewRequest(type){
   reqOnBehalf = null; reqEditId = null; reqEditByCommander = false;
   reqDraftFromDate = reqDraftToDate = reqDraftFrom = reqDraftReason = reqDraftDay = reqDraftRepl = "";
+  reqSwapWeek = "current";
   reqDraftType = type || "leave";
   document.getElementById("my-requests-modal").classList.remove("open");
   document.getElementById("req-title").textContent = "אילוץ חדש";
@@ -8953,21 +8956,37 @@ function renderReqTypePicker(){
 async function renderReqFields(){
   const box = document.getElementById("req-fields");
   if(reqDraftType==="swap"){
-    // החלפה ראש-בראש: בוחרים יום שאני תורן בו, מחליף, ויום שהמחליף תורן
-    // בו. באישור — מחליפים את שניהם: אני נכנס ליום שלו, הוא ליום שלי.
-    const roster = await getDutyRoster("current");
+    // החלפה ראש-בראש: בוחרים שבוע (נוכחי/הבא), יום שאני תורן/נח בו, מחליף,
+    // ויום שהמחליף תורן/נח בו. באישור — מחליפים את שניהם.
+    const nextRoster = await getDutyRoster("next");
+    const nextPublished = nextRoster && nextRoster.published;
+    const swapSlots = [{key:"current",label:"שבוע נוכחי"}];
+    if(nextPublished) swapSlots.push({key:"next",label:"שבוע הבא"});
+    if(!nextPublished && reqSwapWeek==="next") reqSwapWeek = "current";
+    const roster = await getDutyRoster(reqSwapWeek);
     const assign = weekAssignmentsByPerson(roster);
     const shedMap = await personShedMap();
+    const byShed = await fetchAllPersonnelByShed();
+    const soldiersSet = new Set();
+    SHEDS.forEach(s=>(byShed[s.id]||[]).forEach(p=>{
+      if(p && p.name && p.role==="חייל" && !p.reserve && !(p.release && p.release<=todayKey())) soldiersSet.add(p.name);
+    }));
     const dl = d => d==="חמישי" ? "ה׳–ש׳" : DAY_LETTER[d]||d;
+    const weekLabel = reqSwapWeek==="next" ? "שבוע הבא" : "השבוע הנוכחי";
+    let html = "";
+    if(swapSlots.length>1){
+      html += `<label class="req-lbl">מאיזה שבוע?</label>
+        <div class="pick">${swapSlots.map(s=>`<div class="${s.key===reqSwapWeek?"on":""}" onclick="setSwapWeek('${s.key}')">${s.label}</div>`).join("")}</div>`;
+    }
     const myDays = assign[user] || [];
-    if(!myDays.length){ box.innerHTML = `<div class="req-warn">אינך משובץ בלוח הנוכחי — אין תורנות להחליף.</div>`; return; }
+    if(!myDays.length){ box.innerHTML = html + `<div class="req-warn">אינך משובץ בלוח ${weekLabel} — אין תורנות להחליף.</div>`; return; }
     if(!reqDraftDay || !myDays.includes(reqDraftDay)) reqDraftDay = myDays[0];
-    // מועמדים: כל מי שמשובץ השבוע (חוץ ממני), מכל הטייסת
-    const cands = Object.keys(assign).filter(n=>n!==user).sort((a,b)=>a.localeCompare(b,"he"));
-    let html = `<label class="req-lbl">היום שאני תורן</label>
+    // מועמדים: רק חיילים (לא מפקדים, לא מילואים) שמשובצים/נחים בשבוע הנבחר
+    const cands = Object.keys(assign).filter(n=>n!==user && soldiersSet.has(n)).sort((a,b)=>a.localeCompare(b,"he"));
+    html += `<label class="req-lbl">היום שאני תורן/נח</label>
       <div class="pick">${myDays.map(d=>`<div class="${d===reqDraftDay?"on":""}" onclick="setSwapDay('${d}')">${dl(d)}</div>`).join("")}</div>
       <label class="req-lbl">מי מחליף</label>`;
-    if(!cands.length){ box.innerHTML = html + `<div class="req-warn">אין מי להחליף מולו בלוח הנוכחי.</div>`; return; }
+    if(!cands.length){ box.innerHTML = html + `<div class="req-warn">אין חיילים זמינים להחלפה בלוח ${weekLabel}.</div>`; return; }
     html += `<div class="req-people">${cands.map(n=>{
       const cross = shedMap[n] && shedMap[n]!==currentShed.id;
       const sn = cross ? (SHEDS.find(s=>s.id===shedMap[n])||{}).name : "";
@@ -8976,7 +8995,7 @@ async function renderReqFields(){
     }).join("")}</div>`;
     if(reqDraftRepl){
       const replDays = (assign[reqDraftRepl]||[]).filter(d=>d!==reqDraftDay);
-      html += `<label class="req-lbl">היום שהמחליף תורן</label>`;
+      html += `<label class="req-lbl">היום שהמחליף תורן/נח</label>`;
       html += replDays.length
         ? `<div class="pick">${replDays.map(d=>`<div class="${d===reqDraftReplDay?"on":""}" onclick="setSwapReplDay('${d}')">${dl(d)}</div>`).join("")}</div>`
         : `<div class="req-warn">ל${escapeHTML(reqDraftRepl)} אין יום תורנות אחר להחלפה מולו.</div>`;
@@ -9003,16 +9022,21 @@ async function renderReqFields(){
     box.innerHTML = `<label class="req-lbl">הבקשה</label><textarea class="m-input" id="req-reason" rows="3" placeholder="כתוב את בקשתך">${escapeHTML(reqDraftReason)}</textarea>`;
   }
 }
-let reqDraftDay="", reqDraftRepl="", reqDraftDate="", reqDraftFrom="", reqDraftReason="", reqDraftFromDate="", reqDraftToDate="", reqDraftReplDay="", reqDraftReplShed="";
+let reqDraftDay="", reqDraftRepl="", reqDraftDate="", reqDraftFrom="", reqDraftReason="", reqDraftFromDate="", reqDraftToDate="", reqDraftReplDay="", reqDraftReplShed="", reqSwapWeek="current";
+function setSwapWeek(w){ reqSwapWeek=w; reqDraftDay=""; reqDraftRepl=""; reqDraftReplDay=""; reqDraftReplShed=""; renderReqFields(); }
 function setSwapDay(d){ reqDraftDay=d; renderReqFields(); }
 function setSwapRepl(n,shed){ reqDraftRepl=n; reqDraftReplShed=shed||""; reqDraftReplDay=""; renderReqFields(); }
 function setSwapReplDay(d){ reqDraftReplDay=d; renderReqFields(); }
 /* מי משובץ באילו ימים בשבוע — לבחירת החלפה ראש-בראש (התורן שלי מול
-   התורן של המחליף). כולל את כל הטייסת, כי הלוח חוצה-סככות. */
+   התורן של המחליף). כולל את כל הטייסת, כי הלוח חוצה-סככות.
+   כולל גם נחים (pfRest/pmsRest) — כדי שגם חייל ששובץ כנח יוכל לבקש חילוף. */
 function weekAssignmentsByPerson(roster){
   const map = {};
   ROSTER_EDIT_DAYS.forEach(day=>{
-    rosterDayAssigned(roster.days[day]).forEach(n=>{ (map[n]=map[n]||[]).push(day); });
+    const d = roster.days[day];
+    rosterDayAssigned(d).forEach(n=>{ (map[n]=map[n]||[]).push(day); });
+    (d.pfRest||[]).forEach(n=>{ if(n && !(map[n]||[]).includes(day))(map[n]=map[n]||[]).push(day); });
+    (d.pmsRest||[]).forEach(n=>{ if(n && !(map[n]||[]).includes(day))(map[n]=map[n]||[]).push(day); });
   });
   return map;
 }
@@ -9033,6 +9057,7 @@ async function submitRequest(){
     if(!reqDraftDay || !reqDraftRepl || !reqDraftReplDay){ toast("בחר יום שלך, מחליף, ויום שלו"); return; }
     patch.day = reqDraftDay; patch.replacement = reqDraftRepl;
     patch.replDay = reqDraftReplDay; patch.replShed = reqDraftReplShed || currentShed.id;
+    patch.swapWeek = reqSwapWeek || "current";
   } else if(type==="leave" || type==="after"){
     patch.fromDate = (document.getElementById("req-fromdate").value||"").trim();
     patch.toDate = patch.fromDate;
@@ -9154,16 +9179,15 @@ async function renderRequestsInbox(){
   const box = document.getElementById("requests-inbox-list");
   let html = "";
   if(crossB.length) html += `<div class="req-sec">↔️ החלפות בין-מסגרתיות לאישורך</div>` + crossB.map(swapShedBCardHtml).join("");
-  // בקשות שאושרו/נדחו: תמיד מוצגות בקשות מאושרות שהתאריך שלהן עדיין
-  // רלוונטי (היום או קדימה) — אחרת אילוץ מאושר וותיק (כמו חופשת מילואים
-  // שנשלחה מראש) נדחק אל מחוץ ל-10 האחרונות ואין דרך למפקד למצוא ולבטל
-  // אותו. שאר ההיסטוריה (נדחו / מאושר וחלף התאריך) עדיין מוגבלת ל-10
-  // האחרונות — זה תיעוד היסטורי, לא פעולה תלויה.
+  // בקשות מאושרות שהתאריך שלהן עדיין רלוונטי (היום או קדימה) מוצגות תמיד.
+  // אילוצים שפג תוקפם (תאריך עבר) מוסרים לגמרי — לא מוצגים כלל למפקד.
+  // בקשות ללא תאריך (swap/other) או שנדחו לאחרונה מוגבלות ל-10 אחרונות.
   const today = todayKey();
   const stillActive = r => r.status==="approved" && (()=>{ const t=r.toDate||r.fromDate||r.date; return !t || t>=today; })();
+  const isExpired = r => { const t=r.toDate||r.fromDate||r.date; return t && t<today; };
   const nonPending = list.filter(r=>r.status!=="pending");
   const show = pending.concat(nonPending.filter(stillActive))
-    .concat(nonPending.filter(r=>!stillActive(r)).slice(0,10));
+    .concat(nonPending.filter(r=>!stillActive(r) && !isExpired(r)).slice(0,10));
   if(show.length) html += (crossB.length?`<div class="req-sec">בקשות המסגרת</div>`:"") + show.map(r=>reqCardHtml(r, true)).join("");
   box.innerHTML = html || `<div class="empty-state" style="padding:24px"><div class="ic" style="color:#16a34a"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l5 5L20 7"/></svg></div><h3>אין בקשות</h3></div>`;
 }
@@ -10281,22 +10305,31 @@ function renderRosterPickList(){
       const cnt = rotCount[p.name] || 0;                     // ספירה א׳–ד׳ בלבד
       const quota = 2;                                         // כל חייל — מקסימום 2 תורנויות
       const sat = nextSlot && rosterPrevSat.has(p.name);    // עשה שבת — לא לראשון
-      rosterPickRows.push({name:p.name, shed:s.name, busy:assigned.has(p.name), lock, cnt, quota, sat});
+      rosterPickRows.push({name:p.name, shed:s.name, shedIdx:SHEDS.indexOf(s), busy:assigned.has(p.name), lock, cnt, quota, sat});
     });
   });
-  // סדר: פנויים → עשה-שבת → קורס (רך) → נעולים מלא. בתוך כל קבוצה משובצים למטה.
+  // בניית לוח עתידי: מיון ראשי לפי סככה, בתוכה לפי זמינות ושם.
+  // עריכת לוח נוכחי: מיון לפי זמינות (כמו קודם).
   const rank = x => x.lock ? (x.lock.soft?2:3) : (x.sat?1:0);
-  rosterPickRows.sort((a,b)=> rank(a)-rank(b) || (a.busy?1:0)-(b.busy?1:0) || a.name.localeCompare(b.name,"he"));
+  if(nextSlot){
+    rosterPickRows.sort((a,b)=> a.shedIdx-b.shedIdx || rank(a)-rank(b) || (a.busy?1:0)-(b.busy?1:0) || a.name.localeCompare(b.name,"he"));
+  } else {
+    rosterPickRows.sort((a,b)=> rank(a)-rank(b) || (a.busy?1:0)-(b.busy?1:0) || a.name.localeCompare(b.name,"he"));
+  }
   const mark = x => x.lock ? (x.lock.soft?"🎓 ":x.lock.bdp?"🗓️ ":"🔒 ") : (x.sat?"🟡 ":"");
   const cls = x => x.lock ? (x.lock.soft?"softc":x.lock.bdp?"bdplock":"locked") : (x.sat?"sat":"");
   const sub = x => x.lock ? x.lock.label : (x.sat ? "עשה שבת — לא לשבץ בראשון" : (x.busy?"כבר משובץ היום":x.shed));
   const selected = x => rosterPickMulti && rosterPickSel.has(x.name);
+  let _prevShed = "";
   document.getElementById("roster-pick-list").innerHTML = rosterPickRows.length
-    ? rosterPickRows.map((x,i)=>`<div class="rpick ${x.busy?"busy":""} ${cls(x)} ${selected(x)?"sel":""}" onclick="rosterPickChoose(${i})">
+    ? rosterPickRows.map((x,i)=>{
+        let hdr = "";
+        if(nextSlot && x.shed!==_prevShed){ _prevShed=x.shed; hdr=`<div class="rpick-shed-hdr">${escapeHTML(x.shed)}</div>`; }
+        return hdr+`<div class="rpick ${x.busy?"busy":""} ${cls(x)} ${selected(x)?"sel":""}" onclick="rosterPickChoose(${i})">
         <div><div class="rpick-n">${mark(x)}${escapeHTML(x.name)}</div>
         <div class="rpick-s">${escapeHTML(x.lock||x.sat?sub(x):(x.busy?`${x.shed} · כבר משובץ היום`:x.shed))}</div></div>
         <span class="rpick-cnt ${x.cnt>=x.quota?"full":(x.cnt>0?"part":"")}">שובץ ${x.cnt}/${x.quota}</span>
-        <span class="rpick-go">${rosterPickMulti?(selected(x)?"✓":"○"):"+"}</span></div>`).join("")
+        <span class="rpick-go">${rosterPickMulti?(selected(x)?"✓":"○"):"+"}</span></div>`;}).join("")
     : `<div class="empty-state" style="padding:22px"><p>לא נמצאו שמות</p></div>`;
   const conf = document.getElementById("roster-pick-confirm");
   if(conf){
