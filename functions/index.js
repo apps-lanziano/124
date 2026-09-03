@@ -24,11 +24,12 @@ const {buildDutyRosterDigests, resolveNameToShed} = require("./lib/duty_roster_d
 const {analyzeBoardImage: analyzeBoardImageCore} = require("./lib/board_ai_analyze");
 const {isQuietDay} = require("./lib/quiet_days");
 const {validateTestNotificationRequest} = require("./lib/test_notification");
-const {dumpCollection} = require("./lib/backup");
+const {dumpCollection, computeBackupChecksum, verifyBackupIntegrity} = require("./lib/backup");
 const {classify, decide, SHED_NAMES, BROADCAST_SHED, PER_PERSON_SHED} = require("./lib/notify");
 const {commanderChangeBody} = require("./lib/roster_changes");
 const {shouldAuthorize} = require("./lib/authorize");
 const {isSensitiveDocId, buildAuditEntries} = require("./lib/audit_log");
+const {checkRateLimit} = require("./lib/rate_limit");
 const crypto = require("crypto");
 
 initializeApp();
@@ -69,6 +70,10 @@ exports.markAuthorized = onCall(
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "נדרש להיות מחובר");
+    }
+    if (!checkRateLimit(request.auth.uid)) {
+      console.warn(`markAuthorized: rate limit uid=${request.auth.uid}`);
+      throw new HttpsError("resource-exhausted", "יותר מדי בקשות — נסה שוב בעוד דקה");
     }
     if (!shouldAuthorize(request.auth)) {
       // אירוע אבטחה: ניסיון להשיג authorized:true בלי כניסה אמיתית עם קוד
@@ -562,6 +567,9 @@ exports.sendTestNotificationToSelf = onCall(
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "נדרש להיות מחובר");
     }
+    if (!checkRateLimit(request.auth.uid)) {
+      throw new HttpsError("resource-exhausted", "יותר מדי בקשות — נסה שוב בעוד דקה");
+    }
     const {ok, token, title, body, error} = validateTestNotificationRequest(request.data);
     if (!ok) {
       throw new HttpsError("invalid-argument", error);
@@ -589,11 +597,21 @@ exports.dailyBackup = onSchedule(
   },
   async () => {
     const {docs, count} = await dumpCollection(db);
+    const verification = verifyBackupIntegrity(docs);
+    if (!verification.ok) {
+      console.error(`גיבוי יומי: אימות נכשל — ${verification.error}, חסרים: ${(verification.missingCritical||[]).join(", ")}`);
+    }
     const stamp = new Date().toISOString().slice(0, 10);
+    const checksum = computeBackupChecksum(docs);
     const path = `backups/sq124-${stamp}.json`;
+    const metaPath = `backups/sq124-${stamp}.meta.json`;
     const bucket = getStorage().bucket();
     await bucket.file(path).save(JSON.stringify(docs), {contentType: "application/json"});
-    console.log(`גיבוי יומי: ${count} מסמכים -> ${path}`);
+    await bucket.file(metaPath).save(JSON.stringify({
+      date: stamp, docCount: count, checksum, verified: verification.ok,
+      missingCritical: verification.missingCritical,
+    }), {contentType: "application/json"});
+    console.log(`גיבוי יומי: ${count} מסמכים -> ${path} (checksum: ${checksum.slice(0,12)}…, verified: ${verification.ok})`);
   },
 );
 
@@ -623,6 +641,14 @@ exports.monitorLoginAnomalies = onSchedule(
 
     const message = buildAlertMessage(alerts);
     console.warn("LOGIN_ANOMALY:", message);
+
+    await db.collection("security_dashboard").doc("latest_scan").set({
+      ts: Date.now(),
+      failedAttempts: events.length,
+      alertCount: alerts.length,
+      alerts: alerts.map(a => ({type: a.type, ip: a.ip || null, attempts: a.attempts})),
+      window: WINDOW_MINUTES,
+    });
 
     const adminSnap = await db.collection("sq124").doc("push_tokens_admin").get();
     if (!adminSnap.exists) return;

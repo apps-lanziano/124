@@ -5296,6 +5296,7 @@ async function doLogin(){
     user = person.name; userRole = person.role;
     isSuperAdmin = (user === SUPER_ADMIN_NAME);
     document.getElementById("login-overlay").style.display="none";
+    _resetSessionTimer();
     await applyLoginUiForRole(person);
 
     // מסגרות שהומרו מיוזר פרטי — המפקד שלהן מקבל בנוסף את ההרשאות הטייסתיות שלו
@@ -5351,6 +5352,7 @@ async function doLogin(){
   }
 }
 function logout(){
+  if(_sessionTimer){ clearTimeout(_sessionTimer); _sessionTimer=null; }
   try{ if("clearAppBadge" in navigator) navigator.clearAppBadge(); }catch(e){}
   user=null; userRole=null; isCmd=false; isAdmin=false; isVehicleOfficer=false; isBudgetOfficer=false; isTechOfficer=false; isToolsResp=false; isVehiclesResp=false;
   isHearingResp=false; isRangeResp=false; isBoardPublisher=false; isRosterManager=false; isSuppliesResp=false;
@@ -5402,6 +5404,22 @@ function logout(){
   initLoginScreen();   // אם המכשיר זוכר משתמש — מסך PIN מהיר במקום קוד
   go("scr-safety", document.querySelector('[data-scr="scr-safety"]'));
 }
+
+/* ============ SESSION TIMEOUT (30 דקות אי-פעילות) ============ */
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+let _sessionTimer = null;
+function _resetSessionTimer(){
+  if(_sessionTimer) clearTimeout(_sessionTimer);
+  if(!user) return;
+  _sessionTimer = setTimeout(()=>{
+    if(!user) return;
+    toast("נותקת אוטומטית עקב אי-פעילות");
+    logout();
+  }, SESSION_TIMEOUT_MS);
+}
+["pointerdown","keydown","scroll","touchstart"].forEach(evt=>{
+  document.addEventListener(evt, _resetSessionTimer, {passive:true, capture:true});
+});
 
 /* ============ NAV ============ */
 function go(id, btn){
