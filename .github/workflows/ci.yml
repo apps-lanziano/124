@@ -38,6 +38,11 @@ jobs:
       - name: בדיקת סנכרון גרסת Service Worker
         run: node scripts/sw-cache-name.mjs --check
 
+      - name: סריקת תלויות (npm audit)
+        run: |
+          npm audit --audit-level=critical --omit=dev 2>&1 || echo "::warning::נמצאו פגיעויות קריטיות בתלויות — npm audit"
+          cd functions && npm audit --audit-level=critical --omit=dev 2>&1 || echo "::warning::נמצאו פגיעויות קריטיות בתלויות functions — npm audit"
+
       - name: התקנת Playwright ודפדפן
         run: |
           npm install --no-audit --no-fund
