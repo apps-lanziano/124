@@ -29,7 +29,7 @@ const fn = readFileSync(`${ROOT}/functions/index.js`, 'utf8');
 
 {
   const start = fn.indexOf("exports.sendTestNotificationToSelf");
-  const end = fn.indexOf("exports.weeklyBackup");
+  const end = fn.indexOf("exports.dailyBackup");
   const body = start >= 0 && end > start ? fn.slice(start, end) : "";
   const sendsToSingleToken = /getMessaging\(\)\.send\(\{token, data:/.test(body);
   const noTokenListLookup = !/push_tokens_/.test(body) && !/sendEachForMulticast/.test(body);
