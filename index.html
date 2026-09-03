@@ -2634,7 +2634,7 @@ nav{
       <input class="m-input" id="ue-release" type="date" style="margin-bottom:10px">
       <div style="border-top:1px solid var(--line);padding-top:10px;margin-bottom:10px">
         <label style="font-size:11.5px;color:var(--ink-3);display:flex;justify-content:space-between;margin-bottom:3px">
-          <span><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#a16207" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg> PIN אישי (4 ספרות; 6 למנהל-על)</span><span id="ue-pin-status" style="font-weight:800"></span>
+          <span><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#a16207" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg> PIN אישי (6 ספרות)</span><span id="ue-pin-status" style="font-weight:800"></span>
         </label>
         <input class="m-input" id="ue-pin" type="text" inputmode="numeric" maxlength="6" autocomplete="off"
           placeholder="השאר ריק — ללא שינוי" style="margin-bottom:6px">
@@ -2841,7 +2841,7 @@ nav{
         <div id="tm-custom-fields"></div>
         <div style="border-top:1px solid var(--line);padding-top:10px;margin-bottom:10px">
           <label style="font-size:11.5px;color:var(--ink-3);display:flex;justify-content:space-between;margin-bottom:3px">
-            <span><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#a16207" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg> PIN אישי (4 ספרות; 6 למנהל-על)</span><span id="tm-pin-status" style="font-weight:800"></span>
+            <span><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#a16207" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg> PIN אישי (6 ספרות)</span><span id="tm-pin-status" style="font-weight:800"></span>
           </label>
           <input class="m-input" id="tm-pin" type="text" inputmode="numeric" maxlength="6" autocomplete="off"
             placeholder="השאר ריק — ללא שינוי" style="margin-bottom:6px">
@@ -2919,7 +2919,7 @@ nav{
       <div style="font-size:11.5px;color:var(--ink-3);display:flex;justify-content:space-between;margin-bottom:6px">
         <span>סטטוס נוכחי</span><span id="master-pin-status" style="font-weight:800"></span>
       </div>
-      <input class="m-input" id="master-pin-input" type="text" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4 ספרות" style="margin-bottom:10px">
+      <input class="m-input" id="master-pin-input" type="text" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="6 ספרות" style="margin-bottom:10px">
       <div class="modal-actions">
         <button class="m-btn primary" onclick="saveMasterPin()" style="flex:1"><svg class="uic" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M8 3v5h7V3M8 13h8v7H8z"/></svg> שמור</button>
         <button class="m-btn ghost" onclick="clearMasterPin()" style="flex:0 0 auto">בטל</button>
@@ -3839,6 +3839,34 @@ nav{
   <!-- hidden training file input -->
   <input type="file" id="training-input" accept="image/*,.pdf,.doc,.docx,.ppt,.pptx" class="hidden" onchange="onTrainingFile(event)">
 
+  <!-- באנר שדרוג PIN ל-6 ספרות -->
+  <div id="pin-upgrade-banner" class="hidden" style="position:fixed;bottom:0;left:0;right:0;z-index:9998;padding:0 12px 20px;pointer-events:none">
+    <div style="max-width:460px;margin:0 auto;background:var(--card);border:1.5px solid var(--gold);border-radius:18px;box-shadow:0 -2px 24px rgba(0,0,0,.10);padding:18px 16px;pointer-events:auto;direction:rtl;text-align:right">
+      <div class="pub-msg" style="font-size:14px;color:var(--ink);line-height:1.6;margin-bottom:14px"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-start">
+        <button class="pub-go m-btn primary" style="font-size:13.5px;padding:10px 22px;border-radius:12px">עדכן עכשיו</button>
+        <button class="pub-later m-btn ghost" style="font-size:13.5px;padding:10px 18px;border-radius:12px">אחר כך</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- מודל שדרוג PIN -->
+  <div id="pin-upgrade-modal" class="hidden" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--card);border-radius:20px;box-shadow:var(--shadow-lg);padding:28px 22px;max-width:340px;width:100%;direction:rtl;text-align:right">
+      <div style="font-size:17px;font-weight:800;color:var(--ink);margin-bottom:4px">🔐 שדרוג קוד אישי</div>
+      <div style="font-size:13px;color:var(--ink-2);margin-bottom:18px;line-height:1.6">בחר קוד חדש בן <b>6 ספרות</b> — לאבטחה טובה יותר.</div>
+      <label style="font-size:12.5px;color:var(--ink-2);font-weight:600;display:block;margin-bottom:6px">קוד חדש</label>
+      <input id="pup-new" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="6 ספרות" style="width:100%;padding:14px 16px;border-radius:13px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font-family:'Assistant';font-size:16px;text-align:center;letter-spacing:6px;outline:none;margin-bottom:12px">
+      <label style="font-size:12.5px;color:var(--ink-2);font-weight:600;display:block;margin-bottom:6px">אישור קוד</label>
+      <input id="pup-confirm" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="הזן שוב" style="width:100%;padding:14px 16px;border-radius:13px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font-family:'Assistant';font-size:16px;text-align:center;letter-spacing:6px;outline:none;margin-bottom:6px">
+      <div id="pup-error" style="font-size:12.5px;color:var(--red);min-height:18px;margin-bottom:10px"></div>
+      <div style="display:flex;gap:10px">
+        <button id="pup-save-btn" class="m-btn primary" style="flex:1;padding:12px 0;border-radius:13px;font-size:14px">שמור</button>
+        <button class="pup-cancel m-btn ghost" style="padding:12px 18px;border-radius:13px;font-size:14px">ביטול</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast"></div>
 </div>
 
@@ -4267,11 +4295,131 @@ async function upgradePinIfLegacy(person, pin){
    להשוות מולם: הכניסה נעשית מול השרת, וה-PIN הוא נעילה אישית נפרדת. לכן אין קוד
    "שמור" — כל PIN בן 4 ספרות מותר. (השארנו את הפונקציה כדי לא לשבור קריאות קיימות.) */
 function isReservedCode(pin){ return false; }
-/* מנהל-העל (SUPER_ADMIN_NAME) מזוהה ע"פ שם אישי בלבד — לכן ה-PIN שלו
-   בפרט מחוזק ל-6 ספרות (במקום 4) כדי שפריצה ל-4 ספרות (10,000 צירופים)
-   לא תיתן גישת אדמין. לכל שאר המשתמשים נשאר 4 ספרות כרגיל. */
-function requiredPinLength(name){ return name === SUPER_ADMIN_NAME ? 6 : 4; }
+/* שלב 2 (2026-09-03): כל המשתמשים עוברים ל-PIN של 6 ספרות.
+   הגדרת PIN חדש (validPinFormat) = 6 ספרות בלבד.
+   כניסה (acceptedPinFormat) = 4 או 6 ספרות — תאימות אחורה למי שעדיין לא שדרג. */
+function requiredPinLength(name){ return 6; }
 function validPinFormat(pin, name){ return new RegExp("^\\d{"+requiredPinLength(name)+"}$").test(pin); }
+function acceptedPinFormat(pin){ return /^\d{4}$/.test(pin) || /^\d{6}$/.test(pin); }
+
+/* === באנר שדרוג PIN ל-6 ספרות (תרחיש ב׳) ===
+   מוצג אחרי כניסה מוצלחת עם PIN של 4 ספרות. ספירת דחיות ב-localStorage.
+   אחרי 3 דחיות — נוסח "נדרש תוך 7 ימים". אחרי 7 ימים — כפייה עדינה. */
+const PIN_UPGRADE_DISMISS_LIMIT = 3;
+const PIN_UPGRADE_GRACE_DAYS = 7;
+
+function _pinUpgradeKey(name, suffix){ return "pinUpgrade_"+name+"_"+suffix; }
+function _pinUpgradeDismissals(name){
+  try{ return parseInt(localStorage.getItem(_pinUpgradeKey(name,"dismissals")))||0; }catch(e){ return 0; }
+}
+function _pinUpgradeWarnStart(name){
+  try{ return localStorage.getItem(_pinUpgradeKey(name,"warnStart"))||""; }catch(e){ return ""; }
+}
+function _pinUpgradeMarkDone(name){
+  try{ localStorage.removeItem(_pinUpgradeKey(name,"dismissals")); localStorage.removeItem(_pinUpgradeKey(name,"warnStart")); }catch(e){}
+}
+
+function pinUpgradeNeeded(person, enteredPin){
+  if(!person || !person.pinHash) return false;
+  if(enteredPin && enteredPin.length === 6) return false;
+  if(enteredPin && enteredPin.length === 4) return true;
+  return false;
+}
+
+function pinUpgradeEnforced(name){
+  const d = _pinUpgradeDismissals(name);
+  if(d < PIN_UPGRADE_DISMISS_LIMIT) return false;
+  const ws = _pinUpgradeWarnStart(name);
+  if(!ws) return false;
+  const start = new Date(ws);
+  const now = new Date();
+  const daysPassed = (now - start) / (1000*60*60*24);
+  return daysPassed >= PIN_UPGRADE_GRACE_DAYS;
+}
+
+function showPinUpgradeBanner(person, enforced){
+  const name = person.name;
+  const dismissals = _pinUpgradeDismissals(name);
+  const inWarnPhase = dismissals >= PIN_UPGRADE_DISMISS_LIMIT;
+  const el = document.getElementById("pin-upgrade-banner");
+  if(!el) return;
+  const msgEl = el.querySelector(".pub-msg");
+  const laterBtn = el.querySelector(".pub-later");
+  if(enforced){
+    msgEl.innerHTML = '🔒 <b>עדכון קוד אישי נדרש</b><br><span style="font-size:12.5px;color:var(--ink-2)">מעבר ל-6 ספרות — לאבטחת החשבון שלך</span>';
+    laterBtn.style.display = "none";
+  } else if(inWarnPhase){
+    const ws = _pinUpgradeWarnStart(name);
+    const end = new Date(new Date(ws).getTime() + PIN_UPGRADE_GRACE_DAYS*24*60*60*1000);
+    const daysLeft = Math.max(1, Math.ceil((end - new Date())/(1000*60*60*24)));
+    msgEl.innerHTML = '🔐 <b>עדכון נדרש תוך '+daysLeft+' ימים</b><br><span style="font-size:12.5px;color:var(--ink-2)">הקוד האישי שלך ישתדרג ל-6 ספרות</span>';
+    laterBtn.style.display = "";
+  } else {
+    msgEl.innerHTML = '🔑 <b>שדרג את הקוד האישי ל-6 ספרות</b><br><span style="font-size:12.5px;color:var(--ink-2)">לאבטחה טובה יותר — ייקח כמה שניות</span>';
+    laterBtn.style.display = "";
+  }
+  el.classList.remove("hidden");
+  el.onclick = null;
+  el.querySelector(".pub-go").onclick = ()=>{ el.classList.add("hidden"); _pinUpgradeEnforced = enforced; openPinUpgradeFlow(person); };
+  laterBtn.onclick = ()=>{
+    el.classList.add("hidden");
+    const newCount = dismissals + 1;
+    try{
+      localStorage.setItem(_pinUpgradeKey(name,"dismissals"), String(newCount));
+      if(newCount >= PIN_UPGRADE_DISMISS_LIMIT && !_pinUpgradeWarnStart(name)){
+        localStorage.setItem(_pinUpgradeKey(name,"warnStart"), new Date().toISOString());
+      }
+    }catch(e){}
+  };
+}
+
+let _pinUpgradeEnforced = false;
+async function openPinUpgradeFlow(person){
+  const el = document.getElementById("pin-upgrade-modal");
+  if(!el) return;
+  el.classList.remove("hidden");
+  const inp1 = document.getElementById("pup-new");
+  const inp2 = document.getElementById("pup-confirm");
+  const errEl = document.getElementById("pup-error");
+  const btn = document.getElementById("pup-save-btn");
+  const cancelBtn = el.querySelector(".pup-cancel");
+  inp1.value = ""; inp2.value = ""; errEl.textContent = "";
+  if(_pinUpgradeEnforced){
+    cancelBtn.textContent = "יציאה";
+  } else {
+    cancelBtn.textContent = "ביטול";
+  }
+  inp1.focus();
+  btn.onclick = async ()=>{
+    const v1 = (inp1.value||"").trim();
+    const v2 = (inp2.value||"").trim();
+    errEl.textContent = "";
+    if(!v1){ errEl.textContent = "יש להזין קוד חדש"; inp1.focus(); return; }
+    if(!/^\d{6}$/.test(v1)){ errEl.textContent = "הקוד חייב להיות 6 ספרות בדיוק"; inp1.focus(); return; }
+    if(v1 !== v2){ errEl.textContent = "הקודים לא תואמים — נסה שוב"; inp2.focus(); return; }
+    setBtnLoading(btn, true);
+    try{
+      const pinFields = await buildPinFields(v1);
+      const setAt = new Date().toLocaleDateString("he-IL");
+      const saved = await mutatePersonnel(list=>{
+        const m = list.find(x=>x.name===person.name);
+        if(!m) return false;
+        Object.assign(m, pinFields);
+        m.pinSetBy = person.name + " (שדרוג)"; m.pinSetAt = setAt;
+      });
+      if(!saved){ errEl.textContent = "השמירה נכשלה — בדוק חיבור ונסה שוב"; return; }
+      Object.assign(person, pinFields);
+      _pinUpgradeMarkDone(person.name);
+      _pinUpgradeEnforced = false;
+      el.classList.add("hidden");
+      toast("הקוד האישי עודכן בהצלחה ל-6 ספרות ✅");
+    }finally{ setBtnLoading(btn, false); }
+  };
+  cancelBtn.onclick = ()=>{
+    el.classList.add("hidden");
+    if(_pinUpgradeEnforced){ _pinUpgradeEnforced = false; logout(); }
+  };
+}
 /* ===== אימות PIN בצד השרת (Cloud Function) =====
    verifyPin ו-verifyMasterPin מוחלפות בקריאה יחידה ל-verifyPersonalPin
    שמאמתת הן PIN אישי והן סיסמת-על, ומנהלת נעילה מדורגת ב-Firestore
@@ -4313,7 +4461,7 @@ async function localVerifyPin(person, pin){
   }catch(e){ console.error("localVerifyPin", e); return false; }
 }
 async function localVerifyMasterPin(pin){
-  if(!validPinFormat(pin)) return false;
+  if(!acceptedPinFormat(pin)) return false;
   const rec = await getMasterPinRecord();
   if(!rec || !rec.pinHash) return false;
   try{ return (await hashPin(pin, rec.pinSalt, rec.pinIter)) === rec.pinHash; }
@@ -4331,7 +4479,7 @@ async function verifyPin(person, pin){
 }
 
 async function verifyMasterPin(pin){
-  if(!validPinFormat(pin)) return false;
+  if(!acceptedPinFormat(pin)) return false;
   if(!currentShed || !currentShed.id) return localVerifyMasterPin(pin);
   const res = await callVerifyPin(currentShed.id, "__master__", pin);
   if(res.fallback) return localVerifyMasterPin(pin);
@@ -5099,18 +5247,18 @@ function onLoginNameChange(){
   pin.value = "";
   if(!person){ wrap.style.display = "none"; return; }
   wrap.style.display = "block";
-  const pinLen = requiredPinLength(person.name);
   if(person.pinHash){
     label.textContent = "🔒 הזן PIN אישי";
-    pin.placeholder = pinLen+" ספרות";
+    pin.placeholder = "הזן קוד";
   } else {
     label.textContent = "🔒 כניסה ראשונה — הגדר PIN אישי (חובה)";
-    pin.placeholder = "בחר "+pinLen+" ספרות";
+    pin.placeholder = "בחר 6 ספרות";
   }
 }
 
 /* שער ה-PIN האישי בכניסה — הוצא מתוך doLogin (שער עצמאי, מחזיר
    true/false לכניסה בפועל) כדי לקצר את הפונקציה הראשית. */
+let _lastEnteredPin = "";
 async function verifyLoginPin(person){
   // דילוג חד-פעמי — מנהל-על שכבר אימת את זהותו עצמו (כניסה בתור / חזרה מכניסה בתור)
   if(skipPinCheck){ skipPinCheck = false; return true; }
@@ -5137,14 +5285,12 @@ async function verifyLoginPin(person){
       }
     }
   } else {
-    // אין PIN — הגדרה חובה בכניסה ראשונה (אי אפשר לדלג)
+    // אין PIN — הגדרה חובה בכניסה ראשונה (אי אפשר לדלג). PIN חדש = 6 ספרות.
     if(!entered){ toast("כניסה ראשונה — יש להגדיר PIN אישי 🔒"); pinEl.focus(); return false; }
-    if(!validPinFormat(entered, person.name)){ toast("PIN חייב להיות "+requiredPinLength(person.name)+" ספרות ⛔"); pinEl.focus(); return false; }
+    if(!validPinFormat(entered, person.name)){ toast("PIN חייב להיות 6 ספרות ⛔"); pinEl.focus(); return false; }
     if(isReservedCode(entered)){ toast("קוד זה שמור למסגרת — בחר קוד אחר ⛔"); pinEl.value=""; pinEl.focus(); return false; }
     const pinFields = await buildPinFields(entered);
     const setAt = new Date().toLocaleDateString("he-IL");
-    // כתיבה ממוזגת — כדי שהגדרת PIN של חייל אחד לא תדרוס PIN שחייל אחר
-    // הגדיר באותן דקות (ראו ההערה ב-mutatePersonnel)
     const pinSaved = await mutatePersonnel(list=>{
       const m = list.find(x=>x.name===person.name);
       if(!m) return false;
@@ -5152,9 +5298,10 @@ async function verifyLoginPin(person){
       m.pinSetBy = person.name + " (עצמי)"; m.pinSetAt = setAt;
     });
     if(!pinSaved){ toast("⚠️ הגדרת ה-PIN לא נשמרה — בדוק חיבור ונסה שוב"); pinEl.focus(); return false; }
-    Object.assign(person, pinFields);   // סנכרון העותק המקומי להמשך ההתחברות
+    Object.assign(person, pinFields);
     toast("ה-PIN האישי שלך נקבע 🔒");
   }
+  _lastEnteredPin = entered;
   return true;
 }
 /* עדכון כותרת + נראות ניווט/כפתורים לפי תפקיד ומסגרת — הוצא מתוך doLogin
@@ -5400,6 +5547,17 @@ async function doLogin(){
       maybeOfferBiometricEnroll(devRec);   // לא ממתינים — לא חוסם את מסך הכניסה
     }
     toast("ברוך הבא, " + user.split(" ")[0] + " 👋");
+    // שדרוג PIN ל-6 ספרות — באנר רך אחרי כניסה מוצלחת עם PIN של 4 ספרות
+    if(!impersonating && _lastEnteredPin && _lastEnteredPin.length === 4 && person.pinHash){
+      const enforced = pinUpgradeEnforced(person.name);
+      if(enforced){
+        // כפייה עדינה — לא ניתן לדחות
+        setTimeout(()=> showPinUpgradeBanner(person, true), 600);
+      } else {
+        setTimeout(()=> showPinUpgradeBanner(person, false), 1200);
+      }
+    }
+    _lastEnteredPin = "";
     // בזמן "כניסה בתור" לא נוגעים בטוקן ה-push בכלל — זו צפייה זמנית לצורכי
     // תמיכה, לא חברות בפועל במסגרת הזו, ולא צריך שהמכשיר יתחיל לקבל ממנה
     // התראות. ברגע שיוצאים מהתחזות, doLogin חוזר לרוץ עם הזהות האמיתית.
@@ -12947,7 +13105,7 @@ async function openMasterPinModal(){
 }
 async function saveMasterPin(){
   const pin = (document.getElementById("master-pin-input").value||"").trim();
-  if(!validPinFormat(pin)){ toast("סיסמת-העל חייבת להיות 4 ספרות ⛔"); return; }
+  if(!validPinFormat(pin)){ toast("סיסמת-העל חייבת להיות 6 ספרות ⛔"); return; }
   const fields = await buildPinFields(pin);
   await sSetRaw("admin_master_pin", {pinHash:fields.pinHash, pinSalt:fields.pinSalt, pinAlgo:fields.pinAlgo, pinIter:fields.pinIter, setAt:new Date().toLocaleDateString("he-IL")});
   await ownerLog("עדכן את סיסמת-העל");
