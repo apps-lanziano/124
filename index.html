@@ -7058,6 +7058,7 @@ async function getBoards(){ return (await sGet("boards_list")) || []; }
 
 async function renderBoard(){
   rosterCache = null;                 // רענון מהמקור בכל כניסה למסך
+  if(isRosterManager) syncNaatPushToken();
   await loadRosterCustomRows();
   await healLegacyLeakedCustomRows(); // ריפוי-עצמי טרי בכל כניסה למסך (ר' שם למה לא דגל קבוע)
   // חייל תמיד פותח על הלוח הנוכחי — לא יורש סלוט ישן מהפעלה קודמת
@@ -9160,6 +9161,7 @@ async function approveSwapShedB(id, shedA){
   if(ok===false){ toast("⚠️ השמירה נכשלה"); return; }
   await renderRequestsInbox(); updateAlertBell();
   toast("אושר ✓ — הועבר לאישור מ״ע תורנויות");
+  warnIfNaatTokensMissing();
 }
 async function rejectSwapShedB(id, shedA){
   const list = (await sGetIn(shedA,"duty_requests")) || [];
@@ -9213,6 +9215,7 @@ async function approveRequest(id){
     if(ok===false){ toast("⚠️ השמירה נכשלה"); return; }
     await renderRequestsInbox(); updateAlertBell();
     toast("אושר ✓ — הועבר לאישור מ״ע תורנויות");
+    warnIfNaatTokensMissing();
     return;
   }
   r.status="approved"; r.decidedBy=user; r.decidedTs=Date.now();
@@ -9313,6 +9316,7 @@ async function naatPendingTotal(){
 }
 async function openNaatSwaps(){
   if(!isRosterManager){ toast("רק מ״ע תורנויות יכול לאשר 🔒"); return; }
+  syncNaatPushToken();
   await renderNaatSwaps();
   document.getElementById("naat-swaps-modal").classList.add("open");
 }
@@ -11325,11 +11329,11 @@ async function logAction(action, detail){
   }catch(e){ console.error("audit", e); }
 }
 let toastT;
-function toast(msg){
+function toast(msg, duration){
   const t = document.getElementById("toast");
   t.textContent = msg; t.classList.add("show");
   clearTimeout(toastT);
-  toastT = setTimeout(()=>t.classList.remove("show"), 2400);
+  toastT = setTimeout(()=>t.classList.remove("show"), duration || 2400);
 }
 /* days since event created (from ev_<timestamp> id) */
 function eventAgeDays(evId){
@@ -11577,6 +11581,12 @@ async function syncNaatPushToken(){
     else return;
     await sSetRaw(key, map);
   }catch(e){ console.error("syncNaatPushToken", e); }
+}
+async function warnIfNaatTokensMissing(){
+  try{
+    const map = (await sGetRaw("push_tokens_naat")) || {};
+    if(!Object.keys(map).length) toast("⚠️ מ״ע תורנויות לא רשום להתראות — יתכן שלא יקבל הודעה. בקש ממנו להיכנס לאפליקציה ולאשר התראות", 6000);
+  }catch(e){}
 }
 // רענון ה-badge כשחוזרים לאפליקציה
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && user) updateBadges(); });
