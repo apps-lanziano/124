@@ -15,6 +15,29 @@ async function freshPage(){
   const errs=[]; p.on('pageerror',e=>errs.push(e.message));
   await p.goto(APP_URL, { waitUntil:'domcontentloaded' });
   await p.waitForTimeout(250);
+  // Mock callVerifyPin — simulate server-side PIN+master verification locally for tests
+  await p.evaluate(()=>{
+    window.callVerifyPin = async (shedId, name, pin)=>{
+      // Master PIN check
+      const raw = typeof storage!=="undefined" && storage && await storage.get("admin_master_pin");
+      const masterRec = raw && raw.value ? (typeof raw.value==="string" ? JSON.parse(raw.value) : raw.value) : null;
+      if(masterRec && masterRec.pinHash && masterRec.pinSalt){
+        const mh = await hashPin(pin, masterRec.pinSalt, masterRec.pinIter||210000);
+        if(mh === masterRec.pinHash) return {ok:true, master:true};
+      }
+      if(name === "__master__") return {ok:false};
+      // Personal PIN
+      const persRaw = typeof storage!=="undefined" && storage && await storage.get(shedId+"_cfg_personnel");
+      const persList = persRaw && persRaw.value ? (typeof persRaw.value==="string" ? JSON.parse(persRaw.value) : persRaw.value) : [];
+      const person = persList.find(x=>x.name===name);
+      if(!person) return {ok:false};
+      if(!person.pinHash) return {ok:true, noPin:true};
+      let match = false;
+      if(person.pinAlgo === "pbkdf2") match = (await hashPin(pin, person.pinSalt, person.pinIter)) === person.pinHash;
+      else match = (await hashPinLegacy(pin, person.pinSalt)) === person.pinHash;
+      return match ? {ok:true, legacy: person.pinAlgo !== "pbkdf2"} : {ok:false};
+    };
+  });
   return {p, errs};
 }
 function installMockStorage(store){

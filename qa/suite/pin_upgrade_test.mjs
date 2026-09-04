@@ -12,6 +12,24 @@ async function page(){
   const errs=[]; p.on('pageerror',e=>errs.push(e.message));
   await p.goto(APP_URL, { waitUntil:'domcontentloaded' });
   await p.waitForTimeout(250);
+  // Mock callVerifyPin — simulate server-side PIN verification locally for tests.
+  // Production uses the real Cloud Function; this mock replicates the hash logic.
+  await p.evaluate(()=>{
+    window.callVerifyPin = async (shedId, name, pin)=>{
+      if(name === "__master__") return {ok:false};
+      const pers = (typeof PERSONNEL !== "undefined" && PERSONNEL) || [];
+      const person = pers.find(x=>x.name===name);
+      if(!person) return {ok:false};
+      if(!person.pinHash) return {ok:true, noPin:true};
+      let match = false;
+      if(person.pinAlgo === "pbkdf2"){
+        match = (await hashPin(pin, person.pinSalt, person.pinIter)) === person.pinHash;
+      } else {
+        match = (await hashPinLegacy(pin, person.pinSalt)) === person.pinHash;
+      }
+      return match ? {ok:true, legacy: person.pinAlgo !== "pbkdf2"} : {ok:false};
+    };
+  });
   return {p, errs};
 }
 function record(name, pass, detail){ results.push({name, pass, detail}); }
@@ -20,9 +38,11 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
+    currentShed = {id:"shed1", name:"סככה 1"};
     const salt = genSalt();
     const legacyHash = await hashPinLegacy("1234", salt);
     const person = { name:"ותיק", pinHash: legacyHash, pinSalt: salt };   // בלי pinAlgo = פורמט ישן
+    PERSONNEL = [person];
     return {
       correct: await verifyPin(person, "1234"),
       wrong:   await verifyPin(person, "9999"),
@@ -37,8 +57,10 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
+    currentShed = {id:"shed1", name:"סככה 1"};
     const f = await buildPinFields("5678");
     const person = { name:"חדש", ...f };
+    PERSONNEL = [person];
     return {
       algo: f.pinAlgo, iter: f.pinIter,
       correct: await verifyPin(person, "5678"),
@@ -110,10 +132,11 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
+    currentShed = {id:"shed1", name:"סככה 1"};
     const f = await buildPinFields("2468");
-    // מדמה בדיוק את הלוגיקה של applyPin בניהול הצוות
     const m = {name:"חייל"};
     Object.assign(m, f); m.pinSetBy = "מפקד"; m.pinSetAt = "1.1";
+    PERSONNEL = [m];
     return {
       hasAlgo: m.pinAlgo === "pbkdf2",
       hasIter: !!m.pinIter,
@@ -147,9 +170,12 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
+    currentShed = {id:"shed1", name:"סככה 1"};
     const f = await buildPinFields("1111");
+    const person = {name:"בדיקה", ...f};
+    PERSONNEL = [person];
     const t0 = performance.now();
-    await verifyPin({...f}, "1111");
+    await verifyPin(person, "1111");
     return { ms: Math.round(performance.now()-t0), iter: f.pinIter };
   });
   record("זמן אימות סביר (מתחת ל-1.5 שניות)",

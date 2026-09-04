@@ -4434,7 +4434,7 @@ async function getVerifyPinFn(){
 }
 
 async function callVerifyPin(shedId, name, pin){
-  if(AUTH_MODE !== "scoped" || !fbAuth || !fbAuth.app) return {ok:false, fallback:true};
+  if(AUTH_MODE !== "scoped" || !fbAuth || !fbAuth.app) return {ok:false, serverDown:true};
   try{
     const fn = await getVerifyPinFn();
     const res = await fn({shedId, name, pin});
@@ -4445,34 +4445,17 @@ async function callVerifyPin(shedId, name, pin){
       return {ok:false, locked:true, waitSec: msg ? Number(msg[1]) : 60};
     }
     console.error("callVerifyPin", e);
-    return {ok:false, fallback:true};
+    return {ok:false, serverDown:true};
   }
 }
 
-/* fallback מקומי — כשה-CF לא זמינה (רשת נפלה, לא פרוסה) חוזרים לאימות
-   מקומי כדי שהמשתמש לא יינעל מחוץ לאפליקציה. אימות מקומי הוא הרמה
-   הקודמת — עדיין טוב מ"לא לאמת בכלל". */
-async function localVerifyPin(person, pin){
-  if(!person || !person.pinHash) return true;
-  try{
-    if(person.pinAlgo === PIN_ALGO)
-      return (await hashPin(pin, person.pinSalt, person.pinIter)) === person.pinHash;
-    return (await hashPinLegacy(pin, person.pinSalt)) === person.pinHash;
-  }catch(e){ console.error("localVerifyPin", e); return false; }
-}
-async function localVerifyMasterPin(pin){
-  if(!acceptedPinFormat(pin)) return false;
-  const rec = await getMasterPinRecord();
-  if(!rec || !rec.pinHash) return false;
-  try{ return (await hashPin(pin, rec.pinSalt, rec.pinIter)) === rec.pinHash; }
-  catch(e){ return false; }
-}
+/* FAIL CLOSED — כשה-CF לא זמינה, הכניסה נחסמת. אין fallback מקומי. */
 
 async function verifyPin(person, pin){
   if(!person || !person.pinHash) return true;
-  if(!currentShed || !currentShed.id || !person.name) return localVerifyPin(person, pin);
+  if(!currentShed || !currentShed.id || !person.name){ toast("שגיאת אימות — נסה שוב מאוחר יותר ⛔"); return false; }
   const res = await callVerifyPin(currentShed.id, person.name, pin);
-  if(res.fallback) return localVerifyPin(person, pin);
+  if(res.serverDown){ toast("שרת האימות לא זמין — נסה שוב מאוחר יותר ⛔"); return false; }
   if(res.locked){ toast("יותר מדי ניסיונות — המתן "+(res.waitSec||60)+" שניות ⏳"); return false; }
   if(res.ok && res.legacy) upgradePinIfLegacy(person, pin);
   return !!res.ok;
@@ -4480,9 +4463,9 @@ async function verifyPin(person, pin){
 
 async function verifyMasterPin(pin){
   if(!acceptedPinFormat(pin)) return false;
-  if(!currentShed || !currentShed.id) return localVerifyMasterPin(pin);
+  if(!currentShed || !currentShed.id) return false;
   const res = await callVerifyPin(currentShed.id, "__master__", pin);
-  if(res.fallback) return localVerifyMasterPin(pin);
+  if(res.serverDown) return false;
   if(res.locked) return false;
   return !!(res.ok && res.master);
 }
@@ -5051,17 +5034,12 @@ async function quickLogin(){
     const person = await quickLoginCore(dev, shed);
     if(!person) return;
     // PIN נבדק server-side (Cloud Function verifyPersonalPin) — כולל master PIN ונעילה מדורגת.
-    // fallback מקומי אם ה-CF לא זמין (סביבת בדיקות / אופליין).
+    // FAIL CLOSED — אם השרת לא זמין, הכניסה נחסמת.
     const pinRes = await callVerifyPin(shed.id, person.name, entered);
-    if(pinRes.fallback){
-      const masterOk = await localVerifyMasterPin(entered);
-      const personalOk = !masterOk && await localVerifyPin(person, entered);
-      if(!masterOk && !personalOk && person.pinHash){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
-    } else {
-      if(pinRes.locked){ toast("יותר מדי ניסיונות — המתן "+(pinRes.waitSec||60)+" שניות ⏳"); pinEl.value=""; return; }
-      if(!pinRes.ok && !pinRes.noPin){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
-      if(pinRes.ok && pinRes.legacy) upgradePinIfLegacy(person, entered);
-    }
+    if(pinRes.serverDown){ toast("שרת האימות לא זמין — נסה שוב מאוחר יותר ⛔"); pinEl.value=""; return; }
+    if(pinRes.locked){ toast("יותר מדי ניסיונות — המתן "+(pinRes.waitSec||60)+" שניות ⏳"); pinEl.value=""; return; }
+    if(!pinRes.ok && !pinRes.noPin){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return; }
+    if(pinRes.ok && pinRes.legacy) upgradePinIfLegacy(person, entered);
     finishQuickLoginUI(dev, entered);
     await doLogin();
   } finally { setBtnLoading(btn, false); }
@@ -5270,19 +5248,14 @@ async function verifyLoginPin(person){
     // Face ID/טביעת אצבע כבר אימתו נוכחות ברגע זה — לא דורשים גם PIN
     biometricUnlockOK = false;
   } else if(person.pinHash || entered){
-    // PIN נבדק server-side (Cloud Function verifyPersonalPin) — כולל master PIN ונעילה מדורגת
+    // PIN נבדק server-side (Cloud Function verifyPersonalPin) — FAIL CLOSED
     if(!entered){ toast("הזן PIN אישי 🔒"); pinEl.focus(); return false; }
     if(person.pinHash){
       const pinRes = await callVerifyPin(currentShed.id, person.name, entered);
-      if(pinRes.fallback){
-        const masterOk = await localVerifyMasterPin(entered);
-        const personalOk = !masterOk && await localVerifyPin(person, entered);
-        if(!masterOk && !personalOk){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return false; }
-      } else {
-        if(pinRes.locked){ toast("יותר מדי ניסיונות — המתן "+(pinRes.waitSec||60)+" שניות ⏳"); pinEl.value=""; return false; }
-        if(!pinRes.ok){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return false; }
-        if(pinRes.legacy) upgradePinIfLegacy(person, entered);
-      }
+      if(pinRes.serverDown){ toast("שרת האימות לא זמין — נסה שוב מאוחר יותר ⛔"); pinEl.value=""; return false; }
+      if(pinRes.locked){ toast("יותר מדי ניסיונות — המתן "+(pinRes.waitSec||60)+" שניות ⏳"); pinEl.value=""; return false; }
+      if(!pinRes.ok){ toast("PIN שגוי ⛔"); pinEl.value=""; pinEl.focus(); return false; }
+      if(pinRes.legacy) upgradePinIfLegacy(person, entered);
     }
   } else {
     // אין PIN — הגדרה חובה בכניסה ראשונה (אי אפשר לדלג). PIN חדש = 6 ספרות.

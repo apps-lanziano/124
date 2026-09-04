@@ -13,6 +13,22 @@ async function page(){
   const errs=[]; p.on('pageerror',e=>errs.push(e.message));
   await p.goto(APP_URL, { waitUntil:'domcontentloaded' });
   await p.waitForTimeout(250);
+  await p.evaluate(()=>{
+    window.callVerifyPin = async (shedId, name, pin)=>{
+      if(name === "__master__") return {ok:false};
+      const pers = (typeof PERSONNEL !== "undefined" && PERSONNEL) || [];
+      const person = pers.find(x=>x.name===name);
+      if(!person) return {ok:false};
+      if(!person.pinHash) return {ok:true, noPin:true};
+      let match = false;
+      if(person.pinAlgo === "pbkdf2"){
+        match = (await hashPin(pin, person.pinSalt, person.pinIter)) === person.pinHash;
+      } else {
+        match = (await hashPinLegacy(pin, person.pinSalt)) === person.pinHash;
+      }
+      return match ? {ok:true, legacy: person.pinAlgo !== "pbkdf2"} : {ok:false};
+    };
+  });
   return {p, errs};
 }
 function record(name, pass, detail){ results.push({name, pass, detail}); }
@@ -187,8 +203,10 @@ function record(name, pass, detail){ results.push({name, pass, detail}); }
 {
   const {p, errs} = await page();
   const out = await p.evaluate(async ()=>{
+    currentShed = {id:"shed1", name:"סככה 1"};
     const fields = await buildPinFields("654321");
     const person = { name:"שדרוג", ...fields };
+    PERSONNEL = [person];
     return {
       algo: fields.pinAlgo,
       correct: await verifyPin(person, "654321"),
