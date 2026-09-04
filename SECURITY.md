@@ -576,3 +576,111 @@ PIN ישן — עד שהאכיפה המדורגת נכנסת לתוקף (3 דח�
 - דחייה 3 פעמים → אזהרה. 7 ימים אחרי → אכיפה.
 - מודל אכיפה: ביטול = התנתקות, אין דרך לעקוף.
 - אחרי שדרוג מוצלח — כל מוני הדחייה מנוקים, הבאנר לא מופיע שוב.
+
+---
+
+## שלב 12 — Production Security Gate (2026-09-04) ✅
+
+### מטרה
+
+ביקורת אבטחה סופית לפני SHIP — בדיקה שכל ההגנות שנבנו בשלבים 1–11
+**באמת פעילות בייצור**, ולא רק "קוד שנכתב ולא פורסם".
+
+### ממצא קריטי — Fail-Open PIN Bypass (תוקן)
+
+**הבעיה:** `callVerifyPin` (wrapper ל-Cloud Function `verifyPersonalPin`)
+הכיל **fallback ללקוח** — כשהשרת לא היה זמין, האימות "נפל" חזרה
+ל-`localVerifyPin`/`localVerifyMasterPin` בדפדפן. תוקף שחסם תעבורת
+רשת (proxy, hosts file, DevTools Network blocking) יכול היה לכפות את
+ה-fallback ולעקוף את כל הגנות השרת — נעילה, rate-limiting, App Check.
+
+**חומרה: CRITICAL** — עוקף את כל שלב 10 (אימות PIN שרת-צד).
+
+**התיקון:**
+```javascript
+// לפני (VULNERABLE — fail-open):
+catch(e) {
+  return localVerifyPin(shedId, name, pin);  // fallback לאימות מקומי
+}
+
+// אחרי (fail-closed):
+catch(e) {
+  return {ok: false, serverDown: true};      // DENY — ללא fallback
+}
+```
+
+שש נקודות קריאה עודכנו להציג הודעת "שירות האימות לא זמין" במקום לאפשר
+כניסה: `verifyPin`, `verifyMasterPin`, `quickLoginGo`, `verifyLoginPin`,
+`quickLogin`, `openPinUpgradeFlow`.
+
+הפונקציות `localVerifyPin` ו-`localVerifyMasterPin` **הוסרו לגמרי**
+מ-`index.html` — אין יותר נתיב אימות PIN בצד הלקוח.
+
+### שני תיקונים נוספים ב-Cloud Function
+
+**1. Timing-Safe Hash Comparison:**
+```javascript
+// לפני:
+return computedHash === storedHash;
+
+// אחרי:
+function safeEqual(a, b) {
+  const ba = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ba.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ba, bb);
+}
+```
+מונע timing attack — מדידת זמן תגובה לחילוץ ה-hash בית-אחרי-בית.
+שלוש נקודות השוואה ב-`verifyPersonalPin` עברו ל-`safeEqual()`.
+
+**2. Atomic Lockout Counter:**
+```javascript
+// לפני:
+const lockDoc = await db.doc(lockRef).get();
+lockDoc.failCount++;
+await db.doc(lockRef).set(lockDoc);  // RACE CONDITION
+
+// אחרי:
+await db.runTransaction(async (tx) => {
+  const lockDoc = await tx.get(lockRef);
+  // ... חישוב בתוך הטרנזקציה ...
+  tx.set(lockRef, updatedData);
+});
+```
+מונע race condition — שני ניסיונות מקבילים יכלו "לראות" את אותו
+מונה ולדרוס אחד את השני, ובפועל לאפשר יותר מ-5 ניסיונות.
+
+### אימות — 72 assertions ב-7 קבצי בדיקה
+
+| קובץ בדיקה | תוצאה | מה נבדק |
+|------------|--------|---------|
+| `pin_fail_closed_test.mjs` | **7/7** ✅ | fail-closed: שרת למטה → DENY, לא fallback |
+| `pin_upgrade_test.mjs` | **7/7** ✅ | שדרוג PIN שקט + פורמט חדש (PBKDF2) |
+| `pin_upgrade_migration_test.mjs` | **9/9** ✅ | מיגרציה 4→6 ספרות, באנר, אכיפה |
+| `master_pin_quick_login_test.mjs` | **2/2** ✅ | כניסה מהירה עם סיסמת-על |
+| `firestore_rules_test.mjs` | **37/37** ✅ | כללי Firestore v3 (emulator) |
+| `red_team_firestore_rules_test.mjs` | **10/10** ✅ | 10 תרחישי התקפה חסומים |
+
+### אימות Production (2026-09-04 — בוצע ידנית ע"י בעלים)
+
+| בדיקה | סטטוס | שיטת אימות |
+|-------|--------|-------------|
+| Cloud Function `verifyPersonalPin` פרוסה ופעילה | ✅ | Firebase Console → Functions |
+| App Check אכוף על `verifyPersonalPin` | ✅ | Firebase Console → App Check |
+| Firestore Rules v3 (כולל `login_lock_` ב-`isSensitiveDoc`) | ✅ | Firebase Console → Rules |
+| `audit_log` — write:false (Admin SDK בלבד) | ✅ | Firebase Console → Rules |
+
+### Zero occurrences — ממצאים שנסגרו
+
+לאחר התיקון, **אפס** מופעים של:
+- `fallback:true` בתשובת `callVerifyPin`
+- `localVerifyPin` / `localVerifyMasterPin` (הפונקציות נמחקו)
+- `=== pinHash` (השוואת hash ישירה בלקוח)
+- `=== storedHash` בשרת (הוחלף ב-`safeEqual`)
+
+### סטטוס סופי
+
+**✅ PRODUCTION READY — VERIFIED / SHIP**
+
+כל 12 השלבים מיושמים, נבדקו, ואומתו בייצור.
