@@ -1,20 +1,17 @@
 # הדוח היומי של אפליקציית טייסת 124
 
-**יום חמישי, 3 בספטמבר 2026**
+**יום שישי, 4 בספטמבר 2026**
 
-## ⚠️ נמצאו 2 תקלות
+## ⚠️ נמצאה תקלה אחת
 
-**1. בדיקה נכשלה: scheduled_functions_wiring_test.mjs**
-❌ גיבוי שבועי: מתוזמן, כותב ל-backups/sq124-<תאריך>.json ב-Storage, ומשתמש ב-dumpCollection - {"hasSchedule":false,"hasTZ":true,"usesLib":true,"writesToBackupsPath":true,"usesStorage":true}
-
-**2. בדיקה נכשלה: test_notification_wiring_test.mjs**
-❌ שולחת רק לטוקן הבודד שהגיע מהלקוח (send, לא sendEachForMulticast) — לא מחפשת רשימת טוקנים בשרת - {"sendsToSingleToken":false,"noTokenListLookup":true}
+**1. בדיקה נכשלה: no_occluded_controls_test.mjs**
+❌ אין פקדים חסומים באף מסך או שכבת-על (למפקד) - [{"context":"קורא קרא-וחתום","control":"#reader-confirm ✓ אישור קריאה","coveredBy":"DIV"},{"context":"תצוגת לוח צוות","control":"−","coveredBy":".pub-go"},{"context":"תצוגת לוח צוות","control":"+","coveredBy":".pub-later"},{"context":"תצוגת לוח צוות","control":"⟲","coveredBy":".pub-later"}]
 
 ### מה נבדק היום
 
 - נכנסתי לאפליקציה בתור **כל 19 סוגי המשתמשים** שיש בה (מפקדים, חיילים, אחראי הדרכה, מ״ע אחזקה, מנהל-על ועוד)
 - פתחתי **102 מסכים** ובדקתי שכולם נטענים ומציגים נתונים
-- הרצתי **148 בדיקות** שמוודאות שתקלות שכבר תוקנו לא חזרו
+- הרצתי **149 בדיקות** שמוודאות שתקלות שכבר תוקנו לא חזרו
 - ניסיתי לפרוץ לאפליקציה בשיטות מוכרות, כדי לוודא שאי אפשר
 
 ---
@@ -27,13 +24,10 @@ _אין מה לדווח._
 
 ## בדיקה שתקלות ישנות לא חזרו
 
-> 2 נקודות לתשומת לב
+> 1 נקודה לתשומת לב
 
-**🔴 חמור · בדיקה נכשלה: scheduled_functions_wiring_test.mjs**
-❌ גיבוי שבועי: מתוזמן, כותב ל-backups/sq124-<תאריך>.json ב-Storage, ומשתמש ב-dumpCollection - {"hasSchedule":false,"hasTZ":true,"usesLib":true,"writesToBackupsPath":true,"usesStorage":true}
-
-**🔴 חמור · בדיקה נכשלה: test_notification_wiring_test.mjs**
-❌ שולחת רק לטוקן הבודד שהגיע מהלקוח (send, לא sendEachForMulticast) — לא מחפשת רשימת טוקנים בשרת - {"sendsToSingleToken":false,"noTokenListLookup":true}
+**🔴 חמור · בדיקה נכשלה: no_occluded_controls_test.mjs**
+❌ אין פקדים חסומים באף מסך או שכבת-על (למפקד) - [{"context":"קורא קרא-וחתום","control":"#reader-confirm ✓ אישור קריאה","coveredBy":"DIV"},{"context":"תצוגת לוח צוות","control":"−","coveredBy":".pub-go"},{"context":"תצוגת לוח צוות","control":"+","coveredBy":".pub-later"},{"context":"תצוגת לוח צוות","control":"⟲","coveredBy":".pub-later"}]
 
 ---
 
@@ -42,10 +36,10 @@ _אין מה לדווח._
 > 1 נקודה לתשומת לב
 
 **🟠 בינוני · שימוש בפקודה insertAdjacentHTML()**
-1 מופעים (שורות 16682). זו פקודה שמריצה טקסט כאילו היה קוד. יש לוודא שהטקסט שמגיע אליה לא בא ממשתמש.
+1 מופעים (שורות 16944). זו פקודה שמריצה טקסט כאילו היה קוד. יש לוודא שהטקסט שמגיע אליה לא בא ממשתמש.
 
 **🔵 מידע · מפתח Firebase/Google API נמצא בקוד**
-1 מופעים (שורה 4155). מפתח Web של Firebase הוא ציבורי מעצם טיבו — ההגנה בפועל היא כללי מסד הנתונים + App Check. לא נדרשת פעולה, בתנאי ששני אלה מופעלים.
+1 מופעים (שורה 4184). מפתח Web של Firebase הוא ציבורי מעצם טיבו — ההגנה בפועל היא כללי מסד הנתונים + App Check. לא נדרשת פעולה, בתנאי ששני אלה מופעלים.
 
 **🔵 מידע · הפרדה בין מסגרות אינה אכופה בשרת — החלטה מתועדת, לא פרצה**
 תגית authorized חוסמת אימות אנונימי (ראה SECURITY.md שלב 7), אבל כל כניסה אמיתית עם קוד עדיין יכולה לקרוא נתונים של מסגרות אחרות — זו החלטת מוצר מכוונת שתועדה ב-SECURITY.md שלב 4 ("הוחלט לא לבצע הפרדת מסגרות בשרת — החשש אינו מפני אנשי הטייסת עצמם"). אם יידרש בעתיד להדק, הפתרון כבר כתוב כתיעוד היסטורי בקובץ הכללים (גרסה 2).
@@ -63,16 +57,16 @@ _אין מה לדווח._
 > 4 נקודות לתשומת לב
 
 **🟠 בינוני · גודל האפליקציה**
-1311 KB, 18,799 שורות בקובץ יחיד. מעל 900KB — כל טעינה ראשונה מורידה את הכל. שווה לשקול פיצול ה-CSS/JS לקבצים נפרדים שנשמרים במטמון בנפרד.
+1325 KB, 19,061 שורות בקובץ יחיד. מעל 900KB — כל טעינה ראשונה מורידה את הכל. שווה לשקול פיצול ה-CSS/JS לקבצים נפרדים שנשמרים במטמון בנפרד.
 
 **🟡 קל · פונקציות שלא נקראות מאף מקום**
-3 פונקציות: triggerBoardUpload, openBoardViewer, deleteBoard. מועמדות למחיקה — פחות קוד, פחות מקום לטעות.
+4 פונקציות: pinUpgradeNeeded, triggerBoardUpload, openBoardViewer, deleteBoard. מועמדות למחיקה — פחות קוד, פחות מקום לטעות.
 
 **🟡 קל · שדות קלט ללא תיאור**
 3 שדות בלי aria-label/placeholder/id.
 
 **🟡 קל · פונקציות ארוכות מאוד**
-6 פונקציות מעל 120 שורות. הארוכות: removeCertById (219 שורות, שורה 16302), applyLoginUiForRole (175 שורות, שורה 5105), renderRosterEditor (148 שורות, שורה 9776). פיצול יקל על תחזוקה ויקטין סיכון לבאגים.
+6 פונקציות מעל 120 שורות. הארוכות: removeCertById (219 שורות, שורה 16564), applyLoginUiForRole (175 שורות, שורה 5309), renderRosterEditor (148 שורות, שורה 10023). פיצול יקל על תחזוקה ויקטין סיכון לבאגים.
 
 **🔵 מידע · ההגנה על רשימת הצוות במקומה**
 אין כתיבות עיוורות של PERSONNEL — כל השמירות עוברות דרך mutatePersonnel().
@@ -90,10 +84,10 @@ _אין מה לדווח._
 > 3 נקודות לתשומת לב
 
 **🟠 בינוני · פעולת מחיקה בלי בקשת אישור מהמשתמש**
-8 פונקציות ששמן מרמז על מחיקה, בלי confirm() בגוף שלהן: removeDeviceUser (שורה 4687), removeBdpBoardGroup (שורה 7155), removeBasicDutyPlanEntry (שורה 10151), removePersonCerts (שורה 12488), removeDeptReassignedPeople (שורה 13630), removeAdminCert (שורה 14300), removeCertBank (שורה 14372), removeCertById (שורה 16302). לחיצה אחת מוחקת נתונים בלי אפשרות להתחרט — כדאי לבדוק אם יש אישור בשכבה אחרת (למשל מודל ייעודי), ואם לא — להוסיף confirm() כמו בשאר פעולות המחיקה באפליקציה.
+8 פונקציות ששמן מרמז על מחיקה, בלי confirm() בגוף שלהן: removeDeviceUser (שורה 4880), removeBdpBoardGroup (שורה 7371), removeBasicDutyPlanEntry (שורה 10398), removePersonCerts (שורה 12750), removeDeptReassignedPeople (שורה 13892), removeAdminCert (שורה 14562), removeCertBank (שורה 14634), removeCertById (שורה 16564). לחיצה אחת מוחקת נתונים בלי אפשרות להתחרט — כדאי לבדוק אם יש אישור בשכבה אחרת (למשל מודל ייעודי), ואם לא — להוסיף confirm() כמו בשאר פעולות המחיקה באפליקציה.
 
 **🟡 קל · פעולת שמירה/פרסום בלי הודעת משוב (toast) למשתמש**
-11 פונקציות: saveDeviceUsers (שורה 4674), saveManualEvents (שורה 6419), saveRosterCustomRows (שורה 7280), saveRosterArchive (שורה 8151), saveDutyRequests (שורה 8769), saveBasicDutyPlan (שורה 10051), savePushToken (שורה 11501), publishEventToAllSheds (שורה 13979), publishBoardToAllSheds (שורה 14084), publishTrainingToAllSheds (שורה 14431)…. ייתכן שהמשוב ניתן בדרך אחרת (רענון מסך, סגירת מודל) — כדאי לוודא שהמשתמש בכל זאת יודע אם השמירה הצליחה או נכשלה.
+11 פונקציות: saveDeviceUsers (שורה 4867), saveManualEvents (שורה 6634), saveRosterCustomRows (שורה 7496), saveRosterArchive (שורה 8367), saveDutyRequests (שורה 8985), saveBasicDutyPlan (שורה 10298), savePushToken (שורה 11757), publishEventToAllSheds (שורה 14241), publishBoardToAllSheds (שורה 14346), publishTrainingToAllSheds (שורה 14693)…. ייתכן שהמשוב ניתן בדרך אחרת (רענון מסך, סגירת מודל) — כדאי לוודא שהמשתמש בכל זאת יודע אם השמירה הצליחה או נכשלה.
 
 **🟡 קל · כפתורי אייקון בלי תיאור נגיש (title/aria-label)**
 9 כפתורים (8 סוגי סמל) בלי title/aria-label, למשל "›", "‹", "→", "←", "🗑️", "−". הוספת title="..." קצר עוזרת גם למשתמש חדש שמנחש מה הכפתור עושה, וגם לנגישות.
@@ -102,11 +96,10 @@ _אין מה לדווח._
 
 ## מה מומלץ לעשות
 
-1. **בדיקה נכשלה: scheduled_functions_wiring_test.mjs** — ❌ גיבוי שבועי: מתוזמן, כותב ל-backups/sq124-<תאריך>.
-2. **בדיקה נכשלה: test_notification_wiring_test.mjs** — ❌ שולחת רק לטוקן הבודד שהגיע מהלקוח (send, לא sendEachForMulticast) — לא מחפשת רשימת טוקנים בשרת - {"sendsToSingleToken":false,"noTokenListLookup":true}.
-3. **שימוש בפקודה insertAdjacentHTML()** — 1 מופעים (שורות 16682).
-4. **גודל האפליקציה** — 1311 KB, 18,799 שורות בקובץ יחיד.
-5. **פעולת מחיקה בלי בקשת אישור מהמשתמש** — 8 פונקציות ששמן מרמז על מחיקה, בלי confirm() בגוף שלהן: removeDeviceUser (שורה 4687), removeBdpBoardGroup (שורה 7155), removeBasicDutyPlanEntry (שורה 10151), removePersonCerts (שורה 12488), removeDeptReassignedPeople (שורה 13630), removeAdminCert (שורה 14300), removeCertBank (שורה 14372), removeCertById (שורה 16302).
+1. **בדיקה נכשלה: no_occluded_controls_test.mjs** — ❌ אין פקדים חסומים באף מסך או שכבת-על (למפקד) - [{"context":"קורא קרא-וחתום","control":"#reader-confirm ✓ אישור קריאה","coveredBy":"DIV"},{"context":"תצוגת לוח צוות","control":"−","coveredBy":".
+2. **שימוש בפקודה insertAdjacentHTML()** — 1 מופעים (שורות 16944).
+3. **גודל האפליקציה** — 1325 KB, 19,061 שורות בקובץ יחיד.
+4. **פעולת מחיקה בלי בקשת אישור מהמשתמש** — 8 פונקציות ששמן מרמז על מחיקה, בלי confirm() בגוף שלהן: removeDeviceUser (שורה 4880), removeBdpBoardGroup (שורה 7371), removeBasicDutyPlanEntry (שורה 10398), removePersonCerts (שורה 12750), removeDeptReassignedPeople (שורה 13892), removeAdminCert (שורה 14562), removeCertBank (שורה 14634), removeCertById (שורה 16564).
 
 _יש עוד 5 הערות קטנות שלא דחופות._
 
