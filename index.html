@@ -5984,6 +5984,7 @@ async function openReader(id, adminSourced){
   // הכפתור האדום הצף "לדשבורד" מרחף (z-index גבוה) ועלול לכסות את הפינה
   // של כפתור "אישור קריאה" — מסתירים אותו כל עוד הקורא פתוח.
   { const bd = document.getElementById("back-to-dash"); if(bd) bd.style.display = "none"; }
+  { const pb = document.getElementById("pin-upgrade-banner"); if(pb) pb.style.display = "none"; }
   if(ftype === "image"){
     imgZoomReset("doc-zoom-wrap", "doc-zoom-img", "doc-zoom-lbl");
     initImgZoomGestures("doc-zoom-wrap", "doc-zoom-img", "doc-zoom-lbl");
@@ -5994,6 +5995,7 @@ async function openReader(id, adminSourced){
 function closeReader(){
   document.getElementById("doc-reader").classList.remove("open");
   { const bd = document.getElementById("back-to-dash"); if(bd) bd.style.display = ""; }
+  { const pb = document.getElementById("pin-upgrade-banner"); if(pb) pb.style.display = ""; }
   closeFullscreenOverlay();
 }
 
@@ -11017,12 +11019,14 @@ async function openBoardViewer(id){
   // עליו רק מחליפה את המסך שמתחת בלי לסגור את התמונה — "נראה שלא עושה כלום".
   // מסתירים אותו כל עוד התמונה פתוחה (יש לתצוגה כפתור חזור → משלה שעובד).
   { const bd = document.getElementById("back-to-dash"); if(bd) bd.style.display = "none"; }
+  { const pb = document.getElementById("pin-upgrade-banner"); if(pb) pb.style.display = "none"; }
   openFullscreenOverlay(closeBoardViewer);
 }
 function closeBoardViewer(){
   document.getElementById("board-viewer").classList.remove("open");
   // מחזירים את שליטת ה-class על הנראות (‎.show‎) — הכפתור יחזור אם וכשמתאים למסך שמתחת
   { const bd = document.getElementById("back-to-dash"); if(bd) bd.style.display = ""; }
+  { const pb = document.getElementById("pin-upgrade-banner"); if(pb) pb.style.display = ""; }
   closeFullscreenOverlay();
 }
 
