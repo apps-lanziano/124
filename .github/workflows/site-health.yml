@@ -15,7 +15,7 @@ jobs:
       - name: בדיקת זמינות
         id: check
         run: |
-          URL="https://eladlanzianog-sys.github.io/124/"
+          URL="https://apps-lanziano.github.io/124/"
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$URL" || echo "000")
           echo "status=$STATUS" >> "$GITHUB_OUTPUT"
           echo "HTTP status: $STATUS"
@@ -29,7 +29,7 @@ jobs:
         id: content
         if: steps.check.outputs.status == '200'
         run: |
-          BODY=$(curl -s --max-time 15 "https://eladlanzianog-sys.github.io/124/")
+          BODY=$(curl -s --max-time 15 "https://apps-lanziano.github.io/124/")
           if echo "$BODY" | grep -q "sq124"; then
             echo "✅ תוכן תקין — האפליקציה מוגשת"
             echo "valid=true" >> "$GITHUB_OUTPUT"

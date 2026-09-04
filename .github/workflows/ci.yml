@@ -82,7 +82,7 @@ jobs:
 
       - name: בדיקת זמינות האתר
         run: |
-          URL="https://eladlanzianog-sys.github.io/124/"
+          URL="https://apps-lanziano.github.io/124/"
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$URL" || echo "000")
           echo "HTTP status: $STATUS"
           if [ "$STATUS" != "200" ]; then
