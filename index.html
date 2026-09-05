@@ -5285,8 +5285,8 @@ async function applyLoginUiForRole(person){
   document.getElementById("hdr-rank").innerHTML = userRole === "מפקד"
     ? '<svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.4 4.8L20 8.6l-4 3.9.9 5.5L12 15.6l-4.9 2.4.9-5.5-4-3.9 5.6-.8Z"/></svg> מפקד'
     : '<svg class="uic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg> חייל';
-  const shedLabel = (currentShed.isDept && personDept(person)) ? personDept(person) : currentShed.name;
-  document.getElementById("hdr-shed").textContent = "דרג א' · " + shedLabel;
+  const shedLabel = currentShed ? ((currentShed.isDept && personDept(person)) ? personDept(person) : currentShed.name) : "";
+  document.getElementById("hdr-shed").textContent = shedLabel ? ("דרג א' · " + shedLabel) : "";
   // מנהל-על — הרשאה נוספת מעל התפקיד הרגיל, לפי זהות אישית (SUPER_ADMIN_NAME) ולא מסלול כניסה נפרד. נגיש מתפריט "עוד" (לא סרגל קבוע) — שימוש נדיר.
   document.getElementById("sheet-users").classList.toggle("hidden", !isSuperAdmin);
 
@@ -5477,15 +5477,15 @@ async function doLogin(){
     await applyLoginUiForRole(person);
 
     // מסגרות שהומרו מיוזר פרטי — המפקד שלהן מקבל בנוסף את ההרשאות הטייסתיות שלו
-    if(userRole === "מפקד" && currentShed.isTraining) await applyTrainingCommanderPowers();
-    if(userRole === "מפקד" && currentShed.isMaint)    await applyMaintCommanderPowers();
+    if(userRole === "מפקד" && currentShed && currentShed.isTraining) await applyTrainingCommanderPowers();
+    if(userRole === "מפקד" && currentShed && currentShed.isMaint)    await applyMaintCommanderPowers();
 
     // commander lands on commander screen; soldier on safety —
     // switched before refreshAll() so the wrong screen never flashes underneath the overlay
     let landingScreen, landingBtn;
-    if(userRole === "מפקד" && currentShed.isTraining){
+    if(userRole === "מפקד" && currentShed && currentShed.isTraining){
       landingScreen = "scr-admin"; landingBtn = document.getElementById("nav-admin");
-    } else if(userRole === "מפקד" && currentShed.isMaint){
+    } else if(userRole === "מפקד" && currentShed && currentShed.isMaint){
       landingScreen = "scr-vo-overview"; landingBtn = document.getElementById("nav-vo-overview");
     } else if(userRole === "מפקד"){
       landingScreen = "scr-cmd"; landingBtn = document.querySelector('[data-scr="scr-cmd"]');
