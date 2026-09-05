@@ -2,28 +2,13 @@
 
 **יום שבת, 5 בספטמבר 2026**
 
-## ⚠️ נמצאו 7 תקלות
+## ⚠️ נמצאו 2 תקלות
 
-**1. בדיקה נכשלה: cmd_dashboard_restructure_test.mjs**
-❌ scr-safety: סיכום החתימות (KPI + טבלת אנשי צוות) גלוי למפקד - {"summaryVisible":false,"kpiEvents":"—","kpiFullsign":"—","cmdReadsHasContent":false} | ❌ scr-morning: באנר 'טרם בוצעו' מוצג כשאין מטלות שהושלמו - {"hasNoneBanner":false}
-
-**2. בדיקה נכשלה: firestore_rules_test.mjs**
+**1. בדיקה נכשלה: firestore_rules_test.mjs**
 ❌ firebase-tools לא מותקן (node_modules/.bin/firebase חסר). הרץ: npm install
 
-**3. בדיקה נכשלה: pwa_shortcuts_test.mjs**
-❌ קיצור rollcall: הכניסה נוחתת ישר על scr-rollcall (לא על מסך ברירת המחדל) - {"activeScreen":"scr-safety","searchAfter":"","loggedIn":false} | ❌ קיצור faults: הכניסה נוחתת ישר על scr-faults - {"activeScreen":"scr-safety","searchAfter":"","loggedIn":false} | ❌ בלי קיצור: חייל נוחת על scr-today ("היום שלי") כמסך הפתיחה - {"activeScreen":"scr-safety","searchAfter":"","loggedIn":false}
-
-**4. בדיקה נכשלה: quick_login_fix_test.mjs**
-❌ כניסה מהירה מסתיימת בהצלחה בפועל (לא נופלת חזרה למסך קוד) - {"calls":[{"email":"u7788@sq124.app","password":"sq124:7788"}],"loggedIn":false,"currentUser":null}
-
-**5. בדיקה נכשלה: red_team_firestore_rules_test.mjs**
+**2. בדיקה נכשלה: red_team_firestore_rules_test.mjs**
 ❌ firebase-tools not installed. Run: npm install
-
-**6. בדיקה נכשלה: safety_reminder_visible_test.mjs**
-page.evaluate: TypeError: Cannot read properties of undefined (reading 'querySelectorAll')
-
-**7. בדיקה נכשלה: training_hide_board_duties_medchecks_test.mjs**
-❌ מ״ע הדרכה: תורנויות גלויות (7.2), כשירות חיילים מוסתר - {"boardHidden":false,"dutiesHidden":false,"medchecksHidden":false} | ❌ מ״ע הדרכה שוב (אחרי מ״ע אחזקה): תורנויות גלויות, כשירות חיילים מוסתר - {"boardHidden":false,"dutiesHidden":false,"medchecksHidden":false}
 
 ### מה נבדק היום
 
@@ -42,28 +27,13 @@ _אין מה לדווח._
 
 ## בדיקה שתקלות ישנות לא חזרו
 
-> 7 נקודות לתשומת לב
-
-**🔴 חמור · בדיקה נכשלה: cmd_dashboard_restructure_test.mjs**
-❌ scr-safety: סיכום החתימות (KPI + טבלת אנשי צוות) גלוי למפקד - {"summaryVisible":false,"kpiEvents":"—","kpiFullsign":"—","cmdReadsHasContent":false} | ❌ scr-morning: באנר 'טרם בוצעו' מוצג כשאין מטלות שהושלמו - {"hasNoneBanner":false}
+> 2 נקודות לתשומת לב
 
 **🔴 חמור · בדיקה נכשלה: firestore_rules_test.mjs**
 ❌ firebase-tools לא מותקן (node_modules/.bin/firebase חסר). הרץ: npm install
 
-**🔴 חמור · בדיקה נכשלה: pwa_shortcuts_test.mjs**
-❌ קיצור rollcall: הכניסה נוחתת ישר על scr-rollcall (לא על מסך ברירת המחדל) - {"activeScreen":"scr-safety","searchAfter":"","loggedIn":false} | ❌ קיצור faults: הכניסה נוחתת ישר על scr-faults - {"activeScreen":"scr-safety","searchAfter":"","loggedIn":false} | ❌ בלי קיצור: חייל נוחת על scr-today ("היום שלי") כמסך הפתיחה - {"activeScreen":"scr-safety","searchAfter":"","loggedIn":false}
-
-**🔴 חמור · בדיקה נכשלה: quick_login_fix_test.mjs**
-❌ כניסה מהירה מסתיימת בהצלחה בפועל (לא נופלת חזרה למסך קוד) - {"calls":[{"email":"u7788@sq124.app","password":"sq124:7788"}],"loggedIn":false,"currentUser":null}
-
 **🔴 חמור · בדיקה נכשלה: red_team_firestore_rules_test.mjs**
 ❌ firebase-tools not installed. Run: npm install
-
-**🔴 חמור · בדיקה נכשלה: safety_reminder_visible_test.mjs**
-page.evaluate: TypeError: Cannot read properties of undefined (reading 'querySelectorAll')
-
-**🔴 חמור · בדיקה נכשלה: training_hide_board_duties_medchecks_test.mjs**
-❌ מ״ע הדרכה: תורנויות גלויות (7.2), כשירות חיילים מוסתר - {"boardHidden":false,"dutiesHidden":false,"medchecksHidden":false} | ❌ מ״ע הדרכה שוב (אחרי מ״ע אחזקה): תורנויות גלויות, כשירות חיילים מוסתר - {"boardHidden":false,"dutiesHidden":false,"medchecksHidden":false}
 
 ---
 
@@ -132,12 +102,11 @@ page.evaluate: TypeError: Cannot read properties of undefined (reading 'querySel
 
 ## מה מומלץ לעשות
 
-1. **בדיקה נכשלה: cmd_dashboard_restructure_test.mjs** — ❌ scr-safety: סיכום החתימות (KPI + טבלת אנשי צוות) גלוי למפקד - {"summaryVisible":false,"kpiEvents":"—","kpiFullsign":"—","cmdReadsHasContent":false} | ❌ scr-morning: באנר 'טרם בוצעו' מוצג כשאין מטלות שהושלמו - {"hasNoneBanner":false}.
-2. **בדיקה נכשלה: firestore_rules_test.mjs** — ❌ firebase-tools לא מותקן (node_modules/.
-3. **בדיקה נכשלה: pwa_shortcuts_test.mjs** — ❌ קיצור rollcall: הכניסה נוחתת ישר על scr-rollcall (לא על מסך ברירת המחדל) - {"activeScreen":"scr-safety","searchAfter":"","loggedIn":false} | ❌ קיצור faults: הכניסה נוחתת ישר על scr-faults - {"activeScreen":"scr-safety","searchAfter":"","loggedIn":false} | ❌ בלי קיצור: חייל נוחת על scr-today ("היום שלי") כמסך הפתיחה - {"activeScreen":"scr-safety","searchAfter":"","loggedIn":false}.
-4. **בדיקה נכשלה: quick_login_fix_test.mjs** — ❌ כניסה מהירה מסתיימת בהצלחה בפועל (לא נופלת חזרה למסך קוד) - {"calls":[{"email":"u7788@sq124.
-5. **בדיקה נכשלה: red_team_firestore_rules_test.mjs** — ❌ firebase-tools not installed.
-6. **בדיקה נכשלה: safety_reminder_visible_test.mjs** — page.
+1. **בדיקה נכשלה: firestore_rules_test.mjs** — ❌ firebase-tools לא מותקן (node_modules/.
+2. **בדיקה נכשלה: red_team_firestore_rules_test.mjs** — ❌ firebase-tools not installed.
+3. **שימוש בפקודה insertAdjacentHTML()** — 1 מופעים (שורות 16921).
+4. **גודל האפליקציה** — 1324 KB, 19,038 שורות בקובץ יחיד.
+5. **פעולת מחיקה בלי בקשת אישור מהמשתמש** — 8 פונקציות ששמן מרמז על מחיקה, בלי confirm() בגוף שלהן: removeDeviceUser (שורה 4863), removeBdpBoardGroup (שורה 7346), removeBasicDutyPlanEntry (שורה 10373), removePersonCerts (שורה 12727), removeDeptReassignedPeople (שורה 13869), removeAdminCert (שורה 14539), removeCertBank (שורה 14611), removeCertById (שורה 16541).
 
 _יש עוד 5 הערות קטנות שלא דחופות._
 
