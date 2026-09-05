@@ -1,4 +1,4 @@
-const CACHE_NAME = "tayeset124-d3f702b1396e";
+const CACHE_NAME = "tayeset124-1c8998f9fb36";
 const APP_SHELL = [
   "./index.html",
   "./manifest.json",
@@ -57,7 +57,7 @@ self.addEventListener("fetch", event => {
             }
             return res;
           })
-          .catch(() => validCached);
+          .catch(() => validCached || new Response("אין חיבור לרשת — נסה שוב מאוחר יותר", {status:503, headers:{"Content-Type":"text/html;charset=utf-8"}}));
         return validCached || fromNet;
       })
     );
