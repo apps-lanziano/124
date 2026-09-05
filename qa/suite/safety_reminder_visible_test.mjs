@@ -23,6 +23,13 @@ async function setup(role, personIndex=0){
       async delete(k){ delete store[k]; },
     };
     fbReady = false;
+    window.callVerifyPin = async function(shedId, name, pin){
+      const people = (typeof PERSONNEL !== "undefined" && PERSONNEL) || [];
+      const person = people.find(p => p.name === name);
+      if(!person || !person.pinHash) return {ok:true};
+      const h = await hashPin(pin, person.pinSalt, person.pinIter || PIN_ITERATIONS);
+      return {ok: h === person.pinHash};
+    };
     const put = (k,v)=>{ store[k] = JSON.stringify(v); };
     put("shed2_cfg_personnel", [
       {name:"מפקד סככה 2", role:"מפקד", bday:"1995-01-01"},
