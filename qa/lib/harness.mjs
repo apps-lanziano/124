@@ -65,6 +65,17 @@ async function installMockStorage(p){
       async delete(k){ delete store[k]; },
     };
     fbReady = false;
+
+    // mock callVerifyPin — ה-CF לא זמינה בסביבת בדיקה (רשת חסומה),
+    // אז מבצעים אימות PIN מקומי באותה לוגיקת hash של האפליקציה.
+    window.callVerifyPin = async function(shedId, name, pin){
+      const people = (typeof PERSONNEL !== "undefined" && PERSONNEL) || [];
+      const person = people.find(p => p.name === name);
+      if(!person || !person.pinHash) return {ok:true};
+      const h = await hashPin(pin, person.pinSalt, person.pinIter || PIN_ITERATIONS);
+      return {ok: h === person.pinHash};
+    };
+
     const put = (k,v)=>{ store[k] = JSON.stringify(v); };
 
     const today = new Date().toISOString().slice(0,10);
